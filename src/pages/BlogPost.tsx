@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import DOMPurify from "dompurify";
+import { Eye, ThumbsUp, ChevronUp, ChevronDown } from "lucide-react";
 
 interface Post {
   id: string;
