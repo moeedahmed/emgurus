@@ -8,6 +8,10 @@ import Index from "./pages/Index";
 import Quiz from "./pages/Quiz";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Blog from "./pages/Blog";
+import Editor from "./pages/Editor";
+import Review from "./pages/Review";
+import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 

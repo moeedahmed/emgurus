@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.create-payment]
 verify_jwt = true
+
+[functions.seed-test-users]
+verify_jwt = false
