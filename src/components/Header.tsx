@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui/button";
-import { Brain, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Menu, X, Brain } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
