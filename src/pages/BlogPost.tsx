@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
-import { ChevronDown, ChevronUp, Eye, ThumbsUp } from "lucide-react";
+import DOMPurify from "dompurify";
 
 interface Post {
   id: string;
@@ -178,7 +178,7 @@ const BlogPost = () => {
         <section className="prose dark:prose-invert max-w-none">
           {post.content && (
             isHtml ? (
-              <div dangerouslySetInnerHTML={{ __html: post.content }} />
+              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content || "") }} />
             ) : (
               <pre className="whitespace-pre-wrap font-sans text-base">{post.content}</pre>
             )

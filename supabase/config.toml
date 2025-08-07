@@ -7,7 +7,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.seed-test-users]
-verify_jwt = false
+verify_jwt = true
 
 [functions.import-emgurus]
 verify_jwt = true

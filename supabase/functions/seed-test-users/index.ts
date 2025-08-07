@@ -32,6 +32,42 @@ export async function serve(req: Request): Promise<Response> {
   }
 
   try {
+    // Require authenticated admin
+    const url = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!url || !anonKey) throw new Error("Missing Supabase envs");
+
+    const supabaseAnon = createClient(url, anonKey);
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: authError } = await supabaseAnon.auth.getUser(token);
+    if (authError || !userData?.user) {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Check admin role using user's own permissions
+    const { data: roles, error: rolesError } = await supabaseAnon
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userData.user.id);
+    if (rolesError) throw rolesError;
+    const isAdmin = (roles || []).some((r: any) => r.role === 'admin');
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ success: false, error: "Forbidden" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     const supabase = getAdminClient();
 
     const results: any[] = [];

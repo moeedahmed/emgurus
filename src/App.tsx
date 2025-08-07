@@ -14,6 +14,7 @@ import Editor from "./pages/Editor";
 import Review from "./pages/Review";
 import Admin from "./pages/Admin";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import RoleProtectedRoute from "@/components/RoleProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import DashboardUser from "./pages/DashboardUser";
 import DashboardGuru from "./pages/DashboardGuru";
@@ -48,7 +49,13 @@ const App = () => (
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/editor" element={<Editor />} />
               <Route path="/review" element={<Review />} />
-              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin" element={
+                <ProtectedRoute>
+                  <RoleProtectedRoute roles={["admin"]}>
+                    <Admin />
+                  </RoleProtectedRoute>
+                </ProtectedRoute>
+              } />
 
               <Route
                 path="/dashboard"
@@ -78,7 +85,9 @@ const App = () => (
                 path="/dashboard/admin"
                 element={
                   <ProtectedRoute>
-                    <DashboardAdmin />
+                    <RoleProtectedRoute roles={["admin"]}>
+                      <DashboardAdmin />
+                    </RoleProtectedRoute>
                   </ProtectedRoute>
                 }
               />
@@ -86,13 +95,13 @@ const App = () => (
               <Route path="/forums" element={<Forums />} />
               <Route path="/consultations" element={<Consultations />} />
               <Route path="/dashboard/user/progress" element={<UserProgress />} />
-              <Route path="/guru/questions" element={<GuruQuestions />} />
-              <Route path="/guru/reviews" element={<GuruReviewQueue />} />
-              <Route path="/guru/availability" element={<GuruAvailability />} />
-              <Route path="/admin/approve-gurus" element={<ApproveGurus />} />
-              <Route path="/admin/moderate-posts" element={<ModeratePosts />} />
-              <Route path="/admin/assign-reviews" element={<AssignReviews />} />
-              <Route path="/admin/taxonomy" element={<Taxonomy />} />
+              <Route path="/guru/questions" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruQuestions /></RoleProtectedRoute>} />
+              <Route path="/guru/reviews" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruReviewQueue /></RoleProtectedRoute>} />
+              <Route path="/guru/availability" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruAvailability /></RoleProtectedRoute>} />
+              <Route path="/admin/approve-gurus" element={<RoleProtectedRoute roles={["admin"]}><ApproveGurus /></RoleProtectedRoute>} />
+              <Route path="/admin/moderate-posts" element={<RoleProtectedRoute roles={["admin"]}><ModeratePosts /></RoleProtectedRoute>} />
+              <Route path="/admin/assign-reviews" element={<RoleProtectedRoute roles={["admin"]}><AssignReviews /></RoleProtectedRoute>} />
+              <Route path="/admin/taxonomy" element={<RoleProtectedRoute roles={["admin"]}><Taxonomy /></RoleProtectedRoute>} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
