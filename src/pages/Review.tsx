@@ -32,15 +32,34 @@ const Review = () => {
 
   const act = async (id: string, status: "published" | "rejected") => {
     if (!user) return;
-    const { error } = await supabase
-      .from("blog_posts")
-      .update({ status, reviewed_by: user.id, reviewed_at: new Date().toISOString() })
-      .eq("id", id);
-    if (error) {
-      toast.error("Action failed");
-    } else {
+    try {
+      const { error } = await supabase
+        .from("blog_posts")
+        .update({ status, reviewed_by: user.id, reviewed_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+
+      // Log the action
+      await supabase.from("blog_review_logs").insert({
+        post_id: id,
+        action: status,
+        actor_id: user.id,
+        note: null,
+      } as any);
+
+      // Mark assignment as completed for this reviewer if exists
+      await supabase
+        .from("blog_review_assignments")
+        .update({ status: "completed" })
+        .eq("post_id", id)
+        .eq("reviewer_id", user.id)
+        .eq("status", "pending");
+
       toast.success(status === "published" ? "Post published" : "Post rejected");
       load();
+    } catch (e) {
+      console.error(e);
+      toast.error("Action failed");
     }
   };
 
