@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 interface PostItem {
   id: string;
   title: string;
@@ -14,7 +16,7 @@ interface PostItem {
 
 const Blog = () => {
   const [posts, setPosts] = useState<PostItem[]>([]);
-
+  const { user } = useAuth();
   useEffect(() => {
     document.title = "EMGurus Blog | Medical Insights";
     const meta = document.querySelector("meta[name='description']");
@@ -32,6 +34,42 @@ const Blog = () => {
     };
     load();
   }, []);
+
+  const addSamples = async () => {
+    try {
+      if (!user) {
+        toast.error("Sign in to add sample posts");
+        return;
+      }
+      const titles = [
+        "Managing Sepsis in the ED: A Practical Guide",
+        "Airway Pearls: Intubation Tips for Difficult Cases",
+        "ECG Mastery: Recognizing STEMI Mimics"
+      ];
+      const now = new Date().toISOString();
+      const rows = titles.map((t) => ({
+        title: t,
+        description: "Sample article for preview of EMGurus blog layout.",
+        cover_image_url: null,
+        content: `<p>This is a <strong>sample article</strong> to demonstrate how content appears on EMGurus. Replace with real content.</p><p>Posted on ${now}</p>`,
+        status: "published" as const,
+        slug: t.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-"),
+        author_id: user.id,
+      }));
+      const { error } = await supabase.from("blog_posts").insert(rows as any);
+      if (error) throw error;
+      toast.success("Sample posts added");
+      const { data } = await supabase
+        .from("blog_posts")
+        .select("id,title,description,cover_image_url,created_at,slug")
+        .eq("status", "published")
+        .order("created_at", { ascending: false });
+      setPosts((data as any) || []);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to add sample posts");
+    }
+  };
 
   return (
     <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -59,7 +97,14 @@ const Blog = () => {
           </Card>
         ))}
         {posts.length === 0 && (
-          <Card className="p-6">No articles yet. Gurus can publish from the Review page.</Card>
+          <Card className="p-6">
+            <div className="flex items-center justify-between gap-4">
+              <span>No articles yet. Gurus can publish from the Review page.</span>
+              {user && (
+                <Button onClick={addSamples}>Add sample posts</Button>
+              )}
+            </div>
+          </Card>
         )}
       </div>
     </main>
