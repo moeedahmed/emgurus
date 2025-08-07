@@ -82,6 +82,31 @@ const Admin = () => {
             {categories.length === 0 && <Card className="p-4">No categories yet.</Card>}
           </div>
         </Card>
+
+        <Card className="p-6 space-y-4">
+          <h2 className="text-xl font-semibold">Importer</h2>
+          <p className="text-sm text-muted-foreground">Import articles using Firecrawl (requires FIRECRAWL_API_KEY set in Supabase secrets).</p>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Input id="import-url" defaultValue="https://emgurus.com" placeholder="Site URL to crawl" />
+            <Input id="import-limit" defaultValue="20" type="number" placeholder="Max pages" />
+            <Button
+              onClick={async () => {
+                const url = (document.getElementById('import-url') as HTMLInputElement)?.value || 'https://emgurus.com';
+                const limit = parseInt((document.getElementById('import-limit') as HTMLInputElement)?.value || '20', 10);
+                try {
+                  const { data, error } = await supabase.functions.invoke('import-emgurus', { body: { url, limit } });
+                  if (error) throw error;
+                  toast.success(`Imported ${data?.imported || 0} articles`);
+                } catch (e) {
+                  console.error(e);
+                  toast.error('Import failed');
+                }
+              }}
+            >
+              Import Now
+            </Button>
+          </div>
+        </Card>
       </main>
       <Footer />
       <link rel="canonical" href={`${window.location.origin}/admin`} />
