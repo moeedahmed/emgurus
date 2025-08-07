@@ -47,6 +47,12 @@ const Editor = () => {
     try {
       if (!user) return;
       setLoading(true);
+      const slug = title
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-");
       const { error } = await supabase.from("blog_posts").insert({
         author_id: user.id,
         title,
@@ -55,6 +61,7 @@ const Editor = () => {
         category_id: categoryId || null,
         content,
         status,
+        slug,
       });
       if (error) throw error;
       toast.success(status === "draft" ? "Draft saved" : "Submitted for review");
@@ -68,53 +75,49 @@ const Editor = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Create New Post</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => save("draft")} disabled={loading}>Save Draft</Button>
-            <Button onClick={() => save("submitted")} disabled={loading}>Submit</Button>
+    <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Create New Post</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => save("draft")} disabled={loading}>Save Draft</Button>
+          <Button onClick={() => save("submitted")} disabled={loading}>Submit</Button>
+        </div>
+      </div>
+      <Card className="p-6 space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="title">Title</Label>
+          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter post title" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="cover">Cover Image URL</Label>
+          <Input id="cover" value={cover} onChange={(e) => setCover(e.target.value)} placeholder="https://..." />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="category">Category</Label>
+            <Select onValueChange={setCategoryId}>
+              <SelectTrigger id="category">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
-        <Card className="p-6 space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
-            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter post title" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="cover">Cover Image URL</Label>
-            <Input id="cover" value={cover} onChange={(e) => setCover(e.target.value)} placeholder="https://..." />
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Select onValueChange={setCategoryId}>
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="desc">Description</Label>
-            <Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description for SEO" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="content">Content</Label>
-            <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[300px]" placeholder="Write your article here..." />
-          </div>
-        </Card>
-      </main>
-      <Footer />
+        <div className="space-y-2">
+          <Label htmlFor="desc">Description</Label>
+          <Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description for SEO" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="content">Content</Label>
+          <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[300px]" placeholder="Write your article here..." />
+        </div>
+      </Card>
       <link rel="canonical" href={`${window.location.origin}/editor/new`} />
-    </div>
+    </main>
   );
 };
 

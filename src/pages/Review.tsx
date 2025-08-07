@@ -3,8 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { toast } from "sonner";
 
 interface PostItem { id: string; title: string; description: string | null; author_id: string; }
@@ -47,29 +45,25 @@ const Review = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <h1 className="text-3xl font-bold mb-6">Review Queue</h1>
-        <div className="space-y-4">
-          {posts.map((p) => (
-            <Card key={p.id} className="p-4 flex items-center justify-between">
-              <div>
-                <div className="font-semibold">{p.title}</div>
-                <div className="text-sm text-muted-foreground line-clamp-2">{p.description}</div>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => act(p.id, "rejected")}>Reject</Button>
-                <Button onClick={() => act(p.id, "published")}>Publish</Button>
-              </div>
-            </Card>
-          ))}
-          {posts.length === 0 && <Card className="p-6">No submissions to review.</Card>}
-        </div>
-      </main>
-      <Footer />
+    <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <h1 className="text-3xl font-bold mb-6">Review Queue</h1>
+      <div className="space-y-4">
+        {posts.map((p) => (
+          <Card key={p.id} className="p-4 flex items-center justify-between">
+            <div>
+              <div className="font-semibold">{p.title}</div>
+              <div className="text-sm text-muted-foreground line-clamp-2">{p.description}</div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => act(p.id, "rejected")}>Reject</Button>
+              <Button onClick={() => act(p.id, "published")}>Publish</Button>
+            </div>
+          </Card>
+        ))}
+        {posts.length === 0 && <Card className="p-6">No submissions to review.</Card>}
+      </div>
       <link rel="canonical" href={`${window.location.origin}/review`} />
-    </div>
+    </main>
   );
 };
 

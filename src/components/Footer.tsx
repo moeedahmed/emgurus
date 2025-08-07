@@ -4,28 +4,28 @@ import { Button } from "@/components/ui/button";
 const Footer = () => {
   const footerLinks = {
     product: [
-      { name: "Features", href: "#features" },
-      { name: "Pricing", href: "#pricing" },
-      { name: "API", href: "#" },
-      { name: "Integrations", href: "#" },
+      { name: "Features", href: "/#features" },
+      { name: "Pricing", href: "/#pricing" },
+      { name: "API", href: "/" },
+      { name: "Integrations", href: "/" },
     ],
     company: [
-      { name: "About", href: "#about" },
+      { name: "About", href: "/" },
       { name: "Blog", href: "/blog" },
-      { name: "Careers", href: "#" },
-      { name: "Press", href: "#" },
+      { name: "Careers", href: "/" },
+      { name: "Press", href: "/" },
     ],
     resources: [
-      { name: "Documentation", href: "#" },
-      { name: "Help Center", href: "#" },
-      { name: "Community", href: "#" },
-      { name: "Status", href: "#" },
+      { name: "Documentation", href: "/" },
+      { name: "Help Center", href: "/" },
+      { name: "Community", href: "/forums" },
+      { name: "Status", href: "/" },
     ],
     legal: [
-      { name: "Privacy", href: "#" },
-      { name: "Terms", href: "#" },
-      { name: "Security", href: "#" },
-      { name: "Compliance", href: "#" },
+      { name: "Privacy", href: "/" },
+      { name: "Terms", href: "/" },
+      { name: "Security", href: "/" },
+      { name: "Compliance", href: "/" },
     ],
   };
 

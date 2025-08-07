@@ -9,6 +9,7 @@ import Quiz from "./pages/Quiz";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import Editor from "./pages/Editor";
 import Review from "./pages/Review";
 import Admin from "./pages/Admin";
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/quiz" element={<Quiz />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/editor" element={<Editor />} />
               <Route path="/review" element={<Review />} />
               <Route path="/admin" element={<Admin />} />

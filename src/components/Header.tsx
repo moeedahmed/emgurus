@@ -22,8 +22,8 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="text-muted-foreground hover:text-primary transition-colors">Features</a>
-            <a href="#pricing" className="text-muted-foreground hover:text-primary transition-colors">Pricing</a>
+            <a href="/#features" className="text-muted-foreground hover:text-primary transition-colors">Features</a>
+            <a href="/#pricing" className="text-muted-foreground hover:text-primary transition-colors">Pricing</a>
             <a onClick={() => navigate('/blog')} className="cursor-pointer text-muted-foreground hover:text-primary transition-colors">Blog</a>
             <a onClick={() => navigate('/forums')} className="cursor-pointer text-muted-foreground hover:text-primary transition-colors">Forums</a>
             <a onClick={() => navigate('/consultations')} className="cursor-pointer text-muted-foreground hover:text-primary transition-colors">Consultations</a>
@@ -62,8 +62,8 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <nav className="flex flex-col space-y-4">
-              <a href="#features" className="text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => setIsMenuOpen(false)}>Features</a>
-              <a href="#pricing" className="text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => setIsMenuOpen(false)}>Pricing</a>
+              <a href="/#features" className="text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => setIsMenuOpen(false)}>Features</a>
+              <a href="/#pricing" className="text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => setIsMenuOpen(false)}>Pricing</a>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/blog'); setIsMenuOpen(false);}}>Blog</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/forums'); setIsMenuOpen(false);}}>Forums</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/consultations'); setIsMenuOpen(false);}}>Consultations</button>
