@@ -79,7 +79,17 @@ Return ONLY a JSON object with this exact structure:
       }),
     });
 
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    }
+
     const data = await response.json();
+    console.log('OpenAI response:', JSON.stringify(data, null, 2));
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error('Invalid response from OpenAI API');
+    }
+
     const generatedText = data.choices[0].message.content;
     
     let questionData;
