@@ -13,6 +13,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Function started, checking auth...');
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -26,7 +28,9 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
+    console.log('User authenticated, parsing request...');
     const { examType, difficulty, topic, userId } = await req.json();
+    console.log('Request data:', { examType, difficulty, topic });
 
     // Get user's previous questions to avoid duplicates
     const { data: previousQuestions } = await supabaseClient
@@ -34,9 +38,14 @@ serve(async (req) => {
       .select('questions(question_text)')
       .eq('user_id', user.id);
 
-    const previousTexts = previousQuestions?.map(q => q.questions.question_text) || [];
+    const previousTexts = previousQuestions?.map(q => q.questions?.question_text).filter(Boolean) || [];
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    console.log('OpenAI API key available:', !!openAIApiKey);
+    
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
     
     const prompt = `Generate a multiple choice question for medical exam preparation.
 
