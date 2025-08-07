@@ -27,12 +27,12 @@ const DashboardUser = () => {
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-2">Book Consultation</h2>
           <p className="text-muted-foreground mb-4">Schedule 1:1 mentoring with verified Gurus.</p>
-          <Button variant="secondary" disabled>Coming soon</Button>
+          <Button variant="secondary" onClick={() => navigate('/consultations')}>Go to Consultations</Button>
         </Card>
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-2">Track Progress</h2>
           <p className="text-muted-foreground mb-4">Review your quiz attempts and strengths.</p>
-          <Button variant="secondary" disabled>Coming soon</Button>
+          <Button variant="secondary" onClick={() => navigate('/dashboard/user/progress')}>Open Progress</Button>
         </Card>
       </div>
     </main>

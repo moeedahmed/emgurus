@@ -1,8 +1,6 @@
-import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
 import Pricing from "@/components/Pricing";
-import Footer from "@/components/Footer";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -31,15 +29,11 @@ const Index = () => {
   }, [user]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main>
-        <Hero />
-        <Features />
-        <Pricing />
-      </main>
-      <Footer />
-    </div>
+    <main>
+      <Hero />
+      <Features />
+      <Pricing />
+    </main>
   );
 };
 
