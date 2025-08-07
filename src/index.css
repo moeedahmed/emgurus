@@ -8,33 +8,57 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    /* Medical theme - professional blues and teals */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 210 15% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 210 15% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 210 15% 10%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary: Medical blue */
+    --primary: 213 89% 42%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 213 89% 55%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary: Light professional gray */
+    --secondary: 213 20% 96%;
+    --secondary-foreground: 213 15% 25%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted: Subtle grays */
+    --muted: 213 15% 96%;
+    --muted-foreground: 213 8% 50%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent: Teal for highlights */
+    --accent: 178 85% 40%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Success: Medical green */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Warning: Warm orange */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 213 20% 91%;
+    --input: 213 20% 91%;
+    --ring: 213 89% 42%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--secondary)) 100%);
+
+    /* Shadows */
+    --shadow-soft: 0 4px 12px -2px hsl(var(--primary) / 0.1);
+    --shadow-medium: 0 8px 25px -8px hsl(var(--primary) / 0.15);
+    --shadow-strong: 0 20px 40px -12px hsl(var(--primary) / 0.25);
 
     --radius: 0.5rem;
 
