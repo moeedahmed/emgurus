@@ -230,7 +230,16 @@ export type Database = {
     Enums: {
       app_role: "user" | "guru" | "admin"
       difficulty_level: "easy" | "medium" | "hard"
-      exam_type: "FCPS" | "FRCEM" | "USMLE" | "PLAB" | "MRCP" | "Other"
+      exam_type:
+        | "FCPS"
+        | "FRCEM"
+        | "USMLE"
+        | "PLAB"
+        | "MRCP"
+        | "Other"
+        | "MRCEM_PRIMARY"
+        | "MRCEM_SBA"
+        | "FRCEM_SBA"
       question_status: "pending" | "approved" | "rejected"
       subscription_tier: "free" | "exam" | "consultation" | "premium"
     }
@@ -362,7 +371,17 @@ export const Constants = {
     Enums: {
       app_role: ["user", "guru", "admin"],
       difficulty_level: ["easy", "medium", "hard"],
-      exam_type: ["FCPS", "FRCEM", "USMLE", "PLAB", "MRCP", "Other"],
+      exam_type: [
+        "FCPS",
+        "FRCEM",
+        "USMLE",
+        "PLAB",
+        "MRCP",
+        "Other",
+        "MRCEM_PRIMARY",
+        "MRCEM_SBA",
+        "FRCEM_SBA",
+      ],
       question_status: ["pending", "approved", "rejected"],
       subscription_tier: ["free", "exam", "consultation", "premium"],
     },
