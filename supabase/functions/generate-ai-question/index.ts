@@ -13,14 +13,27 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Function started, checking auth...');
+    console.log('=== DEBUGGING START ===');
+    
+    // Check if OpenAI key is available
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    console.log('OpenAI API Key present:', !!openAIApiKey);
+    console.log('OpenAI API Key length:', openAIApiKey?.length || 0);
+    
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not found in environment variables');
+    }
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    const authHeader = req.headers.get('Authorization')!;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header found');
+    }
+    
     const token = authHeader.replace('Bearer ', '');
     const { data: { user } } = await supabaseClient.auth.getUser(token);
 
@@ -28,10 +41,12 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    console.log('User authenticated, parsing request...');
-    const { examType, difficulty, topic, userId } = await req.json();
-    console.log('Request data:', { examType, difficulty, topic });
-
+    console.log('User ID:', user.id);
+    const requestBody = await req.json();
+    console.log('Request body:', JSON.stringify(requestBody));
+    
+    const { examType, difficulty, topic } = requestBody;
+    
     // Get user's previous questions to avoid duplicates
     const { data: previousQuestions } = await supabaseClient
       .from('quiz_attempts')
@@ -39,14 +54,8 @@ serve(async (req) => {
       .eq('user_id', user.id);
 
     const previousTexts = previousQuestions?.map(q => q.questions?.question_text).filter(Boolean) || [];
+    console.log('Previous questions count:', previousTexts.length);
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    console.log('OpenAI API key available:', !!openAIApiKey);
-    
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
-    
     const prompt = `Generate a multiple choice question for medical exam preparation.
 
 Requirements:
