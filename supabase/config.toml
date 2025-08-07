@@ -1,1 +1,7 @@
 project_id = "cgtvvpzrzwyvsbavboxa"
+
+[functions.generate-ai-question]
+verify_jwt = true
+
+[functions.create-payment]
+verify_jwt = true
