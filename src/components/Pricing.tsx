@@ -1,8 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckCircle, Star, Crown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Pricing = () => {
+  const navigate = useNavigate();
+  
+  const handlePlanClick = (planName: string) => {
+    if (planName === "Free") {
+      navigate("/quiz");
+    } else {
+      // TODO: Handle paid plan subscriptions
+      console.log(`Selected plan: ${planName}`);
+    }
+  };
+
   const plans = [
     {
       name: "Free",
@@ -164,6 +176,7 @@ const Pricing = () => {
                   variant={plan.buttonVariant} 
                   className="w-full"
                   size="lg"
+                  onClick={() => handlePlanClick(plan.name)}
                 >
                   {plan.buttonText}
                 </Button>
