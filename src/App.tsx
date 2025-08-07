@@ -12,6 +12,11 @@ import Blog from "./pages/Blog";
 import Editor from "./pages/Editor";
 import Review from "./pages/Review";
 import Admin from "./pages/Admin";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Dashboard from "./pages/Dashboard";
+import DashboardUser from "./pages/DashboardUser";
+import DashboardGuru from "./pages/DashboardGuru";
+import DashboardAdmin from "./pages/DashboardAdmin";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +35,40 @@ const App = () => (
             <Route path="/editor" element={<Editor />} />
             <Route path="/review" element={<Review />} />
             <Route path="/admin" element={<Admin />} />
+
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/user"
+              element={
+                <ProtectedRoute>
+                  <DashboardUser />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/guru"
+              element={
+                <ProtectedRoute>
+                  <DashboardGuru />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/admin"
+              element={
+                <ProtectedRoute>
+                  <DashboardAdmin />
+                </ProtectedRoute>
+              }
+            />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
