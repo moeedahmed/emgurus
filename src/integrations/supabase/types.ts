@@ -111,6 +111,82 @@ export type Database = {
           },
         ]
       }
+      blog_review_assignments: {
+        Row: {
+          assigned_by: string
+          created_at: string
+          id: string
+          notes: string | null
+          post_id: string
+          reviewer_id: string
+          status: Database["public"]["Enums"]["review_assignment_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_by: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          post_id: string
+          reviewer_id: string
+          status?: Database["public"]["Enums"]["review_assignment_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          post_id?: string
+          reviewer_id?: string
+          status?: Database["public"]["Enums"]["review_assignment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_review_assignments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_review_logs: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          id: string
+          note: string | null
+          post_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          post_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_review_logs_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -339,6 +415,7 @@ export type Database = {
         | "FRCEM_SBA"
       post_status: "draft" | "submitted" | "approved" | "rejected" | "published"
       question_status: "pending" | "approved" | "rejected"
+      review_assignment_status: "pending" | "completed" | "cancelled"
       subscription_tier: "free" | "exam" | "consultation" | "premium"
     }
     CompositeTypes: {
@@ -482,6 +559,7 @@ export const Constants = {
       ],
       post_status: ["draft", "submitted", "approved", "rejected", "published"],
       question_status: ["pending", "approved", "rejected"],
+      review_assignment_status: ["pending", "completed", "cancelled"],
       subscription_tier: ["free", "exam", "consultation", "premium"],
     },
   },
