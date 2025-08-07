@@ -29,6 +29,9 @@ const Header = () => {
             <a href="#pricing" className="text-muted-foreground hover:text-primary transition-colors">
               Pricing
             </a>
+            <a href="/blog" className="text-muted-foreground hover:text-primary transition-colors">
+              Blog
+            </a>
             <a href="#about" className="text-muted-foreground hover:text-primary transition-colors">
               About
             </a>
@@ -87,6 +90,13 @@ const Header = () => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Pricing
+              </a>
+              <a
+                href="/blog"
+                className="text-muted-foreground hover:text-primary transition-colors py-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Blog
               </a>
               <a
                 href="#about"
