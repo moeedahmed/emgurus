@@ -4,6 +4,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
@@ -35,6 +38,8 @@ export default function Profile() {
   const [roles, setRoles] = useState<string[]>([]);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [guruNames, setGuruNames] = useState<Record<string, { name: string; avatar_url: string | null }>>({});
+  const [pwd, setPwd] = useState("");
+  const [pwd2, setPwd2] = useState("");
 
   useEffect(() => {
     document.title = "My Profile | EMGurus";
@@ -80,6 +85,25 @@ export default function Profile() {
       }
     })();
   }, [user]);
+
+  const handleChangePassword = async () => {
+    if (!pwd || pwd.length < 8) {
+      toast({ title: "Password too short", description: "Use at least 8 characters." });
+      return;
+    }
+    if (pwd !== pwd2) {
+      toast({ title: "Passwords do not match" });
+      return;
+    }
+    const { error } = await supabase.auth.updateUser({ password: pwd });
+    if (error) {
+      toast({ title: "Could not update password", description: error.message });
+      return;
+    }
+    toast({ title: "Password updated" });
+    setPwd("");
+    setPwd2("");
+  };
 
   const initials = useMemo(() => {
     const name = profile?.full_name || user?.email || 'User';
@@ -154,6 +178,26 @@ export default function Profile() {
               ))}
             </ul>
           )}
+          <div className="pt-2">
+            <Link to="/bookings"><Button variant="link" className="px-0">View all bookings</Button></Link>
+          </div>
+        </Card>
+      </section>
+
+      <section className="mt-6">
+        <Card className="p-6 max-w-xl space-y-4">
+          <div className="font-semibold">Change Password</div>
+          <div className="grid gap-3">
+            <div className="grid gap-1">
+              <Label htmlFor="new-password">New password</Label>
+              <Input id="new-password" type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="confirm-password">Confirm new password</Label>
+              <Input id="confirm-password" type="password" value={pwd2} onChange={(e) => setPwd2(e.target.value)} />
+            </div>
+            <Button onClick={handleChangePassword}>Update Password</Button>
+          </div>
         </Card>
       </section>
     </main>
