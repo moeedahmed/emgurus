@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.guru-applications]
 verify_jwt = true
+
+[functions.forums-api]
+verify_jwt = false
