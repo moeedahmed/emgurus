@@ -14,9 +14,14 @@ interface SeedUserSpec {
 }
 
 const USERS: SeedUserSpec[] = [
-  { email: "admin@emgurus.com", password: "Test1234!", full_name: "Admin User", role: "admin" },
-  { email: "guru@emgurus.com", password: "Test1234!", full_name: "Guru User", role: "guru" },
-  { email: "user@emgurus.com", password: "Test1234!", full_name: "Test User", role: "user" },
+  { email: "admin@emgurus.com", password: "Password123!", full_name: "Admin User", role: "admin" },
+  { email: "guru@emgurus.com", password: "Password123!", full_name: "Guru User", role: "guru" },
+  { email: "user@emgurus.com", password: "Password123!", full_name: "Test User", role: "user" },
+  { email: "guru.khan@emgurus.com", password: "Password123!", full_name: "Dr Ayesha Khan", role: "guru" },
+  { email: "guru.raza@emgurus.com", password: "Password123!", full_name: "Dr Bilal Raza", role: "guru" },
+  { email: "guru.smith@emgurus.com", password: "Password123!", full_name: "Dr Jane Smith", role: "guru" },
+  { email: "user.ahmed@emgurus.com", password: "Password123!", full_name: "Moeed Ahmed", role: "user" },
+  { email: "user.ali@emgurus.com", password: "Password123!", full_name: "Dr Ali", role: "user" },
 ];
 
 function getAdminClient() {
@@ -70,7 +75,20 @@ export async function serve(req: Request): Promise<Response> {
 
     const supabase = getAdminClient();
 
+    // Seed profile data keyed by email
+    const PROFILE_DATA: Record<string, any> = {
+      "admin@emgurus.com": { title: null, specialty: "Emergency Medicine", country: "UK", exams: ["FRCEM"], price_per_30min: 0, timezone: "Europe/London", bio: "Platform administrator." },
+      "guru@emgurus.com": { specialty: "Emergency Medicine" },
+      "user@emgurus.com": {},
+      "guru.khan@emgurus.com": { specialty: "Emergency Medicine", country: "UK", exams: ["MRCEM SBA","FRCEM SBA"], price_per_30min: 40, timezone: "Europe/London", bio: "FRCEM examiner, 10+ yrs EM." },
+      "guru.raza@emgurus.com": { specialty: "Emergency Medicine", country: "Pakistan", exams: ["FCPS EM","MRCEM SBA"], price_per_30min: 20, timezone: "Asia/Karachi", bio: "FCPS EM mentor and MRCEM coach." },
+      "guru.smith@emgurus.com": { specialty: "Paediatric EM", country: "UK", exams: ["MRCEM Primary"], price_per_30min: 0, timezone: "Europe/London", bio: "Paeds EM specialist (free intro slots)." },
+      "user.ahmed@emgurus.com": { country: "UK", timezone: "Europe/London", exams: ["MRCEM SBA"] },
+      "user.ali@emgurus.com": { country: "Pakistan", timezone: "Asia/Karachi", exams: ["FCPS EM"] },
+    };
+
     const results: any[] = [];
+    const idByEmail: Record<string, string> = {};
     for (const u of USERS) {
       // Try to create user
       const { data: created, error: createError } = await supabase.auth.admin.createUser({
@@ -91,19 +109,83 @@ export async function serve(req: Request): Promise<Response> {
 
       if (!userId) throw new Error(`Unable to resolve user id for ${u.email}`);
 
+      idByEmail[u.email] = userId;
+
       // Upsert role
       await supabase.from("user_roles").upsert({ user_id: userId, role: u.role }).select();
-      // Upsert profile for convenience
+      // Upsert profile with extended data
+      const pd = PROFILE_DATA[u.email] || {};
       await supabase
         .from("profiles")
-        .upsert({ user_id: userId, email: u.email, full_name: u.full_name })
+        .upsert({ user_id: userId, email: u.email, full_name: u.full_name, ...pd })
         .select();
 
       results.push({ email: u.email, role: u.role });
     }
 
+    // Additional seed data for consultations
+    try {
+      // Availability defaults for Dr Ayesha Khan (Mon–Fri 09:00–12:00)
+      const guruKhanId = idByEmail["guru.khan@emgurus.com"];
+      if (guruKhanId) {
+        for (let d = 1; d <= 5; d++) {
+          await supabase.from("consult_availability").insert({
+            guru_id: guruKhanId,
+            type: "default",
+            day_of_week: d,
+            start_time: "09:00:00",
+            end_time: "12:00:00",
+            is_available: true,
+          });
+        }
+      }
+
+      // Exception - Dr Bilal Raza unavailable today
+      const guruRazaId = idByEmail["guru.raza@emgurus.com"];
+      if (guruRazaId) {
+        const today = new Date().toISOString().slice(0, 10);
+        await supabase.from("consult_availability").insert({
+          guru_id: guruRazaId,
+          type: "exception",
+          date: today,
+          start_time: "00:00:00",
+          end_time: "23:59:59",
+          is_available: false,
+        });
+      }
+
+      // Sample confirmed free booking for Dr Jane Smith with Moeed Ahmed two days from now at 09:00 UTC
+      const guruSmithId = idByEmail["guru.smith@emgurus.com"];
+      const userAhmedId = idByEmail["user.ahmed@emgurus.com"];
+      if (guruSmithId && userAhmedId) {
+        const now = new Date();
+        const start = new Date(Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate() + 2,
+          9, 0, 0, 0
+        ));
+        const end = new Date(start.getTime() + 30 * 60 * 1000);
+
+        await supabase.from("consult_bookings").insert({
+          guru_id: guruSmithId,
+          user_id: userAhmedId,
+          start_datetime: start.toISOString(),
+          end_datetime: end.toISOString(),
+          status: "confirmed",
+          price: 0,
+          payment_status: "paid",
+          communication_method: "google_meet",
+          meeting_link: "https://meet.google.com/demo-link",
+          notes: "Seed booking",
+        });
+      }
+    } catch (seedErr) {
+      console.error("Additional seed error", seedErr);
+    }
+
     return new Response(
-      JSON.stringify({ success: true, users: results, defaultPassword: "Test1234!" }),
+      JSON.stringify({ success: true, users: results, defaultPassword: "Password123!" }),
       { headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (e) {
