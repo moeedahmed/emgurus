@@ -51,6 +51,9 @@ const Header = () => {
                   <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                     <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/guru/availability')}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" /> My Availability
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/auth')}>
                     <UserIcon className="mr-2 h-4 w-4" /> Account
                   </DropdownMenuItem>
@@ -94,6 +97,7 @@ const Header = () => {
                 {user ? (
                   <>
                     <Button variant="outline" className="justify-start" onClick={() => {navigate('/dashboard'); setIsMenuOpen(false);}}>Dashboard</Button>
+                    <Button variant="outline" className="justify-start" onClick={() => {navigate('/guru/availability'); setIsMenuOpen(false);}}>My Availability</Button>
                     <div className="text-sm text-muted-foreground px-2 py-1">{user.email}</div>
                     <Button variant="outline" className="justify-start" onClick={signOut}>Sign Out</Button>
                   </>
