@@ -138,19 +138,6 @@ export default function Blogs() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {(() => {
-        const hero = filtered.find((p) => p.cover_image_url) || filtered[0];
-        return hero ? (
-          <FeaturedBlogHero post={hero as any} />
-        ) : (
-          <PageHero
-            title="EM GURUS Blogs"
-            subtitle="Evidence-based articles, exam guidance, and clinical pearls."
-            align="left"
-            ctas={[{ label: "Write Blog", href: "/blogs/new", variant: "default" }]}
-          />
-        );
-      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Main list - vertical cards, left aligned */}
@@ -177,6 +164,19 @@ export default function Blogs() {
             </div>
           </div>
           <div className="space-y-6">
+            {(() => {
+              const hero = filtered.find((p) => p.cover_image_url) || filtered[0];
+              return hero ? (
+                <FeaturedBlogHero post={hero as any} />
+              ) : (
+                <PageHero
+                  title="EM GURUS Blogs"
+                  subtitle="Evidence-based articles, exam guidance, and clinical pearls."
+                  align="left"
+                  ctas={[{ label: "Write Blog", href: "/blogs/new", variant: "default" }]}
+                />
+              );
+            })()}
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i} className="h-72 animate-pulse" />

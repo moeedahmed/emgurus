@@ -1,5 +1,4 @@
 import AuthorChip from "@/components/blogs/AuthorChip";
-import ReactionBar from "@/components/blogs/ReactionBar";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import fallbackImage from "@/assets/medical-blog.jpg";
@@ -83,7 +82,7 @@ export default function BlogCard({ post: p, topBadge, onOpen }: BlogCardProps) {
             </span>
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <ReactionBar postId={p.id} counts={{ likes: p.counts?.likes || 0 }} />
+            <span>{(p.counts?.likes || 0)} reactions</span>
             <span>{p.counts?.views || 0} views</span>
           </div>
         </div>
