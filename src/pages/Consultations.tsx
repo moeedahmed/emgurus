@@ -17,7 +17,7 @@ const Consultations = () => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [attemptedSeed, setAttemptedSeed] = useState(false);
-  const [debugNames, setDebugNames] = useState<string[]>([]);
+  
   useEffect(() => {
     const title = "Book a Guru for Career Guidance | EMGurus";
     document.title = title;
@@ -84,7 +84,6 @@ const Consultations = () => {
 
         if (mapped.length) {
           setGurus(mapped);
-          setDebugNames(mapped.map(m => m.full_name));
         }
 
         // If fewer than 5 gurus loaded and we haven't tried seeding, try once and refetch
@@ -117,7 +116,6 @@ const Consultations = () => {
             console.groupEnd();
             if (mapped2.length) {
               setGurus(mapped2);
-              setDebugNames(mapped2.map(m => m.full_name));
             }
           }
         }
@@ -158,17 +156,6 @@ const Consultations = () => {
         <h1 className="text-3xl font-bold">Book a Guru for Career Guidance</h1>
         <p className="text-muted-foreground">Filter by specialty, country, or exam to find the right mentor.</p>
       </header>
-
-      {debugNames.length > 0 && (
-        <section className="mb-4">
-          <p className="text-sm text-muted-foreground">Loaded {debugNames.length} gurus:</p>
-          <ul className="text-sm text-muted-foreground list-disc pl-5">
-            {debugNames.map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       <section className="grid gap-4 md:grid-cols-4 mb-6">
         <Input placeholder="Search by name or specialty" value={search} onChange={(e) => setSearch(e.target.value)} />
