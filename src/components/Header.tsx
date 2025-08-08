@@ -25,6 +25,7 @@ const Header = () => {
           </div>
 
           <nav className="hidden md:flex items-center space-x-8">
+            <button onClick={() => navigate('/')} className="text-muted-foreground hover:text-primary transition-colors">Home</button>
             <button onClick={() => navigate('/blog')} className="text-muted-foreground hover:text-primary transition-colors">Blog</button>
             <button onClick={() => navigate('/quiz')} className="text-muted-foreground hover:text-primary transition-colors">Exams</button>
             <button onClick={() => navigate('/consultations')} className="text-muted-foreground hover:text-primary transition-colors">Consultations</button>
@@ -84,6 +85,7 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <nav className="flex flex-col space-y-4">
+              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/'); setIsMenuOpen(false);}}>Home</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/blog'); setIsMenuOpen(false);}}>Blog</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/quiz'); setIsMenuOpen(false);}}>Exams</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/consultations'); setIsMenuOpen(false);}}>Consultations</button>
