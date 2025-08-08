@@ -14,6 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_exam_answers: {
+        Row: {
+          answered_at: string
+          created_at: string
+          feedback: Database["public"]["Enums"]["ai_answer_feedback"]
+          id: string
+          is_correct: boolean
+          question_id: string
+          selected_answer: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answered_at?: string
+          created_at?: string
+          feedback?: Database["public"]["Enums"]["ai_answer_feedback"]
+          id?: string
+          is_correct: boolean
+          question_id: string
+          selected_answer: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answered_at?: string
+          created_at?: string
+          feedback?: Database["public"]["Enums"]["ai_answer_feedback"]
+          id?: string
+          is_correct?: boolean
+          question_id?: string
+          selected_answer?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_exam_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "ai_exam_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_exam_questions: {
+        Row: {
+          correct_answer: string
+          created_at: string
+          explanation: string | null
+          id: string
+          options: Json
+          question: string
+          session_id: string
+          source: string | null
+          subtopic: string | null
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          options: Json
+          question: string
+          session_id: string
+          source?: string | null
+          subtopic?: string | null
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          options?: Json
+          question?: string
+          session_id?: string
+          source?: string | null
+          subtopic?: string | null
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_exam_questions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_exam_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_exam_sessions: {
+        Row: {
+          created_at: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id: string
+          started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       blog_ai_summaries: {
         Row: {
           created_at: string
@@ -1029,6 +1150,156 @@ export type Database = {
         }
         Relationships: []
       }
+      review_assignments: {
+        Row: {
+          assigned_at: string
+          created_at: string
+          guru_id: string
+          id: string
+          question_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          created_at?: string
+          guru_id: string
+          id?: string
+          question_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          created_at?: string
+          guru_id?: string
+          id?: string
+          question_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_assignments_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "review_exam_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_exam_questions: {
+        Row: {
+          correct_answer: string
+          created_at: string
+          created_by: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          explanation: string | null
+          id: string
+          options: Json
+          question: string
+          status: Database["public"]["Enums"]["review_question_status"]
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string
+          created_by: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          explanation?: string | null
+          id?: string
+          options: Json
+          question: string
+          status?: Database["public"]["Enums"]["review_question_status"]
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string
+          created_by?: string
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          explanation?: string | null
+          id?: string
+          options?: Json
+          question?: string
+          status?: Database["public"]["Enums"]["review_question_status"]
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      review_feedback: {
+        Row: {
+          approved: boolean | null
+          assignment_id: string
+          created_at: string
+          feedback: string | null
+          guru_id: string
+          id: string
+          reviewed_at: string
+          stars: number | null
+          updated_at: string
+        }
+        Insert: {
+          approved?: boolean | null
+          assignment_id: string
+          created_at?: string
+          feedback?: string | null
+          guru_id: string
+          id?: string
+          reviewed_at?: string
+          stars?: number | null
+          updated_at?: string
+        }
+        Update: {
+          approved?: boolean | null
+          assignment_id?: string
+          created_at?: string
+          feedback?: string | null
+          guru_id?: string
+          id?: string
+          reviewed_at?: string
+          stars?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_feedback_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "review_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_publish_log: {
+        Row: {
+          id: string
+          published_at: string
+          published_by: string
+          question_id: string
+        }
+        Insert: {
+          id?: string
+          published_at?: string
+          published_by: string
+          question_id: string
+        }
+        Update: {
+          id?: string
+          published_at?: string
+          published_by?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_publish_log_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "review_exam_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           created_at: string
@@ -1276,6 +1547,12 @@ export type Database = {
       }
     }
     Enums: {
+      ai_answer_feedback:
+        | "none"
+        | "too_easy"
+        | "hallucinated"
+        | "wrong"
+        | "not_relevant"
       app_role: "user" | "guru" | "admin"
       availability_type: "default" | "exception"
       blog_comment_reaction_type: "like" | "thumbs_up" | "thumbs_down"
@@ -1319,6 +1596,7 @@ export type Database = {
         | "exam_answer"
       reminder_type: "email" | "sms" | "whatsapp" | "one_hour_before"
       review_assignment_status: "pending" | "completed" | "cancelled"
+      review_question_status: "draft" | "under_review" | "published"
       subscription_tier: "free" | "exam" | "consultation" | "premium"
       taxonomy_type: "specialty" | "category" | "topic" | "exam" | "forum"
     }
@@ -1448,6 +1726,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      ai_answer_feedback: [
+        "none",
+        "too_easy",
+        "hallucinated",
+        "wrong",
+        "not_relevant",
+      ],
       app_role: ["user", "guru", "admin"],
       availability_type: ["default", "exception"],
       blog_comment_reaction_type: ["like", "thumbs_up", "thumbs_down"],
@@ -1495,6 +1780,7 @@ export const Constants = {
       ],
       reminder_type: ["email", "sms", "whatsapp", "one_hour_before"],
       review_assignment_status: ["pending", "completed", "cancelled"],
+      review_question_status: ["draft", "under_review", "published"],
       subscription_tier: ["free", "exam", "consultation", "premium"],
       taxonomy_type: ["specialty", "category", "topic", "exam", "forum"],
     },
