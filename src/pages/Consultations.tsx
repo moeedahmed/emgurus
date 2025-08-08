@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GuruCard, type Guru } from "@/components/consultations/GuruCard";
 import { BookingModal } from "@/components/consultations/BookingModal";
-
+import { supabase } from "@/integrations/supabase/client";
 interface SampleGuru {
   id: string;
   name: string;
@@ -97,14 +97,40 @@ const Consultations = () => {
           avatar_url: x.avatar_url || null,
           timezone: x.timezone || null,
         }));
-        if (mapped.length) setGurus(mapped);
+
+        if (mapped.length) {
+          setGurus(mapped);
+        } else {
+          // Auto-seed sample gurus if none exist (no admin action needed)
+          try {
+            await supabase.functions.invoke('seed-sample-gurus', { body: {} });
+            const res2 = await fetch(`${SUPABASE_EDGE}/api/gurus`);
+            if (res2.ok) {
+              const data2 = await res2.json();
+              const items2: ApiGuru[] = data2.items || data2 || [];
+              const mapped2: Guru[] = items2.map((x) => ({
+                id: (x.id || x.user_id) as string,
+                full_name: x.full_name || x.name || "Guru",
+                specialty: x.specialty || null,
+                country: x.country || null,
+                price_per_30min: x.price_per_30min ?? null,
+                exams: x.exams || [],
+                bio: x.bio || null,
+                avatar_url: x.avatar_url || null,
+                timezone: x.timezone || null,
+              }));
+              if (mapped2.length) setGurus(mapped2);
+            }
+          } catch (seedErr) {
+            console.error('Auto-seed failed', seedErr);
+          }
+        }
       } catch (e) {
         console.error(e);
       }
     };
     load();
   }, []);
-
   const countries = useMemo(() => ["all", ...Array.from(new Set(gurus.map(g => g.country).filter(Boolean))) as string[]], [gurus]);
   const specialties = useMemo(() => ["all", ...Array.from(new Set(gurus.map(g => g.specialty).filter(Boolean))) as string[]], [gurus]);
   const exams = useMemo(() => ["all", ...Array.from(new Set(gurus.flatMap(g => g.exams || [])))], [gurus]);
