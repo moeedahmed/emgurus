@@ -61,22 +61,21 @@ const Header = () => {
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/') }>
+          <button aria-label="Go to home" onClick={() => navigate('/')} className="flex items-center space-x-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">
             <img src={logo} alt="EM Gurus logo" className="w-8 h-8 rounded-md" />
             <span className="text-xl font-bold text-primary">EM Gurus</span>
-          </div>
+          </button>
 
           <nav className="hidden md:flex items-center space-x-8">
-            <button onClick={() => navigate('/')} className="text-muted-foreground hover:text-primary transition-colors">Home</button>
+            <button onClick={() => navigate('/')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Home</button>
             <HoverCard>
               <HoverCardTrigger asChild>
-                <button onClick={() => navigate('/blogs')} className="text-muted-foreground hover:text-primary transition-colors">Blogs</button>
+                <button onClick={() => navigate('/blogs')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Blogs</button>
               </HoverCardTrigger>
               <HoverCardContent className="w-[520px]">
                 <div className="grid grid-cols-2 gap-3">
                   {presetCats.map((c) => (
-                    <button key={c} onClick={() => navigate(`/blogs?category=${encodeURIComponent(c)}`)} className="flex items-center justify-between rounded-md border p-2 hover:bg-accent">
+                    <button key={c} onClick={() => navigate(`/blogs?category=${encodeURIComponent(c)}`)} className="flex items-center justify-between rounded-md border p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">
                       <span>{c}</span>
                       <span className="text-xs text-muted-foreground">{catCounts[c] ?? 0}</span>
                     </button>
@@ -84,9 +83,9 @@ const Header = () => {
                 </div>
               </HoverCardContent>
             </HoverCard>
-            <button onClick={() => navigate('/exams')} className="text-muted-foreground hover:text-primary transition-colors">Exams</button>
-            <button onClick={() => navigate('/consultations')} className="text-muted-foreground hover:text-primary transition-colors">Consultations</button>
-            <button onClick={() => navigate('/forums')} className="text-muted-foreground hover:text-primary transition-colors">Forums</button>
+            <button onClick={() => navigate('/exams')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Exams</button>
+            <button onClick={() => navigate('/consultations')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Consultations</button>
+            <button onClick={() => navigate('/forums')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Forums</button>
           </nav>
 
           {/* Desktop User Menu */}
@@ -134,7 +133,8 @@ const Header = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2"
+            aria-label="Toggle menu"
+            className="md:hidden p-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? (
@@ -149,11 +149,11 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <nav className="flex flex-col space-y-4">
-              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/'); setIsMenuOpen(false);}}>Home</button>
-              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/blogs'); setIsMenuOpen(false);}}>Blogs</button>
-              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/exams'); setIsMenuOpen(false);}}>Exams</button>
-              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/consultations'); setIsMenuOpen(false);}}>Consultations</button>
-              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/forums'); setIsMenuOpen(false);}}>Forums</button>
+              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/'); setIsMenuOpen(false);}}>Home</button>
+              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/blogs'); setIsMenuOpen(false);}}>Blogs</button>
+              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/exams'); setIsMenuOpen(false);}}>Exams</button>
+              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/consultations'); setIsMenuOpen(false);}}>Consultations</button>
+              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/forums'); setIsMenuOpen(false);}}>Forums</button>
               <div className="flex flex-col space-y-4 pt-4">
                 {user ? (
                   <>

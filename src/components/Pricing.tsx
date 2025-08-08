@@ -209,8 +209,8 @@ const Pricing = () => {
             All plans include a 14-day free trial. No credit card required.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="outline">Compare All Features</Button>
-            <Button variant="ghost">Contact Sales</Button>
+            <Button variant="outline" onClick={() => navigate('/coming-soon')} aria-label="Compare all features">Compare All Features</Button>
+            <Button variant="ghost" onClick={() => navigate('/coming-soon')} aria-label="Contact sales">Contact Sales</Button>
           </div>
         </div>
       </div>

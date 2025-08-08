@@ -87,6 +87,7 @@ const Hero = () => {
                 src={heroImage}
                 alt="Medical professionals collaborating with AI technology"
                 className="w-full h-auto rounded-2xl shadow-strong"
+                decoding="async"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent rounded-2xl"></div>
             </div>
