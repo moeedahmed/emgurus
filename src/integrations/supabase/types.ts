@@ -454,6 +454,9 @@ export type Database = {
           exams: string[] | null
           full_name: string | null
           id: string
+          languages: string[] | null
+          linkedin: string | null
+          position: string | null
           price_per_30min: number | null
           specialty: string | null
           subscription_tier:
@@ -461,8 +464,11 @@ export type Database = {
             | null
           timezone: string | null
           title: string | null
+          twitter: string | null
           updated_at: string
           user_id: string
+          website: string | null
+          years_experience: number | null
         }
         Insert: {
           avatar_url?: string | null
@@ -475,6 +481,9 @@ export type Database = {
           exams?: string[] | null
           full_name?: string | null
           id?: string
+          languages?: string[] | null
+          linkedin?: string | null
+          position?: string | null
           price_per_30min?: number | null
           specialty?: string | null
           subscription_tier?:
@@ -482,8 +491,11 @@ export type Database = {
             | null
           timezone?: string | null
           title?: string | null
+          twitter?: string | null
           updated_at?: string
           user_id: string
+          website?: string | null
+          years_experience?: number | null
         }
         Update: {
           avatar_url?: string | null
@@ -496,6 +508,9 @@ export type Database = {
           exams?: string[] | null
           full_name?: string | null
           id?: string
+          languages?: string[] | null
+          linkedin?: string | null
+          position?: string | null
           price_per_30min?: number | null
           specialty?: string | null
           subscription_tier?:
@@ -503,8 +518,11 @@ export type Database = {
             | null
           timezone?: string | null
           title?: string | null
+          twitter?: string | null
           updated_at?: string
           user_id?: string
+          website?: string | null
+          years_experience?: number | null
         }
         Relationships: []
       }

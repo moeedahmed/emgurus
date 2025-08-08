@@ -1,12 +1,27 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
+  const [checking, setChecking] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    (async () => {
+      if (!user) { setChecking(false); return; }
+      // Skip check on onboarding route
+      if (location.pathname.startsWith('/onboarding')) { setChecking(false); return; }
+      const { data } = await supabase.from('profiles').select('full_name, country, specialty, timezone, exams').eq('user_id', user.id).maybeSingle();
+      const missing = !data?.full_name || !data?.country || !data?.specialty || !data?.timezone || !(data?.exams && (data.exams as any[]).length > 0);
+      setNeedsOnboarding(missing);
+      setChecking(false);
+    })();
+  }, [user, location.pathname]);
+
+  if (loading || checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary" />
@@ -16,6 +31,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (!user) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  if (needsOnboarding) {
+    return <Navigate to="/onboarding" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

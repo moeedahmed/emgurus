@@ -157,8 +157,10 @@ export default function Profile() {
 
           <div className="flex gap-3 pt-2">
             <Link to="/consultations"><Button variant="secondary">Find Gurus</Button></Link>
-            {roles.includes('guru') && (
+            {roles.includes('guru') ? (
               <Link to="/guru/availability"><Button>My Availability</Button></Link>
+            ) : (
+              <ApplyGuruButton />
             )}
           </div>
         </Card>
@@ -176,7 +178,7 @@ export default function Profile() {
                 return (
                   <li key={b.id} className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="font-medium text-sm">{guruNames[b.guru_id]?.name || 'Guru'}</div>
+                      <div className="font-medium text-sm"><Link to={`/profile/${b.guru_id}`} className="hover:underline">{guruNames[b.guru_id]?.name || 'Guru'}</Link></div>
                       <div className="text-xs text-muted-foreground">
                         {new Date(b.start_datetime).toLocaleString()} • {b.status}
                       </div>
@@ -217,5 +219,66 @@ export default function Profile() {
         </Card>
       </section>
     </main>
+  );
+}
+
+function ApplyGuruButton() {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [why, setWhy] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('guru_applications')
+        .select('id, status')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (data && data.length > 0 && data[0].status === 'pending') setPending(true);
+    })();
+  }, [user]);
+
+  const submit = async () => {
+    if (!user) return;
+    try {
+      setSubmitting(true);
+      const { error } = await supabase.from('guru_applications').insert({ user_id: user.id, notes: why, status: 'pending' });
+      if (error) throw error;
+      setPending(true);
+      toast({ title: 'Application submitted', description: 'We will notify you after review.' });
+      setOpen(false);
+    } catch (e: any) {
+      toast({ title: 'Could not submit', description: e.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <Button onClick={() => setOpen(true)} disabled={pending}>Apply as Guru</Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apply to become a Guru</AlertDialogTitle>
+            <AlertDialogDescription>
+              Share a short note on why you want to become a Guru. Admins will review your profile.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="why">Why do you want to become a Guru?</Label>
+            <textarea id="why" value={why} onChange={(e) => setWhy(e.target.value)} className="min-h-[100px] rounded-md border p-2 bg-background" />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogAction onClick={submit} disabled={submitting}>Submit</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

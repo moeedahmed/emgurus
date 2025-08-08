@@ -34,6 +34,7 @@ import Taxonomy from "./pages/admin/Taxonomy";
 import Profile from "./pages/Profile";
 import PublicProfile from "./pages/PublicProfile";
 import Bookings from "./pages/Bookings";
+import Onboarding from "./pages/Onboarding";
 
 const queryClient = new QueryClient();
 
@@ -97,8 +98,8 @@ const App = () => (
                 }
               />
 
-              <Route path="/forums" element={<Forums />} />
               <Route path="/consultations" element={<Consultations />} />
+              <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/profile/:id" element={<PublicProfile />} />
               <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />

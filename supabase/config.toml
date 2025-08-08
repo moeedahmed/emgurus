@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.seed-sample-gurus]
 verify_jwt = false
+
+[functions.guru-applications]
+verify_jwt = true
