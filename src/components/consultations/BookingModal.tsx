@@ -1,13 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, isSameDay, parseISO } from "date-fns";
-import { cn } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
 import type { Guru } from "./GuruCard";
 import { toast } from "@/components/ui/use-toast";
 
@@ -15,12 +12,6 @@ const SUPABASE_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/con
 
 type Slot = { start: string; end: string };
 
-function toSlotsForDate(slots: Slot[], day: Date): Slot[] {
-  return slots.filter((s) => {
-    const sd = parseISO(s.start);
-    return isSameDay(sd, day);
-  });
-}
 
 export function BookingModal({ guru, open, onOpenChange }: {
   guru: Guru | null;
@@ -29,18 +20,14 @@ export function BookingModal({ guru, open, onOpenChange }: {
 }) {
   const { session, signInWithGoogle } = useAuth();
   const [slots, setSlots] = useState<Slot[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const daySlots = useMemo(() => (selectedDate ? toSlotsForDate(slots, selectedDate) : []), [slots, selectedDate]);
-
   useEffect(() => {
     if (!open || !guru?.id) return;
-    // reset local state
-    setSelectedDate(undefined);
     setSelectedSlot(null);
 
     // fetch availability for next 14 days
@@ -127,7 +114,6 @@ export function BookingModal({ guru, open, onOpenChange }: {
                         variant={selectedSlot?.start === s.start ? "default" : "outline"}
                         onClick={() => {
                           setSelectedSlot(s);
-                          setSelectedDate(new Date(s.start));
                         }}
                         className="justify-start"
                       >
@@ -140,43 +126,6 @@ export function BookingModal({ guru, open, onOpenChange }: {
               </div>
             </div>
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("justify-start font-normal", !selectedDate && "text-muted-foreground")}> 
-                  {selectedDate ? format(selectedDate, "PPP") : "Select a day"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar 
-                  mode="single" 
-                  selected={selectedDate} 
-                  onSelect={setSelectedDate} 
-                  initialFocus 
-                  className={cn("p-3 pointer-events-auto")} 
-                />
-              </PopoverContent>
-            </Popover>
-
-            <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">Available times</div>
-              <div className="grid grid-cols-2 gap-2">
-                {selectedDate && daySlots.length > 0 ? (
-                  daySlots.map((s) => (
-                    <Button
-                      key={s.start}
-                      variant={selectedSlot?.start === s.start ? "default" : "outline"}
-                      onClick={() => setSelectedSlot(s)}
-                    >
-                      {format(parseISO(s.start), "HH:mm")} – {format(parseISO(s.end), "HH:mm")}
-                    </Button>
-                  ))
-                ) : (
-                  <div className="col-span-2 text-sm text-muted-foreground">
-                    {selectedDate ? "No times this day" : "Pick a day to see times"}
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
 
           <div className="space-y-4">
