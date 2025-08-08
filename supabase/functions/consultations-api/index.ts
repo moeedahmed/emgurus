@@ -193,7 +193,8 @@ async function handle(req: Request): Promise<Response> {
 
       let query = supabase
         .from("profiles")
-        .select("user_id, full_name, avatar_url, specialty, country, exams, price_per_30min, timezone, bio", { count: "exact" });
+        .select("user_id, full_name, avatar_url, specialty, country, exams, price_per_30min, timezone, bio", { count: "exact" })
+        .neq("user_id", "080c2b2d-2b51-4484-9027-a037216c3a7c");
       // RLS exposes only guru profiles via existing policy
 
       if (search) {
@@ -313,10 +314,10 @@ async function handle(req: Request): Promise<Response> {
       const { guru_id, start_datetime_utc, end_datetime_utc, communication_method, notes } = body;
       if (!guru_id || !start_datetime_utc || !end_datetime_utc) return badRequest("guru_id, start_datetime_utc, end_datetime_utc required");
 
-      // Fetch guru price
+      // Fetch guru price and name
       const { data: prof, error: pErr } = await supabase
         .from("profiles")
-        .select("price_per_30min")
+        .select("price_per_30min, full_name")
         .eq("user_id", guru_id)
         .maybeSingle();
       if (pErr) return serverError("Failed to get guru pricing", pErr);
@@ -327,6 +328,42 @@ async function handle(req: Request): Promise<Response> {
       const units = Math.ceil(minutes / 30);
       const price = Math.max(0, units * price30);
 
+      // Build Jitsi link when confirming free bookings
+      const ts = `${start.getUTCFullYear()}${String(start.getUTCMonth()+1).padStart(2,'0')}${String(start.getUTCDate()).padStart(2,'0')}T${String(start.getUTCHours()).padStart(2,'0')}${String(start.getUTCMinutes()).padStart(2,'0')}`;
+      const guruName = (prof?.full_name || 'Guru').replace(/[^A-Za-z0-9]+/g, '-');
+      const jitsi = `https://meet.jit.si/${guruName}-${ts}`;
+
+      if (price <= 0) {
+        // Instant confirmation for free consultations
+        const { data, error } = await supabase
+          .from("consult_bookings")
+          .insert({
+            guru_id,
+            user_id: user.id,
+            start_datetime: start.toISOString(),
+            end_datetime: end.toISOString(),
+            status: "confirmed",
+            payment_status: "paid",
+            meeting_link: jitsi,
+            price: 0,
+            communication_method: communication_method ?? null,
+            notes: notes ?? null,
+          })
+          .select()
+          .maybeSingle();
+        if (error) return serverError("Failed to create booking", error);
+
+        // Schedule reminders
+        const r24 = new Date(start.getTime() - 24 * 60 * 60 * 1000).toISOString();
+        const r1 = new Date(start.getTime() - 60 * 60 * 1000).toISOString();
+        await supabase.from("consult_reminders").insert([
+          { booking_id: data.id, reminder_type: "email", scheduled_time: r24 },
+          { booking_id: data.id, reminder_type: "email", scheduled_time: r1 },
+        ]);
+        return json({ booking: data });
+      }
+
+      // Paid flow: create pending booking
       const { data, error } = await supabase
         .from("consult_bookings")
         .insert({
@@ -428,8 +465,25 @@ async function handle(req: Request): Promise<Response> {
         .eq("status", "pending");
       if (upPayErr) console.warn("Payment update warning:", upPayErr.message);
 
-      // Create placeholder meeting link if not set
-      const meeting_link = `https://meet.jit.si/emgurus-${bookingId}`;
+      // Build Jitsi link from guru name and start time
+      const { data: bookForLink } = await supabase
+        .from("consult_bookings")
+        .select("start_datetime, guru_id")
+        .eq("id", bookingId)
+        .maybeSingle();
+      let meeting_link = undefined as string | undefined;
+      if (bookForLink?.start_datetime && bookForLink?.guru_id) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", bookForLink.guru_id)
+          .maybeSingle();
+        const start = new Date(bookForLink.start_datetime);
+        const ts = `${start.getUTCFullYear()}${String(start.getUTCMonth()+1).padStart(2,'0')}${String(start.getUTCDate()).padStart(2,'0')}T${String(start.getUTCHours()).padStart(2,'0')}${String(start.getUTCMinutes()).padStart(2,'0')}`;
+        const name = (prof?.full_name || 'Guru').replace(/[^A-Za-z0-9]+/g, '-');
+        meeting_link = `https://meet.jit.si/${name}-${ts}`;
+      }
+
       const { error: upBookErr } = await supabase
         .from("consult_bookings")
         .update({ status: "confirmed", payment_status: "paid", meeting_link })

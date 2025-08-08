@@ -78,6 +78,13 @@ export function BookingModal({ guru, open, onOpenChange }: {
       const { booking } = await res.json();
       if (!booking?.id) throw new Error("Invalid booking response");
 
+      // Free consultations: instantly confirmed by API
+      if (!guru.price_per_30min || Number(guru.price_per_30min) <= 0) {
+        toast({ title: "Free consultation confirmed" });
+        onOpenChange(false);
+        return;
+      }
+
       // 2) Create Stripe checkout session
       const pay = await fetch(`${SUPABASE_EDGE}/api/payments`, {
         method: "POST",
