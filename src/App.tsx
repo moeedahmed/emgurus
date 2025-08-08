@@ -35,6 +35,8 @@ import Profile from "./pages/Profile";
 import PublicProfile from "./pages/PublicProfile";
 import Bookings from "./pages/Bookings";
 import Onboarding from "./pages/Onboarding";
+import ForumCategory from "./pages/ForumCategory";
+import ThreadView from "./pages/ThreadView";
 
 const queryClient = new QueryClient();
 
@@ -99,6 +101,9 @@ const App = () => (
               />
 
               <Route path="/consultations" element={<Consultations />} />
+              <Route path="/forums" element={<Forums />} />
+              <Route path="/forums/:category_id" element={<ForumCategory />} />
+              <Route path="/threads/:thread_id" element={<ThreadView />} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/profile/:id" element={<PublicProfile />} />
