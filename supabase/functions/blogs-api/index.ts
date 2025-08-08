@@ -85,8 +85,13 @@ serve(async (req) => {
     const url = new URL(req.url);
     // Normalize path to work with both direct domain and function subpath
     const rawPath = url.pathname;
-    let pathname = rawPath.replace(/^\/?blogs-api\/?/, "/");
-    pathname = pathname.replace(/^\/+/, "/");
+    let pathname = rawPath
+      // strip common prefixes when calling via full URL or gateway
+      .replace(/^\/functions\/v1\/blogs-api(?=\/|$)/, "")
+      .replace(/^\/blogs-api(?=\/|$)/, "")
+      .replace(/^\/+/, "/");
+    // default root to list endpoint
+    if (pathname === "/") pathname = "/api/blogs";
     const supabase = getClient(req);
     const {
       data: { user },
