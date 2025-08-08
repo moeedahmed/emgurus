@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import BlogCard from "@/components/blogs/BlogCard";
 import BlogsFilterPanel from "@/components/blogs/BlogsFilterPanel";
 import TopAuthorsPanel from "@/components/blogs/TopAuthorsPanel";
-
+import PopularCategoriesPanel from "@/components/blogs/PopularCategoriesPanel";
+import RecentlyDiscussedPanel from "@/components/blogs/RecentlyDiscussedPanel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PageHero from "@/components/PageHero";
@@ -82,6 +83,14 @@ export default function Blogs() {
     return Array.from(stats.values())
       .map((s) => ({ id: s.id, name: s.name, avatar: s.avatar, posts: s.posts, views: s.views, likes: s.likes, online: now - s.lastDate < 7 * 24 * 60 * 60 * 1000 }))
       .sort((a, b) => b.likes - a.likes)
+      .slice(0, 5);
+  }, [items]);
+
+  const recentDiscussed = useMemo(() => {
+    return [...items]
+      .filter((i) => i.slug)
+      .map((i) => ({ slug: i.slug as string, title: i.title as string, comments: i.counts?.comments || 0 }))
+      .sort((a, b) => b.comments - a.comments)
       .slice(0, 5);
   }, [items]);
 
@@ -198,6 +207,8 @@ export default function Blogs() {
                 onChange={setParam}
               />
               <TopAuthorsPanel authors={topAuthors} />
+              <PopularCategoriesPanel categories={categories} />
+              <RecentlyDiscussedPanel items={recentDiscussed} />
             </div>
           </div>
         </aside>

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Share2, Copy, Mail, Twitter, Linkedin, Facebook, MessageCircle } from "lucide-react";
-
+import { toast } from "sonner";
 export default function ShareButtons({
   title,
   url,
@@ -24,7 +24,10 @@ export default function ShareButtons({
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(url);
-    } catch {}
+      toast.success("Link copied to clipboard");
+    } catch {
+      toast.error("Copy failed");
+    }
   };
 
   const sysShare = async () => {
