@@ -186,8 +186,9 @@ export type Database = {
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          reviewer_id: string | null
           slug: string | null
-          status: Database["public"]["Enums"]["post_status"]
+          status: Database["public"]["Enums"]["blog_post_status"]
           tags: string[] | null
           title: string
           updated_at: string
@@ -205,8 +206,9 @@ export type Database = {
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          reviewer_id?: string | null
           slug?: string | null
-          status?: Database["public"]["Enums"]["post_status"]
+          status?: Database["public"]["Enums"]["blog_post_status"]
           tags?: string[] | null
           title: string
           updated_at?: string
@@ -224,8 +226,9 @@ export type Database = {
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          reviewer_id?: string | null
           slug?: string | null
-          status?: Database["public"]["Enums"]["post_status"]
+          status?: Database["public"]["Enums"]["blog_post_status"]
           tags?: string[] | null
           title?: string
           updated_at?: string
@@ -946,6 +949,7 @@ export type Database = {
       app_role: "user" | "guru" | "admin"
       availability_type: "default" | "exception"
       blog_comment_reaction_type: "like" | "thumbs_up" | "thumbs_down"
+      blog_post_status: "draft" | "in_review" | "published" | "archived"
       blog_reaction_type:
         | "like"
         | "love"
@@ -1109,6 +1113,7 @@ export const Constants = {
       app_role: ["user", "guru", "admin"],
       availability_type: ["default", "exception"],
       blog_comment_reaction_type: ["like", "thumbs_up", "thumbs_down"],
+      blog_post_status: ["draft", "in_review", "published", "archived"],
       blog_reaction_type: [
         "like",
         "love",

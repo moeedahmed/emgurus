@@ -54,7 +54,7 @@ const ModeratePosts = () => {
     const { data, error } = await supabase
       .from("blog_posts")
       .select("id,title,description,author_id,created_at,status")
-      .eq("status", "submitted")
+      .eq("status", "in_review")
       .order("created_at", { ascending: true });
     if (error) console.error(error);
     const list = (data as any) || [];
@@ -105,7 +105,7 @@ const ModeratePosts = () => {
     }
   };
 
-  const act = async (postId: string, status: "published" | "rejected") => {
+  const act = async (postId: string, status: "published" | "archived") => {
     if (!user) return;
     try {
       const { error } = await supabase
@@ -125,7 +125,7 @@ const ModeratePosts = () => {
         .update({ status: "completed" })
         .eq("post_id", postId)
         .eq("status", "pending");
-      toast.success(status === "published" ? "Post published" : "Post rejected");
+      toast.success(status === "published" ? "Post published" : "Post archived");
       loadPosts();
     } catch (e) {
       console.error(e);
@@ -157,7 +157,7 @@ const ModeratePosts = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => act(p.id, "rejected")}>Reject</Button>
+                <Button variant="outline" onClick={() => act(p.id, "archived")}>Reject</Button>
                 <Button onClick={() => act(p.id, "published")}>Publish</Button>
               </div>
             </div>

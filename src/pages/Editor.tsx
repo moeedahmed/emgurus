@@ -86,7 +86,7 @@ const Editor = () => {
 
   const isDescRecommended = useMemo(() => description.length >= 120 && description.length <= 180, [description]);
 
-  const save = async (status: "draft" | "submitted") => {
+  const save = async (status: "draft" | "in_review") => {
     try {
       if (!user) return;
       if (title.trim().length < 8) {
@@ -165,7 +165,7 @@ const Editor = () => {
             </DialogContent>
           </Dialog>
           <Button variant="outline" onClick={() => save("draft")} disabled={loading}>Save Draft</Button>
-          <Button onClick={() => save("submitted")} disabled={loading}>Submit</Button>
+          <Button onClick={() => save("in_review")} disabled={loading}>Submit</Button>
         </div>
       </div>
       <Card className="p-6 space-y-6">

@@ -29,7 +29,7 @@ const AssignReviews = () => {
     const { data } = await supabase
       .from("blog_posts")
       .select("id,title,description,created_at")
-      .eq("status", "submitted")
+      .eq("status", "in_review")
       .order("created_at", { ascending: true });
     setPosts((data as any) || []);
 
