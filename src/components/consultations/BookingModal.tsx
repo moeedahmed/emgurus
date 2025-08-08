@@ -46,16 +46,16 @@ export function BookingModal({ guru, open, onOpenChange }: {
   const daySlots = useMemo(() => (selectedDate ? toSlotsForDate(slots, selectedDate) : []), [slots, selectedDate]);
 
   useEffect(() => {
-    if (!open || !guru) return;
+    if (!open || !guru?.id) return;
     // reset local state
     setSelectedDate(undefined);
     setSelectedSlot(null);
 
     // fetch availability for next 30 days
-    const start = format(new Date(), "yyyy-MM-dd");
-    const end = format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+    const from = format(new Date(), "yyyy-MM-dd");
+    const to = format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
 
-    const url = `${SUPABASE_EDGE}/api/gurus/${guru.id}/availability?start=${start}&end=${end}`;
+    const url = `${SUPABASE_EDGE}/api/gurus/${guru.id}/availability?from=${from}&to=${to}`;
     setLoading(true);
     fetch(url, { headers: { "Content-Type": "application/json" } })
       .then(async (r) => {
@@ -70,7 +70,7 @@ export function BookingModal({ guru, open, onOpenChange }: {
         toast({ title: "Could not load availability", description: "Please try again later." });
       })
       .finally(() => setLoading(false));
-  }, [open, guru]);
+  }, [open, guru?.id]);
 
   const confirmBooking = async () => {
     if (!guru || !selectedSlot) return;
