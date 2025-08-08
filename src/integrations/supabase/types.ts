@@ -222,40 +222,91 @@ export type Database = {
           },
         ]
       }
+      guru_applications: {
+        Row: {
+          bio: string | null
+          created_at: string
+          credentials: string | null
+          id: string
+          notes: string | null
+          specialty: string | null
+          status: Database["public"]["Enums"]["guru_application_status"]
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          credentials?: string | null
+          id?: string
+          notes?: string | null
+          specialty?: string | null
+          status?: Database["public"]["Enums"]["guru_application_status"]
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          credentials?: string | null
+          id?: string
+          notes?: string | null
+          specialty?: string | null
+          status?: Database["public"]["Enums"]["guru_application_status"]
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
+          credentials: string | null
           email: string | null
           full_name: string | null
           id: string
+          specialty: string | null
           subscription_tier:
             | Database["public"]["Enums"]["subscription_tier"]
             | null
+          title: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
+          credentials?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
+          specialty?: string | null
           subscription_tier?:
             | Database["public"]["Enums"]["subscription_tier"]
             | null
+          title?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
+          credentials?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
+          specialty?: string | null
           subscription_tier?:
             | Database["public"]["Enums"]["subscription_tier"]
             | null
+          title?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -448,6 +499,7 @@ export type Database = {
         | "MRCEM_PRIMARY"
         | "MRCEM_SBA"
         | "FRCEM_SBA"
+      guru_application_status: "pending" | "approved" | "rejected"
       post_status: "draft" | "submitted" | "approved" | "rejected" | "published"
       question_status: "pending" | "approved" | "rejected"
       review_assignment_status: "pending" | "completed" | "cancelled"
@@ -592,6 +644,7 @@ export const Constants = {
         "MRCEM_SBA",
         "FRCEM_SBA",
       ],
+      guru_application_status: ["pending", "approved", "rejected"],
       post_status: ["draft", "submitted", "approved", "rejected", "published"],
       question_status: ["pending", "approved", "rejected"],
       review_assignment_status: ["pending", "completed", "cancelled"],
