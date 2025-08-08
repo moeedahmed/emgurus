@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Pencil, Search, ThumbsUp, Eye } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import fallbackCover from "@/assets/medical-blog.jpg";
 
 interface PostItem {
@@ -47,6 +49,7 @@ const Blog = () => {
   const q = searchParams.get('q') || '';
   const page = Number(searchParams.get('page') || '1');
   const tag = searchParams.get('tag') || '';
+  const sort = searchParams.get('sort') || 'popular';
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -108,11 +111,33 @@ const Blog = () => {
     setSearchParams(next);
   };
 
-  const allTags = useMemo(() => {
+
+  const tagCounts = useMemo(() => {
     const m = new Map<string, number>();
     posts.forEach(p => (p.tags || []).forEach(t => m.set(t, (m.get(t) || 0) + 1)));
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]).map(([t]) => t);
+    return Array.from(m.entries()).sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   }, [posts]);
+
+  const sortedPrimary = useMemo(() => {
+    const arr = [...filtered];
+    switch (sort) {
+      case 'new':
+        return arr.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      case 'old':
+        return arr.sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      case 'liked':
+        return arr.sort((a,b) => (b.likes_count ?? 0) - (a.likes_count ?? 0) || (b.view_count ?? 0) - (a.view_count ?? 0));
+      default:
+        return arr.sort((a,b) => (b.view_count ?? 0) - (a.view_count ?? 0) || (b.likes_count ?? 0) - (a.likes_count ?? 0));
+    }
+  }, [filtered, sort]);
+
+  const popularTop = useMemo(() => sortedPrimary.slice(0, 5), [sortedPrimary]);
+  const recentTop = useMemo(() => {
+    return [...filtered]
+      .sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5);
+  }, [filtered]);
 
   const addSamples = async () => {
     try {
@@ -384,129 +409,90 @@ const Blog = () => {
         )
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-        {/* Recent Blogs grid */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Recent Blogs</h2>
-            <div className="hidden md:flex items-center gap-2 overflow-x-auto">
-              {allTags.slice(0, 10).map((t) => (
-                <Link key={t} to={`/blog/category/${encodeURIComponent(t)}`}>
-                  <Badge variant="secondary" className="whitespace-nowrap cursor-pointer">{t}</Badge>
-                </Link>
-              ))}
+      {/* Sidebar-only layout per request */}
+      <aside className="space-y-6">
+        <Card className="p-4">
+          <h3 className="font-semibold mb-3">Sort By</h3>
+          <RadioGroup value={sort} onValueChange={(v) => setParam('sort', v)} className="grid gap-2">
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="new" id="sort-new" />
+              <Label htmlFor="sort-new">Newest First</Label>
             </div>
-          </div>
-
-          {loading ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {[...Array(9)].map((_, i) => (
-                <Card key={i} className="overflow-hidden">
-                  <Skeleton className="h-40 w-full" />
-                  <div className="p-4 space-y-3">
-                    <Skeleton className="h-5 w-3/4" />
-                    <Skeleton className="h-4 w-2/3" />
-                    <Skeleton className="h-4 w-1/3" />
-                  </div>
-                </Card>
-              ))}
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="old" id="sort-old" />
+              <Label htmlFor="sort-old">Oldest First</Label>
             </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {paginated.map((p) => (
-                <Card key={p.id} className="overflow-hidden cursor-pointer" onClick={() => { if (p.slug) { recordView(p.id); navigate(`/blog/${p.slug}`); }}} role="link" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' && p.slug) { recordView(p.id); navigate(`/blog/${p.slug}`); } }}>
-                  <img
-                    src={p.cover_image_url || fallbackCover}
-                    alt={`Cover image for ${p.title}`}
-                    className="w-full h-40 object-cover"
-                    loading="lazy"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = fallbackCover; }}
-                  />
-                  <div className="p-4">
-                    <div className="mb-2 flex items-center gap-2 flex-wrap">
-                      {(p.tags || ["General"]).slice(0, 3).map((t) => (
-                        <Link key={t} to={`/blog/category/${encodeURIComponent(t)}`} onClick={(e) => e.stopPropagation()}>
-                          <Badge variant="secondary" className="cursor-pointer">{t}</Badge>
-                        </Link>
-                      ))}
-                    </div>
-                    <h3 className="text-lg font-semibold mb-1 line-clamp-2">{p.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-3 mb-3">{p.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" />{p.view_count ?? 0}</span>
-                      <button className={`inline-flex items-center gap-1 transition-opacity ${likedIds.has(p.id) ? 'text-primary' : ''}`} onClick={(e) => { e.stopPropagation(); toggleLike(p.id); }} aria-pressed={likedIds.has(p.id)} aria-label="Like this article">
-                        <ThumbsUp className="h-3.5 w-3.5" />{p.likes_count ?? 0}
-                      </button>
-                      <span>{readTime(p.description || '')} min read</span>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="popular" id="sort-popular" />
+              <Label htmlFor="sort-popular">Most Popular</Label>
             </div>
-          )}
-
-          {/* Pagination */}
-          {!loading && totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-center gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setParam('page', String(page - 1))}>Prev</Button>
-              <span className="text-sm text-muted-foreground">Showing {filtered.length ? (page - 1) * perPage + 1 : 0}–{Math.min(page * perPage, filtered.length)} of {filtered.length} • {perPage} per page</span>
-              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setParam('page', String(page + 1))}>Next</Button>
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="liked" id="sort-liked" />
+              <Label htmlFor="sort-liked">Most Liked</Label>
             </div>
-          )}
+          </RadioGroup>
+        </Card>
 
-          {posts.length === 0 && !loading && (
-            <Card className="p-6 mt-6">
-              <div className="flex items-center justify-between gap-4">
-                <span>No articles yet. Gurus can publish from the Review page.</span>
-                {user && (
-                  <Button onClick={addSamples}>Add sample posts</Button>
-                )}
-              </div>
-            </Card>
-          )}
-        </section>
-
-        {/* Sidebar */}
-        <aside className="space-y-6">
-          <Card className="p-4">
-            <h3 className="font-semibold mb-3">Most Popular</h3>
+        <Card className="p-4">
+          <h3 className="font-semibold mb-3">Most Popular</h3>
+          <ul className="space-y-2 text-sm">
+            {popularTop.map((p) => (
+              <li key={p.id} className="flex items-start justify-between gap-3">
+                <Link to={p.slug ? `/blog/${p.slug}` : '#'} className="hover:underline flex-1 line-clamp-1">{p.title}</Link>
+                <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1"><Eye className="h-3.5 w-3.5" />{p.view_count ?? 0}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 pt-4 border-t">
+            <h4 className="text-sm font-medium mb-2">Recent</h4>
             <ul className="space-y-2 text-sm">
-              {filtered.slice(0, 5).map((p) => (
+              {recentTop.map((p) => (
                 <li key={p.id} className="flex items-start justify-between gap-3">
                   <Link to={p.slug ? `/blog/${p.slug}` : '#'} className="hover:underline flex-1 line-clamp-1">{p.title}</Link>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{pseudoCount(p.id, 300)}</span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{new Date(p.created_at).toLocaleDateString()}</span>
                 </li>
               ))}
             </ul>
-          </Card>
-          <Card className="p-4">
-            <h3 className="font-semibold mb-3">Editor’s Pick</h3>
-            {filtered[1] ? (
-              <div>
-                <p className="text-sm font-medium mb-1 line-clamp-2">{filtered[1].title}</p>
-                <p className="text-xs text-muted-foreground line-clamp-2">{filtered[1].description}</p>
-                {filtered[1].slug && (
-                  <Button variant="link" className="px-0" asChild>
-                    <Link to={`/blog/${filtered[1].slug}`}>Read now →</Link>
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No pick yet.</p>
-            )}
-          </Card>
-          <Card className="p-4">
-            <h3 className="font-semibold mb-3">Browse by Tag</h3>
-            <div className="flex flex-wrap gap-2">
-              {allTags.slice(0, 20).map((t) => (
-                <Link key={t} to={`/blog/category/${encodeURIComponent(t)}`}>
-                  <Badge variant="outline" className="cursor-pointer">{t}</Badge>
-                </Link>
-              ))}
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <h3 className="font-semibold mb-3">Editor’s Pick</h3>
+          {filtered[1] ? (
+            <div>
+              <p className="text-sm font-medium mb-1 line-clamp-2">{filtered[1].title}</p>
+              <p className="text-xs text-muted-foreground line-clamp-2">{filtered[1].description}</p>
+              {filtered[1].slug && (
+                <Button variant="link" className="px-0" asChild>
+                  <Link to={`/blog/${filtered[1].slug}`}>Read now →</Link>
+                </Button>
+              )}
             </div>
-          </Card>
-        </aside>
-      </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No pick yet.</p>
+          )}
+        </Card>
+
+        <Card className="p-4">
+          <h3 className="font-semibold mb-3">Categories</h3>
+          <ul className="space-y-1.5">
+            <li>
+              <Link to="/blog" className="flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-muted/50">
+                <span>All Categories</span>
+                <span className="ml-2 text-xs text-muted-foreground rounded-full border px-2 py-0.5">{posts.length}</span>
+              </Link>
+            </li>
+            {tagCounts.slice(0, 20).map(([t, count]) => (
+              <li key={t as string}>
+                <Link to={`/blog/category/${encodeURIComponent(t as string)}`} className="flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-muted/50">
+                  <span>{t as string}</span>
+                  <span className="ml-2 text-xs text-muted-foreground rounded-full border px-2 py-0.5">{count as number}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </aside>
 
       {/* Mobile FAB */}
       {user && (
