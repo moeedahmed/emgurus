@@ -379,7 +379,7 @@ export type Database = {
           booking_id: string
           created_at?: string
           id?: string
-          reminder_type: Database["public"]["Enums"]["reminder_type"]
+          reminder_type?: Database["public"]["Enums"]["reminder_type"]
           scheduled_time: string
           sent_status?: boolean
           updated_at?: string
