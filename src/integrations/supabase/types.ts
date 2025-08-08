@@ -968,6 +968,179 @@ export type Database = {
         }
         Relationships: []
       }
+      taxonomy_post_terms: {
+        Row: {
+          created_at: string
+          post_id: string
+          term_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          term_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          term_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_tpt_post"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "taxonomy_post_terms_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "taxonomy_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      taxonomy_profile_terms: {
+        Row: {
+          created_at: string
+          profile_id: string
+          term_id: string
+        }
+        Insert: {
+          created_at?: string
+          profile_id: string
+          term_id: string
+        }
+        Update: {
+          created_at?: string
+          profile_id?: string
+          term_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_tpr_profile"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "taxonomy_profile_terms_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "taxonomy_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      taxonomy_question_terms: {
+        Row: {
+          created_at: string
+          question_id: string
+          term_id: string
+        }
+        Insert: {
+          created_at?: string
+          question_id: string
+          term_id: string
+        }
+        Update: {
+          created_at?: string
+          question_id?: string
+          term_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_tqt_question"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "taxonomy_question_terms_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "taxonomy_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      taxonomy_terms: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          kind: Database["public"]["Enums"]["taxonomy_type"]
+          parent_id: string | null
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["taxonomy_type"]
+          parent_id?: string | null
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["taxonomy_type"]
+          parent_id?: string | null
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "taxonomy_terms_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "taxonomy_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      taxonomy_thread_terms: {
+        Row: {
+          created_at: string
+          term_id: string
+          thread_id: string
+        }
+        Insert: {
+          created_at?: string
+          term_id: string
+          thread_id: string
+        }
+        Update: {
+          created_at?: string
+          term_id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_ttt_thread"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "forum_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "taxonomy_thread_terms_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "taxonomy_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1040,6 +1213,7 @@ export type Database = {
       reminder_type: "email" | "sms" | "whatsapp" | "one_hour_before"
       review_assignment_status: "pending" | "completed" | "cancelled"
       subscription_tier: "free" | "exam" | "consultation" | "premium"
+      taxonomy_type: "specialty" | "category" | "topic" | "exam" | "forum"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1207,6 +1381,7 @@ export const Constants = {
       reminder_type: ["email", "sms", "whatsapp", "one_hour_before"],
       review_assignment_status: ["pending", "completed", "cancelled"],
       subscription_tier: ["free", "exam", "consultation", "premium"],
+      taxonomy_type: ["specialty", "category", "topic", "exam", "forum"],
     },
   },
 } as const

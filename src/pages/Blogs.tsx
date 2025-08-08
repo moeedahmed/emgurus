@@ -138,6 +138,10 @@ export default function Blogs() {
         <span className="text-foreground">Blogs</span>
       </nav>
 
+      <div className="mb-4 hidden lg:flex items-center justify-end">
+        <Button onClick={() => navigate('/blogs/new')}>Write Blog</Button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Main list - vertical cards, left aligned */}
         <section className="lg:col-span-8">
@@ -190,9 +194,6 @@ export default function Blogs() {
         <aside className="lg:col-span-4 hidden lg:block">
           <div className="lg:sticky lg:top-20">
             <div className="max-h-[calc(100vh-6rem)] overflow-auto pr-2 space-y-6">
-              <div className="flex justify-end">
-                <Button onClick={() => navigate('/blogs/new')}>Write Blog</Button>
-              </div>
               <BlogsFilterPanel
                 q={q}
                 category={category}
