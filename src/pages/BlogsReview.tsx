@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { publishPost } from "@/lib/blogsApi";
 
 export default function BlogsReview() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [status, setStatus] = useState("in_review");
   const [q, setQ] = useState("");
@@ -21,14 +21,14 @@ export default function BlogsReview() {
     const load = async () => {
       try {
         const res = await fetch(`/functions/v1/blogs-api/api/blogs/admin?status=${encodeURIComponent(status)}`, {
-          headers: { "Content-Type": "application/json", ...(user ? { Authorization: `Bearer ${user?.access_token}` } as any : {}) },
+          headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } as any : {}) },
         });
         const data = await res.json();
         setItems(data.items || []);
       } catch {}
     };
     load();
-  }, [status, user]);
+  }, [status, session?.access_token]);
 
   const onPublish = async (id: string) => {
     try {
