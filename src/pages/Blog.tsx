@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Pencil, Search, ThumbsUp, Eye } from "lucide-react";
+import fallbackCover from "@/assets/medical-blog.jpg";
 
 interface PostItem {
   id: string;
@@ -19,6 +20,8 @@ interface PostItem {
   slug: string | null;
   tags: string[] | null;
   author_id: string;
+  view_count?: number | null;
+  likes_count?: number | null;
 }
 
 const perPage = 9;
@@ -44,6 +47,7 @@ const Blog = () => {
   const q = searchParams.get('q') || '';
   const page = Number(searchParams.get('page') || '1');
   const tag = searchParams.get('tag') || '';
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     document.title = "EMGurus Blog | Medical Insights";
@@ -56,7 +60,7 @@ const Blog = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("blog_posts")
-        .select("id,title,description,cover_image_url,created_at,slug,tags,author_id")
+        .select("id,title,description,cover_image_url,created_at,slug,tags,author_id,view_count,likes_count")
         .eq("status", "published")
         .order("created_at", { ascending: false });
       if (error) console.error(error);

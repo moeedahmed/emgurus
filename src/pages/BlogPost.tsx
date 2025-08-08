@@ -20,6 +20,8 @@ interface Post {
   author_id: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
+  view_count?: number | null;
+  likes_count?: number | null;
 }
 
 const pseudoCount = (seed: string, base: number, spread = 500) => {
@@ -41,25 +43,29 @@ const summarize = (html?: string | null, max = 420) => {
 };
 
 const BlogPost = () => {
-  const { slug } = useParams();
+const { slug } = useParams();
   const { user } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
   const [related, setRelated] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [viewCount, setViewCount] = useState<number>(0);
+  const [likeCount, setLikeCount] = useState<number>(0);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       const { data } = await supabase
         .from("blog_posts")
-        .select("id,title,description,cover_image_url,created_at,content,tags,author_id,reviewed_by,reviewed_at")
+        .select("id,title,description,cover_image_url,created_at,content,tags,author_id,reviewed_by,reviewed_at,view_count,likes_count,slug")
         .eq("slug", slug)
         .eq("status", "published")
         .maybeSingle();
       const current = (data as any) || null;
       setPost(current);
+      setViewCount(current?.view_count ?? 0);
+      setLikeCount(current?.likes_count ?? 0);
 
       if (current?.tags?.length) {
         const { data: rel } = await supabase
@@ -88,6 +94,37 @@ const BlogPost = () => {
     }
   }, [post]);
 
+  useEffect(() => {
+    if (!post?.id) return;
+    const storageKey = `blog_viewed_${post.id}`;
+    if (sessionStorage.getItem(storageKey)) return;
+    supabase.functions.invoke("blog-record-view", { body: { post_id: post.id } })
+      .then(({ data, error }) => {
+        if (!error && data && typeof data.view_count === 'number') {
+          setViewCount(data.view_count);
+          sessionStorage.setItem(storageKey, '1');
+        }
+      });
+  }, [post?.id]);
+
+  useEffect(() => {
+    if (!user || !post?.id) return;
+    supabase.from('blog_likes').select('id').eq('post_id', post.id).maybeSingle()
+      .then(({ data }) => setLiked(!!data));
+  }, [user?.id, post?.id]);
+
+  const toggleLike = async () => {
+    if (!user || !post?.id) {
+      alert('Please sign in to like');
+      return;
+    };
+    const { data, error } = await supabase.functions.invoke('blog-toggle-like', { body: { post_id: post.id } });
+    if (!error && data) {
+      setLiked(!!data.liked);
+      if (typeof data.likes_count === 'number') setLikeCount(data.likes_count);
+    }
+  };
+
   const publishedDate = useMemo(() =>
     post?.created_at ? new Date(post.created_at) : null
   , [post?.created_at]);
@@ -113,8 +150,6 @@ const BlogPost = () => {
   }
 
   const isHtml = /<\w+[^>]*>/.test(post.content || "");
-  const views = pseudoCount(post.id, 300);
-  const likes = pseudoCount(post.id, 20, 80) + (liked ? 1 : 0);
   const minutes = readTime(post.content);
   const aiSummary = summarize(post.content);
 
@@ -136,15 +171,15 @@ const BlogPost = () => {
               <span>EMGurus Contributor</span>
               <Badge variant="secondary">Guru</Badge>
             </div>
-            {publishedDate && (
-              <span title={publishedDate.toLocaleString()}>
-                {publishedDate.toLocaleDateString()} • {minutes} min read
-              </span>
-            )}
-            <span className="flex items-center gap-1"><Eye className="h-4 w-4" /> {views}</span>
-            <button className="inline-flex items-center gap-1 hover:opacity-80" onClick={() => setLiked((v) => !v)} aria-label="Like this article">
-              <ThumbsUp className="h-4 w-4" /> {likes}
-            </button>
+              {publishedDate && (
+                <span title={publishedDate.toLocaleString()}>
+                  {publishedDate.toLocaleDateString()} • {minutes} min read
+                </span>
+              )}
+              <span className="flex items-center gap-1"><Eye className="h-4 w-4" /> {viewCount}</span>
+              <button className="inline-flex items-center gap-1 hover:opacity-80" onClick={toggleLike} aria-label="Like this article">
+                <ThumbsUp className="h-4 w-4" /> {likeCount}
+              </button>
           </div>
         </header>
 
@@ -170,7 +205,7 @@ const BlogPost = () => {
 
         <div className="mb-4 flex flex-wrap gap-2">
           {(post.tags || ["General"]).map((t) => (
-            <Link key={t} to={`/blog?tag=${encodeURIComponent(t)}`}>
+            <Link key={t} to={`/blog/category/${encodeURIComponent(t)}`}>
               <Badge variant="outline" className="cursor-pointer">{t}</Badge>
             </Link>
           ))}
