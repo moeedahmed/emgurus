@@ -94,12 +94,12 @@ export default function Blogs() {
         </div>
         <div>
           <label className="text-sm text-muted-foreground">Category</label>
-          <Select value={category} onValueChange={(v) => setParam("category", v)}>
+          <Select value={category || "__all__"} onValueChange={(v) => setParam("category", v === "__all__" ? "" : v)}>
             <SelectTrigger>
               <SelectValue placeholder="All" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All</SelectItem>
+              <SelectItem value="__all__">All</SelectItem>
               {categories.map((c) => (
                 <SelectItem key={c.title} value={c.title}>{c.title} ({c.count})</SelectItem>
               ))}
