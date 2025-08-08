@@ -41,8 +41,8 @@ export default function QuestionBank() {
       setLoading(true);
       try {
         let q = supabase.from("questions").select("id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation, reviewed_by, topic, exam_type, difficulty_level, created_at").eq("status","approved");
-        if (exam) q = q.eq("exam_type", exam);
-        if (difficulty) q = q.eq("difficulty_level", difficulty);
+        if (exam) q = q.eq("exam_type", exam as any);
+        if (difficulty) q = q.eq("difficulty_level", difficulty as any);
         if (topic) q = q.ilike("topic", `%${topic}%`);
         if (search) q = q.or(`question_text.ilike.%${search}%,option_a.ilike.%${search}%,option_b.ilike.%${search}%,option_c.ilike.%${search}%,option_d.ilike.%${search}%` as any);
         const { data, error } = await q.limit(50);
@@ -79,9 +79,9 @@ export default function QuestionBank() {
             <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="">All Exams</SelectItem>
-              <SelectItem value="MRCEM Primary">MRCEM Primary</SelectItem>
-              <SelectItem value="MRCEM Intermediate SBA">MRCEM Intermediate SBA</SelectItem>
-              <SelectItem value="FRCEM Final">FRCEM Final</SelectItem>
+              <SelectItem value="MRCEM_PRIMARY">MRCEM Primary</SelectItem>
+              <SelectItem value="MRCEM_SBA">MRCEM Intermediate SBA</SelectItem>
+              <SelectItem value="FRCEM_SBA">FRCEM SBA</SelectItem>
             </SelectContent>
           </Select>
           <Select value={difficulty} onValueChange={setDifficulty}>

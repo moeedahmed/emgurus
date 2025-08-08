@@ -56,7 +56,7 @@ const App = () => (
             <Route element={<SiteLayout />}> 
               <Route path="/" element={<Index />} />
               <Route path="/exams" element={<Exams />} />
-              <Route path="/quiz" element={<Quiz />} />
+              <Route path="/quiz" element={<Navigate to="/exams" replace />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/blogs" element={<Blogs />} />
               <Route path="/blogs/:slug" element={<BlogDetail />} />
