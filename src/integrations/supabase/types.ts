@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      blog_ai_summaries: {
+        Row: {
+          created_at: string
+          model: string | null
+          post_id: string
+          provider: string
+          summary_md: string | null
+        }
+        Insert: {
+          created_at?: string
+          model?: string | null
+          post_id: string
+          provider?: string
+          summary_md?: string | null
+        }
+        Update: {
+          created_at?: string
+          model?: string | null
+          post_id?: string
+          provider?: string
+          summary_md?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_ai_summaries_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: true
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_categories: {
         Row: {
           created_at: string
@@ -45,6 +77,69 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "blog_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_comment_reactions: {
+        Row: {
+          comment_id: string
+          created_at: string
+          reaction: Database["public"]["Enums"]["blog_comment_reaction_type"]
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          reaction: Database["public"]["Enums"]["blog_comment_reaction_type"]
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          reaction?: Database["public"]["Enums"]["blog_comment_reaction_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      blog_comments: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          parent_id: string | null
+          post_id: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          post_id: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "blog_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
             referencedColumns: ["id"]
           },
         ]
@@ -145,6 +240,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      blog_reactions: {
+        Row: {
+          created_at: string
+          post_id: string
+          reaction: Database["public"]["Enums"]["blog_reaction_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          reaction: Database["public"]["Enums"]["blog_reaction_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          reaction?: Database["public"]["Enums"]["blog_reaction_type"]
+          user_id?: string
+        }
+        Relationships: []
       }
       blog_review_assignments: {
         Row: {
@@ -829,6 +945,14 @@ export type Database = {
     Enums: {
       app_role: "user" | "guru" | "admin"
       availability_type: "default" | "exception"
+      blog_comment_reaction_type: "like" | "thumbs_up" | "thumbs_down"
+      blog_reaction_type:
+        | "like"
+        | "love"
+        | "insightful"
+        | "curious"
+        | "thumbs_up"
+        | "thumbs_down"
       booking_payment_status: "unpaid" | "paid" | "refunded"
       booking_status:
         | "pending_payment"
@@ -984,6 +1108,15 @@ export const Constants = {
     Enums: {
       app_role: ["user", "guru", "admin"],
       availability_type: ["default", "exception"],
+      blog_comment_reaction_type: ["like", "thumbs_up", "thumbs_down"],
+      blog_reaction_type: [
+        "like",
+        "love",
+        "insightful",
+        "curious",
+        "thumbs_up",
+        "thumbs_down",
+      ],
       booking_payment_status: ["unpaid", "paid", "refunded"],
       booking_status: [
         "pending_payment",
