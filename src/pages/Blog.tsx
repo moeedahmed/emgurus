@@ -52,6 +52,13 @@ const Blog = () => {
   const sort = searchParams.get('sort') || 'popular';
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
 
+  const setParam = (key: string, value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value); else next.delete(key);
+    if (key !== 'page') next.delete('page');
+    setSearchParams(next);
+  };
+
   useEffect(() => {
     document.title = "EMGurus Blog | Medical Insights";
     const meta = document.querySelector("meta[name='description']");
@@ -102,31 +109,29 @@ const Blog = () => {
 
   const featured = filtered.slice(0, 3);
 
-  const setParam = (key: string, value: string) => {
-    const next = new URLSearchParams(searchParams);
-    if (value) next.set(key, value); else next.delete(key);
-    if (key !== 'page') next.delete('page');
-    setSearchParams(next);
-  };
-
+  // Featured helpers
+  const featuredIds = useMemo(() => new Set(featured.map(p => p.id)), [featured]);
+  const isEditorPick = (p: PostItem) =>
+    featuredIds.has(p.id) || (p.tags || []).some(t => /editor'?s pick/i.test(t) || /featured/i.test(t));
 
   const sortedPrimary = useMemo(() => {
     const arr = [...filtered];
     switch (sort) {
       case 'new':
-        return arr.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       case 'old':
-        return arr.sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        return arr.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       case 'liked':
-        return arr.sort((a,b) => (b.likes_count ?? 0) - (a.likes_count ?? 0) || (b.view_count ?? 0) - (a.view_count ?? 0));
+        return arr.sort((a, b) => (b.likes_count ?? 0) - (a.likes_count ?? 0) || (b.view_count ?? 0) - (a.view_count ?? 0));
       default:
-        return arr.sort((a,b) => (b.view_count ?? 0) - (a.view_count ?? 0) || (b.likes_count ?? 0) - (a.likes_count ?? 0));
+        return arr.sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0) || (b.likes_count ?? 0) - (a.likes_count ?? 0));
     }
   }, [filtered, sort]);
-  const paginatedMain = sortedPrimary.slice((page - 1) * perPage, page * perPage);
-  const totalPages = Math.max(1, Math.ceil(sortedPrimary.length / perPage));
-  const featuredIds = useMemo(() => new Set(featured.map(p => p.id)), [featured]);
-  const isEditorPick = (p: PostItem) => featuredIds.has(p.id) || (p.tags || []).some(t => /editor'?s pick/i.test(t) || /featured/i.test(t));
+
+  // Exclude featured from main list to avoid repetition
+  const mainList = useMemo(() => sortedPrimary.filter(p => !featuredIds.has(p.id)), [sortedPrimary, featuredIds]);
+  const paginatedMain = mainList.slice((page - 1) * perPage, page * perPage);
+  const totalPages = Math.max(1, Math.ceil(mainList.length / perPage));
 
   const addSamples = async () => {
     try {
@@ -403,8 +408,8 @@ const Blog = () => {
         )
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-        <section>
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <section className="max-w-3xl">
           {loading ? (
             <div className="grid grid-cols-1 gap-6">
               {[...Array(9)].map((_, i) => (
@@ -419,7 +424,7 @@ const Blog = () => {
               ))}
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6">
               {paginatedMain.map((p) => (
                 <Card key={p.id} className="relative overflow-hidden cursor-pointer" onClick={() => { if (p.slug) { recordView(p.id); navigate(`/blog/${p.slug}`); }}} role="link" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' && p.slug) { recordView(p.id); navigate(`/blog/${p.slug}`); } }}>
                   {isEditorPick(p) && (
@@ -461,7 +466,7 @@ const Blog = () => {
           {!loading && totalPages > 1 && (
             <div className="mt-6 flex items-center justify-center gap-2">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setParam('page', String(page - 1))}>Prev</Button>
-              <span className="text-sm text-muted-foreground">Showing {sortedPrimary.length ? (page - 1) * perPage + 1 : 0}–{Math.min(page * perPage, sortedPrimary.length)} of {sortedPrimary.length} • {perPage} per page</span>
+              <span className="text-sm text-muted-foreground">Showing {mainList.length ? (page - 1) * perPage + 1 : 0}–{Math.min(page * perPage, mainList.length)} of {mainList.length} • {perPage} per page</span>
               <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setParam('page', String(page + 1))}>Next</Button>
             </div>
           )}
@@ -478,7 +483,7 @@ const Blog = () => {
           )}
         </section>
 
-        <aside className="space-y-6">
+        <aside className="space-y-6 self-start">
           <Card className="p-4">
             <h3 className="font-semibold mb-3">Sort By</h3>
             <RadioGroup value={sort} onValueChange={(v) => setParam('sort', v)} className="grid gap-2">
