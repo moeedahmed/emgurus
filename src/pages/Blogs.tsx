@@ -11,7 +11,7 @@ import RecentlyDiscussedPanel from "@/components/blogs/RecentlyDiscussedPanel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PageHero from "@/components/PageHero";
-
+import FeaturedBlogHero from "@/components/blogs/FeaturedBlogHero";
 export default function Blogs() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,12 +138,19 @@ export default function Blogs() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <PageHero
-        title="EM Gurus Blogs"
-        subtitle="Evidence-based articles, exam guidance, and clinical pearls."
-        align="left"
-        ctas={[{ label: "Write Blog", href: "/blogs/new", variant: "default" }]}
-      />
+      {(() => {
+        const hero = filtered.find((p) => p.cover_image_url) || filtered[0];
+        return hero ? (
+          <FeaturedBlogHero post={hero as any} />
+        ) : (
+          <PageHero
+            title="EM GURUS Blogs"
+            subtitle="Evidence-based articles, exam guidance, and clinical pearls."
+            align="left"
+            ctas={[{ label: "Write Blog", href: "/blogs/new", variant: "default" }]}
+          />
+        );
+      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Main list - vertical cards, left aligned */}

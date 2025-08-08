@@ -2,7 +2,7 @@ import AuthorChip from "@/components/blogs/AuthorChip";
 import ReactionBar from "@/components/blogs/ReactionBar";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
+import fallbackImage from "@/assets/medical-blog.jpg";
 interface BlogCardProps {
   post: {
     id: string;
@@ -21,6 +21,7 @@ interface BlogCardProps {
 }
 
 export default function BlogCard({ post: p, topBadge, onOpen }: BlogCardProps) {
+  const cover = p.cover_image_url || fallbackImage;
   const words = (p.excerpt || "").split(/\s+/).filter(Boolean).length;
   const readMin = Math.max(1, Math.ceil(words / 220));
   const summary = p.excerpt || "Summary not available yet.";
@@ -35,30 +36,27 @@ export default function BlogCard({ post: p, topBadge, onOpen }: BlogCardProps) {
       onClick={onOpen}
       aria-label={`Open blog post ${p.title}`}
     >
-      {p.cover_image_url && (
-        <div className="relative">
-          <img
-            src={p.cover_image_url}
-            alt={`${p.title} cover image`}
-            className="w-full aspect-video object-cover"
-            loading="lazy"
-            decoding="async"
-          />
-          {topBadge?.label && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="absolute top-3 right-3 text-xs px-2 py-1 rounded-full bg-primary/90 text-primary-foreground shadow">
-                    🏅 {topBadge.label}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>Top ranked in category</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-      )}
-
+      <div className="relative">
+        <img
+          src={cover}
+          alt={`${p.title} cover image`}
+          className="w-full aspect-video object-cover"
+          loading="lazy"
+          decoding="async"
+        />
+        {topBadge?.label && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="absolute top-3 right-3 text-xs px-2 py-1 rounded-full bg-primary/90 text-primary-foreground shadow">
+                  🏅 {topBadge.label}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>Top ranked in category</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           {p.category?.title && !/^imported$/i.test(p.category.title) && (
