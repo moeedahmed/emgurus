@@ -9,7 +9,7 @@ import TopAuthorsPanel from "@/components/blogs/TopAuthorsPanel";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-
+import PageHero from "@/components/PageHero";
 
 export default function Blogs() {
   const [items, setItems] = useState<any[]>([]);
@@ -111,7 +111,6 @@ export default function Blogs() {
     }
     return arr;
   }, [items, q, category, tag, sort]);
-
   const topByCat = useMemo(() => {
     const byCat = new Map<string, any[]>();
     for (const it of filtered) {
@@ -130,17 +129,12 @@ export default function Blogs() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="sr-only">EMGurus Blogs — Clinical Education and Exam Guidance</h1>
-
-      <nav className="mb-4 text-sm text-muted-foreground">
-        <button className="hover:underline" onClick={() => navigate('/')}>Home</button>
-        <span className="mx-2">›</span>
-        <span className="text-foreground">Blogs</span>
-      </nav>
-
-      <div className="mb-4 hidden lg:flex items-center justify-end">
-        <Button onClick={() => navigate('/blogs/new')}>Write Blog</Button>
-      </div>
+      <PageHero
+        title="EM Gurus Blogs"
+        subtitle="Evidence-based articles, exam guidance, and clinical pearls."
+        align="left"
+        ctas={[{ label: "Write Blog", href: "/blogs/new", variant: "default" }]}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Main list - vertical cards, left aligned */}

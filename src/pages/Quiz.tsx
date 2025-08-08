@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Brain, CheckCircle, Clock, Zap } from "lucide-react";
+import { CheckCircle, Clock, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ExamSelector from "@/components/ExamSelector";
 import QuizInterface from "@/components/QuizInterface";
+import PageHero from "@/components/PageHero";
 
 interface QuizConfig {
   examType: string;
@@ -53,28 +54,12 @@ const Quiz = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Home
-            </Button>
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <Brain className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold text-primary">EM Gurus Exams</span>
-            </div>
-            <div></div>
-          </div>
-        </div>
-      </div>
+      <PageHero
+        title="EM Gurus Exams"
+        subtitle="Practice with AI-generated or Guru-reviewed questions — pick your mode below."
+        align="left"
+        ctas={[{ label: "Back to Home", href: "/", variant: "outline" }]}
+      />
 
           {/* Main Content */}
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">

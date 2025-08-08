@@ -7,6 +7,7 @@ import { GuruCard, type Guru } from "@/components/consultations/GuruCard";
 import { BookingModal } from "@/components/consultations/BookingModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import PageHero from "@/components/PageHero";
 
 const Consultations = () => {
   const [search, setSearch] = useState("");
@@ -196,10 +197,12 @@ const Consultations = () => {
 
   return (
     <main className="container mx-auto px-4 py-8">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold">Book a Guru for Career Guidance</h1>
-        <p className="text-muted-foreground">Filter by specialty, country, or exam to find the right mentor.</p>
-      </header>
+      <PageHero
+        title="EM Gurus Consultations"
+        subtitle="Filter by specialty, country, or exam to find the right mentor."
+        align="left"
+        ctas={[{ label: "How Consultations Work", href: "/coming-soon", variant: "outline" }]}
+      />
 
       <section className="grid gap-4 md:grid-cols-4 mb-6">
         <Input placeholder="Search by name or specialty" value={search} onChange={(e) => setSearch(e.target.value)} />

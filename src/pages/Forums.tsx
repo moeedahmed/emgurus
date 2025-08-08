@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import PageHero from "@/components/PageHero";
 
 const FORUMS_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/forums-api";
 
@@ -40,10 +41,12 @@ const Forums = () => {
 
   return (
     <main className="container mx-auto px-4 py-8">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold">Forums</h1>
-        <p className="text-muted-foreground">Discuss by topic or exam. Join the EM community.</p>
-      </header>
+      <PageHero
+        title="EM Gurus Forums"
+        subtitle="Discuss by topic or exam. Join the EM community."
+        align="left"
+        ctas={[{ label: "Start a Thread", href: "/coming-soon", variant: "outline" }]}
+      />
 
       {loading ? (
         <div className="min-h-[30vh] flex items-center justify-center">
