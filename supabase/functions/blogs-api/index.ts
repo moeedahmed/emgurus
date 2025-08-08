@@ -438,6 +438,43 @@ serve(async (req) => {
         .update({ status: "published", reviewed_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
+
+      // Try to auto-generate AI summary (non-blocking)
+      try {
+        const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
+        const model = Deno.env.get("OPENAI_MODEL") ?? "gpt-4o-mini";
+        if (openAIApiKey) {
+          const { data: post2 } = await supabase
+            .from("blog_posts")
+            .select("id, title, content")
+            .eq("id", id)
+            .maybeSingle();
+          const content = post2?.content ? stripHtml(post2.content) : "";
+          if ((post2?.title || content)) {
+            const prompt = `Summarize the following blog post for EM clinicians in 5-7 bullet points with concise, high-yield takeaways.\n\nTitle: ${post2?.title ?? ""}\n\nContent:\n${content.slice(0, 12000)}`;
+            const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${openAIApiKey}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model,
+                messages: [
+                  { role: "system", content: "You summarize medical blog posts with precise, actionable bullet points." },
+                  { role: "user", content: prompt },
+                ],
+                temperature: 0.2,
+              }),
+            });
+            const d = await resp.json();
+            const summary = d.choices?.[0]?.message?.content ?? "";
+            if (summary) {
+              await supabase.from("blog_ai_summaries").upsert({ post_id: id, provider: "openai", model, summary_md: summary });
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Auto summary failed", e);
+      }
+
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

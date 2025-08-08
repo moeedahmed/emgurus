@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getBlog, refreshAISummary } from "@/lib/blogsApi";
+import { getBlog } from "@/lib/blogsApi";
 import { Card } from "@/components/ui/card";
 import AuthorChip from "@/components/blogs/AuthorChip";
 import ReactionBar from "@/components/blogs/ReactionBar";
@@ -36,7 +36,9 @@ export default function BlogDetail() {
 
   const contentHtml = useMemo(() => {
     if (!data?.post) return "";
-    const html = data.post.content_html || (data.post.content_md ? data.post.content_md.replace(/\n/g, "<br/>") : "");
+    const html = data.post.content_html
+      || (data.post.content ? data.post.content : "")
+      || (data.post.content_md ? data.post.content_md.replace(/\n/g, "<br/>") : "");
     return DOMPurify.sanitize(html);
   }, [data]);
 
@@ -74,10 +76,25 @@ export default function BlogDetail() {
             <AuthorChip id={p.author.id} name={p.author.name} avatar={p.author.avatar} onClick={(id) => navigate(`/profile/${id}`)} />
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               {p.category?.title && <span>{p.category.title}</span>}
-              {p.reading_minutes && <span>{p.reading_minutes} min read</span>}
-              {p.published_at && <span>{new Date(p.published_at).toLocaleDateString()}</span>}
+              <span>{p.published_at ? new Date(p.published_at).toLocaleDateString() : ""}</span>
+              {(() => {
+                const text = (data.post.content || data.post.content_md || data.post.content_html || "").toString();
+                const words = text.replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length;
+                const mins = Math.max(1, Math.ceil(words / 220));
+                return <span>{mins} min read</span>;
+              })()}
             </div>
           </div>
+
+          {/* quick summary below author/meta */}
+          {data.ai_summary?.summary_md && (
+            <Card className="p-4 bg-muted/30">
+              <div className="font-medium mb-2">🧠 Quick Summary</div>
+              <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                {data.ai_summary.summary_md}
+              </div>
+            </Card>
+          )}
 
           {/* content */}
           <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: contentHtml }} />
@@ -100,30 +117,8 @@ export default function BlogDetail() {
           </section>
         </article>
 
-        {/* right column */}
-        <aside className="lg:col-span-4 space-y-4">
-          {/* AI summary panel */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium">AI‑generated summary</h3>
-              <button className="text-sm text-primary" onClick={async () => {
-                try {
-                  await refreshAISummary(p.id);
-                  toast.success("Requested refresh");
-                } catch (e: any) {
-                  toast.error(e.message || "Failed");
-                }
-              }}>Refresh</button>
-            </div>
-            {data.ai_summary?.summary_md ? (
-              <div className="mt-3 prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-                {data.ai_summary.summary_md}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground mt-2">No summary yet.</p>
-            )}
-          </Card>
-        </aside>
+        {/* right column (reserved for related/ads in future) */}
+        <aside className="lg:col-span-4 space-y-4" />
       </div>
 
       {/* sticky bottom bar */}

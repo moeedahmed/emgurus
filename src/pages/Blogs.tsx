@@ -131,37 +131,47 @@ export default function Blogs() {
         </div>
       </aside>
 
-      {/* Main grid */}
+      {/* Main list - vertical cards */}
       <section className="lg:col-span-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="space-y-6">
           {loading ? (
             Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="h-72 animate-pulse" />
             ))
           ) : filtered.length === 0 ? (
-            <Card className="p-6 col-span-full">No posts yet. Check back soon.</Card>
+            <Card className="p-6">No posts yet. Check back soon.</Card>
           ) : (
-            filtered.map((p) => (
-              <Card key={p.id} className="overflow-hidden group cursor-pointer" onClick={() => navigate(`/blogs/${p.slug}`)}>
-                {p.cover_image_url && (
-                  <img src={p.cover_image_url} alt={`${p.title} cover image`} className="w-full aspect-video object-cover" loading="lazy" />
-                )}
-                <div className="p-4 space-y-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {p.category?.title && <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{p.category.title}</span>}
-                    {(p.tags || []).slice(0, 2).map((t: any) => (
-                      <span key={t.slug} className="text-xs px-2 py-0.5 rounded-full border">#{t.slug}</span>
-                    ))}
+            filtered.map((p) => {
+              const words = (p.excerpt || "").split(/\s+/).filter(Boolean).length;
+              const readMin = Math.max(1, Math.ceil(words / 220));
+              return (
+                <Card key={p.id} className="overflow-hidden group cursor-pointer transition-shadow hover:shadow-md" onClick={() => navigate(`/blogs/${p.slug}`)}>
+                  {p.cover_image_url && (
+                    <img src={p.cover_image_url} alt={`${p.title} cover image`} className="w-full aspect-video object-cover" loading="lazy" />
+                  )}
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {p.category?.title && <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{p.category.title}</span>}
+                      {(p.tags || []).slice(0, 3).map((t: any) => (
+                        <span key={t.slug || t.title} className="text-xs px-2 py-0.5 rounded-full border">#{t.slug || t.title}</span>
+                      ))}
+                    </div>
+                    <h3 className="font-semibold text-lg line-clamp-2 story-link">{p.title}</h3>
+                    {p.excerpt && <p className="text-sm text-muted-foreground line-clamp-3">{p.excerpt}</p>}
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-3">
+                        <AuthorChip id={p.author.id} name={p.author.name} avatar={p.author.avatar} onClick={(id) => navigate(`/profile/${id}`)} />
+                        <span className="text-xs text-muted-foreground">{p.published_at ? new Date(p.published_at).toLocaleDateString() : ""}{words ? ` · ${readMin} min read` : ""}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <ReactionBar postId={p.id} counts={{ likes: p.counts?.likes || 0 }} />
+                        <span>{p.counts?.views || 0} views</span>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="font-semibold line-clamp-2 story-link">{p.title}</h3>
-                  {p.excerpt && <p className="text-sm text-muted-foreground line-clamp-2">{p.excerpt}</p>}
-                  <div className="flex items-center justify-between pt-1">
-                    <AuthorChip id={p.author.id} name={p.author.name} avatar={p.author.avatar} onClick={(id) => navigate(`/profile/${id}`)} />
-                    <ReactionBar postId={p.id} counts={{ likes: p.counts?.likes || 0 }} compact />
-                  </div>
-                </div>
-              </Card>
-            ))
+                </Card>
+              );
+            })
           )}
         </div>
       </section>
