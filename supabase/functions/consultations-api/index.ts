@@ -475,11 +475,6 @@ async function handle(req: Request): Promise<Response> {
       const units = Math.ceil(minutes / 30);
       const price = Math.max(0, units * price30);
 
-      // Build Jitsi link when confirming free bookings
-      const ts = `${start.getUTCFullYear()}${String(start.getUTCMonth()+1).padStart(2,'0')}${String(start.getUTCDate()).padStart(2,'0')}T${String(start.getUTCHours()).padStart(2,'0')}${String(start.getUTCMinutes()).padStart(2,'0')}`;
-      const guruName = (prof?.full_name || 'Guru').replace(/[^A-Za-z0-9]+/g, '-');
-      const jitsi = `https://meet.jit.si/${guruName}-${ts}`;
-
       if (price <= 0) {
         // Instant confirmation for free consultations
         const { data, error } = await supabase
@@ -491,7 +486,6 @@ async function handle(req: Request): Promise<Response> {
             end_datetime: end.toISOString(),
             status: "confirmed",
             payment_status: "paid",
-            meeting_link: jitsi,
             price: 0,
             communication_method: communication_method ?? null,
             notes: notes ?? null,
@@ -500,17 +494,25 @@ async function handle(req: Request): Promise<Response> {
           .maybeSingle();
         if (error) return serverError("Failed to create booking", error);
 
-        // Schedule reminders
-        const r24 = new Date(start.getTime() - 24 * 60 * 60 * 1000).toISOString();
+        // Set meeting link to Jitsi room using booking_id
+        const meeting_link = `https://meet.jit.si/${data.id}`;
+        const { data: updated, error: upErr } = await supabase
+          .from("consult_bookings")
+          .update({ meeting_link })
+          .eq("id", data.id)
+          .select()
+          .maybeSingle();
+        if (upErr) console.warn("Failed to update meeting link", upErr.message);
+
+        // Schedule 1-hour reminder only
         const r1 = new Date(start.getTime() - 60 * 60 * 1000).toISOString();
         await supabase.from("consult_reminders").insert([
-          { booking_id: data.id, reminder_type: "email", scheduled_time: r24 },
-          { booking_id: data.id, reminder_type: "email", scheduled_time: r1 },
+          { booking_id: data.id, reminder_type: "one_hour_before", scheduled_time: r1 },
         ]);
 
         // Fire-and-forget confirmation emails
         sendBookingEmails(data.id).catch((e) => console.error("sendBookingEmails error", e));
-        return json({ booking: data });
+        return json({ booking: updated || data });
       }
 
       // Paid flow: create pending booking
@@ -616,25 +618,8 @@ async function handle(req: Request): Promise<Response> {
         .eq("status", "pending");
       if (upPayErr) console.warn("Payment update warning:", upPayErr.message);
 
-      // Build Jitsi link from guru name and start time
-      const { data: bookForLink } = await supabase
-        .from("consult_bookings")
-        .select("start_datetime, guru_id")
-        .eq("id", bookingId)
-        .maybeSingle();
-      let meeting_link = undefined as string | undefined;
-      if (bookForLink?.start_datetime && bookForLink?.guru_id) {
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("user_id", bookForLink.guru_id)
-          .maybeSingle();
-        const start = new Date(bookForLink.start_datetime);
-        const ts = `${start.getUTCFullYear()}${String(start.getUTCMonth()+1).padStart(2,'0')}${String(start.getUTCDate()).padStart(2,'0')}T${String(start.getUTCHours()).padStart(2,'0')}${String(start.getUTCMinutes()).padStart(2,'0')}`;
-        const name = (prof?.full_name || 'Guru').replace(/[^A-Za-z0-9]+/g, '-');
-        meeting_link = `https://meet.jit.si/${name}-${ts}`;
-      }
-
+      // Set meeting link to Jitsi room using booking_id
+      const meeting_link = `https://meet.jit.si/${bookingId}`;
       const { error: upBookErr } = await supabase
         .from("consult_bookings")
         .update({ status: "confirmed", payment_status: "paid", meeting_link })
@@ -642,7 +627,7 @@ async function handle(req: Request): Promise<Response> {
         .eq("user_id", user.id);
       if (upBookErr) return serverError("Failed to confirm booking", upBookErr);
 
-      // Schedule reminders: 24h and 1h before start
+      // Schedule 1-hour reminder only
       const { data: booking, error: bErr } = await supabase
         .from("consult_bookings")
         .select("start_datetime")
@@ -650,11 +635,9 @@ async function handle(req: Request): Promise<Response> {
         .maybeSingle();
       if (!bErr && booking?.start_datetime) {
         const start = new Date(booking.start_datetime);
-        const r24 = new Date(start.getTime() - 24 * 60 * 60 * 1000).toISOString();
         const r1 = new Date(start.getTime() - 60 * 60 * 1000).toISOString();
         await supabase.from("consult_reminders").insert([
-          { booking_id: bookingId, reminder_type: "email", scheduled_time: r24 },
-          { booking_id: bookingId, reminder_type: "email", scheduled_time: r1 },
+          { booking_id: bookingId, reminder_type: "one_hour_before", scheduled_time: r1 },
         ]);
       }
 
@@ -745,13 +728,18 @@ async function handle(req: Request): Promise<Response> {
     if (path.endsWith("/api/reminders/send") && req.method === "POST") {
       if (!(await hasRole(req, "admin"))) return unauthorized("Admin role required");
       const nowIso = new Date().toISOString();
-      const { data, error } = await supabase
+      const { data: due, error } = await supabase
         .from("consult_reminders")
-        .select("id")
+        .select("id, booking_id")
         .lte("scheduled_time", nowIso)
-        .eq("sent_status", false);
+        .eq("sent_status", false)
+        .eq("reminder_type", "one_hour_before");
       if (error) return serverError("Failed to fetch due reminders", error);
-      const ids = (data || []).map((r: any) => r.id);
+
+      const ids = (due || []).map((r: any) => r.id);
+      // Send emails
+      await Promise.all((due || []).map((r: any) => sendReminderEmails(r.booking_id).catch((e) => console.error("reminder send error", e))));
+
       if (ids.length > 0) {
         const { error: upErr } = await supabase
           .from("consult_reminders")
