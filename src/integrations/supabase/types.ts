@@ -667,6 +667,76 @@ export type Database = {
           },
         ]
       }
+      forum_reply_votes: {
+        Row: {
+          created_at: string
+          id: string
+          reply_id: string
+          updated_at: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reply_id: string
+          updated_at?: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reply_id?: string
+          updated_at?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_reply_votes_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "forum_replies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_thread_votes: {
+        Row: {
+          created_at: string
+          id: string
+          thread_id: string
+          updated_at: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          thread_id: string
+          updated_at?: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          thread_id?: string
+          updated_at?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_thread_votes_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "forum_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forum_threads: {
         Row: {
           author_id: string
@@ -928,6 +998,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reactions: {
+        Row: {
+          content_id: string
+          created_at: string
+          emoji: string
+          id: string
+          target: Database["public"]["Enums"]["reaction_target"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_id: string
+          created_at?: string
+          emoji: string
+          id?: string
+          target: Database["public"]["Enums"]["reaction_target"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_id?: string
+          created_at?: string
+          emoji?: string
+          id?: string
+          target?: Database["public"]["Enums"]["reaction_target"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       subscriptions: {
         Row: {
@@ -1210,6 +1310,13 @@ export type Database = {
       payment_status: "pending" | "completed" | "refunded" | "failed"
       post_status: "draft" | "submitted" | "approved" | "rejected" | "published"
       question_status: "pending" | "approved" | "rejected"
+      reaction_target:
+        | "forum_thread"
+        | "forum_reply"
+        | "blog_post"
+        | "blog_comment"
+        | "exam_question"
+        | "exam_answer"
       reminder_type: "email" | "sms" | "whatsapp" | "one_hour_before"
       review_assignment_status: "pending" | "completed" | "cancelled"
       subscription_tier: "free" | "exam" | "consultation" | "premium"
@@ -1378,6 +1485,14 @@ export const Constants = {
       payment_status: ["pending", "completed", "refunded", "failed"],
       post_status: ["draft", "submitted", "approved", "rejected", "published"],
       question_status: ["pending", "approved", "rejected"],
+      reaction_target: [
+        "forum_thread",
+        "forum_reply",
+        "blog_post",
+        "blog_comment",
+        "exam_question",
+        "exam_answer",
+      ],
       reminder_type: ["email", "sms", "whatsapp", "one_hour_before"],
       review_assignment_status: ["pending", "completed", "cancelled"],
       subscription_tier: ["free", "exam", "consultation", "premium"],
