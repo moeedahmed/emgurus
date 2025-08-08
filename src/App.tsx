@@ -40,7 +40,7 @@ import PublicProfile from "./pages/PublicProfile";
 import Bookings from "./pages/Bookings";
 import Onboarding from "./pages/Onboarding";
 import ForumCategory from "./pages/ForumCategory";
-import ThreadView from "./pages/ThreadView";
+import ComingSoon from "./pages/ComingSoon";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +54,7 @@ const App = () => (
           <Routes>
             <Route element={<SiteLayout />}> 
               <Route path="/" element={<Index />} />
+              <Route path="/exams" element={<Quiz />} />
               <Route path="/quiz" element={<Quiz />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/blogs" element={<Blogs />} />
@@ -124,6 +125,7 @@ const App = () => (
               <Route path="/admin/moderate-posts" element={<RoleProtectedRoute roles={["admin"]}><ModeratePosts /></RoleProtectedRoute>} />
               <Route path="/admin/assign-reviews" element={<RoleProtectedRoute roles={["admin"]}><AssignReviews /></RoleProtectedRoute>} />
               <Route path="/admin/taxonomy" element={<RoleProtectedRoute roles={["admin"]}><Taxonomy /></RoleProtectedRoute>} />
+              <Route path="/coming-soon" element={<ComingSoon />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

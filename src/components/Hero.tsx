@@ -20,20 +20,19 @@ const Hero = () => {
                 ))}
               </div>
               <span className="text-sm text-muted-foreground">
-                Trusted by 10,000+ medical professionals
+                Trusted by learners worldwide
               </span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-              Master Medical Exams with
+              Empowering Emergency Medicine & Healthcare Careers
               <span className="text-transparent bg-clip-text bg-gradient-hero block">
-                AI-Powered Learning
+                with AI, Mentorship, and Global Collaboration
               </span>
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground mb-8 leading-relaxed">
-              Join thousands of medical professionals advancing their careers through 
-              personalized AI tutoring, expert mentorship, and collaborative learning.
+              Personalized AI tutoring, expert mentorship, and collaborative learning built for modern medical careers.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -42,9 +41,9 @@ const Hero = () => {
                   variant="hero" 
                   size="lg" 
                   className="group"
-                  onClick={() => navigate('/quiz')}
+                  onClick={() => navigate('/exams')}
                 >
-                  Continue Learning
+                  Continue Exams
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               ) : (
@@ -54,29 +53,29 @@ const Hero = () => {
                   className="group"
                   onClick={() => navigate('/auth')}
                 >
-                  Start Learning Free
+                  Get Started
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               )}
-              <Button variant="outline" size="lg" className="group">
+              <Button variant="outline" size="lg" className="group" onClick={() => navigate('/#pricing')}>
                 <Play className="w-5 h-5 mr-2" />
-                Watch Demo
+                Compare Plans
               </Button>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-6 pt-8 border-t border-border">
               <div className="text-center sm:text-left">
-                <div className="text-2xl font-bold text-primary">50K+</div>
-                <div className="text-sm text-muted-foreground">Practice Questions</div>
+                <div className="text-2xl font-bold text-primary">Growing</div>
+                <div className="text-sm text-muted-foreground">Question Bank</div>
               </div>
               <div className="text-center sm:text-left">
-                <div className="text-2xl font-bold text-primary">500+</div>
-                <div className="text-sm text-muted-foreground">Expert Mentors</div>
+                <div className="text-2xl font-bold text-primary">Building</div>
+                <div className="text-sm text-muted-foreground">Verified Mentors</div>
               </div>
               <div className="text-center sm:text-left">
-                <div className="text-2xl font-bold text-primary">95%</div>
-                <div className="text-sm text-muted-foreground">Success Rate</div>
+                <div className="text-2xl font-bold text-primary">Beta</div>
+                <div className="text-sm text-muted-foreground">Outcomes Tracking</div>
               </div>
             </div>
           </div>

@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { listBlogs } from "@/lib/blogsApi";
+import logo from "@/assets/logo-em-gurus.png";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isGuru, setIsGuru] = useState(false);
@@ -62,10 +63,8 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/') }>
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <Brain className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-primary">EMGurus</span>
+            <img src={logo} alt="EM Gurus logo" className="w-8 h-8 rounded-md" />
+            <span className="text-xl font-bold text-primary">EM Gurus</span>
           </div>
 
           <nav className="hidden md:flex items-center space-x-8">
@@ -85,7 +84,7 @@ const Header = () => {
                 </div>
               </HoverCardContent>
             </HoverCard>
-            <button onClick={() => navigate('/quiz')} className="text-muted-foreground hover:text-primary transition-colors">Exams</button>
+            <button onClick={() => navigate('/exams')} className="text-muted-foreground hover:text-primary transition-colors">Exams</button>
             <button onClick={() => navigate('/consultations')} className="text-muted-foreground hover:text-primary transition-colors">Consultations</button>
             <button onClick={() => navigate('/forums')} className="text-muted-foreground hover:text-primary transition-colors">Forums</button>
           </nav>
@@ -128,7 +127,7 @@ const Header = () => {
             ) : (
               <>
                 <Button variant="ghost" onClick={() => navigate('/auth')}>Sign In</Button>
-                <Button variant="hero" onClick={() => navigate('/quiz')}>Get Started</Button>
+                <Button variant="hero" onClick={() => navigate('/exams')}>Get Started</Button>
               </>
             )}
           </div>
@@ -152,7 +151,7 @@ const Header = () => {
             <nav className="flex flex-col space-y-4">
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/'); setIsMenuOpen(false);}}>Home</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/blogs'); setIsMenuOpen(false);}}>Blogs</button>
-              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/quiz'); setIsMenuOpen(false);}}>Exams</button>
+              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/exams'); setIsMenuOpen(false);}}>Exams</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/consultations'); setIsMenuOpen(false);}}>Consultations</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/forums'); setIsMenuOpen(false);}}>Forums</button>
               <div className="flex flex-col space-y-4 pt-4">
@@ -174,7 +173,7 @@ const Header = () => {
                 ) : (
                   <>
                     <Button variant="ghost" className="justify-start" onClick={() => {navigate('/auth'); setIsMenuOpen(false);}}>Sign In</Button>
-                    <Button variant="hero" className="justify-start" onClick={() => {navigate('/quiz'); setIsMenuOpen(false);}}>Get Started</Button>
+                    <Button variant="hero" className="justify-start" onClick={() => {navigate('/exams'); setIsMenuOpen(false);}}>Get Started</Button>
                   </>
                 )}
               </div>

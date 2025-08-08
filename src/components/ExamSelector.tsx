@@ -119,7 +119,7 @@ const ExamSelector = ({ onStartQuiz, type }: ExamSelectorProps) => {
           className="w-full"
           size="lg"
         >
-          Start Quiz
+          Start Exam
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>

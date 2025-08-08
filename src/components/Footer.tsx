@@ -6,26 +6,26 @@ const Footer = () => {
     product: [
       { name: "Features", href: "/#features" },
       { name: "Pricing", href: "/#pricing" },
-      { name: "API", href: "/" },
-      { name: "Integrations", href: "/" },
+      { name: "API", href: "/coming-soon" },
+      { name: "Integrations", href: "/coming-soon" },
     ],
     company: [
-      { name: "About", href: "/" },
-      { name: "Blog", href: "/blog" },
-      { name: "Careers", href: "/" },
-      { name: "Press", href: "/" },
+      { name: "About", href: "/coming-soon" },
+      { name: "Blog", href: "/blogs" },
+      { name: "Careers", href: "/coming-soon" },
+      { name: "Press", href: "/coming-soon" },
     ],
     resources: [
-      { name: "Documentation", href: "/" },
-      { name: "Help Center", href: "/" },
+      { name: "Documentation", href: "/coming-soon" },
+      { name: "Help Center", href: "/coming-soon" },
       { name: "Community", href: "/forums" },
-      { name: "Status", href: "/" },
+      { name: "Status", href: "/coming-soon" },
     ],
     legal: [
-      { name: "Privacy", href: "/" },
-      { name: "Terms", href: "/" },
-      { name: "Security", href: "/" },
-      { name: "Compliance", href: "/" },
+      { name: "Privacy", href: "/coming-soon" },
+      { name: "Terms", href: "/coming-soon" },
+      { name: "Security", href: "/coming-soon" },
+      { name: "Compliance", href: "/coming-soon" },
     ],
   };
 
@@ -40,7 +40,7 @@ const Footer = () => {
               <div className="w-8 h-8 bg-primary-foreground rounded-lg flex items-center justify-center">
                 <BookOpen className="w-5 h-5 text-primary" />
               </div>
-              <span className="text-xl font-bold">EMGurus</span>
+              <span className="text-xl font-bold">EM Gurus</span>
             </div>
             <p className="text-primary-foreground/80 mb-6 max-w-md">
               Empowering medical professionals with AI-powered learning, 
@@ -136,7 +136,7 @@ const Footer = () => {
         <div className="border-t border-primary-foreground/20 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-primary-foreground/80 text-sm">
-              © 2024 EMGurus. All rights reserved.
+              © 2024 EM Gurus. All rights reserved.
             </p>
             <div className="flex space-x-6">
               {footerLinks.legal.map((link) => (

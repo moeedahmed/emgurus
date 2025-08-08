@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 import { 
   Brain, 
   BookOpen, 
@@ -21,14 +22,16 @@ const Features = () => {
       title: "AI-Powered Exams",
       description: "Smart question generation and personalized learning paths",
       image: examImage,
-      highlights: ["50,000+ questions", "Real-time feedback", "Adaptive difficulty"],
+      highlights: ["Growing question bank", "Real-time feedback", "Adaptive difficulty"],
+      href: "/exams",
     },
     {
       icon: Video,
       title: "Expert Consultations",
       description: "1:1 mentoring sessions with verified medical professionals",
       image: mentoringImage,
-      highlights: ["500+ verified gurus", "Flexible scheduling", "All specialties"],
+      highlights: ["Verified gurus (in review)", "Flexible scheduling", "All specialties"],
+      href: "/consultations",
     },
     {
       icon: BookOpen,
@@ -36,6 +39,7 @@ const Features = () => {
       description: "AI-summarized insights and peer-reviewed content",
       image: blogImage,
       highlights: ["Expert articles", "AI summaries", "Peer reviews"],
+      href: "/blogs",
     },
   ];
 
@@ -70,7 +74,7 @@ const Features = () => {
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
             From AI-powered exam preparation to expert mentorship, 
-            EMGurus provides a comprehensive platform for medical learning.
+            EM Gurus provides a comprehensive platform for medical learning.
           </p>
         </div>
 
@@ -110,7 +114,7 @@ const Features = () => {
                   ))}
                 </ul>
                 
-                <Button variant="outline" className="w-full group">
+                <Button variant="outline" className="w-full group" onClick={() => navigate((feature as any).href)}>
                   Learn More
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Button>

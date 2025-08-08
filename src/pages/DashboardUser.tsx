@@ -11,7 +11,7 @@ const DashboardUser = () => {
   const [drafts, setDrafts] = useState<{ id: string; title: string; status: string | null; updated_at: string }[]>([]);
 
   useEffect(() => {
-    document.title = "Learner Dashboard | EMGurus";
+    document.title = "Learner Dashboard | EM Gurus";
   }, []);
 
   useEffect(() => {
@@ -34,9 +34,9 @@ const DashboardUser = () => {
       <h1 className="text-3xl font-bold mb-6">Learner Dashboard</h1>
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Start a Quiz</h2>
+          <h2 className="text-xl font-semibold mb-2">Start Exams</h2>
           <p className="text-muted-foreground mb-4">Practice questions tailored to your exam and level.</p>
-          <Button onClick={() => navigate('/quiz')}>Go to Quiz</Button>
+          <Button onClick={() => navigate('/exams')}>Go to Exams</Button>
         </Card>
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-2">Explore Blogs</h2>
@@ -50,7 +50,7 @@ const DashboardUser = () => {
         </Card>
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-2">Track Progress</h2>
-          <p className="text-muted-foreground mb-4">Review your quiz attempts and strengths.</p>
+          <p className="text-muted-foreground mb-4">Review your exam attempts and strengths.</p>
           <Button variant="secondary" onClick={() => navigate('/dashboard/user/progress')}>Open Progress</Button>
         </Card>
         <Card className="p-6 md:col-span-2">

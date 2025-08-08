@@ -8,7 +8,11 @@ const Pricing = () => {
   
   const handlePlanClick = (planName: string) => {
     if (planName === "Free") {
-      navigate("/quiz");
+      navigate("/exams");
+    } else if (planName === "Exams") {
+      navigate("/exams");
+    } else if (planName === "Consultation") {
+      navigate("/consultations");
     } else {
       // TODO: Handle paid plan subscriptions
       console.log(`Selected plan: ${planName}`);

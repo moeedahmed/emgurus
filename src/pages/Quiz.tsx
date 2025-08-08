@@ -69,7 +69,7 @@ const Quiz = () => {
               <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
                 <Brain className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-primary">EMGurus Quiz</span>
+              <span className="text-xl font-bold text-primary">EM Gurus Exams</span>
             </div>
             <div></div>
           </div>
@@ -84,7 +84,7 @@ const Quiz = () => {
                   {/* Title */}
                   <div className="text-center mb-12">
                     <h1 className="text-3xl sm:text-4xl font-bold mb-4">
-                      Choose Your Quiz Type
+                      Choose Your Exam Mode
                     </h1>
                     <p className="text-lg text-muted-foreground">
                       Select how you'd like to practice your medical knowledge
