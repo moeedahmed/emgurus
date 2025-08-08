@@ -49,26 +49,32 @@ export type Database = {
       blog_categories: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           name: string
           parent_id: string | null
           slug: string
+          title: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           name: string
           parent_id?: string | null
           slug: string
+          title?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
           parent_id?: string | null
           slug?: string
+          title?: string | null
           updated_at?: string
         }
         Relationships: [
