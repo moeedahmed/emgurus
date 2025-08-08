@@ -5,6 +5,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import BlogCard from "@/components/blogs/BlogCard";
 import BlogsFilterPanel from "@/components/blogs/BlogsFilterPanel";
+import TopAuthorsPanel from "@/components/blogs/TopAuthorsPanel";
+import BrowseByCategoryPanel from "@/components/blogs/BrowseByCategoryPanel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -60,6 +62,26 @@ export default function Blogs() {
     const map = new Map<string, number>();
     for (const it of items) for (const t of it.tags || []) map.set(t.slug || t.title, (map.get(t.slug || t.title) || 0) + 1);
     return Array.from(map.entries()).map(([slug, count]) => ({ slug, count })).slice(0, 12);
+  }, [items]);
+
+  const topAuthors = useMemo(() => {
+    const stats = new Map<string, { id: string; name: string; avatar: string | null; posts: number; views: number; likes: number; lastDate: number }>();
+    for (const it of items) {
+      const id = it.author?.id;
+      if (!id) continue;
+      const s = stats.get(id) || { id, name: it.author.name, avatar: it.author.avatar || null, posts: 0, views: 0, likes: 0, lastDate: 0 };
+      s.posts += 1;
+      s.views += it.counts?.views || 0;
+      s.likes += it.counts?.likes || 0;
+      const d = new Date(it.published_at || it.created_at || 0).getTime();
+      if (d > s.lastDate) s.lastDate = d;
+      stats.set(id, s);
+    }
+    const now = Date.now();
+    return Array.from(stats.values())
+      .map((s) => ({ id: s.id, name: s.name, avatar: s.avatar, posts: s.posts, views: s.views, likes: s.likes, online: now - s.lastDate < 7 * 24 * 60 * 60 * 1000 }))
+      .sort((a, b) => b.likes - a.likes)
+      .slice(0, 5);
   }, [items]);
 
   const filtered = useMemo(() => {
@@ -159,7 +181,7 @@ export default function Blogs() {
         {/* Right filters panel - sticky and independently scrollable */}
         <aside className="lg:col-span-4 hidden lg:block">
           <div className="lg:sticky lg:top-20">
-            <div className="max-h-[calc(100vh-6rem)] overflow-auto pr-2">
+            <div className="max-h-[calc(100vh-6rem)] overflow-auto pr-2 space-y-6">
               <BlogsFilterPanel
                 q={q}
                 category={category}
@@ -168,6 +190,11 @@ export default function Blogs() {
                 categories={categories}
                 tags={tags}
                 onChange={setParam}
+              />
+              <TopAuthorsPanel authors={topAuthors} />
+              <BrowseByCategoryPanel
+                categories={categories}
+                onSelect={(v) => setParam("category", v === "__all__" ? "" : v)}
               />
             </div>
           </div>

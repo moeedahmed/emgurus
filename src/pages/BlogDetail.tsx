@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import AuthorChip from "@/components/blogs/AuthorChip";
 import ReactionBar from "@/components/blogs/ReactionBar";
 import CommentThread from "@/components/blogs/CommentThread";
+import ShareButtons from "@/components/blogs/ShareButtons";
 import { Button } from "@/components/ui/button";
 import DOMPurify from "dompurify";
 import { toast } from "sonner";
@@ -104,7 +105,7 @@ export default function BlogDetail() {
           <div className="pt-4 border-t flex items-center justify-between">
             <ReactionBar postId={p.id} counts={{ likes: (data.reactions?.thumbs_up || 0) + (data.reactions?.like || 0) + (data.reactions?.love || 0) + (data.reactions?.insightful || 0) + (data.reactions?.curious || 0) }} />
             <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={() => navigator.share ? navigator.share({ title: p.title, url: window.location.href }) : navigator.clipboard.writeText(window.location.href).then(() => toast.success("Link copied"))}>Share</Button>
+              <ShareButtons title={p.title} url={window.location.href} text={p.excerpt || ""} />
             </div>
           </div>
 
@@ -132,7 +133,7 @@ export default function BlogDetail() {
               const el = document.getElementById('comments');
               if (el) el.scrollIntoView({ behavior: 'smooth' });
             }}>Comment</Button>
-            <Button size="sm" onClick={() => navigator.clipboard.writeText(window.location.href).then(() => toast.success("Link copied"))}>Share</Button>
+            <ShareButtons title={p.title} url={window.location.href} text={p.excerpt || ""} size="sm" />
           </div>
         </div>
       </div>

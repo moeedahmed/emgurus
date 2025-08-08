@@ -69,8 +69,27 @@ export default function BlogsFilterPanel({
             <SelectItem value="discussed">Most Discussed</SelectItem>
             <SelectItem value="editors">Editor’s Picks</SelectItem>
             <SelectItem value="featured">Featured</SelectItem>
+            <SelectItem value="category">Sort by Category</SelectItem>
           </SelectContent>
         </Select>
+        {sort === 'category' && (
+          <div className="mt-3">
+            <label className="text-sm text-muted-foreground">Select Category</label>
+            <Select value={category || "__all__"} onValueChange={(v) => onChange("category", v === "__all__" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All</SelectItem>
+                {categories.map((c) => (
+                  <SelectItem key={c.title} value={c.title}>
+                    {c.title} ({c.count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
     </aside>
   );

@@ -111,7 +111,6 @@ export default function CommentThread({
         <Textarea className="flex-1" value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a comment" />
         <Button size="sm" onClick={() => submit(null)} disabled={busy}>Comment</Button>
       </div>
-      </div>
       <div className="space-y-6">
         {roots.map((c) => (
           <div key={c.id} className="space-y-2">
