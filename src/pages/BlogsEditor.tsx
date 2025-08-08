@@ -50,7 +50,7 @@ export default function BlogsEditor() {
       setLoading(true);
       const tag_slugs = tags.split(",").map((t) => t.trim()).filter(Boolean);
       const res = await createDraft({ title, content_md: content, category_id: categoryId, tag_slugs, cover_image_url: cover || undefined, excerpt: excerpt || undefined });
-      if (submit) await submitPost(res.slug);
+      if (submit) await submitPost(res.id);
       toast.success(submit ? "Submitted for review" : "Draft saved");
       navigate("/blogs");
     } catch (e: any) {

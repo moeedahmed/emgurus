@@ -379,7 +379,7 @@ serve(async (req) => {
         if (links.length) await supabase.from("blog_post_tags").insert(links);
       }
 
-      return new Response(JSON.stringify({ slug }), {
+      return new Response(JSON.stringify({ id: postId, slug }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 201,
       });

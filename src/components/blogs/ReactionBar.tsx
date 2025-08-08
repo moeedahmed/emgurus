@@ -3,10 +3,8 @@ import { reactToPost, type ReactionKey } from "@/lib/blogsApi";
 import { toast } from "sonner";
 
 const emojiMap: { key: ReactionKey; emoji: string; label: string }[] = [
-  { key: "thumbs_up", emoji: "👍", label: "Thumbs up" },
   { key: "love", emoji: "❤️", label: "Love" },
   { key: "insightful", emoji: "👏", label: "Clap" },
-  { key: "curious", emoji: "🤔", label: "Curious" },
 ];
 
 export default function ReactionBar({

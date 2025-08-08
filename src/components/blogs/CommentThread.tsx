@@ -40,12 +40,16 @@ export default function CommentThread({
   const submit = async (parent?: string | null) => {
     const content = (parent ? text.trim() : text.trim());
     if (!content) return;
+    if (!userId) {
+      toast.error("Please log in to comment");
+      return;
+    }
     try {
       setBusy(true);
       await commentOnPost(postId, content, parent ?? null);
       const c: CommentNode = {
         id: `temp-${Date.now()}`,
-        author_id: "me",
+        author_id: userId,
         parent_id: parent ?? null,
         content,
         created_at: new Date().toISOString(),

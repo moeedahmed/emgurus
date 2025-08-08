@@ -242,7 +242,7 @@ export async function createDraft(body: {
   tag_slugs?: string[];
   cover_image_url?: string;
   excerpt?: string;
-}): Promise<{ slug: string }> {
+}): Promise<{ id: string; slug: string }> {
   const headers = { "Content-Type": "application/json", ...(await authHeader()) };
   const res = await fetch(`${BASE}/api/blogs`, { method: "POST", headers, body: JSON.stringify(body) });
   if (!res.ok) throw new Error("Failed to create draft");

@@ -24,6 +24,10 @@ export default function BlogCard({ post: p, topBadge, onOpen }: BlogCardProps) {
   const words = (p.excerpt || "").split(/\s+/).filter(Boolean).length;
   const readMin = Math.max(1, Math.ceil(words / 220));
   const summary = p.excerpt || "Summary not available yet.";
+  const badges: string[] = [];
+  if ((p.counts?.comments || 0) >= 10) badges.push("Most Discussed");
+  if ((p.tags || []).some((t) => /editor|pick/i.test(t.slug || t.title))) badges.push("Editor’s Pick");
+  if ((p.tags || []).some((t) => /featured|star|top/i.test(t.slug || t.title))) badges.push("Featured");
 
   return (
     <Card
