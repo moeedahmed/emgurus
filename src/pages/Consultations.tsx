@@ -6,20 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { GuruCard, type Guru } from "@/components/consultations/GuruCard";
 import { BookingModal } from "@/components/consultations/BookingModal";
 import { supabase } from "@/integrations/supabase/client";
-interface SampleGuru {
-  id: string;
-  name: string;
-  specialty: string;
-  country: string;
-  price: number; // USD per 30min
-  exams: string[];
-}
-
-const sampleGurus: SampleGuru[] = [
-  { id: "1", name: "Dr. Aisha Khan", specialty: "Emergency Medicine", country: "UK", price: 60, exams: ["MRCEM", "FRCEM"] },
-  { id: "2", name: "Dr. Miguel Santos", specialty: "Emergency Medicine", country: "UAE", price: 55, exams: ["Arab Board", "ACLS"] },
-  { id: "3", name: "Dr. Sarah Lee", specialty: "Pediatrics", country: "USA", price: 70, exams: ["USMLE", "PALS"] },
-];
 
 const Consultations = () => {
   const [search, setSearch] = useState("");
@@ -29,7 +15,7 @@ const Consultations = () => {
 
   const [bookingGuru, setBookingGuru] = useState<Guru | null>(null);
   const [open, setOpen] = useState(false);
-
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     const title = "Book a Guru for Career Guidance | EMGurus";
     document.title = title;
@@ -67,22 +53,13 @@ const Consultations = () => {
     avatar_url?: string | null;
     timezone?: string | null;
   };
-  const [gurus, setGurus] = useState<Guru[]>(sampleGurus.map(g => ({
-    id: g.id,
-    full_name: g.name,
-    specialty: g.specialty,
-    country: g.country,
-    price_per_30min: g.price,
-    exams: g.exams,
-    bio: "",
-    avatar_url: null,
-    timezone: "Europe/London",
-  })));
+  const [gurus, setGurus] = useState<Guru[]>([]);
 
   useEffect(() => {
     const load = async () => {
+      setLoading(true);
       try {
-        const res = await fetch(`${SUPABASE_EDGE}/api/gurus`);
+        const res = await fetch(`${SUPABASE_EDGE}/api/gurus?bust=${Date.now()}` as string, { cache: 'no-store' as RequestCache });
         if (!res.ok) throw new Error("Failed to load gurus");
         const data = await res.json();
         const items: ApiGuru[] = data.items || data || [];
@@ -104,7 +81,7 @@ const Consultations = () => {
           // Auto-seed sample gurus if none exist (no admin action needed)
           try {
             await supabase.functions.invoke('seed-sample-gurus', { body: {} });
-            const res2 = await fetch(`${SUPABASE_EDGE}/api/gurus`);
+            const res2 = await fetch(`${SUPABASE_EDGE}/api/gurus?bust=${Date.now()}` as string, { cache: 'no-store' as RequestCache });
             if (res2.ok) {
               const data2 = await res2.json();
               const items2: ApiGuru[] = data2.items || data2 || [];
@@ -127,6 +104,8 @@ const Consultations = () => {
         }
       } catch (e) {
         console.error(e);
+      } finally {
+        setLoading(false);
       }
     };
     load();
