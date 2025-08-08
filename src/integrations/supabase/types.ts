@@ -222,6 +222,187 @@ export type Database = {
           },
         ]
       }
+      consult_availability: {
+        Row: {
+          created_at: string
+          date: string | null
+          day_of_week: number | null
+          end_time: string
+          guru_id: string
+          id: string
+          is_available: boolean
+          start_time: string
+          type: Database["public"]["Enums"]["availability_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string | null
+          day_of_week?: number | null
+          end_time: string
+          guru_id: string
+          id?: string
+          is_available?: boolean
+          start_time: string
+          type?: Database["public"]["Enums"]["availability_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string | null
+          day_of_week?: number | null
+          end_time?: string
+          guru_id?: string
+          id?: string
+          is_available?: boolean
+          start_time?: string
+          type?: Database["public"]["Enums"]["availability_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      consult_bookings: {
+        Row: {
+          cancellation_reason: string | null
+          communication_method:
+            | Database["public"]["Enums"]["communication_method"]
+            | null
+          created_at: string
+          end_datetime: string
+          guru_id: string
+          id: string
+          meeting_link: string | null
+          notes: string | null
+          payment_status: Database["public"]["Enums"]["booking_payment_status"]
+          price: number
+          start_datetime: string
+          status: Database["public"]["Enums"]["booking_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          communication_method?:
+            | Database["public"]["Enums"]["communication_method"]
+            | null
+          created_at?: string
+          end_datetime: string
+          guru_id: string
+          id?: string
+          meeting_link?: string | null
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["booking_payment_status"]
+          price: number
+          start_datetime: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancellation_reason?: string | null
+          communication_method?:
+            | Database["public"]["Enums"]["communication_method"]
+            | null
+          created_at?: string
+          end_datetime?: string
+          guru_id?: string
+          id?: string
+          meeting_link?: string | null
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["booking_payment_status"]
+          price?: number
+          start_datetime?: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      consult_payments: {
+        Row: {
+          amount: number
+          booking_id: string
+          created_at: string
+          currency: string
+          id: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          receipt_url: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          receipt_url?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          receipt_url?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consult_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "consult_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consult_reminders: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          reminder_type: Database["public"]["Enums"]["reminder_type"]
+          scheduled_time: string
+          sent_status: boolean
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          reminder_type: Database["public"]["Enums"]["reminder_type"]
+          scheduled_time: string
+          sent_status?: boolean
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          reminder_type?: Database["public"]["Enums"]["reminder_type"]
+          scheduled_time?: string
+          sent_status?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consult_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "consult_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guru_applications: {
         Row: {
           bio: string | null
@@ -265,15 +446,20 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          calendar_sync_token: string | null
+          country: string | null
           created_at: string
           credentials: string | null
           email: string | null
+          exams: string[] | null
           full_name: string | null
           id: string
+          price_per_30min: number | null
           specialty: string | null
           subscription_tier:
             | Database["public"]["Enums"]["subscription_tier"]
             | null
+          timezone: string | null
           title: string | null
           updated_at: string
           user_id: string
@@ -281,15 +467,20 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          calendar_sync_token?: string | null
+          country?: string | null
           created_at?: string
           credentials?: string | null
           email?: string | null
+          exams?: string[] | null
           full_name?: string | null
           id?: string
+          price_per_30min?: number | null
           specialty?: string | null
           subscription_tier?:
             | Database["public"]["Enums"]["subscription_tier"]
             | null
+          timezone?: string | null
           title?: string | null
           updated_at?: string
           user_id: string
@@ -297,15 +488,20 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          calendar_sync_token?: string | null
+          country?: string | null
           created_at?: string
           credentials?: string | null
           email?: string | null
+          exams?: string[] | null
           full_name?: string | null
           id?: string
+          price_per_30min?: number | null
           specialty?: string | null
           subscription_tier?:
             | Database["public"]["Enums"]["subscription_tier"]
             | null
+          timezone?: string | null
           title?: string | null
           updated_at?: string
           user_id?: string
@@ -478,6 +674,230 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      gbt_bit_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_bool_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_bool_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_bpchar_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_bytea_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_cash_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_cash_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_date_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_date_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_enum_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_enum_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_float4_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_float4_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_float8_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_float8_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_inet_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_int2_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_int2_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_int4_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_int4_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_int8_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_int8_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_intv_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_intv_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_intv_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_macad_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_macad_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_macad8_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_macad8_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_numeric_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_oid_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_oid_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_text_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_time_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_time_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_timetz_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_ts_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_ts_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_tstz_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_uuid_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_uuid_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_var_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbt_var_fetch: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbtreekey_var_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbtreekey_var_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbtreekey16_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbtreekey16_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbtreekey2_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbtreekey2_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbtreekey32_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbtreekey32_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbtreekey4_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbtreekey4_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbtreekey8_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gbtreekey8_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
       has_role: {
         Args: {
           _user_id: string
@@ -488,6 +908,14 @@ export type Database = {
     }
     Enums: {
       app_role: "user" | "guru" | "admin"
+      availability_type: "default" | "exception"
+      booking_payment_status: "unpaid" | "paid" | "refunded"
+      booking_status:
+        | "pending_payment"
+        | "confirmed"
+        | "cancelled"
+        | "completed"
+      communication_method: "zoom" | "google_meet" | "phone"
       difficulty_level: "easy" | "medium" | "hard"
       exam_type:
         | "FCPS"
@@ -500,8 +928,11 @@ export type Database = {
         | "MRCEM_SBA"
         | "FRCEM_SBA"
       guru_application_status: "pending" | "approved" | "rejected"
+      payment_method: "stripe" | "paypal" | "free"
+      payment_status: "pending" | "completed" | "refunded" | "failed"
       post_status: "draft" | "submitted" | "approved" | "rejected" | "published"
       question_status: "pending" | "approved" | "rejected"
+      reminder_type: "email" | "sms" | "whatsapp"
       review_assignment_status: "pending" | "completed" | "cancelled"
       subscription_tier: "free" | "exam" | "consultation" | "premium"
     }
@@ -632,6 +1063,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["user", "guru", "admin"],
+      availability_type: ["default", "exception"],
+      booking_payment_status: ["unpaid", "paid", "refunded"],
+      booking_status: [
+        "pending_payment",
+        "confirmed",
+        "cancelled",
+        "completed",
+      ],
+      communication_method: ["zoom", "google_meet", "phone"],
       difficulty_level: ["easy", "medium", "hard"],
       exam_type: [
         "FCPS",
@@ -645,8 +1085,11 @@ export const Constants = {
         "FRCEM_SBA",
       ],
       guru_application_status: ["pending", "approved", "rejected"],
+      payment_method: ["stripe", "paypal", "free"],
+      payment_status: ["pending", "completed", "refunded", "failed"],
       post_status: ["draft", "submitted", "approved", "rejected", "published"],
       question_status: ["pending", "approved", "rejected"],
+      reminder_type: ["email", "sms", "whatsapp"],
       review_assignment_status: ["pending", "completed", "cancelled"],
       subscription_tier: ["free", "exam", "consultation", "premium"],
     },
