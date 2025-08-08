@@ -41,6 +41,7 @@ import Bookings from "./pages/Bookings";
 import Onboarding from "./pages/Onboarding";
 import ForumCategory from "./pages/ForumCategory";
 import ComingSoon from "./pages/ComingSoon";
+import ThreadView from "./pages/ThreadView";
 
 const queryClient = new QueryClient();
 

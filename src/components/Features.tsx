@@ -16,6 +16,7 @@ import mentoringImage from "@/assets/mentoring-consultation.jpg";
 import blogImage from "@/assets/medical-blog.jpg";
 
 const Features = () => {
+  const navigate = useNavigate();
   const features = [
     {
       icon: Brain,
