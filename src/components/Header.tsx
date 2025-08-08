@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isGuru, setIsGuru] = useState(false);
+  const [roles, setRoles] = useState<string[]>([]);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const displayName = (user?.user_metadata?.full_name as string) || (user?.email?.split('@')[0] ?? 'Account');
@@ -17,14 +18,17 @@ const Header = () => {
   useEffect(() => {
     let canceled = false;
     const check = async () => {
-      if (!user) { setIsGuru(false); return; }
+      if (!user) { if (!canceled) { setIsGuru(false); setRoles([]); } return; }
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id);
-      if (error) { if (!canceled) setIsGuru(false); return; }
-      const roles = (data || []).map(r => r.role as string);
-      if (!canceled) setIsGuru(roles.includes('guru') || roles.includes('admin'));
+      if (error) { if (!canceled) { setIsGuru(false); setRoles([]); } return; }
+      const rs = (data || []).map(r => r.role as string);
+      if (!canceled) {
+        setRoles(rs);
+        setIsGuru(rs.includes('guru') || rs.includes('admin'));
+      }
     };
     check();
     return () => { canceled = true; };
@@ -66,15 +70,19 @@ const Header = () => {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                    <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <UserIcon className="mr-2 h-4 w-4" /> My Profile
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/guru/availability')}>
-                    <LayoutDashboard className="mr-2 h-4 w-4" /> My Availability
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/auth')}>
-                    <UserIcon className="mr-2 h-4 w-4" /> Account
-                  </DropdownMenuItem>
+                  {(roles.includes('guru') || roles.includes('admin')) && (
+                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                      <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+                    </DropdownMenuItem>
+                  )}
+                  {roles.includes('guru') && (
+                    <DropdownMenuItem onClick={() => navigate('/guru/availability')}>
+                      <LayoutDashboard className="mr-2 h-4 w-4" /> My Availability
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut}>
                     <LogOut className="mr-2 h-4 w-4" /> Sign Out
@@ -118,14 +126,12 @@ const Header = () => {
                       <div className="rounded-md border border-border">
                         <div className="px-3 py-2 text-xs uppercase text-muted-foreground">Guru Tools</div>
                         <div className="flex flex-col space-y-2 p-2 pt-0">
-                          <Button variant="outline" className="justify-start" onClick={() => {navigate('/dashboard/guru'); setIsMenuOpen(false);}}>My Dashboard</Button>
+                          <Button variant="outline" className="justify-start" onClick={() => {navigate('/dashboard'); setIsMenuOpen(false);}}>Dashboard</Button>
                           <Button variant="outline" className="justify-start" onClick={() => {navigate('/guru/availability'); setIsMenuOpen(false);}}>My Availability</Button>
                         </div>
                       </div>
                     )}
-                    {!isGuru && (
-                      <Button variant="outline" className="justify-start" onClick={() => {navigate('/dashboard'); setIsMenuOpen(false);}}>Dashboard</Button>
-                    )}
+                    <Button variant="outline" className="justify-start" onClick={() => {navigate('/profile'); setIsMenuOpen(false);}}>My Profile</Button>
                     <div className="text-sm text-muted-foreground px-2 py-1">{user.email}</div>
                     <Button variant="outline" className="justify-start" onClick={signOut}>Sign Out</Button>
                   </>

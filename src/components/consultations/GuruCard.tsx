@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
+import { Link } from "react-router-dom";
 export type Guru = {
   id: string;
   full_name: string;
@@ -53,7 +53,9 @@ export function GuruCard({ guru, onBook, disabled }: {
         </Avatar>
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-lg truncate">{guru.full_name}</h3>
+            <h3 className="font-semibold text-lg truncate">
+              <Link to={`/profile/${guru.id}`} className="hover:underline">{guru.full_name}</Link>
+            </h3>
             <span title={guru.country || undefined}>{getFlag(guru.country)}</span>
           </div>
           <p className="text-sm text-muted-foreground truncate">{guru.specialty || "Emergency Medicine"}</p>

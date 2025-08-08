@@ -31,6 +31,8 @@ import ApproveGurus from "./pages/admin/ApproveGurus";
 import ModeratePosts from "./pages/admin/ModeratePosts";
 import AssignReviews from "./pages/admin/AssignReviews";
 import Taxonomy from "./pages/admin/Taxonomy";
+import Profile from "./pages/Profile";
+import PublicProfile from "./pages/PublicProfile";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +98,8 @@ const App = () => (
 
               <Route path="/forums" element={<Forums />} />
               <Route path="/consultations" element={<Consultations />} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/profile/:id" element={<PublicProfile />} />
               <Route path="/dashboard/user/progress" element={<UserProgress />} />
               <Route path="/guru/questions" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruQuestions /></RoleProtectedRoute>} />
               <Route path="/guru/reviews" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruReviewQueue /></RoleProtectedRoute>} />
