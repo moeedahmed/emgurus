@@ -70,7 +70,7 @@ export function BookingModal({ guru, open, onOpenChange }: {
           guru_id: guru.id,
           start_datetime_utc: selectedSlot.start,
           end_datetime_utc: selectedSlot.end,
-          communication_method: "video",
+          // communication_method intentionally omitted to avoid enum mismatches
           notes: name && email ? `Guest details: ${name} <${email}>` : undefined,
         }),
       });
@@ -103,7 +103,8 @@ export function BookingModal({ guru, open, onOpenChange }: {
       onOpenChange(false);
     } catch (e: any) {
       console.error(e);
-      toast({ title: "Payment could not be processed", description: "Please try again." });
+      const msg = typeof e?.message === 'string' ? e.message : 'Please try again.';
+      toast({ title: "Payment could not be processed", description: msg });
     } finally {
       setLoading(false);
     }

@@ -406,6 +406,7 @@ async function handle(req: Request): Promise<Response> {
       if (!stripeKey) return serverError("Stripe secret key not configured");
       const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
+      const frontOrigin = req.headers.get("origin") || url.origin;
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         customer_email: user.email ?? undefined,
@@ -424,8 +425,8 @@ async function handle(req: Request): Promise<Response> {
           end: booking.end_datetime,
           email: user.email || "",
         },
-        success_url: `${url.origin}/consultations?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${url.origin}/consultations?payment=cancelled`,
+        success_url: `${frontOrigin}/consultations?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${frontOrigin}/consultations?payment=cancelled`,
       });
 
       // Create payment row (pending)
