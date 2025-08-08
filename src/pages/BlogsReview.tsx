@@ -20,7 +20,7 @@ export default function BlogsReview() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch(`/functions/v1/blogs-api/api/blogs/admin?status=${encodeURIComponent(status)}`, {
+        const res = await fetch(`https://cgtvvpzrzwyvsbavboxa.functions.supabase.co/blogs-api/api/blogs/admin?status=${encodeURIComponent(status)}`, {
           headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } as any : {}) },
         });
         const data = await res.json();

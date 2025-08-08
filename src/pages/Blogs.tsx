@@ -138,6 +138,8 @@ export default function Blogs() {
             Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="h-72 animate-pulse" />
             ))
+          ) : filtered.length === 0 ? (
+            <Card className="p-6 col-span-full">No posts yet. Check back soon.</Card>
           ) : (
             filtered.map((p) => (
               <Card key={p.id} className="overflow-hidden group cursor-pointer" onClick={() => navigate(`/blogs/${p.slug}`)}>
