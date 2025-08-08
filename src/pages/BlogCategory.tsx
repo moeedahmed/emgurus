@@ -118,9 +118,9 @@ const BlogCategory = () => {
               <div className="p-4">
                 <div className="mb-2 flex items-center gap-2 flex-wrap">
                   {(p.tags || [tag]).slice(0, 3).map((t) => (
-                    <Badge key={t} variant="secondary" className="cursor-pointer" asChild>
-                      <Link to={`/blog/category/${encodeURIComponent(t)}`}>{t}</Link>
-                    </Badge>
+                    <Link key={t} to={`/blog/category/${encodeURIComponent(t)}`}>
+                      <Badge variant="secondary" className="cursor-pointer">{t}</Badge>
+                    </Link>
                   ))}
                 </div>
                 <h3 className="text-lg font-semibold mb-1 line-clamp-2">{p.title}</h3>
