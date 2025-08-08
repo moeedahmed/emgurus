@@ -49,6 +49,7 @@ export default function Profile() {
   const [pwd2, setPwd2] = useState("");
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = "My Profile | EMGurus";
@@ -112,6 +113,30 @@ export default function Profile() {
     toast({ title: "Password updated" });
     setPwd("");
     setPwd2("");
+  };
+
+  const confirmCancel = async () => {
+    if (!cancelId) return;
+    try {
+      setCancellingId(cancelId);
+      const res = await fetch(`${SUPABASE_EDGE}/api/bookings/${cancelId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to cancel booking');
+      setBookings((prev) => prev.filter((b) => b.id !== cancelId));
+      toast({ title: 'Booking cancelled' });
+    } catch (e: any) {
+      toast({ title: 'Cancel failed', description: e.message });
+    } finally {
+      setCancellingId(null);
+      setConfirmOpen(false);
+      setCancelId(null);
+    }
   };
 
   const initials = useMemo(() => {
@@ -204,16 +229,33 @@ export default function Profile() {
                     <div className="flex items-center gap-2">
                       <div className="text-sm font-medium">{b.price ? `$${b.price}` : 'Free'}</div>
                       {isCancelable && (
-                        <Button size="sm" variant="outline" onClick={() => { setCancelId(b.id); setConfirmOpen(true); }}>
-                          Cancel
+                        <Button size="sm" variant="outline" onClick={() => { setCancelId(b.id); setConfirmOpen(true); }} disabled={cancellingId === b.id}>
+                          {cancellingId === b.id ? 'Cancelling…' : 'Cancel'}
                         </Button>
                       )}
                     </div>
                   </li>
                 );
               })}
-            </ul>
+          </ul>
           )}
+
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Cancel booking?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will cancel your session and reopen the slot. {''}
+                  {"If it was a paid booking, a Stripe refund will be processed."}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setConfirmOpen(false)}>Keep</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmCancel} disabled={!cancelId || (cancellingId === cancelId)}>Confirm</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <div className="pt-2">
             <Link to="/bookings"><Button variant="link" className="px-0">View all bookings</Button></Link>
           </div>

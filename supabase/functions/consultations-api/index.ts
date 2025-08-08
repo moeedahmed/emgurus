@@ -723,7 +723,7 @@ async function handle(req: Request): Promise<Response> {
 
       const { data: booking, error: be } = await supabase
         .from("consult_bookings")
-        .select("id, user_id, guru_id, start_datetime, status, payment_status, price")
+        .select("id, user_id, guru_id, start_datetime, end_datetime, status, payment_status, price")
         .eq("id", bookingId)
         .maybeSingle();
       if (be) return serverError("Failed to fetch booking", be);
@@ -765,6 +765,40 @@ async function handle(req: Request): Promise<Response> {
         .eq("id", bookingId)
         .eq("user_id", user.id);
       if (upErr) return serverError("Failed to cancel booking", upErr);
+
+      // Restore availability as a dated slot (exception) so others can rebook
+      try {
+        const svc = getServiceClient();
+        const { data: tzRow } = await svc
+          .from('profiles')
+          .select('timezone')
+          .eq('user_id', booking.guru_id)
+          .maybeSingle();
+        const tz = (tzRow as any)?.timezone || 'UTC';
+        const dStart = new Date(booking.start_datetime);
+        const dEnd = new Date((booking as any).end_datetime || booking.start_datetime);
+        const dFmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+        const dateStr = dFmt.format(dStart);
+        const tFmt = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit' });
+        const getHM = (d: Date) => {
+          const parts = tFmt.formatToParts(d);
+          const h = parts.find(p => p.type === 'hour')?.value || '00';
+          const m = parts.find(p => p.type === 'minute')?.value || '00';
+          return `${h}:${m}:00`;
+        };
+        const startLocal = getHM(dStart);
+        const endLocal = getHM(dEnd);
+        await svc.from('consult_availability').insert({
+          guru_id: booking.guru_id,
+          type: 'exception',
+          date: dateStr,
+          start_time: startLocal,
+          end_time: endLocal,
+          is_available: true,
+        });
+      } catch (e) {
+        console.warn('Failed to restore availability slot on cancel', e);
+      }
 
       // Emails
       sendCancellationEmails(bookingId, wasPaid).catch((e) => console.error("sendCancellationEmails error", e));
