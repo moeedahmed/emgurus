@@ -13,15 +13,7 @@ import { toast } from "@/components/ui/use-toast";
 
 const SUPABASE_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/consultations-api";
 
-type Slot = {
-  start: string; // ISO datetime
-  end: string;   // ISO datetime
-};
-
-type AvailabilityResponse = {
-  guru_id: string;
-  slots: Slot[];
-};
+type Slot = { start: string; end: string };
 
 function toSlotsForDate(slots: Slot[], day: Date): Slot[] {
   return slots.filter((s) => {
@@ -51,18 +43,18 @@ export function BookingModal({ guru, open, onOpenChange }: {
     setSelectedDate(undefined);
     setSelectedSlot(null);
 
-    // fetch availability for next 30 days
+    // fetch availability for next 14 days
     const from = format(new Date(), "yyyy-MM-dd");
-    const to = format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+    const to = format(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
 
     const url = `${SUPABASE_EDGE}/api/gurus/${guru.id}/availability?from=${from}&to=${to}`;
     setLoading(true);
     fetch(url, { headers: { "Content-Type": "application/json" } })
       .then(async (r) => {
         if (!r.ok) throw new Error("Failed to load availability");
-        const data: AvailabilityResponse = await r.json();
-        // Normalize potential shapes
-        const normalized = (data?.slots || []).map((s) => ({ start: s.start, end: s.end }));
+        const data: any = await r.json();
+        // Use slots if present; otherwise derive empty list
+        const normalized = (data?.slots || []).map((s: any) => ({ start: s.start, end: s.end }));
         setSlots(normalized);
       })
       .catch((e) => {
@@ -88,8 +80,8 @@ export function BookingModal({ guru, open, onOpenChange }: {
         },
         body: JSON.stringify({
           guru_id: guru.id,
-          start_datetime: selectedSlot.start,
-          end_datetime: selectedSlot.end,
+          start_datetime_utc: selectedSlot.start,
+          end_datetime_utc: selectedSlot.end,
           communication_method: "video",
           notes: name && email ? `Guest details: ${name} <${email}>` : undefined,
         }),
@@ -117,6 +109,37 @@ export function BookingModal({ guru, open, onOpenChange }: {
 
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-3">
+            <div className="space-y-2">
+              <div className="font-medium">Next available (14 days)</div>
+              <div className="max-h-72 overflow-auto grid gap-2">
+                {slots.length > 0 ? (
+                  slots
+                    .filter((s) => {
+                      const now = Date.now();
+                      const start = new Date(s.start).getTime();
+                      const max = Date.now() + 14 * 24 * 60 * 60 * 1000;
+                      return start > now && start <= max;
+                    })
+                    .slice(0, 50)
+                    .map((s) => (
+                      <Button
+                        key={s.start}
+                        variant={selectedSlot?.start === s.start ? "default" : "outline"}
+                        onClick={() => {
+                          setSelectedSlot(s);
+                          setSelectedDate(new Date(s.start));
+                        }}
+                        className="justify-start"
+                      >
+                        {format(parseISO(s.start), "EEE MMM d, HH:mm")} – {format(parseISO(s.end), "HH:mm")}
+                      </Button>
+                    ))
+                ) : (
+                  <div className="text-sm text-muted-foreground">No upcoming slots found</div>
+                )}
+              </div>
+            </div>
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("justify-start font-normal", !selectedDate && "text-muted-foreground")}> 

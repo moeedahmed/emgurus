@@ -6,7 +6,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-
+import { fromZonedTime } from "https://esm.sh/date-fns-tz@3.0.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -235,9 +235,20 @@ async function handle(req: Request): Promise<Response> {
       const guruId = availMatch[1];
       const from = url.searchParams.get("from");
       const to = url.searchParams.get("to");
+      const daysRange = url.searchParams.get("range");
       if (!from || !to) return badRequest("from and to (YYYY-MM-DD) are required");
+
       const fromDate = new Date(from + "T00:00:00Z");
       const toDate = new Date(to + "T00:00:00Z");
+
+      // Guru timezone
+      const { data: profTz, error: tzErr } = await supabase
+        .from("profiles")
+        .select("timezone")
+        .eq("user_id", guruId)
+        .maybeSingle();
+      if (tzErr) return serverError("Failed to load timezone", tzErr);
+      const timezone = profTz?.timezone || "UTC";
 
       const { data: defaults, error: e1 } = await supabase
         .from("consult_availability")
@@ -269,7 +280,28 @@ async function handle(req: Request): Promise<Response> {
           byDate[d] = defs.map((x) => ({ start_time: x.start_time, end_time: x.end_time, is_available: x.is_available }));
         }
       }
-      return json({ availability: byDate });
+
+      // Generate 30-minute slots in UTC across the window for next N days
+      const now = new Date();
+      const slots: Array<{ start: string; end: string }> = [];
+      for (const d of days) {
+        const windows = byDate[d] || [];
+        for (const w of windows) {
+          if (!w.is_available) continue;
+          const windowStartUtc = fromZonedTime(`${d} ${w.start_time}`, timezone);
+          const windowEndUtc = fromZonedTime(`${d} ${w.end_time}`, timezone);
+          // step 30 minutes
+          for (let t = new Date(windowStartUtc); t < windowEndUtc; t = new Date(t.getTime() + 30 * 60 * 1000)) {
+            const end = new Date(t.getTime() + 30 * 60 * 1000);
+            if (end <= windowEndUtc && end > now) {
+              slots.push({ start: t.toISOString(), end: end.toISOString() });
+            }
+          }
+        }
+      }
+
+      // Optional limit via ?range=14days not needed here since from/to defines range, but keep client hint
+      return json({ guru_id: guruId, availability: byDate, slots });
     }
 
     // POST /api/bookings
