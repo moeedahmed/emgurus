@@ -135,8 +135,8 @@ serve(async (req) => {
       // Base query for posts
       let query = supabase
         .from("blog_posts")
-        .select("id, title, slug, excerpt, cover_image_url, category_id, author_id, reading_minutes, published_at, status, view_count")
-        .order("published_at", { ascending: false });
+        .select("id, title, slug, description, cover_image_url, category_id, author_id, status, view_count, created_at")
+        .order("created_at", { ascending: false });
 
       if (status) query = query.eq("status", status);
       if (categoryId) query = query.eq("category_id", categoryId);
@@ -205,11 +205,11 @@ serve(async (req) => {
         commentsCount.set(c.post_id, (commentsCount.get(c.post_id) ?? 0) + 1);
       }
 
-      const items = pageItems.map((p) => ({
+      const items = pageItems.map((p: any) => ({
         id: p.id,
         title: p.title,
         slug: p.slug,
-        excerpt: p.excerpt ?? null,
+        excerpt: p.description ?? null,
         cover_image_url: p.cover_image_url ?? null,
         category: p.category_id ? categoryMap.get(p.category_id) ?? null : null,
         tags: [] as { slug: string; title: string }[],
@@ -219,8 +219,8 @@ serve(async (req) => {
             ? { id: p.author_id, name: a.full_name, avatar: a.avatar_url ?? null }
             : { id: p.author_id, name: "Unknown", avatar: null };
         })(),
-        reading_minutes: p.reading_minutes ?? null,
-        published_at: p.published_at ?? null,
+        reading_minutes: null,
+        published_at: p.created_at ?? null,
         counts: {
           likes: likesCount.get(p.id) ?? 0,
           comments: commentsCount.get(p.id) ?? 0,
@@ -359,11 +359,9 @@ serve(async (req) => {
       const insertRes = await supabase.from("blog_posts").insert({
         title: parsed.title,
         slug,
-        excerpt: parsed.excerpt ?? null,
+        description: parsed.excerpt ?? null,
         cover_image_url: parsed.cover_image_url ?? null,
-        content_md: parsed.content_md ?? null,
-        content_html: parsed.content_html ?? null,
-        reading_minutes: readingMinutesFrom({ md: parsed.content_md, html: parsed.content_html }),
+        content: parsed.content_md ?? parsed.content_html ?? null,
         status: "draft",
         author_id: user!.id,
         category_id: parsed.category_id ?? null,
@@ -428,17 +426,16 @@ serve(async (req) => {
       const id = publishMatch[1];
       const { data: post } = await supabase
         .from("blog_posts")
-        .select("id, content_md, content_html, reviewer_id, reviewed_by")
+        .select("id, reviewer_id, reviewed_by")
         .eq("id", id)
         .maybeSingle();
       const { isAdmin } = await getUserRoleFlags(supabase, user!.id);
       const canReview = isAdmin || !!(post && (post.reviewer_id === user!.id || post.reviewed_by === user!.id));
       if (!canReview) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      const minutes = readingMinutesFrom({ md: post?.content_md ?? undefined, html: post?.content_html ?? undefined });
       const { error } = await supabase
         .from("blog_posts")
-        .update({ status: "published", reading_minutes: minutes, published_at: new Date().toISOString() })
+        .update({ status: "published", reviewed_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -515,7 +512,7 @@ serve(async (req) => {
 
       const { data: post } = await supabase
         .from("blog_posts")
-        .select("id, title, content_md, content_html, reviewer_id, reviewed_by")
+        .select("id, title, content, reviewer_id, reviewed_by")
         .eq("id", id)
         .maybeSingle();
       if (!post) return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -524,7 +521,7 @@ serve(async (req) => {
       const canReview = isAdmin || post.reviewer_id === user!.id || post.reviewed_by === user!.id;
       if (!canReview) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      const content = post.content_md ?? (post.content_html ? stripHtml(post.content_html) : "");
+      const content = post.content ? stripHtml(post.content) : "";
       const prompt = `Summarize the following blog post for EM clinicians in 5-7 bullet points with concise, high-yield takeaways.\n\nTitle: ${post.title}\n\nContent:\n${content.slice(0, 12000)}`;
 
       const resp = await fetch("https://api.openai.com/v1/chat/completions", {
