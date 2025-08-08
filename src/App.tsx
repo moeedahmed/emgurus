@@ -47,6 +47,7 @@ const App = () => (
               <Route path="/quiz" element={<Quiz />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/category/:tag" element={<BlogCategory />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/editor" element={<Editor />} />
               <Route path="/review" element={<Review />} />

@@ -70,6 +70,17 @@ const Blog = () => {
     load();
   }, []);
 
+  useEffect(() => {
+    const fetchLikes = async () => {
+      if (!user) { setLikedIds(new Set()); return; }
+      const { data, error } = await supabase.from('blog_likes').select('post_id');
+      if (!error && Array.isArray(data)) {
+        setLikedIds(new Set((data as any[]).map((r: any) => r.post_id)));
+      }
+    };
+    fetchLikes();
+  }, [user?.id, posts.length]);
+
   const filtered = useMemo(() => {
     let r = posts;
     if (q) {
@@ -193,6 +204,30 @@ const Blog = () => {
     }
   };
 
+  const recordView = async (postId: string) => {
+    try {
+      const { data } = await supabase.functions.invoke('blog-record-view', { body: { post_id: postId } });
+      if (data && typeof data.view_count === 'number') {
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, view_count: data.view_count } : p));
+      }
+    } catch {}
+  };
+
+  const toggleLike = async (postId: string) => {
+    if (!user) { toast.error('Sign in to like'); return; }
+    const { data, error } = await supabase.functions.invoke('blog-toggle-like', { body: { post_id: postId } });
+    if (!error && data) {
+      setLikedIds(prev => {
+        const next = new Set(prev);
+        if (data.liked) next.add(postId); else next.delete(postId);
+        return next;
+      });
+      if (typeof data.likes_count === 'number') {
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count: data.likes_count } : p));
+      }
+    }
+  };
+
   return (
     <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <h1 className="sr-only">EMGurus Blog — Medical Education Articles</h1>
@@ -236,33 +271,31 @@ const Blog = () => {
             <h2 className="text-xl font-semibold mb-4">Featured</h2>
             <div className="grid gap-6 md:grid-cols-3">
               {featured.map((p) => (
-                <Card key={p.id} className="overflow-hidden group">
-                  {p.cover_image_url && (
-                    <img
-                      src={p.cover_image_url}
-                      alt={`Cover image for ${p.title}`}
-                      className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                      loading="lazy"
-                    />
-                  )}
+                <Card key={p.id} className="overflow-hidden group cursor-pointer" onClick={() => { if (p.slug) { recordView(p.id); navigate(`/blog/${p.slug}`); }}} role="link" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' && p.slug) { recordView(p.id); navigate(`/blog/${p.slug}`); } }}>
+                  <img
+                    src={p.cover_image_url || fallbackCover}
+                    alt={`Cover image for ${p.title}`}
+                    className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    loading="lazy"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = fallbackCover; }}
+                  />
                   <div className="p-4">
                     <div className="mb-2 flex items-center gap-2 flex-wrap">
-                      {(p.tags || ["General"]).slice(0, 2).map((t) => (
-                        <Badge key={t} variant="secondary" className="cursor-pointer" onClick={() => setParam('tag', t)}>{t}</Badge>
+                      {(p.tags || ["General"]).slice(0, 3).map((t) => (
+                        <Link key={t} to={`/blog/category/${encodeURIComponent(t)}`} onClick={(e) => e.stopPropagation()}>
+                          <Badge variant="secondary" className="cursor-pointer">{t}</Badge>
+                        </Link>
                       ))}
                     </div>
                     <h3 className="text-lg font-semibold mb-1 line-clamp-2">{p.title}</h3>
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{p.description}</p>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" />{pseudoCount(p.id, 300)}</span>
-                      <span className="flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" />{pseudoCount(p.id, 20, 80)}</span>
+                      <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" />{p.view_count ?? 0}</span>
+                      <button className={`inline-flex items-center gap-1 transition-opacity ${likedIds.has(p.id) ? 'text-primary' : ''}`} onClick={(e) => { e.stopPropagation(); toggleLike(p.id); }} aria-pressed={likedIds.has(p.id)} aria-label="Like this article">
+                        <ThumbsUp className="h-3.5 w-3.5" />{p.likes_count ?? 0}
+                      </button>
                       <span>{readTime(p.description || '')} min read</span>
                     </div>
-                    {p.slug && (
-                      <Button variant="outline" className="mt-3" asChild>
-                        <Link to={`/blog/${p.slug}`} aria-label={`Read article ${p.title}`}>Read Article</Link>
-                      </Button>
-                    )}
                   </div>
                 </Card>
               ))}
@@ -278,13 +311,10 @@ const Blog = () => {
             <h2 className="text-xl font-semibold">Recent Blogs</h2>
             <div className="hidden md:flex items-center gap-2 overflow-x-auto">
               {allTags.slice(0, 10).map((t) => (
-                <Badge key={t} variant={t === tag ? "default" : "secondary"} className="whitespace-nowrap cursor-pointer" onClick={() => setParam('tag', t)}>
-                  {t}
-                </Badge>
+                <Link key={t} to={`/blog/category/${encodeURIComponent(t)}`}>
+                  <Badge variant="secondary" className="whitespace-nowrap cursor-pointer">{t}</Badge>
+                </Link>
               ))}
-              {tag && (
-                <Button variant="ghost" size="sm" onClick={() => setParam('tag', '')}>Clear</Button>
-              )}
             </div>
           </div>
 
@@ -304,33 +334,31 @@ const Blog = () => {
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {paginated.map((p) => (
-                <Card key={p.id} className="overflow-hidden">
-                  {p.cover_image_url && (
-                    <img
-                      src={p.cover_image_url}
-                      alt={`Cover image for ${p.title}`}
-                      className="w-full h-40 object-cover"
-                      loading="lazy"
-                    />
-                  )}
+                <Card key={p.id} className="overflow-hidden cursor-pointer" onClick={() => { if (p.slug) { recordView(p.id); navigate(`/blog/${p.slug}`); }}} role="link" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' && p.slug) { recordView(p.id); navigate(`/blog/${p.slug}`); } }}>
+                  <img
+                    src={p.cover_image_url || fallbackCover}
+                    alt={`Cover image for ${p.title}`}
+                    className="w-full h-40 object-cover"
+                    loading="lazy"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = fallbackCover; }}
+                  />
                   <div className="p-4">
                     <div className="mb-2 flex items-center gap-2 flex-wrap">
                       {(p.tags || ["General"]).slice(0, 3).map((t) => (
-                        <Badge key={t} variant="secondary" className="cursor-pointer" onClick={() => setParam('tag', t)}>{t}</Badge>
+                        <Link key={t} to={`/blog/category/${encodeURIComponent(t)}`} onClick={(e) => e.stopPropagation()}>
+                          <Badge variant="secondary" className="cursor-pointer">{t}</Badge>
+                        </Link>
                       ))}
                     </div>
                     <h3 className="text-lg font-semibold mb-1 line-clamp-2">{p.title}</h3>
                     <p className="text-sm text-muted-foreground line-clamp-3 mb-3">{p.description}</p>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" />{pseudoCount(p.id, 150)}</span>
-                      <span className="flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" />{pseudoCount(p.id, 10, 60)}</span>
+                      <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" />{p.view_count ?? 0}</span>
+                      <button className={`inline-flex items-center gap-1 transition-opacity ${likedIds.has(p.id) ? 'text-primary' : ''}`} onClick={(e) => { e.stopPropagation(); toggleLike(p.id); }} aria-pressed={likedIds.has(p.id)} aria-label="Like this article">
+                        <ThumbsUp className="h-3.5 w-3.5" />{p.likes_count ?? 0}
+                      </button>
                       <span>{readTime(p.description || '')} min read</span>
                     </div>
-                    {p.slug && (
-                      <Button variant="outline" className="mt-3" asChild>
-                        <Link to={`/blog/${p.slug}`} aria-label={`Read article ${p.title}`}>Read Article</Link>
-                      </Button>
-                    )}
                   </div>
                 </Card>
               ))}
@@ -341,7 +369,7 @@ const Blog = () => {
           {!loading && totalPages > 1 && (
             <div className="mt-6 flex items-center justify-center gap-2">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setParam('page', String(page - 1))}>Prev</Button>
-              <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
+              <span className="text-sm text-muted-foreground">Showing {filtered.length ? (page - 1) * perPage + 1 : 0}–{Math.min(page * perPage, filtered.length)} of {filtered.length} • {perPage} per page</span>
               <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setParam('page', String(page + 1))}>Next</Button>
             </div>
           )}
@@ -391,7 +419,9 @@ const Blog = () => {
             <h3 className="font-semibold mb-3">Browse by Tag</h3>
             <div className="flex flex-wrap gap-2">
               {allTags.slice(0, 20).map((t) => (
-                <Badge key={t} variant="outline" className="cursor-pointer" onClick={() => setParam('tag', t)}>{t}</Badge>
+                <Link key={t} to={`/blog/category/${encodeURIComponent(t)}`}>
+                  <Badge variant="outline" className="cursor-pointer">{t}</Badge>
+                </Link>
               ))}
             </div>
           </Card>
