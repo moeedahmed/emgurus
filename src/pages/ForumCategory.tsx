@@ -7,11 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const FORUMS_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/forums-api";
 
 interface ThreadRow {
   id: string; title: string; content: string; author_id: string; created_at: string; updated_at: string;
+  author?: { id: string; name: string; avatar_url: string | null };
+  reply_count?: number;
 }
 interface Category { id: string; title: string; description: string | null; }
 
@@ -81,10 +84,20 @@ export default function ForumCategory() {
           {threads.map(t => (
             <Card key={t.id} className="p-4">
               <div className="flex items-start justify-between gap-4">
-                <div>
+                <div className="min-w-0">
                   <Link to={`/threads/${t.id}`} className="text-lg font-semibold hover:underline">{t.title}</Link>
                   <p className="text-sm text-muted-foreground line-clamp-2">{t.content}</p>
-                  <div className="text-xs text-muted-foreground pt-1">{new Date(t.created_at).toLocaleString()}</div>
+                  <div className="flex items-center gap-2 pt-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={t.author?.avatar_url || undefined} alt={t.author?.name || 'User'} />
+                      <AvatarFallback>{(t.author?.name || 'U').slice(0,2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <Link to={t.author ? `/profile/${t.author.id}` : '#'} className="text-xs underline">
+                      {t.author?.name || 'User'}
+                    </Link>
+                    <span className="text-xs text-muted-foreground">• {new Date(t.created_at).toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground">• {t.reply_count || 0} replies</span>
+                  </div>
                 </div>
                 <div>
                   <Link to={`/threads/${t.id}`}><Button variant="outline">Open</Button></Link>

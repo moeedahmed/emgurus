@@ -18,6 +18,11 @@ function bad(msg = "Bad Request") { return json({ error: msg }, 400); }
 function unauthorized(msg = "Unauthorized") { return json({ error: msg }, 401); }
 function serverError(msg: string, details?: unknown) { console.error(msg, details); return json({ error: msg }, 500); }
 
+function getServiceClient() {
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  return createClient(SUPABASE_URL, key, { auth: { persistSession: false } });
+}
+
 function getBearer(req: Request) {
   const h = req.headers.get("Authorization") || "";
   if (!h.startsWith("Bearer ")) return null;
@@ -64,9 +69,39 @@ serve(async (req) => {
         .order("updated_at", { ascending: false })
         .limit(50);
       if (categoryId) q = q.eq("category_id", categoryId);
-      const { data, error } = await q;
+      const { data: threads, error } = await q;
       if (error) return serverError("Failed to list threads", error);
-      return json({ items: data });
+
+      // Enrich with author info and reply counts using service role
+      const svc = getServiceClient();
+      const authorIds = Array.from(new Set((threads || []).map((t: any) => t.author_id)));
+      const threadIds = (threads || []).map((t: any) => t.id);
+
+      let authors: Record<string, { name: string; avatar_url: string | null }> = {};
+      if (authorIds.length) {
+        const { data: profs } = await svc
+          .from("profiles")
+          .select("user_id, full_name, avatar_url")
+          .in("user_id", authorIds);
+        (profs || []).forEach((p: any) => { authors[p.user_id] = { name: p.full_name || 'User', avatar_url: p.avatar_url || null }; });
+      }
+
+      let replyCounts: Record<string, number> = {};
+      if (threadIds.length) {
+        const { data: reps } = await svc
+          .from("forum_replies")
+          .select("thread_id")
+          .in("thread_id", threadIds);
+        (reps || []).forEach((r: any) => { replyCounts[r.thread_id] = (replyCounts[r.thread_id] || 0) + 1; });
+      }
+
+      const items = (threads || []).map((t: any) => ({
+        ...t,
+        author: { id: t.author_id, name: authors[t.author_id]?.name || 'User', avatar_url: authors[t.author_id]?.avatar_url || null },
+        reply_count: replyCounts[t.id] || 0,
+      }));
+
+      return json({ items });
     }
 
     // GET /api/forum/threads/:id
@@ -88,22 +123,39 @@ serve(async (req) => {
         .order("created_at", { ascending: true });
       if (re) return serverError("Failed to load replies", re);
 
+      // Enrich authors with service role
+      const svc = getServiceClient();
+      const authorIds = Array.from(new Set([thread.author_id, ...(replies || []).map((r: any) => r.author_id)]));
+      let authors: Record<string, { name: string; avatar_url: string | null }> = {};
+      if (authorIds.length) {
+        const { data: profs } = await svc
+          .from("profiles")
+          .select("user_id, full_name, avatar_url")
+          .in("user_id", authorIds);
+        (profs || []).forEach((p: any) => { authors[p.user_id] = { name: p.full_name || 'User', avatar_url: p.avatar_url || null }; });
+      }
+
       // Likes count per reply
       const ids = (replies || []).map((r: any) => r.id);
       let likeCounts: Record<string, number> = {};
       if (ids.length) {
-        const { data: likesAgg, error: le } = await supabase
+        const { data: likesRows } = await svc
           .from("forum_likes")
-          .select("reply_id, count:id", { count: "exact", head: false })
+          .select("reply_id")
           .in("reply_id", ids);
-        if (!le && likesAgg) {
-          for (const row of likesAgg as any[]) {
-            likeCounts[row.reply_id] = (likeCounts[row.reply_id] || 0) + 1;
-          }
-        }
+        (likesRows || []).forEach((row: any) => { likeCounts[row.reply_id] = (likeCounts[row.reply_id] || 0) + 1; });
       }
-      const repliesWithLikes = (replies || []).map((r: any) => ({ ...r, likes_count: likeCounts[r.id] || 0 }));
-      return json({ thread, replies: repliesWithLikes });
+
+      const repliesWith = (replies || []).map((r: any) => ({
+        ...r,
+        likes_count: likeCounts[r.id] || 0,
+        author: { id: r.author_id, name: authors[r.author_id]?.name || 'User', avatar_url: authors[r.author_id]?.avatar_url || null },
+      }));
+      const threadOut = {
+        ...thread,
+        author: { id: thread.author_id, name: authors[thread.author_id]?.name || 'User', avatar_url: authors[thread.author_id]?.avatar_url || null },
+      };
+      return json({ thread: threadOut, replies: repliesWith });
     }
 
     // Auth-only endpoints below
@@ -158,7 +210,12 @@ serve(async (req) => {
       const { error } = await supabase
         .from("forum_likes")
         .insert({ reply_id, user_id: user.id });
-      if (error) return serverError("Failed to like reply", error);
+      if (error) {
+        // Ignore duplicate likes (unique constraint)
+        // @ts-ignore
+        if ((error as any).code === '23505') return json({ ok: true, duplicate: true });
+        return serverError("Failed to like reply", error);
+      }
       return json({ ok: true });
     }
 
