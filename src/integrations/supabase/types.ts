@@ -708,7 +708,7 @@ export type Database = {
       payment_status: "pending" | "completed" | "refunded" | "failed"
       post_status: "draft" | "submitted" | "approved" | "rejected" | "published"
       question_status: "pending" | "approved" | "rejected"
-      reminder_type: "email" | "sms" | "whatsapp"
+      reminder_type: "email" | "sms" | "whatsapp" | "one_hour_before"
       review_assignment_status: "pending" | "completed" | "cancelled"
       subscription_tier: "free" | "exam" | "consultation" | "premium"
     }
@@ -865,7 +865,7 @@ export const Constants = {
       payment_status: ["pending", "completed", "refunded", "failed"],
       post_status: ["draft", "submitted", "approved", "rejected", "published"],
       question_status: ["pending", "approved", "rejected"],
-      reminder_type: ["email", "sms", "whatsapp"],
+      reminder_type: ["email", "sms", "whatsapp", "one_hour_before"],
       review_assignment_status: ["pending", "completed", "cancelled"],
       subscription_tier: ["free", "exam", "consultation", "premium"],
     },
