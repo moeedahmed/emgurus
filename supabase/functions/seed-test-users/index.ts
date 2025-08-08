@@ -22,6 +22,11 @@ const USERS: SeedUserSpec[] = [
   { email: "guru.smith@emgurus.com", password: "Password123!", full_name: "Dr Jane Smith", role: "guru" },
   { email: "user.ahmed@emgurus.com", password: "Password123!", full_name: "Moeed Ahmed", role: "user" },
   { email: "user.ali@emgurus.com", password: "Password123!", full_name: "Dr Ali", role: "user" },
+  { email: "aisha.khan@emgurus.com", password: "Password123!", full_name: "Dr. Aisha Khan", role: "guru" },
+  { email: "miguel.santos@emgurus.com", password: "Password123!", full_name: "Dr. Miguel Santos", role: "guru" },
+  { email: "sarah.lee@emgurus.com", password: "Password123!", full_name: "Dr. Sarah Lee", role: "guru" },
+  { email: "imran.bashir@emgurus.com", password: "Password123!", full_name: "Dr. Imran Bashir", role: "guru" },
+  { email: "kavya.ramesh@emgurus.com", password: "Password123!", full_name: "Dr. Kavya Ramesh", role: "guru" },
 ];
 
 function getAdminClient() {
@@ -76,16 +81,21 @@ export async function serve(req: Request): Promise<Response> {
     const supabase = getAdminClient();
 
     // Seed profile data keyed by email
-    const PROFILE_DATA: Record<string, any> = {
-      "admin@emgurus.com": { title: null, specialty: "Emergency Medicine", country: "UK", exams: ["FRCEM"], price_per_30min: 0, timezone: "Europe/London", bio: "Platform administrator." },
-      "guru@emgurus.com": { specialty: "Emergency Medicine" },
-      "user@emgurus.com": {},
-      "guru.khan@emgurus.com": { specialty: "Emergency Medicine", country: "UK", exams: ["MRCEM SBA","FRCEM SBA"], price_per_30min: 40, timezone: "Europe/London", bio: "FRCEM examiner, 10+ yrs EM." },
-      "guru.raza@emgurus.com": { specialty: "Emergency Medicine", country: "Pakistan", exams: ["FCPS EM","MRCEM SBA"], price_per_30min: 20, timezone: "Asia/Karachi", bio: "FCPS EM mentor and MRCEM coach." },
-      "guru.smith@emgurus.com": { specialty: "Paediatric EM", country: "UK", exams: ["MRCEM Primary"], price_per_30min: 0, timezone: "Europe/London", bio: "Paeds EM specialist (free intro slots)." },
-      "user.ahmed@emgurus.com": { country: "UK", timezone: "Europe/London", exams: ["MRCEM SBA"] },
-      "user.ali@emgurus.com": { country: "Pakistan", timezone: "Asia/Karachi", exams: ["FCPS EM"] },
-    };
+const PROFILE_DATA: Record<string, any> = {
+  "admin@emgurus.com": { title: null, specialty: "Emergency Medicine", country: "UK", exams: ["FRCEM"], price_per_30min: 0, timezone: "Europe/London", bio: "Platform administrator." },
+  "guru@emgurus.com": { specialty: "Emergency Medicine" },
+  "user@emgurus.com": {},
+  "guru.khan@emgurus.com": { specialty: "Emergency Medicine", country: "UK", exams: ["MRCEM SBA","FRCEM SBA"], price_per_30min: 40, timezone: "Europe/London", bio: "FRCEM examiner, 10+ yrs EM." },
+  "guru.raza@emgurus.com": { specialty: "Emergency Medicine", country: "Pakistan", exams: ["FCPS EM","MRCEM SBA"], price_per_30min: 20, timezone: "Asia/Karachi", bio: "FCPS EM mentor and MRCEM coach." },
+  "guru.smith@emgurus.com": { specialty: "Paediatric EM", country: "UK", exams: ["MRCEM Primary"], price_per_30min: 0, timezone: "Europe/London", bio: "Paeds EM specialist (free intro slots)." },
+  "user.ahmed@emgurus.com": { country: "UK", timezone: "Europe/London", exams: ["MRCEM SBA"] },
+  "user.ali@emgurus.com": { country: "Pakistan", timezone: "Asia/Karachi", exams: ["FCPS EM"] },
+  "aisha.khan@emgurus.com": { specialty: "Emergency Medicine", country: "UK", exams: ["MRCEM SBA","FRCEM SBA"], price_per_30min: 60, timezone: "Europe/London", bio: "UK-based emergency physician with FRCEM experience." },
+  "miguel.santos@emgurus.com": { specialty: "Emergency Medicine", country: "UAE", exams: ["Arab Board","ACLS"], price_per_30min: 55, timezone: "Asia/Dubai", bio: "Experienced consultant from UAE, expert in Arab Board prep." },
+  "sarah.lee@emgurus.com": { specialty: "Pediatrics", country: "USA", exams: ["USMLE","PALS"], price_per_30min: 70, timezone: "America/New_York", bio: "Pediatric specialist helping students crack USMLE." },
+  "imran.bashir@emgurus.com": { specialty: "Internal Medicine", country: "Pakistan", exams: ["FCPS-I","FCPS-II","IMM"], price_per_30min: 30, timezone: "Asia/Karachi", bio: "FCPS-qualified mentor based in Lahore, Pakistan." },
+  "kavya.ramesh@emgurus.com": { specialty: "Emergency Medicine", country: "India", exams: ["MEM","ACLS","BLS"], price_per_30min: 40, timezone: "Asia/Kolkata", bio: "Indian emergency physician guiding MEM candidates." },
+};
 
     const results: any[] = [];
     const idByEmail: Record<string, string> = {};
@@ -178,6 +188,34 @@ export async function serve(req: Request): Promise<Response> {
           communication_method: "google_meet",
           meeting_link: "https://meet.google.com/demo-link",
           notes: "Seed booking",
+        });
+      }
+
+      // Seed weekly default availability for requested gurus
+      const weeklyDefs = [
+        { email: "aisha.khan@emgurus.com", day: 1, start: "09:00:00", end: "12:00:00" },
+        { email: "miguel.santos@emgurus.com", day: 2, start: "15:00:00", end: "18:00:00" },
+        { email: "sarah.lee@emgurus.com", day: 3, start: "08:00:00", end: "10:00:00" },
+        { email: "imran.bashir@emgurus.com", day: 4, start: "17:00:00", end: "20:00:00" },
+        { email: "kavya.ramesh@emgurus.com", day: 5, start: "10:00:00", end: "13:00:00" },
+      ];
+      for (const w of weeklyDefs) {
+        const gid = idByEmail[w.email];
+        if (!gid) continue;
+        // Avoid duplicates for the same day
+        await supabase
+          .from("consult_availability")
+          .delete()
+          .eq("guru_id", gid)
+          .eq("type", "default")
+          .eq("day_of_week", w.day);
+        await supabase.from("consult_availability").insert({
+          guru_id: gid,
+          type: "default",
+          day_of_week: w.day,
+          start_time: w.start,
+          end_time: w.end,
+          is_available: true,
         });
       }
     } catch (seedErr) {
