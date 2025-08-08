@@ -55,7 +55,8 @@ const Consultations = () => {
   const SUPABASE_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/consultations-api";
 
   type ApiGuru = {
-    id: string;
+    user_id?: string; // primary id in API
+    id?: string | null; // fallback, if API changes
     full_name?: string | null;
     name?: string | null;
     specialty?: string | null;
@@ -66,7 +67,6 @@ const Consultations = () => {
     avatar_url?: string | null;
     timezone?: string | null;
   };
-
   const [gurus, setGurus] = useState<Guru[]>(sampleGurus.map(g => ({
     id: g.id,
     full_name: g.name,
@@ -87,7 +87,7 @@ const Consultations = () => {
         const data = await res.json();
         const items: ApiGuru[] = data.items || data || [];
         const mapped: Guru[] = items.map((x) => ({
-          id: x.id,
+          id: (x.id || x.user_id) as string,
           full_name: x.full_name || x.name || "Guru",
           specialty: x.specialty || null,
           country: x.country || null,
