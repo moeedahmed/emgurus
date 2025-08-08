@@ -5,9 +5,8 @@ import { toast } from "sonner";
 const emojiMap: { key: ReactionKey; emoji: string; label: string }[] = [
   { key: "thumbs_up", emoji: "👍", label: "Thumbs up" },
   { key: "love", emoji: "❤️", label: "Love" },
-  { key: "insightful", emoji: "💡", label: "Insightful" },
+  { key: "insightful", emoji: "👏", label: "Clap" },
   { key: "curious", emoji: "🤔", label: "Curious" },
-  { key: "thumbs_down", emoji: "👎", label: "Thumbs down" },
 ];
 
 export default function ReactionBar({
@@ -44,7 +43,7 @@ export default function ReactionBar({
 
   return (
     <div className={`flex items-center gap-2 ${compact ? "opacity-90" : ""}`}>
-      {emojiMap.slice(0, compact ? 4 : 5).map(({ key, emoji, label }) => (
+      {emojiMap.map(({ key, emoji, label }) => (
         <button
           key={key}
           onClick={() => onReact(key)}

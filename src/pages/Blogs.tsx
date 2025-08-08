@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { listBlogs } from "@/lib/blogsApi";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import AuthorChip from "@/components/blogs/AuthorChip";
-import ReactionBar from "@/components/blogs/ReactionBar";
 import { toast } from "sonner";
+import BlogCard from "@/components/blogs/BlogCard";
+import BlogsFilterPanel from "@/components/blogs/BlogsFilterPanel";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
 
 export default function Blogs() {
   const [items, setItems] = useState<any[]>([]);
@@ -77,130 +77,102 @@ export default function Blogs() {
       case "discussed":
         arr.sort((a, b) => (b.counts?.comments || 0) - (a.counts?.comments || 0));
         break;
+      case "editors":
+        arr = arr.filter((i) => (i.tags || []).some((t: any) => /editor|pick/i.test(t.slug || t.title)));
+        break;
+      case "featured":
+        arr = arr.filter((i) => (i.tags || []).some((t: any) => /featured|star|top/i.test(t.slug || t.title)) || /featured/i.test(i.category?.title || ""));
+        break;
       default:
         arr.sort((a, b) => new Date(b.published_at || 0).getTime() - new Date(a.published_at || 0).getTime());
     }
     return arr;
   }, [items, q, category, tag, sort]);
 
+  const topByCat = useMemo(() => {
+    const byCat = new Map<string, any[]>();
+    for (const it of filtered) {
+      const key = it.category?.title || "General";
+      const arr = byCat.get(key) || [];
+      arr.push(it);
+      byCat.set(key, arr);
+    }
+    const top = new Set<string>();
+    for (const [, arr] of byCat) {
+      arr.sort((a, b) => (b.counts?.likes || 0) - (a.counts?.likes || 0));
+      for (const it of arr.slice(0, 3)) top.add(it.id);
+    }
+    return top;
+  }, [filtered]);
+
   return (
-    <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="sr-only">EMGurus Blogs — Clinical Education and Exam Guidance</h1>
-      {/* Left filters */}
-      <aside className="lg:col-span-3 space-y-6">
-        <div>
-          <label className="text-sm text-muted-foreground">Search</label>
-          <Input value={q} onChange={(e) => setParam("q", e.target.value)} placeholder="Search title or excerpt" />
-        </div>
-        <div>
-          <label className="text-sm text-muted-foreground">Category</label>
-          <Select value={category || "__all__"} onValueChange={(v) => setParam("category", v === "__all__" ? "" : v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="All" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c.title} value={c.title}>{c.title} ({c.count})</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <div className="text-sm text-muted-foreground mb-2">Popular tags</div>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((t) => (
-              <button key={t.slug} onClick={() => setParam("tag", t.slug === tag ? "" : t.slug)} className={`px-2 py-1 rounded-full border ${t.slug === tag ? "bg-accent" : ""}`}>
-                #{t.slug} ({t.count})
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label className="text-sm text-muted-foreground">Sort</label>
-          <Select value={sort} onValueChange={(v) => setParam("sort", v)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Newest</SelectItem>
-              <SelectItem value="liked">Most Liked</SelectItem>
-              <SelectItem value="discussed">Most Discussed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </aside>
 
-      {/* Main list - vertical cards */}
-      <section className="lg:col-span-6">
-        <div className="space-y-6">
-          {loading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="h-72 animate-pulse" />
-            ))
-          ) : filtered.length === 0 ? (
-            <Card className="p-6">No posts yet. Check back soon.</Card>
-          ) : (
-            filtered.map((p) => {
-              const words = (p.excerpt || "").split(/\s+/).filter(Boolean).length;
-              const readMin = Math.max(1, Math.ceil(words / 220));
-              return (
-                <Card key={p.id} className="overflow-hidden group cursor-pointer transition-shadow hover:shadow-md" onClick={() => navigate(`/blogs/${p.slug}`)}>
-                  {p.cover_image_url && (
-                    <img src={p.cover_image_url} alt={`${p.title} cover image`} className="w-full aspect-video object-cover" loading="lazy" />
-                  )}
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {p.category?.title && <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{p.category.title}</span>}
-                      {(p.tags || []).slice(0, 3).map((t: any) => (
-                        <span key={t.slug || t.title} className="text-xs px-2 py-0.5 rounded-full border">#{t.slug || t.title}</span>
-                      ))}
-                    </div>
-                    <h3 className="font-semibold text-lg line-clamp-2 story-link">{p.title}</h3>
-                    {p.excerpt && <p className="text-sm text-muted-foreground line-clamp-3">{p.excerpt}</p>}
-                    <div className="flex items-center justify-between pt-1">
-                      <div className="flex items-center gap-3">
-                        <AuthorChip id={p.author.id} name={p.author.name} avatar={p.author.avatar} onClick={(id) => navigate(`/profile/${id}`)} />
-                        <span className="text-xs text-muted-foreground">{p.published_at ? new Date(p.published_at).toLocaleDateString() : ""}{words ? ` · ${readMin} min read` : ""}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <ReactionBar postId={p.id} counts={{ likes: p.counts?.likes || 0 }} />
-                        <span>{p.counts?.views || 0} views</span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })
-          )}
-        </div>
-      </section>
+      <nav className="mb-4 text-sm text-muted-foreground">
+        <button className="hover:underline" onClick={() => navigate('/')}>Home</button>
+        <span className="mx-2">›</span>
+        <span className="text-foreground">Blogs</span>
+      </nav>
 
-      {/* Right sidebar */}
-      <aside className="lg:col-span-3 space-y-6">
-        <div>
-          <h3 className="text-sm font-semibold mb-2">Featured</h3>
-          <div className="space-y-3">
-            {items.slice(0,3).map((p) => (
-              <button key={p.id} onClick={() => navigate(`/blogs/${p.slug}`)} className="block text-left">
-                <div className="font-medium line-clamp-1">{p.title}</div>
-                <div className="text-xs text-muted-foreground line-clamp-1">{p.excerpt || ""}</div>
-              </button>
-            ))}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Main list - vertical cards, left aligned */}
+        <section className="lg:col-span-8">
+          <div className="mb-4 lg:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline">Filters</Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-80 sm:w-96">
+                <BlogsFilterPanel
+                  q={q}
+                  category={category}
+                  sort={sort}
+                  tag={tag}
+                  categories={categories}
+                  tags={tags}
+                  onChange={setParam}
+                />
+              </SheetContent>
+            </Sheet>
           </div>
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold mb-2">Editor’s Picks</h3>
-          <div className="space-y-3">
-            {items.filter((p) => (p.tags||[]).some((t:any)=>/pick/i.test(t.title))).slice(0,3).map((p) => (
-              <button key={p.id} onClick={() => navigate(`/blogs/${p.slug}`)} className="block text-left">
-                <div className="font-medium line-clamp-1">{p.title}</div>
-                <div className="text-xs text-muted-foreground line-clamp-1">{p.excerpt || ""}</div>
-              </button>
-            ))}
+          <div className="space-y-6">
+            {loading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="h-72 animate-pulse" />
+              ))
+            ) : filtered.length === 0 ? (
+              <Card className="p-6">No posts yet. Check back soon.</Card>
+            ) : (
+              filtered.map((p) => (
+                <BlogCard
+                  key={p.id}
+                  post={p}
+                  onOpen={() => navigate(`/blogs/${p.slug}`)}
+                  topBadge={topByCat.has(p.id) ? { label: 'Most Liked' } : null}
+                />
+              ))
+            )}
           </div>
-        </div>
-      </aside>
+        </section>
+
+        {/* Right filters panel - sticky and independently scrollable */}
+        <aside className="lg:col-span-4 hidden lg:block">
+          <div className="lg:sticky lg:top-20">
+            <div className="max-h-[calc(100vh-6rem)] overflow-auto pr-2">
+              <BlogsFilterPanel
+                q={q}
+                category={category}
+                sort={sort}
+                tag={tag}
+                categories={categories}
+                tags={tags}
+                onChange={setParam}
+              />
+            </div>
+          </div>
+        </aside>
+      </div>
       <link rel="canonical" href={`${window.location.origin}/blogs`} />
     </main>
   );

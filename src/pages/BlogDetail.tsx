@@ -52,13 +52,15 @@ export default function BlogDetail() {
       {/* Hero */}
       {p.cover_image_url && (
         <div className="w-full max-h-[420px] overflow-hidden">
-          <img src={p.cover_image_url} alt={`${p.title} cover image`} className="w-full h-full object-cover" />
+          <img src={p.cover_image_url} alt={`${p.title} cover image`} className="w-full h-full object-cover" loading="eager" decoding="async" />
         </div>
       )}
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* breadcrumbs */}
         <nav className="lg:col-span-12 text-sm text-muted-foreground">
+          <button className="hover:underline" onClick={() => navigate('/')}>Home</button>
+          <span className="mx-2">›</span>
           <button className="hover:underline" onClick={() => navigate('/blogs')}>Blogs</button>
           {p.category?.title && (
             <> <span className="mx-2">›</span>
