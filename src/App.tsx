@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Quiz from "./pages/Quiz";
@@ -13,6 +13,10 @@ import BlogPost from "./pages/BlogPost";
 import BlogCategory from "./pages/BlogCategory";
 import Editor from "./pages/Editor";
 import Review from "./pages/Review";
+import Blogs from "./pages/Blogs";
+import BlogDetail from "./pages/BlogDetail";
+import BlogsEditor from "./pages/BlogsEditor";
+import BlogsReview from "./pages/BlogsReview";
 import Admin from "./pages/Admin";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleProtectedRoute from "@/components/RoleProtectedRoute";
@@ -52,9 +56,13 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/quiz" element={<Quiz />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/blog" element={<Blog />} />
+              <Route path="/blogs" element={<Blogs />} />
+              <Route path="/blogs/:slug" element={<BlogDetail />} />
+              <Route path="/blogs/new" element={<ProtectedRoute><BlogsEditor /></ProtectedRoute>} />
+              <Route path="/blogs/review" element={<RoleProtectedRoute roles={["guru","admin"]}><BlogsReview /></RoleProtectedRoute>} />
+              <Route path="/blog" element={<Navigate to="/blogs" replace />} />
               <Route path="/blog/category/:tag" element={<BlogCategory />} />
-              <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/blog/:slug" element={<BlogDetail />} />
               <Route path="/editor" element={<Editor />} />
               <Route path="/review" element={<Review />} />
               <Route path="/admin" element={

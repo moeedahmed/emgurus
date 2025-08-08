@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { listBlogs } from "@/lib/blogsApi";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isGuru, setIsGuru] = useState(false);
@@ -14,7 +16,8 @@ const Header = () => {
   const navigate = useNavigate();
   const displayName = (user?.user_metadata?.full_name as string) || (user?.email?.split('@')[0] ?? 'Account');
   const initials = displayName.slice(0, 2).toUpperCase();
-
+  const [catCounts, setCatCounts] = useState<Record<string, number>>({});
+  const presetCats = ["General","Exam Guidance","Clinical Compendium","Research & Evidence","Careers","Announcements"];
   useEffect(() => {
     let canceled = false;
     const check = async () => {
@@ -34,6 +37,25 @@ const Header = () => {
     return () => { canceled = true; };
   }, [user]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await listBlogs({ status: "published", page_size: 200 });
+        const map: Record<string, number> = {};
+        for (const t of presetCats) map[t] = 0;
+        for (const it of res.items || []) {
+          const key = it.category?.title || "General";
+          if (map[key] === undefined) map[key] = 0;
+          map[key] += 1;
+        }
+        if (!cancelled) setCatCounts(map);
+      } catch {}
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -48,7 +70,21 @@ const Header = () => {
 
           <nav className="hidden md:flex items-center space-x-8">
             <button onClick={() => navigate('/')} className="text-muted-foreground hover:text-primary transition-colors">Home</button>
-            <button onClick={() => navigate('/blog')} className="text-muted-foreground hover:text-primary transition-colors">Blog</button>
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <button onClick={() => navigate('/blogs')} className="text-muted-foreground hover:text-primary transition-colors">Blogs</button>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-[520px]">
+                <div className="grid grid-cols-2 gap-3">
+                  {presetCats.map((c) => (
+                    <button key={c} onClick={() => navigate(`/blogs?category=${encodeURIComponent(c)}`)} className="flex items-center justify-between rounded-md border p-2 hover:bg-accent">
+                      <span>{c}</span>
+                      <span className="text-xs text-muted-foreground">{catCounts[c] ?? 0}</span>
+                    </button>
+                  ))}
+                </div>
+              </HoverCardContent>
+            </HoverCard>
             <button onClick={() => navigate('/quiz')} className="text-muted-foreground hover:text-primary transition-colors">Exams</button>
             <button onClick={() => navigate('/consultations')} className="text-muted-foreground hover:text-primary transition-colors">Consultations</button>
             <button onClick={() => navigate('/forums')} className="text-muted-foreground hover:text-primary transition-colors">Forums</button>
@@ -115,7 +151,7 @@ const Header = () => {
           <div className="md:hidden py-4 border-t border-border">
             <nav className="flex flex-col space-y-4">
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/'); setIsMenuOpen(false);}}>Home</button>
-              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/blog'); setIsMenuOpen(false);}}>Blog</button>
+              <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/blogs'); setIsMenuOpen(false);}}>Blogs</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/quiz'); setIsMenuOpen(false);}}>Exams</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/consultations'); setIsMenuOpen(false);}}>Consultations</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/forums'); setIsMenuOpen(false);}}>Forums</button>

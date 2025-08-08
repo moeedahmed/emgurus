@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getBlog, refreshAISummary } from "@/lib/blogsApi";
 import { Card } from "@/components/ui/card";
@@ -14,7 +14,7 @@ export default function BlogDetail() {
   const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [summaryOpen, setSummaryOpen] = useState(true);
+  const commentsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -36,7 +36,7 @@ export default function BlogDetail() {
 
   const contentHtml = useMemo(() => {
     if (!data?.post) return "";
-    const html = data.post.content_md ? data.post.content_md.replace(/\n/g, "<br/>") : data.post.content_html || "";
+    const html = data.post.content_html || (data.post.content_md ? data.post.content_md.replace(/\n/g, "<br/>") : "");
     return DOMPurify.sanitize(html);
   }, [data]);
 
@@ -83,14 +83,14 @@ export default function BlogDetail() {
           <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: contentHtml }} />
 
           <div className="pt-4 border-t flex items-center justify-between">
-            <ReactionBar postId={p.id} counts={{ likes: data.reactions?.thumbs_up || 0 }} />
+            <ReactionBar postId={p.id} counts={{ likes: (data.reactions?.thumbs_up || 0) + (data.reactions?.like || 0) + (data.reactions?.love || 0) + (data.reactions?.insightful || 0) + (data.reactions?.curious || 0) }} />
             <div className="flex items-center gap-2">
               <Button variant="secondary" onClick={() => navigator.share ? navigator.share({ title: p.title, url: window.location.href }) : navigator.clipboard.writeText(window.location.href).then(() => toast.success("Link copied"))}>Share</Button>
             </div>
           </div>
 
           {/* comments */}
-          <section className="mt-8">
+          <section className="mt-8" id="comments" ref={commentsRef}>
             <h2 className="text-xl font-semibold mb-4">Comments</h2>
             <CommentThread
               postId={p.id}
@@ -129,10 +129,10 @@ export default function BlogDetail() {
       {/* sticky bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 lg:hidden border-t bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 py-2 flex items-center justify-between">
-          <ReactionBar postId={p.id} counts={{ likes: data.reactions?.thumbs_up || 0 }} compact />
+          <ReactionBar postId={p.id} counts={{ likes: (data.reactions?.thumbs_up || 0) + (data.reactions?.like || 0) + (data.reactions?.love || 0) + (data.reactions?.insightful || 0) + (data.reactions?.curious || 0) }} compact />
           <div className="flex items-center gap-2">
             <Button size="sm" variant="ghost" onClick={() => {
-              const el = document.querySelector('h2:contains("Comments")');
+              const el = document.getElementById('comments');
               if (el) el.scrollIntoView({ behavior: 'smooth' });
             }}>Comment</Button>
             <Button size="sm" onClick={() => navigator.clipboard.writeText(window.location.href).then(() => toast.success("Link copied"))}>Share</Button>
