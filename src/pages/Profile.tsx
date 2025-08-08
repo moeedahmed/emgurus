@@ -10,6 +10,9 @@ import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+
+const SUPABASE_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/consultations-api";
 
 interface ProfileRow {
   user_id: string;
@@ -33,13 +36,15 @@ interface BookingRow {
 }
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [roles, setRoles] = useState<string[]>([]);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [guruNames, setGuruNames] = useState<Record<string, { name: string; avatar_url: string | null }>>({});
   const [pwd, setPwd] = useState("");
   const [pwd2, setPwd2] = useState("");
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     document.title = "My Profile | EMGurus";
@@ -165,17 +170,28 @@ export default function Profile() {
             <div className="text-sm text-muted-foreground">No bookings yet.</div>
           ) : (
             <ul className="space-y-3">
-              {bookings.map((b) => (
-                <li key={b.id} className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-medium text-sm">{guruNames[b.guru_id]?.name || 'Guru'}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(b.start_datetime).toLocaleString()} • {b.status}
+              {bookings.map((b) => {
+                const isFuture = new Date(b.start_datetime).getTime() > Date.now();
+                const isCancelable = b.status === 'confirmed' && isFuture;
+                return (
+                  <li key={b.id} className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-medium text-sm">{guruNames[b.guru_id]?.name || 'Guru'}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(b.start_datetime).toLocaleString()} • {b.status}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-sm font-medium">{b.price ? `$${b.price}` : 'Free'}</div>
-                </li>
-              ))}
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-medium">{b.price ? `$${b.price}` : 'Free'}</div>
+                      {isCancelable && (
+                        <Button size="sm" variant="outline" onClick={() => { setCancelId(b.id); setConfirmOpen(true); }}>
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
           <div className="pt-2">

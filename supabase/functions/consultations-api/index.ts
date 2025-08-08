@@ -311,6 +311,56 @@ async function sendReminderEmails(bookingId: string) {
   if (guruEmail) await sendEmail([guruEmail], subject, guruHtml);
 }
 
+async function sendCancellationEmails(bookingId: string, wasPaid: boolean) {
+  const supabase = getServiceClient();
+  const { data: booking } = await supabase
+    .from("consult_bookings")
+    .select("id, user_id, guru_id, start_datetime, meeting_link, price")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking) return;
+
+  const { data: userProf } = await supabase.from("profiles").select("email, full_name, timezone").eq("user_id", booking.user_id).maybeSingle();
+  const { data: guruProf } = await supabase.from("profiles").select("email, full_name, specialty, timezone").eq("user_id", booking.guru_id).maybeSingle();
+
+  const userEmail = userProf?.email;
+  const userName = userProf?.full_name || "Student";
+  const userTz = userProf?.timezone || "UTC";
+  const guruEmail = guruProf?.email;
+  const guruName = guruProf?.full_name || "Guru";
+  const guruTz = guruProf?.timezone || "UTC";
+  const specialty = (guruProf as any)?.specialty || "";
+
+  const whenForUser = formatInTz(booking.start_datetime, userTz);
+  const whenForGuru = formatInTz(booking.start_datetime, guruTz);
+  const link = booking.meeting_link || `https://meet.jit.si/${bookingId}`;
+
+  const refundText = wasPaid ? " A refund is being processed via Stripe." : "";
+
+  const userSubject = `Consultation with ${guruName} has been cancelled`;
+  const userHtml = `
+    <h2>Cancellation Confirmed</h2>
+    <p>Hi ${userName}, your consultation with <strong>${guruName}</strong>${specialty ? ` (${specialty})` : ""} has been cancelled.</p>
+    <p><strong>Original Date & Time:</strong> ${whenForUser} (${userTz})</p>
+    <p>The slot has been reopened.${refundText}</p>
+  `;
+
+  const guruSubject = `Booking cancelled by ${userName}`;
+  const guruHtml = `
+    <h2>Booking Cancelled</h2>
+    <p>The consultation was cancelled by the student.</p>
+    <p><strong>Student:</strong> ${userName}${userEmail ? ` (${userEmail})` : ""}</p>
+    <p><strong>Original Date & Time:</strong> ${whenForGuru} (${guruTz})</p>
+    <p>The slot has been reopened.${refundText}</p>
+  `;
+
+  if (userEmail) await sendEmail([userEmail], userSubject, userHtml, ADMIN_EMAIL ? [ADMIN_EMAIL] : undefined);
+  if (guruEmail) await sendEmail([guruEmail], guruSubject, guruHtml);
+  if (ADMIN_EMAIL) {
+    await sendEmail([ADMIN_EMAIL], `Copy: Booking ${bookingId} cancelled`, `<p>Booking ${bookingId} was cancelled. Paid: ${wasPaid ? "yes" : "no"}.</p>`);
+  }
+}
+
 async function handle(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -447,9 +497,27 @@ async function handle(req: Request): Promise<Response> {
           }
         }
       }
+      // Subtract overlapping confirmed bookings from available slots
+      const { data: existingBookings, error: bErr } = await supabase
+        .from("consult_bookings")
+        .select("start_datetime, end_datetime")
+        .eq("guru_id", guruId)
+        .eq("status", "confirmed")
+        .lt("start_datetime", toDate.toISOString())
+        .gt("end_datetime", fromDate.toISOString());
+      if (bErr) return serverError("Failed to fetch existing bookings", bErr);
+      const filteredSlots = slots.filter((s) => {
+        const sStart = new Date(s.start).getTime();
+        const sEnd = new Date(s.end).getTime();
+        return !(existingBookings || []).some((b: any) => {
+          const bStart = new Date(b.start_datetime).getTime();
+          const bEnd = new Date(b.end_datetime).getTime();
+          return sStart < bEnd && sEnd > bStart; // overlap
+        });
+      });
 
       // Optional limit via ?range=14days not needed here since from/to defines range, but keep client hint
-      return json({ guru_id: guruId, availability: byDate, slots });
+      return json({ guru_id: guruId, availability: byDate, slots: filteredSlots });
     }
 
     // POST /api/bookings
@@ -474,9 +542,9 @@ async function handle(req: Request): Promise<Response> {
       const minutes = Math.max(0, (end.getTime() - start.getTime()) / 60000);
       const units = Math.ceil(minutes / 30);
       const price = Math.max(0, units * price30);
-
       if (price <= 0) {
         // Instant confirmation for free consultations
+        const meeting_link = ""; // will set below using booking id
         const { data, error } = await supabase
           .from("consult_bookings")
           .insert({
@@ -494,14 +562,13 @@ async function handle(req: Request): Promise<Response> {
           .maybeSingle();
         if (error) return serverError("Failed to create booking", error);
 
-        // Set meeting link to Jitsi room using booking_id
-        const meeting_link = `https://meet.jit.si/${data.id}`;
-        const { data: updated, error: upErr } = await supabase
+        // Set meeting link to Jitsi room using booking_id (must use service role to bypass RLS on update)
+        const svc = getServiceClient();
+        const link = `https://meet.jit.si/${data.id}`;
+        const { error: upErr } = await svc
           .from("consult_bookings")
-          .update({ meeting_link })
-          .eq("id", data.id)
-          .select()
-          .maybeSingle();
+          .update({ meeting_link: link })
+          .eq("id", data.id);
         if (upErr) console.warn("Failed to update meeting link", upErr.message);
 
         // Schedule 1-hour reminder only
@@ -512,7 +579,7 @@ async function handle(req: Request): Promise<Response> {
 
         // Fire-and-forget confirmation emails
         sendBookingEmails(data.id).catch((e) => console.error("sendBookingEmails error", e));
-        return json({ booking: updated || data });
+        return json({ booking: { ...data, meeting_link: link } });
       }
 
       // Paid flow: create pending booking
@@ -645,6 +712,64 @@ async function handle(req: Request): Promise<Response> {
       sendBookingEmails(bookingId).catch((e) => console.error("sendBookingEmails error", e));
 
       return json({ ok: true, booking_id: bookingId });
+    }
+
+    // POST /api/bookings/:id/cancel
+    const cancelMatch = path.match(/\/api\/bookings\/([^/]+)\/cancel$/);
+    if (cancelMatch && req.method === "POST") {
+      const user = await getAuthUser(req);
+      if (!user) return unauthorized();
+      const bookingId = cancelMatch[1];
+
+      const { data: booking, error: be } = await supabase
+        .from("consult_bookings")
+        .select("id, user_id, guru_id, start_datetime, status, payment_status, price")
+        .eq("id", bookingId)
+        .maybeSingle();
+      if (be) return serverError("Failed to fetch booking", be);
+      if (!booking) return notFound("Booking not found");
+      if (booking.user_id !== user.id) return unauthorized();
+      if (booking.status !== "confirmed") return badRequest("Only confirmed bookings can be cancelled");
+      if (new Date(booking.start_datetime) <= new Date()) return badRequest("Cannot cancel past or ongoing bookings");
+
+      let wasPaid = Number(booking.price || 0) > 0 && booking.payment_status === "paid";
+      if (wasPaid) {
+        const stripeKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
+        if (!stripeKey) return serverError("Stripe secret key not configured");
+        const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
+
+        const { data: payment } = await supabase
+          .from("consult_payments")
+          .select("transaction_id")
+          .eq("booking_id", bookingId)
+          .eq("status", "completed")
+          .maybeSingle();
+
+        if (!payment || !payment.transaction_id) {
+          console.warn("No completed payment row found for refund", { bookingId });
+          wasPaid = false;
+        } else {
+          const session = await stripe.checkout.sessions.retrieve(payment.transaction_id);
+          const payment_intent = (session.payment_intent as string | null) || null;
+          if (!payment_intent) return serverError("Payment intent not found on session");
+          await stripe.refunds.create({ payment_intent });
+          await supabase.from("consult_payments").update({ status: "refunded" }).eq("booking_id", bookingId);
+        }
+      }
+
+      const newStatus = wasPaid ? "cancelled_refunded" : "cancelled";
+      const newPay = wasPaid ? "refunded" : "unpaid";
+      const { error: upErr } = await supabase
+        .from("consult_bookings")
+        .update({ status: newStatus, payment_status: newPay })
+        .eq("id", bookingId)
+        .eq("user_id", user.id);
+      if (upErr) return serverError("Failed to cancel booking", upErr);
+
+      // Emails
+      sendCancellationEmails(bookingId, wasPaid).catch((e) => console.error("sendCancellationEmails error", e));
+
+      return json({ ok: true, status: newStatus, wasPaid });
     }
 
     // GET /api/guru/bookings (auth:guru)
