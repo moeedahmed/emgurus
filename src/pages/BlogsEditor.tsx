@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ export default function BlogsEditor() {
   const [content, setContent] = useState("");
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [tags, setTags] = useState<string>("");
+  const [tagList, setTagList] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<{ id: string; title: string }[]>([]);
 
@@ -48,7 +50,8 @@ export default function BlogsEditor() {
   const onSave = async (submit = false) => {
     try {
       setLoading(true);
-      const tag_slugs = tags.split(",").map((t) => t.trim()).filter(Boolean);
+      const leftover = tags.split(",").map((t) => t.trim()).filter(Boolean);
+      const tag_slugs = Array.from(new Set([...tagList, ...leftover].map((t) => t.toLowerCase().replace(/\s+/g, "-"))));
       const res = await createDraft({ title, content_md: content, category_id: categoryId, tag_slugs, cover_image_url: cover || undefined, excerpt: excerpt || undefined });
       if (submit) await submitPost(res.id);
       toast.success(submit ? "Submitted for review" : "Draft saved");
@@ -79,15 +82,46 @@ export default function BlogsEditor() {
               <SelectTrigger>
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50">
                 {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Tags (comma-separated slugs)</Label>
-          <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="ecg, airway, trauma" />
+          <Label>Tags</Label>
+          <Input
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                const parts = tags.split(',').map((t) => t.trim()).filter(Boolean);
+                if (parts.length) {
+                  setTagList((prev) => Array.from(new Set([...prev, ...parts.map((t) => t.toLowerCase().replace(/\\s+/g, '-'))])));
+                  setTags('');
+                }
+              }
+            }}
+            placeholder="Type a tag and press Enter"
+          />
+          {tagList.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-2">
+              {tagList.map((t) => (
+                <Badge key={t} variant="secondary" className="flex items-center gap-1">
+                  <span>#{t}</span>
+                  <button
+                    type="button"
+                    onClick={() => setTagList((prev) => prev.filter((x) => x !== t))}
+                    aria-label={`Remove ${t}`}
+                    className="ml-1"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
         <div className="space-y-2">
           <Label>Excerpt</Label>
