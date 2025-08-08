@@ -59,6 +59,7 @@ export function BookingModal({ guru, open, onOpenChange }: {
     }
     try {
       setLoading(true);
+      // 1) Create pending booking
       const res = await fetch(`${SUPABASE_EDGE}/api/bookings`, {
         method: "POST",
         headers: {
@@ -74,11 +75,28 @@ export function BookingModal({ guru, open, onOpenChange }: {
         }),
       });
       if (!res.ok) throw new Error(await res.text());
-      toast({ title: "Booking created", description: "Check your dashboard for details." });
+      const { booking } = await res.json();
+      if (!booking?.id) throw new Error("Invalid booking response");
+
+      // 2) Create Stripe checkout session
+      const pay = await fetch(`${SUPABASE_EDGE}/api/payments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ booking_id: booking.id, provider: "stripe" }),
+      });
+      if (!pay.ok) throw new Error(await pay.text());
+      const { checkout_url } = await pay.json();
+      if (!checkout_url) throw new Error("Failed to create checkout session");
+
+      toast({ title: "Redirecting to secure payment" });
+      window.open(checkout_url, "_blank");
       onOpenChange(false);
     } catch (e: any) {
       console.error(e);
-      toast({ title: "Booking failed", description: "Please retry in a moment." });
+      toast({ title: "Payment could not be processed", description: "Please try again." });
     } finally {
       setLoading(false);
     }

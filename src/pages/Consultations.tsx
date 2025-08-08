@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { GuruCard, type Guru } from "@/components/consultations/GuruCard";
 import { BookingModal } from "@/components/consultations/BookingModal";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Consultations = () => {
   const [search, setSearch] = useState("");
@@ -127,6 +128,49 @@ const Consultations = () => {
     };
     load();
   }, [attemptedSeed]);
+
+  // Handle Stripe return (success/cancel) and verify booking
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const flag = params.get('payment');
+    const sessionId = params.get('session_id');
+
+    const clearParams = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('payment');
+      url.searchParams.delete('session_id');
+      window.history.replaceState({}, '', url.toString());
+    };
+
+    if (flag === 'success' && sessionId) {
+      (async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          toast.error('Please sign in to verify your payment.');
+          clearParams();
+          return;
+        }
+        try {
+          const res = await fetch(`${SUPABASE_EDGE}/api/payments/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({ session_id: sessionId }),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          toast.success('Booking confirmed!');
+        } catch (e) {
+          console.error(e);
+          toast.error('Payment verification failed.');
+        } finally {
+          clearParams();
+        }
+      })();
+    } else if (flag === 'cancelled') {
+      toast('Payment cancelled');
+      clearParams();
+    }
+  }, []);
+
   const countries = useMemo(() => ["all", ...Array.from(new Set(gurus.map(g => g.country).filter(Boolean))) as string[]], [gurus]);
   const specialties = useMemo(() => ["all", ...Array.from(new Set(gurus.map(g => g.specialty).filter(Boolean))) as string[]], [gurus]);
   const exams = useMemo(() => ["all", ...Array.from(new Set(gurus.flatMap(g => g.exams || [])))], [gurus]);

@@ -357,7 +357,7 @@ async function handle(req: Request): Promise<Response> {
 
       const { data: booking, error: bErr } = await supabase
         .from("consult_bookings")
-        .select("id, price, status")
+        .select("id, price, status, guru_id, start_datetime, end_datetime")
         .eq("id", booking_id)
         .eq("user_id", user.id)
         .maybeSingle();
@@ -380,7 +380,13 @@ async function handle(req: Request): Promise<Response> {
           },
           quantity: 1,
         }],
-        metadata: { booking_id: booking.id },
+        metadata: {
+          booking_id: booking.id,
+          guru_id: booking.guru_id,
+          start: booking.start_datetime,
+          end: booking.end_datetime,
+          email: user.email || "",
+        },
         success_url: `${url.origin}/consultations?payment=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${url.origin}/consultations?payment=cancelled`,
       });
