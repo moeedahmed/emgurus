@@ -1,16 +1,34 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Brain, LogOut, LayoutDashboard, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isGuru, setIsGuru] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const displayName = (user?.user_metadata?.full_name as string) || (user?.email?.split('@')[0] ?? 'Account');
   const initials = displayName.slice(0, 2).toUpperCase();
+
+  useEffect(() => {
+    let canceled = false;
+    const check = async () => {
+      if (!user) { setIsGuru(false); return; }
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+      if (error) { if (!canceled) setIsGuru(false); return; }
+      const roles = (data || []).map(r => r.role as string);
+      if (!canceled) setIsGuru(roles.includes('guru') || roles.includes('admin'));
+    };
+    check();
+    return () => { canceled = true; };
+  }, [user]);
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
@@ -93,11 +111,21 @@ const Header = () => {
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/quiz'); setIsMenuOpen(false);}}>Exams</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/consultations'); setIsMenuOpen(false);}}>Consultations</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => {navigate('/forums'); setIsMenuOpen(false);}}>Forums</button>
-              <div className="flex flex-col space-y-2 pt-4">
+              <div className="flex flex-col space-y-4 pt-4">
                 {user ? (
                   <>
-                    <Button variant="outline" className="justify-start" onClick={() => {navigate('/dashboard'); setIsMenuOpen(false);}}>Dashboard</Button>
-                    <Button variant="outline" className="justify-start" onClick={() => {navigate('/guru/availability'); setIsMenuOpen(false);}}>My Availability</Button>
+                    {isGuru && (
+                      <div className="rounded-md border border-border">
+                        <div className="px-3 py-2 text-xs uppercase text-muted-foreground">Guru Tools</div>
+                        <div className="flex flex-col space-y-2 p-2 pt-0">
+                          <Button variant="outline" className="justify-start" onClick={() => {navigate('/dashboard/guru'); setIsMenuOpen(false);}}>My Dashboard</Button>
+                          <Button variant="outline" className="justify-start" onClick={() => {navigate('/guru/availability'); setIsMenuOpen(false);}}>My Availability</Button>
+                        </div>
+                      </div>
+                    )}
+                    {!isGuru && (
+                      <Button variant="outline" className="justify-start" onClick={() => {navigate('/dashboard'); setIsMenuOpen(false);}}>Dashboard</Button>
+                    )}
                     <div className="text-sm text-muted-foreground px-2 py-1">{user.email}</div>
                     <Button variant="outline" className="justify-start" onClick={signOut}>Sign Out</Button>
                   </>

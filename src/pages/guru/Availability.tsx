@@ -7,6 +7,8 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { format } from "date-fns";
 
 const SUPABASE_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/consultations-api";
 
@@ -21,6 +23,15 @@ type Avail = {
 };
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Format HH:mm or HH:mm:ss to h:mm a
+const fmt = (t?: string | null) => {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  const d = new Date();
+  d.setHours(parseInt(h || "0"), parseInt(m || "0"), 0, 0);
+  return format(d, "h:mm a");
+};
 
 export default function GuruAvailability() {
   const { session } = useAuth();
@@ -123,11 +134,12 @@ export default function GuruAvailability() {
     if (!session || !id) return;
     try {
       setLoading(true);
-      const res = await fetch(`${SUPABASE_EDGE}/api/guru/availability/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
+      const { error } = await supabase
+        .from("consult_availability")
+        .delete()
+        .eq("id", id)
+        .eq("guru_id", session.user?.id || "");
+      if (error) throw error;
       setWeekly((w) => w.filter((x) => x.id !== id));
       setExceptions((w) => w.filter((x) => x.id !== id));
       toast({ title: "Removed" });
@@ -180,31 +192,38 @@ export default function GuruAvailability() {
       <section className="grid gap-6 md:grid-cols-2">
         <Card className="p-4">
           <h2 className="font-semibold mb-3">Weekly recurring</h2>
-          <div className="grid gap-3">
+          <Accordion type="single" collapsible className="w-full">
             {Object.entries(weeklyByDay).map(([d, slots]) => (
-              <div key={d} className="rounded border p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="font-medium">{dayNames[Number(d)]}</div>
-                  <div className="text-xs text-muted-foreground">{slots.length} range{slots.length === 1 ? "" : "s"}</div>
-                </div>
-                {slots.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No ranges</div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {slots.map((s) => (
-                      <div key={s.id} className="flex items-center gap-2 rounded bg-muted px-2 py-1 text-sm">
-                        <span>{s.start_time}–{s.end_time}</span>
-                        <Button size="sm" variant="ghost" onClick={() => deleteAvail(s.id)}>Remove</Button>
-                      </div>
-                    ))}
+              <AccordionItem key={d} value={`day-${d}`}>
+                <AccordionTrigger className="justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{dayNames[Number(d)]}</span>
+                    <span className="text-xs text-muted-foreground">{slots.length} range{slots.length === 1 ? "" : "s"}</span>
                   </div>
-                )}
-              </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  {slots.length === 0 ? (
+                    <div className="text-sm text-muted-foreground mb-2">No ranges</div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {slots.map((s) => (
+                        <div key={s.id} className="flex items-center gap-2 rounded bg-muted px-2 py-1 text-sm">
+                          <span>{fmt(s.start_time)}–{fmt(s.end_time)}</span>
+                          <Button size="sm" variant="ghost" onClick={() => deleteAvail(s.id)}>Remove</Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => { setNewWeekly({ ...newWeekly, dow: Number(d) }); document.getElementById('add-weekly-form')?.scrollIntoView({ behavior: 'smooth' }); }}>
+                    + Add availability
+                  </Button>
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
 
           <Separator className="my-4" />
-          <div className="grid gap-2 md:grid-cols-4 items-end">
+          <div id="add-weekly-form" className="grid gap-2 md:grid-cols-4 items-end">
             <div>
               <Label>Day</Label>
               <select className="w-full rounded-md border bg-background p-2" value={newWeekly.dow} onChange={(e) => setNewWeekly({ ...newWeekly, dow: Number(e.target.value) })}>
@@ -256,7 +275,7 @@ export default function GuruAvailability() {
               exceptions.map((e) => (
                 <div key={e.id} className="flex items-center justify-between rounded border p-2">
                   <div className="text-sm">
-                    <span className="font-medium">{e.date}</span> • {e.start_time}–{e.end_time} • {e.is_available ? "Available" : "Blocked"}
+                    <span className="font-medium">{e.date}</span> • {fmt(e.start_time)}–{fmt(e.end_time)} • {e.is_available ? "Available" : "Blocked"}
                   </div>
                   <Button size="sm" variant="ghost" onClick={() => deleteAvail(e.id)}>Remove</Button>
                 </div>
