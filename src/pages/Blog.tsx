@@ -347,7 +347,7 @@ const Blog = () => {
 
       {/* Featured section */}
       {loading ? (
-        <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6">
           {[...Array(3)].map((_, i) => (
             <Card key={i} className="overflow-hidden">
               <Skeleton className="h-40 w-full" />
@@ -363,7 +363,7 @@ const Blog = () => {
         featured.length > 0 && (
           <section className="mb-10">
             <h2 className="text-xl font-semibold mb-4">Featured</h2>
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6">
               {featured.map((p) => (
                 <Card key={p.id} className="relative overflow-hidden group cursor-pointer" onClick={() => { if (p.slug) { recordView(p.id); navigate(`/blog/${p.slug}`); }}} role="link" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' && p.slug) { recordView(p.id); navigate(`/blog/${p.slug}`); } }}>
                   {isEditorPick(p) && (
@@ -406,7 +406,7 @@ const Blog = () => {
       <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
         <section>
           {loading ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6">
               {[...Array(9)].map((_, i) => (
                 <Card key={i} className="overflow-hidden">
                   <Skeleton className="h-40 w-full" />
