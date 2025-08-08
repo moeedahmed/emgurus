@@ -16,6 +16,8 @@ const Consultations = () => {
   const [bookingGuru, setBookingGuru] = useState<Guru | null>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [attemptedSeed, setAttemptedSeed] = useState(false);
+  const [debugNames, setDebugNames] = useState<string[]>([]);
   useEffect(() => {
     const title = "Book a Guru for Career Guidance | EMGurus";
     document.title = title;
@@ -75,31 +77,48 @@ const Consultations = () => {
           timezone: x.timezone || null,
         }));
 
+        console.groupCollapsed('[Consultations] /api/gurus fetch');
+        console.log('Fetched items:', items.length);
+        console.log('Mapped gurus:', mapped.length, mapped.map(m => m.full_name));
+        console.groupEnd();
+
         if (mapped.length) {
           setGurus(mapped);
-        } else {
-          // Auto-seed sample gurus if none exist (no admin action needed)
+          setDebugNames(mapped.map(m => m.full_name));
+        }
+
+        // If fewer than 5 gurus loaded and we haven't tried seeding, try once and refetch
+        if ((mapped.length < 5) && !attemptedSeed) {
+          setAttemptedSeed(true);
           try {
-            await supabase.functions.invoke('seed-sample-gurus', { body: {} });
-            const res2 = await fetch(`${SUPABASE_EDGE}/api/gurus?bust=${Date.now()}` as string, { cache: 'no-store' as RequestCache });
-            if (res2.ok) {
-              const data2 = await res2.json();
-              const items2: ApiGuru[] = data2.items || data2 || [];
-              const mapped2: Guru[] = items2.map((x) => ({
-                id: (x.id || x.user_id) as string,
-                full_name: x.full_name || x.name || "Guru",
-                specialty: x.specialty || null,
-                country: x.country || null,
-                price_per_30min: x.price_per_30min ?? null,
-                exams: x.exams || [],
-                bio: x.bio || null,
-                avatar_url: x.avatar_url || null,
-                timezone: x.timezone || null,
-              }));
-              if (mapped2.length) setGurus(mapped2);
-            }
+            const { error } = await supabase.functions.invoke('seed-sample-gurus', { body: {} });
+            if (error) console.warn('Seed function returned error:', error);
           } catch (seedErr) {
             console.error('Auto-seed failed', seedErr);
+          }
+          const res2 = await fetch(`${SUPABASE_EDGE}/api/gurus?bust=${Date.now()}` as string, { cache: 'no-store' as RequestCache });
+          if (res2.ok) {
+            const data2 = await res2.json();
+            const items2: ApiGuru[] = data2.items || data2 || [];
+            const mapped2: Guru[] = items2.map((x) => ({
+              id: (x.id || x.user_id) as string,
+              full_name: x.full_name || x.name || "Guru",
+              specialty: x.specialty || null,
+              country: x.country || null,
+              price_per_30min: x.price_per_30min ?? null,
+              exams: x.exams || [],
+              bio: x.bio || null,
+              avatar_url: x.avatar_url || null,
+              timezone: x.timezone || null,
+            }));
+            console.groupCollapsed('[Consultations] post-seed /api/gurus fetch');
+            console.log('Fetched items:', items2.length);
+            console.log('Mapped gurus:', mapped2.length, mapped2.map(m => m.full_name));
+            console.groupEnd();
+            if (mapped2.length) {
+              setGurus(mapped2);
+              setDebugNames(mapped2.map(m => m.full_name));
+            }
           }
         }
       } catch (e) {
@@ -109,10 +128,18 @@ const Consultations = () => {
       }
     };
     load();
-  }, []);
+  }, [attemptedSeed]);
   const countries = useMemo(() => ["all", ...Array.from(new Set(gurus.map(g => g.country).filter(Boolean))) as string[]], [gurus]);
   const specialties = useMemo(() => ["all", ...Array.from(new Set(gurus.map(g => g.specialty).filter(Boolean))) as string[]], [gurus]);
   const exams = useMemo(() => ["all", ...Array.from(new Set(gurus.flatMap(g => g.exams || [])))], [gurus]);
+
+  useEffect(() => {
+    console.groupCollapsed('[Consultations] Derived filters');
+    console.log('Countries:', countries);
+    console.log('Specialties:', specialties);
+    console.log('Exams:', exams);
+    console.groupEnd();
+  }, [countries, specialties, exams]);
 
   const filtered = useMemo(() => {
     return gurus.filter(g =>
@@ -131,6 +158,17 @@ const Consultations = () => {
         <h1 className="text-3xl font-bold">Book a Guru for Career Guidance</h1>
         <p className="text-muted-foreground">Filter by specialty, country, or exam to find the right mentor.</p>
       </header>
+
+      {debugNames.length > 0 && (
+        <section className="mb-4">
+          <p className="text-sm text-muted-foreground">Loaded {debugNames.length} gurus:</p>
+          <ul className="text-sm text-muted-foreground list-disc pl-5">
+            {debugNames.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="grid gap-4 md:grid-cols-4 mb-6">
         <Input placeholder="Search by name or specialty" value={search} onChange={(e) => setSearch(e.target.value)} />
