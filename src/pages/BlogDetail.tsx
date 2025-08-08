@@ -79,7 +79,7 @@ export default function BlogDetail() {
           <button className="hover:underline" onClick={() => navigate('/')}>Home</button>
           <span className="mx-2">›</span>
           <button className="hover:underline" onClick={() => navigate('/blogs')}>Blogs</button>
-          {p.category?.title && (
+          {p.category?.title && !/^imported$/i.test(p.category.title) && (
             <> <span className="mx-2">›</span>
               <button className="hover:underline" onClick={() => navigate(`/blogs?category=${encodeURIComponent(p.category.title)}`)}>{p.category.title}</button>
             </>
@@ -94,7 +94,7 @@ export default function BlogDetail() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <AuthorChip id={p.author.id} name={p.author.name} avatar={p.author.avatar} onClick={(id) => navigate(`/profile/${id}`)} />
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              {p.category?.title && <span>{p.category.title}</span>}
+              {p.category?.title && !/^imported$/i.test(p.category.title) && <span>{p.category.title}</span>}
               <span>{p.published_at ? new Date(p.published_at).toLocaleDateString() : ""}</span>
               {(() => {
                 const text = (data.post.content || data.post.content_md || data.post.content_html || "").toString();

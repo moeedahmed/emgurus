@@ -53,6 +53,7 @@ export default function Blogs() {
     const map = new Map<string, number>();
     for (const it of items) {
       const key = it.category?.title || "General";
+      if (/^imported$/i.test(key)) continue; // hide 'Imported' from UI
       map.set(key, (map.get(key) || 0) + 1);
     }
     return Array.from(map.entries()).map(([title, count]) => ({ title, count }));
@@ -178,6 +179,10 @@ export default function Blogs() {
                 />
               ))
             )}
+            {/* Mobile: Top authors below the list */}
+            <div className="lg:hidden">
+              <TopAuthorsPanel authors={topAuthors} />
+            </div>
           </div>
         </section>
 

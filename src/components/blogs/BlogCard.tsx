@@ -57,7 +57,7 @@ export default function BlogCard({ post: p, topBadge, onOpen }: BlogCardProps) {
 
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
-          {p.category?.title && (
+          {p.category?.title && !/^imported$/i.test(p.category.title) && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
               {p.category.title}
             </span>
