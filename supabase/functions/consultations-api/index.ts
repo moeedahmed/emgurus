@@ -7,6 +7,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { fromZonedTime } from "https://esm.sh/date-fns-tz@3.0.0";
+import { Resend } from "npm:resend@4.0.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -162,6 +163,152 @@ function daysBetween(start: Date, end: Date) {
     d.setUTCDate(d.getUTCDate() + 1);
   }
   return result;
+}
+
+// Email + formatting helpers
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
+const ADMIN_EMAIL = Deno.env.get("ADMIN_NOTIFICATIONS_EMAIL") || "";
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+
+function usd(amount: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+}
+function formatInTz(iso: string, tz?: string) {
+  try {
+    return new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: tz || 'UTC' }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+function getServiceClient() {
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  return createClient(SUPABASE_URL, key, { auth: { persistSession: false } });
+}
+async function sendEmail(to: string[], subject: string, html: string, bcc?: string[]) {
+  if (!resend) {
+    console.warn("Resend API key not configured; skipping email:", { subject, to });
+    return;
+  }
+  try {
+    await resend.emails.send({ from: "EMGurus <onboarding@resend.dev>", to, bcc, subject, html });
+  } catch (e) {
+    console.error("Resend send error", e);
+  }
+}
+
+async function sendBookingEmails(bookingId: string) {
+  const supabase = getServiceClient();
+  const { data: booking, error: bErr } = await supabase
+    .from("consult_bookings")
+    .select("id, user_id, guru_id, start_datetime, end_datetime, meeting_link, price, payment_status, status")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (bErr || !booking) {
+    console.error("sendBookingEmails: booking fetch error", bErr);
+    return;
+  }
+  const { data: userProf } = await supabase
+    .from("profiles")
+    .select("email, full_name, timezone")
+    .eq("user_id", booking.user_id)
+    .maybeSingle();
+  const { data: guruProf } = await supabase
+    .from("profiles")
+    .select("email, full_name, specialty, timezone")
+    .eq("user_id", booking.guru_id)
+    .maybeSingle();
+
+  const userEmail = userProf?.email;
+  const userName = userProf?.full_name || "Student";
+  const userTz = userProf?.timezone || "UTC";
+  const guruEmail = guruProf?.email;
+  const guruName = guruProf?.full_name || "Guru";
+  const guruTz = guruProf?.timezone || "UTC";
+  const specialty = (guruProf as any)?.specialty || "";
+
+  const whenForUser = formatInTz(booking.start_datetime, userTz);
+  const whenForGuru = formatInTz(booking.start_datetime, guruTz);
+  const link = booking.meeting_link || "To be shared before the session";
+  const bookingType = Number(booking.price || 0) > 0
+    ? `Paid: ${usd(Number(booking.price))} via Stripe`
+    : "Free booking";
+
+  const userSubject = `Your consultation with ${guruName} is confirmed`;
+  const userHtml = `
+    <h2>Booking Confirmed</h2>
+    <p>Hi ${userName},</p>
+    <p>Your consultation with <strong>${guruName}</strong>${specialty ? ` (${specialty})` : ""} is confirmed.</p>
+    <p><strong>Date & Time:</strong> ${whenForUser} (${userTz})</p>
+    <p><strong>Meeting link:</strong> <a href="${link}">${link}</a></p>
+    <p><strong>Booking type:</strong> ${bookingType}</p>
+    ${Number(booking.price || 0) > 0 ? "<p>This email serves as your receipt.</p>" : ""}
+    <p>See you then!</p>
+  `;
+
+  const guruSubject = `New booking from ${userName}`;
+  const guruHtml = `
+    <h2>New Booking</h2>
+    <p>You have a new consultation.</p>
+    <p><strong>Student:</strong> ${userName}${userEmail ? ` (${userEmail})` : ""}</p>
+    <p><strong>Date & Time:</strong> ${whenForGuru} (${guruTz})</p>
+    <p><strong>Meeting link:</strong> <a href="${link}">${link}</a></p>
+  `;
+
+  if (userEmail) await sendEmail([userEmail], userSubject, userHtml, ADMIN_EMAIL ? [ADMIN_EMAIL] : undefined);
+  if (guruEmail) await sendEmail([guruEmail], guruSubject, guruHtml);
+  if (ADMIN_EMAIL) {
+    const adminHtml = `
+      <h2>Booking Copy</h2>
+      <p>Booking ID: ${booking.id}</p>
+      <p>Guru: ${guruName} (${specialty}) - ${guruEmail || "no email"}</p>
+      <p>User: ${userName} - ${userEmail || "no email"}</p>
+      <p>Start: ${booking.start_datetime}</p>
+      <p>Price: ${usd(Number(booking.price || 0))} (${bookingType})</p>
+      <p>Status: ${booking.status} / ${booking.payment_status}</p>
+      <p>Link: ${link}</p>
+    `;
+    await sendEmail([ADMIN_EMAIL], `Copy: Booking ${booking.id} confirmed`, adminHtml);
+  }
+}
+
+async function sendReminderEmails(bookingId: string) {
+  const supabase = getServiceClient();
+  const { data: booking } = await supabase
+    .from("consult_bookings")
+    .select("id, user_id, guru_id, start_datetime, meeting_link, price")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking) return;
+
+  const { data: userProf } = await supabase.from("profiles").select("email, full_name, timezone").eq("user_id", booking.user_id).maybeSingle();
+  const { data: guruProf } = await supabase.from("profiles").select("email, full_name, timezone").eq("user_id", booking.guru_id).maybeSingle();
+
+  const userEmail = userProf?.email;
+  const userName = userProf?.full_name || "Student";
+  const userTz = userProf?.timezone || "UTC";
+  const guruEmail = guruProf?.email;
+  const guruName = guruProf?.full_name || "Guru";
+  const guruTz = guruProf?.timezone || "UTC";
+  const whenForUser = formatInTz(booking.start_datetime, userTz);
+  const whenForGuru = formatInTz(booking.start_datetime, guruTz);
+  const link = booking.meeting_link || "To be shared before the session";
+
+  const subject = "Reminder: Your consultation is in 1 hour";
+  const userHtml = `
+    <h2>Reminder</h2>
+    <p>Hi ${userName}, this is a reminder for your consultation in 1 hour.</p>
+    <p><strong>Date & Time:</strong> ${whenForUser} (${userTz})</p>
+    <p><strong>Meeting link:</strong> <a href="${link}">${link}</a></p>
+  `;
+  const guruHtml = `
+    <h2>Reminder</h2>
+    <p>Hi ${guruName}, you have a consultation in 1 hour.</p>
+    <p><strong>Date & Time:</strong> ${whenForGuru} (${guruTz})</p>
+    <p><strong>Meeting link:</strong> <a href="${link}">${link}</a></p>
+  `;
+
+  if (userEmail) await sendEmail([userEmail], subject, userHtml);
+  if (guruEmail) await sendEmail([guruEmail], subject, guruHtml);
 }
 
 async function handle(req: Request): Promise<Response> {
@@ -360,6 +507,9 @@ async function handle(req: Request): Promise<Response> {
           { booking_id: data.id, reminder_type: "email", scheduled_time: r24 },
           { booking_id: data.id, reminder_type: "email", scheduled_time: r1 },
         ]);
+
+        // Fire-and-forget confirmation emails
+        sendBookingEmails(data.id).catch((e) => console.error("sendBookingEmails error", e));
         return json({ booking: data });
       }
 
@@ -507,6 +657,9 @@ async function handle(req: Request): Promise<Response> {
           { booking_id: bookingId, reminder_type: "email", scheduled_time: r1 },
         ]);
       }
+
+      // Send confirmation emails
+      sendBookingEmails(bookingId).catch((e) => console.error("sendBookingEmails error", e));
 
       return json({ ok: true, booking_id: bookingId });
     }
