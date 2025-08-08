@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.blog-toggle-like]
 verify_jwt = true
+
+[functions.consultations-api]
+verify_jwt = false
