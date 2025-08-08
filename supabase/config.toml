@@ -29,3 +29,9 @@ verify_jwt = true
 
 [functions.forums-api]
 verify_jwt = false
+
+[functions.blogs-api]
+verify_jwt = false
+
+[functions.import-legacy-blogs]
+verify_jwt = true
