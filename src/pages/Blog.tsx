@@ -142,7 +142,7 @@ const Blog = () => {
         {
           title: "Airway Pearls: Intubation Tips for Difficult Cases",
           description: "From positioning to preoxygenation—practical pearls for your next challenging airway.",
-          cover: "https://images.unsplash.com/photo-1582719478250-1e88b1f69a00?q=80&w=1600&auto=format&fit=crop",
+          cover: "https://images.unsplash.com/photo-1504439904031-93ded9f93e3f?q=80&w=1600&auto=format&fit=crop",
           tags: ["Airway", "Procedures", "Education"],
           content: `
             <h2>Preparation</h2>
@@ -159,7 +159,7 @@ const Blog = () => {
         {
           title: "ECG Mastery: Recognizing STEMI Mimics",
           description: "Don’t miss the dangerous mimics—hyperkalemia, pericarditis, LV aneurysm and more.",
-          cover: "https://images.unsplash.com/photo-1582719478250-7a6a8b3a4a11?q=80&w=1600&auto=format&fit=crop",
+          cover: "https://images.unsplash.com/photo-1516542076529-1ea3854896e1?q=80&w=1600&auto=format&fit=crop",
           tags: ["ECG", "Cardiology", "Diagnostics"],
           content: `
             <h2>Common Mimics</h2>
@@ -173,6 +173,73 @@ const Blog = () => {
               </tbody>
             </table>
             <p>Always correlate with symptoms, troponins, and bedside echo.</p>
+          `,
+        },
+        {
+          title: "Head CT in Minor Head Injury: When to Scan",
+          description: "Applying decision rules to reduce unnecessary radiology without missing danger.",
+          cover: "https://images.unsplash.com/photo-1581594549595-35f6ed5b8f5c?q=80&w=1600&auto=format&fit=crop",
+          tags: ["Imaging", "Neurology", "Evidence"],
+          content: `
+            <p>Use validated tools like the Canadian CT Head Rule to guide decisions.</p>
+            <ul>
+              <li>Assess GCS, vomiting, age, and mechanism.</li>
+              <li>Shared decision-making reduces utilization.</li>
+            </ul>
+          `,
+        },
+        {
+          title: "Antibiotics in Cellulitis: What, When, and How Long",
+          description: "Choosing agents and durations that balance efficacy with stewardship.",
+          cover: "https://images.unsplash.com/photo-1584982751601-97dcc096659c?q=80&w=1600&auto=format&fit=crop",
+          tags: ["Infectious Disease", "Antibiotics", "Dermatology"],
+          content: `
+            <p>Empiric coverage should target streptococci; add MRSA coverage when risk factors exist.</p>
+          `,
+        },
+        {
+          title: "Pediatric Fever: Red Flags You Can't Miss",
+          description: "Ages, appearance, and vitals that change the game in febrile children.",
+          cover: "https://images.unsplash.com/photo-1600959907703-125ba1374a12?q=80&w=1600&auto=format&fit=crop",
+          tags: ["Pediatrics", "Fever", "Triage"],
+          content: `
+            <p>Ill appearance and poor perfusion trump temperature alone. Trust your gestalt.</p>
+          `,
+        },
+        {
+          title: "Stroke Thrombolysis: Door-to-Needle Done Right",
+          description: "Streamlining workflows for faster, safer stroke care in the ED.",
+          cover: "https://images.unsplash.com/photo-1559757175-08d1ea6a9d26?q=80&w=1600&auto=format&fit=crop",
+          tags: ["Neurology", "Stroke", "Systems"],
+          content: `
+            <p>Pre-notification, parallel processing, and checklists shave precious minutes.</p>
+          `,
+        },
+        {
+          title: "Point-of-Care Ultrasound: FAST Exam Essentials",
+          description: "Focused assessment in trauma—views, pitfalls, and pearls.",
+          cover: "https://images.unsplash.com/photo-1580281657520-4e4b3c7539e2?q=80&w=1600&auto=format&fit=crop",
+          tags: ["Ultrasound", "Trauma", "Critical Care"],
+          content: `
+            <p>FAST rapidly detects free fluid; integrate with clinical picture and vitals.</p>
+          `,
+        },
+        {
+          title: "Procedural Sedation: Safety and Success",
+          description: "Dosing, monitoring, and airway backup for common ED procedures.",
+          cover: "https://images.unsplash.com/photo-1584982896647-33b3790fb70b?q=80&w=1600&auto=format&fit=crop",
+          tags: ["Sedation", "Procedures", "Safety"],
+          content: `
+            <p>Use capnography and pre-oxygenation; match agent selection to the procedure and patient.</p>
+          `,
+        },
+        {
+          title: "Chest Pain Pathways: Low-Risk Doesn’t Mean No-Risk",
+          description: "Troponins, HEART score, and discharge safety nets for low-risk chest pain.",
+          cover: "https://images.unsplash.com/photo-1530026186672-2cd00ffc50fe?q=80&w=1600&auto=format&fit=crop",
+          tags: ["Cardiology", "Chest Pain", "Guidelines"],
+          content: `
+            <p>Serial troponins and structured risk tools reduce admissions while maintaining safety.</p>
           `,
         },
       ];
@@ -227,6 +294,19 @@ const Blog = () => {
       }
     }
   };
+
+  useEffect(() => {
+    if (loading || !user) return;
+    try {
+      if (localStorage.getItem('seeded_demo_posts')) return;
+    } catch {}
+    const haveCovers = posts.filter(p => !!p.cover_image_url).length;
+    if (posts.length < 6 || haveCovers < 3) {
+      addSamples().then(() => {
+        try { localStorage.setItem('seeded_demo_posts', '1'); } catch {}
+      });
+    }
+  }, [loading, user?.id, posts.length]);
 
   return (
     <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
