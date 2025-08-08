@@ -44,15 +44,12 @@ const Admin = () => {
 
   const seed = async () => {
     try {
-      const res = await fetch(`https://${"cgtvvpzrzwyvsbavboxa"}.supabase.co/functions/v1/seed-test-users`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Seed failed");
-      toast.success("Seeded test users: admin, guru, user (password: Test1234!)");
+      const { data, error } = await supabase.functions.invoke('seed-test-users', { body: {} });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Seed failed');
+      toast.success(`Seeded users (default password: Password123!).`);
     } catch (e) {
-      toast.error("Seeding failed");
+      toast.error('Seeding failed');
       console.error(e);
     }
   };
