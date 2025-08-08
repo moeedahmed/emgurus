@@ -9,6 +9,7 @@ import ShareButtons from "@/components/blogs/ShareButtons";
 import { Button } from "@/components/ui/button";
 import DOMPurify from "dompurify";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function BlogDetail() {
   const { slug } = useParams();
@@ -16,6 +17,8 @@ export default function BlogDetail() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const commentsRef = useRef<HTMLDivElement | null>(null);
+  const [authorProfile, setAuthorProfile] = useState<any | null>(null);
+  const [reviewerProfile, setReviewerProfile] = useState<any | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -34,6 +37,19 @@ export default function BlogDetail() {
     };
     load();
   }, [slug]);
+
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      if (!data?.post) return;
+      const ids: string[] = [data.post.author?.id, data.post.reviewer?.id].filter(Boolean) as string[];
+      if (!ids.length) return;
+      const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, avatar_url, bio, title, specialty').in('user_id', ids);
+      const map = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+      setAuthorProfile(map.get(data.post.author?.id || '') || null);
+      if (data.post.reviewer?.id) setReviewerProfile(map.get(data.post.reviewer.id) || null);
+    };
+    fetchProfiles();
+  }, [data]);
 
   const contentHtml = useMemo(() => {
     if (!data?.post) return "";
@@ -108,6 +124,32 @@ export default function BlogDetail() {
               <ShareButtons title={p.title} url={window.location.href} text={p.excerpt || ""} />
             </div>
           </div>
+
+          {/* attribution panel */}
+          <section className="mt-8">
+            <Card className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Author */}
+                <div className="flex items-start gap-3">
+                  <AuthorChip id={p.author.id} name={authorProfile?.full_name || p.author.name} avatar={authorProfile?.avatar_url || p.author.avatar} onClick={(id) => navigate(`/profile/${id}`)} />
+                  <div>
+                    <div className="font-medium">Author</div>
+                    {authorProfile?.bio && <div className="text-sm text-muted-foreground max-w-prose">{authorProfile.bio}</div>}
+                  </div>
+                </div>
+                {/* Reviewer */}
+                {data.post.reviewer && (
+                  <div className="flex items-start gap-3">
+                    <AuthorChip id={data.post.reviewer.id} name={reviewerProfile?.full_name || data.post.reviewer.name} avatar={reviewerProfile?.avatar_url || data.post.reviewer.avatar} onClick={(id) => navigate(`/profile/${id}`)} />
+                    <div>
+                      <div className="font-medium">Reviewed by</div>
+                      {reviewerProfile?.bio && <div className="text-sm text-muted-foreground max-w-prose">{reviewerProfile.bio}</div>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </section>
 
           {/* comments */}
           <section className="mt-8" id="comments" ref={commentsRef}>

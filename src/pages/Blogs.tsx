@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import BlogCard from "@/components/blogs/BlogCard";
 import BlogsFilterPanel from "@/components/blogs/BlogsFilterPanel";
 import TopAuthorsPanel from "@/components/blogs/TopAuthorsPanel";
-import BrowseByCategoryPanel from "@/components/blogs/BrowseByCategoryPanel";
+
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -141,22 +141,25 @@ export default function Blogs() {
         {/* Main list - vertical cards, left aligned */}
         <section className="lg:col-span-8">
           <div className="mb-4 lg:hidden">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline">Filters</Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-80 sm:w-96">
-                <BlogsFilterPanel
-                  q={q}
-                  category={category}
-                  sort={sort}
-                  tag={tag}
-                  categories={categories}
-                  tags={tags}
-                  onChange={setParam}
-                />
-              </SheetContent>
-            </Sheet>
+            <div className="flex items-center justify-between gap-3">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline">Filters</Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-80 sm:w-96">
+                  <BlogsFilterPanel
+                    q={q}
+                    category={category}
+                    sort={sort}
+                    tag={tag}
+                    categories={categories}
+                    tags={tags}
+                    onChange={setParam}
+                  />
+                </SheetContent>
+              </Sheet>
+              <Button onClick={() => navigate('/blogs/new')}>Write Blog</Button>
+            </div>
           </div>
           <div className="space-y-6">
             {loading ? (
@@ -182,6 +185,9 @@ export default function Blogs() {
         <aside className="lg:col-span-4 hidden lg:block">
           <div className="lg:sticky lg:top-20">
             <div className="max-h-[calc(100vh-6rem)] overflow-auto pr-2 space-y-6">
+              <div className="flex justify-end">
+                <Button onClick={() => navigate('/blogs/new')}>Write Blog</Button>
+              </div>
               <BlogsFilterPanel
                 q={q}
                 category={category}
@@ -192,10 +198,6 @@ export default function Blogs() {
                 onChange={setParam}
               />
               <TopAuthorsPanel authors={topAuthors} />
-              <BrowseByCategoryPanel
-                categories={categories}
-                onSelect={(v) => setParam("category", v === "__all__" ? "" : v)}
-              />
             </div>
           </div>
         </aside>
