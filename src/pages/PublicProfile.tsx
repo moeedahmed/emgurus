@@ -17,8 +17,12 @@ interface ProfileRow {
   specialty: string | null;
   avatar_url: string | null;
   exams: string[] | null;
+  languages: string[] | null;
   bio: string | null;
   price_per_30min: number | null;
+  linkedin: string | null;
+  twitter: string | null;
+  website: string | null;
 }
 
 export default function PublicProfile() {
@@ -32,7 +36,7 @@ export default function PublicProfile() {
     (async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, full_name, timezone, country, specialty, avatar_url, exams, bio, price_per_30min')
+        .select('user_id, full_name, timezone, country, specialty, avatar_url, exams, languages, bio, price_per_30min, linkedin, twitter, website')
         .eq('user_id', id)
         .maybeSingle();
       if (!mounted) return;
@@ -101,7 +105,7 @@ export default function PublicProfile() {
                 <h1 className="text-2xl font-semibold">{profile.full_name}</h1>
               </div>
               <div className="text-sm text-muted-foreground">
-                {profile.specialty || 'Emergency Medicine'} • {profile.country || 'Global'}
+                {(profile.specialty || 'Emergency Medicine')} • {(profile.country || 'Global')} • {(profile.timezone || 'UTC')}
               </div>
             </div>
           </header>
@@ -115,6 +119,22 @@ export default function PublicProfile() {
               {(profile.exams || []).map((e) => (
                 <Badge key={e} variant="outline">{e}</Badge>
               ))}
+            </div>
+          )}
+
+          {(profile.languages || []).length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {(profile.languages || []).map((l) => (
+                <Badge key={l} variant="outline">{l}</Badge>
+              ))}
+            </div>
+          )}
+
+          {(profile.linkedin || profile.twitter || profile.website) && (
+            <div className="flex gap-3 pt-1 text-sm">
+              {profile.linkedin && (<a href={profile.linkedin} target="_blank" rel="noreferrer" className="underline">LinkedIn</a>)}
+              {profile.twitter && (<a href={profile.twitter} target="_blank" rel="noreferrer" className="underline">X (Twitter)</a>)}
+              {profile.website && (<a href={profile.website} target="_blank" rel="noreferrer" className="underline">Website</a>)}
             </div>
           )}
 

@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const countries = ["United Kingdom","United States","United Arab Emirates","India","Pakistan","Canada","Australia"];
 const specialties = ["Emergency Medicine","Internal Medicine","Surgery","Pediatrics","Radiology"];
-const exams = ["PLAB","USMLE","MRCP","MRCS","FRCR","MRCEM"];
+const exams = ["MRCEM (UK)","FRCEM (UK)","FCPS (Pakistan)","MRCS (EM)","FCEM (India)","ABEM (US)","FACEM (Australia)","PLAB","USMLE","Other"];
 const timezones = ["UTC","Europe/London","America/New_York","Asia/Dubai","Asia/Kolkata","Asia/Karachi","Australia/Sydney"];
 
 export default function Onboarding() {
@@ -29,6 +29,8 @@ export default function Onboarding() {
   const [twitter, setTwitter] = useState("");
   const [website, setWebsite] = useState("");
   const [saving, setSaving] = useState(false);
+  const [otherExam, setOtherExam] = useState("");
+  const [otherLanguage, setOtherLanguage] = useState("");
 
   useEffect(() => {
     document.title = "Complete your profile | EMGurus";
@@ -78,16 +80,19 @@ export default function Onboarding() {
     }
     try {
       setSaving(true);
+      const finalExams = examsSel.filter(e => e !== 'Other').concat(otherExam.trim() ? [otherExam.trim()] : []);
+      const finalLanguages = languages.filter(l => l !== 'Other').concat(otherLanguage.trim() ? [otherLanguage.trim()] : []);
+      if (finalExams.length === 0) { toast({ title: 'Please add at least one exam.' }); setSaving(false); return; }
       const { error } = await supabase.from('profiles').update({
         full_name: fullName,
         country,
         specialty,
         timezone: tz,
-        exams: examsSel,
+        exams: finalExams,
         bio,
         position,
         years_experience: years === "" ? null : Number(years),
-        languages,
+        languages: finalLanguages,
         linkedin,
         twitter,
         website,
@@ -151,6 +156,12 @@ export default function Onboarding() {
                 </Badge>
               ))}
             </div>
+            {examsSel.includes('Other') && (
+              <div className="grid gap-1 pt-2">
+                <Label>Other exam</Label>
+                <Input value={otherExam} onChange={(e) => setOtherExam(e.target.value)} placeholder="Enter other exam" />
+              </div>
+            )}
           </div>
         </div>
 
@@ -166,20 +177,26 @@ export default function Onboarding() {
           <div className="grid gap-1">
             <Label>Languages</Label>
             <div className="flex flex-wrap gap-2">
-              {["English","Arabic","Hindi","Urdu","French","Spanish"].map(l => (
+              {["English","Arabic","Hindi","Urdu","French","Spanish","Other"].map(l => (
                 <Badge key={l} variant={languages.includes(l) ? 'default' : 'outline'} className="cursor-pointer" onClick={() => toggleLang(l)}>
                   {l}
                 </Badge>
               ))}
             </div>
+            {languages.includes('Other') && (
+              <div className="grid gap-1 pt-2">
+                <Label>Other language</Label>
+                <Input value={otherLanguage} onChange={(e) => setOtherLanguage(e.target.value)} placeholder="Enter other language" />
+              </div>
+            )}
           </div>
           <div className="grid gap-1">
             <Label>LinkedIn</Label>
             <Input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} placeholder="https://linkedin.com/in/username" />
           </div>
           <div className="grid gap-1">
-            <Label>Twitter</Label>
-            <Input value={twitter} onChange={(e) => setTwitter(e.target.value)} placeholder="https://twitter.com/username" />
+            <Label>X (Twitter)</Label>
+            <Input value={twitter} onChange={(e) => setTwitter(e.target.value)} placeholder="https://x.com/username" />
           </div>
           <div className="grid gap-1">
             <Label>Website</Label>
