@@ -83,7 +83,10 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const pathname = url.pathname.replace(/^\/+/, "/");
+    // Normalize path to work with both direct domain and function subpath
+    const rawPath = url.pathname;
+    let pathname = rawPath.replace(/^\/?blogs-api\/?/, "/");
+    pathname = pathname.replace(/^\/+/, "/");
     const supabase = getClient(req);
     const {
       data: { user },
