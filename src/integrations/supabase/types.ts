@@ -1762,8 +1762,10 @@ export type Database = {
       }
       reviewed_exam_questions: {
         Row: {
+          answer_key: string | null
           correct_index: number | null
           created_at: string
+          difficulty: string | null
           exam: string
           explanation: string | null
           id: string
@@ -1774,10 +1776,13 @@ export type Database = {
           stem: string
           subtopic: string | null
           topic: string | null
+          updated_at: string
         }
         Insert: {
+          answer_key?: string | null
           correct_index?: number | null
           created_at?: string
+          difficulty?: string | null
           exam: string
           explanation?: string | null
           id?: string
@@ -1788,10 +1793,13 @@ export type Database = {
           stem: string
           subtopic?: string | null
           topic?: string | null
+          updated_at?: string
         }
         Update: {
+          answer_key?: string | null
           correct_index?: number | null
           created_at?: string
+          difficulty?: string | null
           exam?: string
           explanation?: string | null
           id?: string
@@ -1802,6 +1810,7 @@ export type Database = {
           stem?: string
           subtopic?: string | null
           topic?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
