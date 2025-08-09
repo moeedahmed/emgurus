@@ -923,6 +923,24 @@ export type Database = {
         }
         Relationships: []
       }
+      curriculum_slos: {
+        Row: {
+          code: string
+          id: string
+          title: string
+        }
+        Insert: {
+          code: string
+          id?: string
+          title: string
+        }
+        Update: {
+          code?: string
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       email_events: {
         Row: {
           created_at: string
