@@ -569,6 +569,7 @@ export type Database = {
           description: string | null
           id: string
           likes_count: number
+          published_at: string | null
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -589,6 +590,7 @@ export type Database = {
           description?: string | null
           id?: string
           likes_count?: number
+          published_at?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -609,6 +611,7 @@ export type Database = {
           description?: string | null
           id?: string
           likes_count?: number
+          published_at?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -627,6 +630,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "blog_categories"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_posts_reviewed_by_profiles_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
