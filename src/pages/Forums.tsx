@@ -74,7 +74,6 @@ const Forums = () => {
               <Card className="p-6 flex flex-col border-2 transition hover:shadow-md hover:border-primary/20 rounded-xl">
                 <h2 className="text-xl font-semibold mb-1 group-hover:text-primary transition-colors">{c.title}</h2>
                 <p className="text-muted-foreground flex-1">{c.description || 'Discussion category'}</p>
-                <div className="pt-4 text-sm text-primary group-hover:underline">View threads →</div>
               </Card>
             </Link>
           ))}

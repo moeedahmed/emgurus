@@ -66,6 +66,9 @@ export default function ForumCategory() {
 
   return (
     <main className="container mx-auto px-4 py-8">
+      <div className="mb-4">
+        <Link to="/forums" className="text-sm no-underline text-foreground/70 hover:text-foreground">← Back to Forums</Link>
+      </div>
       <header className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{category?.title || 'Threads'}</h1>
