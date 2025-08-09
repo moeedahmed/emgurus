@@ -1,41 +1,69 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// Dynamic CORS with allowlist
+const allowOrigin = (origin: string | null) => {
+  const o = origin || '';
+  if (o.includes('localhost')) return o;
+  if (o.endsWith('.lovable.app')) return o;
+  return '';
 };
+
+const baseCors = {
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+} as const;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 const EMBEDDING_MODEL = Deno.env.get("EMBEDDING_MODEL") || "text-embedding-3-small";
-const EMBEDDING_DIM = Number(Deno.env.get("EMBEDDING_DIM") || "1536");
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
 interface MessageIn { role: 'user'|'assistant'|'system'; content: string }
 
-function withTimeout<T>(p: Promise<T>, ms: number, label = 'request'): Promise<T> {
+function sseEncode(data: unknown) {
+  return `data: ${JSON.stringify(data)}\n\n`;
+}
+
+async function getEmbedding(input: string) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(`${label} timeout after ${ms} ms`), ms);
-  // Note: we can't actually pass ctrl.signal to supabase client calls, but we use it for OpenAI fetches below
-  return new Promise<T>((resolve, reject) => {
-    p.then((v) => { clearTimeout(t); resolve(v); }).catch((e) => { clearTimeout(t); reject(e); });
-  });
+  const res = await Promise.race([
+    fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: EMBEDDING_MODEL, input }),
+      signal: ctrl.signal,
+    }),
+    new Promise<never>((_, rej) => setTimeout(() => rej(new Error('embeddings timeout')), 30000))
+  ]);
+  if (!('ok' in res) || !(res as Response).ok) throw new Error(`Embeddings failed`);
+  const json = await (res as Response).json();
+  return json?.data?.[0]?.embedding as number[];
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
-  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+  const origin = req.headers.get('Origin');
+  const allowed = allowOrigin(origin);
+
+  // Preflight
+  if (req.method === 'OPTIONS') {
+    if (!allowed) return new Response(null, { status: 403, headers: { ...baseCors } });
+    return new Response(null, { headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed } });
+  }
+
+  if (!allowed) return new Response('Forbidden', { status: 403, headers: { ...baseCors } });
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed } });
 
   try {
     const body = await req.json().catch(() => ({}));
+    const allow_browsing: boolean = !!body.allow_browsing;
     const sessionId: string | null = body.session_id || null;
     const anonId: string | null = body.anon_id || null;
     const pageContext: any = body.page_context || {};
     const messages: MessageIn[] = Array.isArray(body.messages) ? body.messages.slice(-20) : [];
-    const now = new Date().toISOString();
 
+    const now = new Date().toISOString();
     let dbSessionId = sessionId;
     if (!dbSessionId) {
       const { data: s } = await supabase.from('ai_sessions').insert({ anon_id: anonId || crypto.randomUUID(), page_first_seen: pageContext?.page_type || null }).select('id').single();
@@ -44,74 +72,133 @@ serve(async (req) => {
       await supabase.from('ai_sessions').update({ last_active_at: now }).eq('id', dbSessionId);
     }
 
-    // Retrieval (best-effort)
-    const lastUser = [...messages].reverse().find(m => m.role === 'user');
+    // Build retrieval context if browsing allowed
     let retrieved: any[] = [];
-    try {
-      if (lastUser?.content) {
-        const embCtrl = new AbortController();
-        const embRes = await Promise.race([
-          fetch('https://api.openai.com/v1/embeddings', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: EMBEDDING_MODEL, input: lastUser.content }),
-            signal: embCtrl.signal,
-          }),
-          new Promise<never>((_, rej) => setTimeout(() => rej(new Error('embeddings timeout')), 20000))
-        ]);
-        if (!('ok' in embRes) || !(embRes as Response).ok) throw new Error(`Embeddings failed`);
-        const embJson = await (embRes as Response).json();
-        const embedding: number[] = embJson?.data?.[0]?.embedding || [];
-        if (embedding.length) {
-          const { data } = await supabase.rpc('ai_search_content', { query_embedding: embedding as any, match_count: 6, filter_source: null as any });
-          retrieved = data || [];
+    const lastUser = [...messages].reverse().find(m => m.role === 'user');
+    if (allow_browsing && lastUser?.content) {
+      try {
+        const embedding = await getEmbedding(lastUser.content);
+        if (embedding?.length) {
+          const { data } = await supabase.rpc('ai_search_content', { query_embedding: embedding as any, match_count: 8, filter_source: null as any });
+          const seen = new Set<string>();
+          for (const r of (data || [])) {
+            const key = r.slug_url || r.url || r.slug || '';
+            if (key && !seen.has(key)) { seen.add(key); retrieved.push(r); }
+          }
         }
+      } catch (_) {
+        // retrieval fail is fine; will continue
       }
-    } catch (retrErr) {
-      // Ignore retrieval failure silently; main chat can still proceed
     }
 
-    const systemPrompt = `You are AI Guru, a helpful assistant for EM Gurus. Provide concise, friendly answers using EM Gurus content first. Never give medical advice; include a short disclaimer when medical questions arise. Current page context: ${JSON.stringify(pageContext)}. If you cite content, link with markdown and keep bullets short.`;
+    const systemPrompt = `You are AI Guru, a helpful assistant for EM Gurus. Provide concise, friendly answers using EM Gurus content first. Never give medical advice; include a short disclaimer when medical questions arise. Current page context: ${JSON.stringify(pageContext)}.`;
 
+    // Prepare OpenAI payload
     const openaiMessages = [
       { role: 'system', content: systemPrompt },
       ...messages.map(m => ({ role: m.role, content: m.content })),
-      retrieved.length ? { role: 'system', content: `Relevant content:\n${retrieved.map((r: any, i: number) => `#${i+1} [${r.title}](${r.slug_url || r.url || r.slug || ''})\n${(r.text_chunk||'').slice(0,800)}`).join('\n\n')}` } : null,
-    ].filter(Boolean) as Array<{ role: string; content: string }>;
+    ] as Array<{ role: string; content: string }>;
 
-    // Chat completion with quick failure on OpenAI errors/timeouts
-    try {
-      const ctrl = new AbortController();
-      const completionRes = await Promise.race([
-        fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'gpt-4.1-2025-04-14', messages: openaiMessages, temperature: 0.3 }),
-          signal: ctrl.signal,
-        }),
-        new Promise<never>((_, rej) => setTimeout(() => rej(new Error('completion timeout')), 25000))
-      ]);
-      if (!('ok' in completionRes) || !(completionRes as Response).ok) {
-        const errTxt = await (completionRes as Response).text().catch(() => 'Unknown error');
-        return new Response(JSON.stringify({ error: `OpenAI error: ${errTxt}` }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
-      }
-      const completion = await (completionRes as Response).json();
-      const reply = completion?.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response.";
-
-      if (dbSessionId) {
-        const userMsg = lastUser ? [{ session_id: dbSessionId, role: 'user', content: { text: lastUser.content } }] : [];
-        const asstMsg = [{ session_id: dbSessionId, role: 'assistant', content: { text: reply, retrieved: (retrieved||[]).slice(0,3) } }];
-        if (userMsg.length) await supabase.from('ai_messages').insert(userMsg as any);
-        await supabase.from('ai_messages').insert(asstMsg as any);
-      }
-
-      return new Response(JSON.stringify({ session_id: dbSessionId, reply }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
-    } catch (openaiErr: any) {
-      // Quick failure path
-      return new Response(JSON.stringify({ error: openaiErr?.message || 'AI completion failed' }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    if (retrieved.length) {
+      const ctx = retrieved.map((r: any, i: number) => `#${i+1} [${r.title}](${r.slug_url || r.url || r.slug || ''})\n${(r.text_chunk||'').slice(0,800)}`).join('\n\n');
+      openaiMessages.push({ role: 'system', content: `Relevant EM Gurus content:\n${ctx}` });
     }
+
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream<Uint8Array>({
+      start: async (controller) => {
+        const send = (d: unknown) => controller.enqueue(encoder.encode(sseEncode(d)));
+
+        async function run(withTools: boolean) {
+          const ctrl = new AbortController();
+          try {
+            const res = await Promise.race([
+              fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  model: 'gpt-4.1-2025-04-14',
+                  temperature: 0.3,
+                  max_tokens: 1024,
+                  messages: openaiMessages,
+                  stream: true,
+                  tool_choice: withTools ? 'auto' : 'none',
+                }),
+                signal: ctrl.signal,
+              }),
+              new Promise<never>((_, rej) => setTimeout(() => rej(new Error('completion timeout')), 60000))
+            ]);
+            if (!('ok' in res) || !(res as Response).ok) {
+              const errTxt = await (res as Response).text().catch(() => 'OpenAI error');
+              throw new Error(errTxt);
+            }
+            const reader = (res as Response).body!.getReader();
+            const decoder = new TextDecoder();
+            let full = '';
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split(/\r?\n/);
+              for (const line of lines) {
+                if (!line.startsWith('data:')) continue;
+                const data = line.slice(5).trim();
+                if (!data || data === '[DONE]') continue;
+                try {
+                  const json = JSON.parse(data);
+                  const delta = json?.choices?.[0]?.delta?.content || '';
+                  if (delta) {
+                    full += delta;
+                    send({ choices: [{ delta: { content: delta } }] });
+                  }
+                } catch { /* ignore parse */ }
+              }
+            }
+            // Persist
+            if (dbSessionId) {
+              const userMsg = lastUser ? [{ session_id: dbSessionId, role: 'user', content: { text: lastUser.content } }] : [];
+              const asstMsg = [{ session_id: dbSessionId, role: 'assistant', content: { text: full, retrieved: (retrieved||[]).slice(0,3) } }];
+              if (userMsg.length) await supabase.from('ai_messages').insert(userMsg as any);
+              await supabase.from('ai_messages').insert(asstMsg as any);
+            }
+          } catch (err) {
+            throw err;
+          }
+        }
+
+        try {
+          await run(!!allow_browsing);
+        } catch (err) {
+          if (allow_browsing) {
+            // Tool path failed — inform and retry without tools
+            send({ delta: 'Browsing failed; answering without browsing… ' });
+            try {
+              await run(false);
+            } catch (finalErr) {
+              send({ error: 'final', message: 'AI Guru failed—try again with browsing off or reload.' });
+            }
+          } else {
+            send({ error: 'timeout', message: 'Request timeout after 60s' });
+          }
+        } finally {
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(stream, {
+      headers: {
+        ...baseCors,
+        'Access-Control-Allow-Origin': allowed,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      }
+    });
   } catch (err: any) {
     console.error('ai-route error', err);
-    return new Response(JSON.stringify({ error: err?.message || 'Unknown error' }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    return new Response(JSON.stringify({ error: err?.message || 'Unknown error' }), { status: 500, headers: { ...baseCors, 'Access-Control-Allow-Origin': allowOrigin(req.headers.get('Origin') || '') } });
   }
 });

@@ -21,12 +21,13 @@ function detectPageContext() {
 }
 
 export default function AIGuru() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState<string>("");
+  const [allowBrowsing, setAllowBrowsing] = useState<boolean>(false);
   const sessionKey = useRef<string>("");
   const panelRef = useRef<HTMLDivElement | null>(null);
   const fabRef = useRef<HTMLButtonElement | null>(null);
@@ -80,12 +81,18 @@ export default function AIGuru() {
     };
   }, [open]);
 
-  const invokeWithTimeout = useCallback(async (body: any, ms = 25000) => {
-    // Race invoke against a timeout to avoid hanging
-    return await Promise.race([
-      supabase.functions.invoke('ai-route', { body }),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('Request timeout after 25s')), ms))
-    ]) as Awaited<ReturnType<typeof supabase.functions.invoke>>;
+  const invokeWithTimeout = useCallback(async (p: Promise<Response>, ms = 60000) => {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort('timeout'), ms);
+    try {
+      const res = await Promise.race([
+        p,
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error('Request timeout after 60s')), ms))
+      ]);
+      return res;
+    } finally {
+      clearTimeout(timeout);
+    }
   }, []);
 
   const send = useCallback(async (text?: string) => {
@@ -97,46 +104,91 @@ export default function AIGuru() {
     setLoading(true);
     setStatusText('Generating…');
 
-    // optional transient status
+    // transient status
     const statusTimer = setTimeout(() => setStatusText('Searching EM Gurus…'), 600);
 
-    const doCall = async () => {
-      const { data, error } = await invokeWithTimeout({
-        session_id: sessionKey.current,
-        anon_id: sessionKey.current,
-        page_context: pageContext,
-        messages: newMsgs,
-        extra_ignored: true, // safe extra field, should be ignored by backend
-      });
-      if (error) throw error;
-      return data as any;
+    const url = `https://cgtvvpzrzwyvsbavboxa.functions.supabase.co/ai-route`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
     };
+    if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
 
     try {
-      let data: any;
-      try {
-        data = await doCall();
-      } catch (e: any) {
-        setStatusText('AI Guru hit a snag. Retrying…');
-        await new Promise(res => setTimeout(res, 1500));
-        data = await doCall();
-      }
+      // Add assistant placeholder for streaming
+      setMsgs(m => [...m, { role: 'assistant', content: '' }]);
+
+      const controller = new AbortController();
+      const fetchPromise = fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          session_id: sessionKey.current,
+          anon_id: sessionKey.current,
+          page_context: pageContext,
+          messages: newMsgs,
+          allow_browsing: allowBrowsing,
+        }),
+        signal: controller.signal,
+      });
+
+      const res = await invokeWithTimeout(fetchPromise, 60000);
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No response body');
       clearTimeout(statusTimer);
       setStatusText('');
-      const reply = data?.reply || 'Sorry, I could not generate a response.';
-      setMsgs(m => [...m, { role: 'assistant', content: reply }]);
-      if (data?.session_id) sessionKey.current = data.session_id;
+
+      const decoder = new TextDecoder();
+      let full = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split(/\r?\n/);
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          const data = line.slice(5).trim();
+          if (!data || data === '[DONE]') continue;
+          try {
+            const json = JSON.parse(data);
+            const delta = json?.choices?.[0]?.delta?.content || json?.delta || json?.content || '';
+            if (delta) {
+              full += delta;
+              setMsgs(m => {
+                const copy = [...m];
+                const idx = copy.length - 1;
+                copy[idx] = { ...copy[idx], content: (copy[idx].content || '') + delta } as ChatMsg;
+                return copy;
+              });
+            }
+          } catch {}
+        }
+      }
+
+      // Finalize
+      if (full) return;
+      // If no streamed content, show fallback
+      setMsgs(m => {
+        const copy = [...m];
+        const idx = copy.length - 1;
+        copy[idx] = { ...copy[idx], content: copy[idx].content || 'Sorry, I could not generate a response.' } as ChatMsg;
+        return copy;
+      });
     } catch (e: any) {
       clearTimeout(statusTimer);
       setStatusText('');
-      const msg = e?.message || 'Still not working—please try again or reload.';
-      setMsgs(m => [...m, { role: 'assistant', content: msg }] );
-      // Also log to console for visibility
+      const aborted = /timeout/i.test(String(e?.message)) || e?.name === 'AbortError';
+      const msg = allowBrowsing
+        ? 'AI Guru failed—try again with browsing off or reload.'
+        : (aborted ? 'Request timeout after 60s' : 'Sorry, I couldn\'t generate a response.');
+      setMsgs(m => [...m.slice(0, m.length - (m[m.length-1]?.role === 'assistant' ? 0 : 0)), { role: 'assistant', content: msg }]);
       console.error('AI Guru error', e);
     } finally {
       setLoading(false);
     }
-  }, [input, msgs, pageContext, invokeWithTimeout]);
+  }, [input, msgs, pageContext, allowBrowsing, session?.access_token, invokeWithTimeout]);
 
   const runSelfTest = async () => {
     await send("Give me 2 links about sepsis from EM Gurus");
@@ -187,7 +239,15 @@ export default function AIGuru() {
 
           {/* Quick actions (wrap, max two lines) */}
           <div className="px-3 pt-2">
-            <div className="flex flex-wrap gap-2 max-h-[72px] overflow-hidden">
+            <div className="flex flex-wrap gap-2 max-h-[72px] overflow-hidden items-center">
+              <button
+                onClick={() => setAllowBrowsing(v => !v)}
+                className={`text-xs px-2 py-1 rounded-full border ${allowBrowsing ? 'bg-accent' : ''}`}
+                aria-pressed={allowBrowsing}
+                aria-label="Toggle browsing"
+              >
+                Browsing: {allowBrowsing ? 'On' : 'Off'}
+              </button>
               {quickAsk.map((q) => (
                 <button key={q.label} onClick={() => send(q.text)} className="text-xs px-2 py-1 rounded-full border hover:bg-accent">
                   {q.label}
