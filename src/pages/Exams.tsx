@@ -1,76 +1,51 @@
 import { useEffect } from "react";
 import PageHero from "@/components/PageHero";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import AiPractice from "@/components/exams/AiPractice";
-import QuestionBank from "@/components/exams/QuestionBank";
-const setSEO = () => {
-  document.title = "EMGurus Exams – AI Practice & Question Bank";
-  const desc = "Practice Emergency Medicine exams with AI-generated and guru-reviewed questions.";
-  let meta = document.querySelector('meta[name="description"]');
-  if (!meta) {
-    meta = document.createElement("meta");
-    meta.setAttribute("name", "description");
-    document.head.appendChild(meta);
-  }
-  meta.setAttribute("content", desc);
-  let link: HTMLLinkElement | null = document.querySelector('link[rel="canonical"]');
-  if (!link) {
-    link = document.createElement("link");
-    link.setAttribute("rel", "canonical");
-    document.head.appendChild(link);
-  }
-  link.setAttribute("href", window.location.href);
-};
+import { useNavigate } from "react-router-dom";
 
 export default function Exams() {
-  useEffect(() => { setSEO(); }, []);
+  const navigate = useNavigate();
+  useEffect(() => {
+    document.title = "Exams • EM Gurus";
+    const desc = "Practice exams via AI or browse the reviewed bank.";
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name','description'); document.head.appendChild(meta); }
+    meta.setAttribute('content', desc);
+  }, []);
 
   return (
     <main>
-      <PageHero
-        title="Exam Practice"
-        subtitle="AI real-time questions and a peer-reviewed bank to master Emergency Medicine."
-      />
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Exams</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </div>
-
-      <div className="sticky top-16 z-40 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <div className="font-semibold">Practice Modes</div>
-          <div className="flex gap-2">
-            <a href="#tab-ai"><Button variant="default">Start AI Practice</Button></a>
-            <a href="#tab-bank"><Button variant="outline">Browse Questions</Button></a>
-          </div>
-        </div>
-      </div>
-
+      <PageHero title="Exam Practice" subtitle="AI practice (Beta) or Guru‑reviewed bank — pick a mode." />
       <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="ai" className="w-full">
-          <TabsList>
-            <TabsTrigger value="ai" id="tab-ai">AI Practice</TabsTrigger>
-            <TabsTrigger value="bank" id="tab-bank">Question Bank</TabsTrigger>
-          </TabsList>
-          <TabsContent value="ai" className="mt-6">
-            <AiPractice />
-          </TabsContent>
-          <TabsContent value="bank" className="mt-6">
-            <QuestionBank />
-          </TabsContent>
-        </Tabs>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="p-6 flex flex-col justify-between">
+            <div>
+              <h3 className="text-xl font-semibold mb-2">AI Practice (Beta)</h3>
+              <ul className="list-disc ml-5 text-sm text-muted-foreground space-y-1">
+                <li>Generate fresh MCQs instantly</li>
+                <li>Choose exam, count, and curriculum</li>
+                <li>Compact play session with explanations</li>
+              </ul>
+            </div>
+            <div className="pt-4">
+              <Button onClick={() => navigate('/exams/ai-practice')} aria-label="Configure & Start AI Practice">Configure & Start</Button>
+            </div>
+          </Card>
+          <Card className="p-6 flex flex-col justify-between">
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Reviewed Question Bank</h3>
+              <ul className="list-disc ml-5 text-sm text-muted-foreground space-y-1">
+                <li>Guru‑reviewed questions</li>
+                <li>Filter by exam and curriculum</li>
+                <li>Fast search and paging</li>
+              </ul>
+            </div>
+            <div className="pt-4">
+              <Button variant="outline" onClick={() => navigate('/exams/question-bank')} aria-label="Browse reviewed questions">Browse</Button>
+            </div>
+          </Card>
+        </div>
       </section>
     </main>
   );

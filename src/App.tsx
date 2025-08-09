@@ -43,6 +43,11 @@ import ForumCategory from "./pages/ForumCategory";
 import ComingSoon from "./pages/ComingSoon";
 import About from "./pages/About";
 import ThreadView from "@/pages/ThreadView";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
+import AiPracticeSession from "@/pages/exams/AiPracticeSession";
+import QuestionBankPage from "@/pages/exams/QuestionBankPage";
+import QuestionDetail from "@/pages/exams/QuestionDetail";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +62,26 @@ const App = () => (
             <Route element={<SiteLayout />}> 
               <Route path="/" element={<Index />} />
               <Route path="/exams" element={<Exams />} />
+              <Route path="/exams/ai-practice" element={
+                <ErrorBoundary>
+                  <AiPracticeConfig />
+                </ErrorBoundary>
+              } />
+              <Route path="/exams/ai-practice/session/:id" element={
+                <ErrorBoundary>
+                  <AiPracticeSession />
+                </ErrorBoundary>
+              } />
+              <Route path="/exams/question-bank" element={
+                <ErrorBoundary>
+                  <QuestionBankPage />
+                </ErrorBoundary>
+              } />
+              <Route path="/exams/question/:id" element={
+                <ErrorBoundary>
+                  <QuestionDetail />
+                </ErrorBoundary>
+              } />
               <Route path="/quiz" element={<Navigate to="/exams" replace />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/blogs" element={<Blogs />} />
