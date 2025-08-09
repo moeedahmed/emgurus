@@ -20,13 +20,23 @@ const demo: ReviewedQuestionRow[] = Array.from({ length: 5 }).map((_, i) => ({
   reviewer_id: null,
 }));
 
+// Map human-readable exam names to backend enum codes
+// This aligns the UI selection with the review_exam_questions.exam_type values
+// Keep the literal types so Supabase types infer correctly
+export type ExamCode = "MRCEM_PRIMARY" | "MRCEM_SBA" | "FRCEM_SBA";
+export const EXAM_CODE_MAP: Record<ExamName, ExamCode> = {
+  "MRCEM Primary": "MRCEM_PRIMARY",
+  "MRCEM Intermediate SBA": "MRCEM_SBA",
+  "FRCEM SBA": "FRCEM_SBA",
+};
+
 function toReviewedRow(d: unknown): ReviewedQuestionRow {
   const o = (d ?? {}) as Record<string, unknown>;
   const toStr = (v: unknown) => (typeof v === 'string' ? v : null);
   return {
     id: String(o['id'] ?? `row-${Math.random().toString(36).slice(2)}`),
-    exam: toStr(o['exam']),
-    stem: toStr(o['stem']),
+    exam: toStr(o['exam']) ?? toStr(o['exam_type']),
+    stem: toStr(o['stem']) ?? toStr(o['question']),
     tags: Array.isArray(o['tags']) ? (o['tags'] as string[]) : null,
     topic: toStr(o['topic']),
     subtopic: toStr(o['subtopic']),
@@ -59,13 +69,13 @@ export default function QuestionBankPage() {
       setLoading(true);
       try {
         let q = supabase
-          .from('reviewed_exam_questions')
-          .select('id, exam, stem, tags, topic, subtopic, reviewed_at, reviewer_id', { count: 'exact' })
-          .order('reviewed_at', { ascending: false })
+          .from('review_exam_questions')
+          .select('id, exam_type, question, tags, topic, reviewed_at, reviewer_id', { count: 'exact' })
+          .order('created_at', { ascending: false })
           .range((page-1)*pageSize, page*pageSize - 1);
-        if (exam) q = q.eq('exam', exam);
-        if (area && area !== 'All areas') q = q.or(`topic.eq.${area},subtopic.eq.${area}`);
-        if (search) q = q.ilike('stem', `%${search}%`);
+        if (exam) q = q.eq('exam_type', EXAM_CODE_MAP[exam]);
+        if (area && area !== 'All areas') q = q.eq('topic', area);
+        if (search) q = q.ilike('question', `%${search}%`);
         const { data, error } = await q;
         if (error) throw error;
         const list: ReviewedQuestionRow[] = (Array.isArray(data) ? data : []).map((d) => toReviewedRow(d));
