@@ -1464,6 +1464,36 @@ export type Database = {
           },
         ]
       }
+      question_slos: {
+        Row: {
+          question_id: string
+          slo_id: string
+        }
+        Insert: {
+          question_id: string
+          slo_id: string
+        }
+        Update: {
+          question_id?: string
+          slo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_slos_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "reviewed_exam_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_slos_slo_id_fkey"
+            columns: ["slo_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_slos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       questions: {
         Row: {
           correct_answer: string
