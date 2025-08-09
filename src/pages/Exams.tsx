@@ -7,8 +7,8 @@ import { useNavigate } from "react-router-dom";
 export default function Exams() {
   const navigate = useNavigate();
   useEffect(() => {
-    document.title = "Exams • EM Gurus";
-    const desc = "Practice exams via AI or browse the reviewed bank.";
+    document.title = "EMGurus Exam Practice • EM Gurus";
+    const desc = "Targeted Emergency Medicine exam prep for MRCEM Primary, MRCEM SBA, and FRCEM SBA — learn smarter, score higher.";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name','description'); document.head.appendChild(meta); }
     meta.setAttribute('content', desc);
@@ -16,33 +16,34 @@ export default function Exams() {
 
   return (
     <main>
-      <PageHero title="Exam Practice" subtitle="AI practice (Beta) or Guru‑reviewed bank — pick a mode." />
-      <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="p-6 flex flex-col justify-between">
+      <PageHero eyebrow="EMGurus Exams" title="EMGurus Exam Practice" subtitle="Targeted Emergency Medicine exam prep for MRCEM Primary, MRCEM SBA, and FRCEM SBA — learn smarter, score higher." align="center" />
+      <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="mx-auto max-w-5xl grid items-stretch gap-6 md:grid-cols-2">
+          <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
               <h3 className="text-xl font-semibold mb-2">AI Practice (Beta)</h3>
-              <ul className="list-disc ml-5 text-sm text-muted-foreground space-y-1">
-                <li>Generate fresh MCQs instantly</li>
-                <li>Choose exam, count, and curriculum</li>
-                <li>Compact play session with explanations</li>
-              </ul>
+              <p className="text-sm text-muted-foreground">
+                Generate fresh MCQs instantly, tailored to your chosen exam and RCEM curriculum topics. Practice anytime with instant explanations.
+              </p>
             </div>
-            <div className="pt-4">
-              <Button onClick={() => navigate('/exams/ai-practice')} aria-label="Configure & Start AI Practice">Configure & Start</Button>
+            <div className="pt-6">
+              <Button size="lg" onClick={() => navigate('/exams/ai-practice')} aria-label="Start AI Practice">
+                Start AI Practice
+              </Button>
             </div>
           </Card>
-          <Card className="p-6 flex flex-col justify-between">
+
+          <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
-              <h3 className="text-xl font-semibold mb-2">Reviewed Question Bank</h3>
-              <ul className="list-disc ml-5 text-sm text-muted-foreground space-y-1">
-                <li>Guru‑reviewed questions</li>
-                <li>Filter by exam and curriculum</li>
-                <li>Fast search and paging</li>
-              </ul>
+              <h3 className="text-xl font-semibold mb-2">Guru‑Reviewed Question Bank</h3>
+              <p className="text-sm text-muted-foreground">
+                Access expert-reviewed MCQs aligned with the RCEM curriculum. Filter by exam or topic, track your progress.
+              </p>
             </div>
-            <div className="pt-4">
-              <Button variant="outline" onClick={() => navigate('/exams/reviewed')} aria-label="Browse reviewed questions">Browse</Button>
+            <div className="pt-6">
+              <Button size="lg" variant="outline" onClick={() => navigate('/exams/reviewed')} aria-label="Browse Question Bank">
+                Browse Question Bank
+              </Button>
             </div>
           </Card>
         </div>
