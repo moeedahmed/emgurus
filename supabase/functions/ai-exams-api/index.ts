@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 type StartSessionBody = { action: "start_session"; examType: string };
-type GenerateQuestionBody = { action: "generate_question"; session_id: string; topic?: string };
+type GenerateQuestionBody = { action: "generate_question"; session_id: string; curriculum_ids?: string[]; topic?: string };
 type SubmitAnswerBody = { action: "submit_answer"; question_id: string; selected_answer: string; feedback?: "none"|"too_easy"|"hallucinated"|"wrong"|"not_relevant" };
 
 type RequestBody = StartSessionBody | GenerateQuestionBody | SubmitAnswerBody;

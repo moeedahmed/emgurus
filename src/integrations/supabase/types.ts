@@ -58,6 +58,39 @@ export type Database = {
           },
         ]
       }
+      ai_exam_question_curriculum: {
+        Row: {
+          created_at: string
+          curriculum_id: string
+          question_id: string
+        }
+        Insert: {
+          created_at?: string
+          curriculum_id: string
+          question_id: string
+        }
+        Update: {
+          created_at?: string
+          curriculum_id?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_exam_question_curriculum_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_map"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_exam_question_curriculum_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "ai_exam_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_exam_questions: {
         Row: {
           correct_answer: string
@@ -700,6 +733,39 @@ export type Database = {
           },
         ]
       }
+      curriculum_map: {
+        Row: {
+          created_at: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id: string
+          key_capability_number: number
+          key_capability_title: string
+          slo_number: number
+          slo_title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          key_capability_number: number
+          key_capability_title: string
+          slo_number: number
+          slo_title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          id?: string
+          key_capability_number?: number
+          key_capability_title?: string
+          slo_number?: number
+          slo_title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       forum_categories: {
         Row: {
           created_at: string
@@ -1018,6 +1084,39 @@ export type Database = {
           years_experience?: number | null
         }
         Relationships: []
+      }
+      question_curriculum_map: {
+        Row: {
+          created_at: string
+          curriculum_id: string
+          question_id: string
+        }
+        Insert: {
+          created_at?: string
+          curriculum_id: string
+          question_id: string
+        }
+        Update: {
+          created_at?: string
+          curriculum_id?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_curriculum_map_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_map"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_curriculum_map_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       questions: {
         Row: {

@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import QuestionCard from "./QuestionCard";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 interface AIQuestion {
   id: string;
   question: string;
@@ -20,19 +21,27 @@ interface AIQuestion {
   source?: string;
 }
 
+interface CurriculumRow {
+  id: string;
+  slo_number: number;
+  slo_title: string;
+  key_capability_number: number;
+  key_capability_title: string;
+}
+
 type Feedback = "none" | "too_easy" | "hallucinated" | "wrong" | "not_relevant";
 
 const EXAMS = [
-  "MRCEM Primary",
-  "MRCEM Intermediate SBA",
-  "FRCEM Final"
+  { value: "MRCEM_PRIMARY", label: "MRCEM Primary" },
+  { value: "MRCEM_SBA", label: "MRCEM Intermediate SBA" },
+  { value: "FRCEM_SBA", label: "FRCEM SBA" },
 ];
 const COUNTS = [10, 25, 50];
 
 export default function AiPractice() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [exam, setExam] = useState<string>(EXAMS[0]);
+  const [exam, setExam] = useState<string>(EXAMS[0].value);
   const [count, setCount] = useState<number>(10);
   const [topic, setTopic] = useState<string>("");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -44,6 +53,8 @@ export default function AiPractice() {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [feedback, setFeedback] = useState<Feedback>("none");
   const pendingReportRef = useRef<Feedback>("none");
+  const [curriculumRows, setCurriculumRows] = useState<CurriculumRow[]>([]);
+  const [selectedCurriculum, setSelectedCurriculum] = useState<string[]>([]);
 
   const remainingFree = useMemo(() => {
     if (user) return Infinity; // extend later with subscription
@@ -64,6 +75,31 @@ export default function AiPractice() {
       }
     } catch {}
   }, [user]);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("curriculum_map")
+        .select("id, slo_number, slo_title, key_capability_number, key_capability_title")
+        .eq("exam_type", exam as any)
+        .order("slo_number", { ascending: true })
+        .order("key_capability_number", { ascending: true });
+      setCurriculumRows((data as any) || []);
+      // reset selection when exam changes
+      setSelectedCurriculum([]);
+    };
+    load();
+  }, [exam]);
+
+  const groupedCurriculum = useMemo(() => {
+    const m = new Map<number, { title: string; items: CurriculumRow[] }>();
+    for (const r of curriculumRows) {
+      const g = m.get(r.slo_number) || { title: r.slo_title, items: [] };
+      g.items.push(r);
+      m.set(r.slo_number, g);
+    }
+    return Array.from(m.entries()).sort((a,b)=>a[0]-b[0]);
+  }, [curriculumRows]);
 
   const persistSession = (sid: string, idx: number) => {
     localStorage.setItem("ai_practice_session", JSON.stringify({ session_id: sid, examType: exam, index: idx, user_id: user?.id || null }));
@@ -101,7 +137,7 @@ export default function AiPractice() {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-exams-api", {
-        body: { action: "generate_question", session_id: s, topic: topic || undefined }
+        body: { action: "generate_question", session_id: s, curriculum_ids: selectedCurriculum.length ? selectedCurriculum : undefined }
       });
       if (error) throw error;
       setQuestion(data.question as AIQuestion);
@@ -173,7 +209,7 @@ export default function AiPractice() {
               <Select value={exam} onValueChange={setExam}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
                 <SelectContent>
-                  {EXAMS.map((e) => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
+                  {EXAMS.map((e) => (<SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -187,8 +223,44 @@ export default function AiPractice() {
               </Select>
             </div>
             <div>
-              <Label>Focus area (optional)</Label>
-              <Input className="mt-1" placeholder="e.g., Cardiology" value={topic} onChange={(e) => setTopic(e.target.value)} />
+              <Label>Select Curriculum Area</Label>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button type="button" variant="outline" className="mt-1 w-full justify-between">
+                    {selectedCurriculum.length ? `${selectedCurriculum.length} selected` : "All areas"}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Select Curriculum Area</DialogTitle>
+                  </DialogHeader>
+                  <div className="max-h-[60vh] overflow-auto space-y-4">
+                    {groupedCurriculum.map(([slo, group]) => (
+                      <div key={slo} className="space-y-2">
+                        <div className="font-medium">SLO {slo}: {group.title}</div>
+                        <div className="grid gap-2">
+                          {group.items.map((item) => (
+                            <label key={item.id} className="flex items-center gap-3">
+                              <Checkbox
+                                checked={selectedCurriculum.includes(item.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedCurriculum((prev) => (checked ? [...prev, item.id] : prev.filter((id) => id !== item.id)));
+                                }}
+                              />
+                              <span>{item.key_capability_title}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <Separator />
+                      </div>
+                    ))}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="ghost" onClick={() => setSelectedCurriculum([])}>Clear</Button>
+                    <Button type="button">Done</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -198,7 +270,7 @@ export default function AiPractice() {
               <Badge variant="outline">Guest • Free left: {remainingFree}</Badge>
             )}
             <div className="ml-auto flex gap-2">
-              <Button variant="outline" disabled={!sessionId} onClick={() => generateQuestion()}>Skip</Button>
+              <Button variant="outline" onClick={() => { if (!sessionId) startSession(); else generateQuestion(); }}>Skip</Button>
               <Button disabled={!canStart || loading || blockedByFreeLimit} onClick={startSession}>
                 {blockedByFreeLimit ? "Upgrade to continue" : (sessionId ? "Restart" : "Generate")}
               </Button>
