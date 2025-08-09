@@ -4,9 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import QuestionCard from "./QuestionCard";
 import { Button } from "@/components/ui/button";
-
 interface BankQuestion {
   id: string;
   question_text: string;
@@ -30,7 +30,7 @@ export default function QuestionBank() {
   const [loading, setLoading] = useState(false);
   const [reviewers, setReviewers] = useState<Record<string, { name: string; avatar?: string }>>({});
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
-
+  const [reviewer, setReviewer] = useState<string>("");
   const remainingFree = useMemo(() => {
     const used = Number(localStorage.getItem("free_bank_used") || "0");
     return Math.max(0, 10 - used);
@@ -43,6 +43,7 @@ export default function QuestionBank() {
         let q = supabase.from("questions").select("id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation, reviewed_by, topic, exam_type, difficulty_level, created_at").eq("status","approved");
         if (exam) q = q.eq("exam_type", exam as any);
         if (difficulty) q = q.eq("difficulty_level", difficulty as any);
+        if (reviewer) q = q.eq("reviewed_by", reviewer as any);
         if (topic) q = q.ilike("topic", `%${topic}%`);
         if (search) q = q.or(`question_text.ilike.%${search}%,option_a.ilike.%${search}%,option_b.ilike.%${search}%,option_c.ilike.%${search}%,option_d.ilike.%${search}%` as any);
         const { data, error } = await q.limit(50);
@@ -60,7 +61,7 @@ export default function QuestionBank() {
       setLoading(false);
     };
     load();
-  }, [exam, difficulty, topic, search]);
+  }, [exam, difficulty, topic, search, reviewer]);
 
   const sorted = useMemo(() => {
     const arr = [...items];
@@ -71,7 +72,7 @@ export default function QuestionBank() {
   return (
     <div className="grid gap-4">
       <Card>
-        <CardContent className="py-4 grid gap-3 md:grid-cols-5">
+        <CardContent className="py-4 grid gap-3 md:grid-cols-6">
           <div className="md:col-span-2">
             <Input placeholder="Search questions" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
@@ -91,6 +92,15 @@ export default function QuestionBank() {
               <SelectItem value="easy">Easy</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="hard">Hard</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={reviewer} onValueChange={setReviewer}>
+            <SelectTrigger><SelectValue placeholder="Reviewed by" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Reviewers</SelectItem>
+              {Object.entries(reviewers).map(([id, r]) => (
+                <SelectItem key={id} value={id}>{r.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Input placeholder="System / Topic" value={topic} onChange={(e) => setTopic(e.target.value)} />
@@ -123,7 +133,13 @@ export default function QuestionBank() {
                   <span className="text-base">Reviewed Question</span>
                   <div className="flex items-center gap-2">
                     {reviewer && (
-                      <span className="text-sm text-muted-foreground">By <a className="underline" href={`/profile/${q.reviewed_by}`}>{reviewer.name}</a></span>
+                      <a className="flex items-center gap-2 text-sm text-muted-foreground hover:underline" href={`/profile/${q.reviewed_by}`}>
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={reviewer.avatar} alt={`${reviewer.name} profile`} />
+                          <AvatarFallback>{reviewer.name?.[0] || "G"}</AvatarFallback>
+                        </Avatar>
+                        <span>By {reviewer.name}</span>
+                      </a>
                     )}
                     <Badge variant="secondary">{q.exam_type}</Badge>
                     {q.topic && <Badge variant="outline">{q.topic}</Badge>}

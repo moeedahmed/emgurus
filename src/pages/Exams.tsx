@@ -2,9 +2,9 @@ import { useEffect } from "react";
 import PageHero from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import AiPractice from "@/components/exams/AiPractice";
 import QuestionBank from "@/components/exams/QuestionBank";
-
 const setSEO = () => {
   document.title = "EMGurus Exams – AI Practice & Question Bank";
   const desc = "Practice Emergency Medicine exams with AI-generated and guru-reviewed questions.";
@@ -33,6 +33,20 @@ export default function Exams() {
         title="Exam Practice"
         subtitle="AI real-time questions and a peer-reviewed bank to master Emergency Medicine."
       />
+
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/">Home</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Exams</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
 
       <div className="sticky top-16 z-40 border-b border-border bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
