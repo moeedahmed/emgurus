@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { ExperienceSelect } from "@/components/forms/ExperienceSelect";
 
 const countries = ["United Kingdom","United States","United Arab Emirates","India","Pakistan","Canada","Australia"];
 const specialties = ["Emergency Medicine","Internal Medicine","Surgery","Pediatrics","Radiology"];
@@ -23,6 +24,7 @@ export default function Onboarding() {
   const [examsSel, setExamsSel] = useState<string[]>([]);
   const [bio, setBio] = useState("");
   const [position, setPosition] = useState("");
+  const [hospital, setHospital] = useState("");
   const [years, setYears] = useState<number | "">("");
   const [languages, setLanguages] = useState<string[]>([]);
   const [linkedin, setLinkedin] = useState("");
@@ -54,6 +56,7 @@ export default function Onboarding() {
         setExamsSel(data.exams || []);
         setBio(data.bio || "");
         setPosition(data.position || "");
+        setHospital((data as any).hospital || "");
         setYears((data.years_experience as any) || "");
         setLanguages((data.languages as any) || []);
         setLinkedin(data.linkedin || "");
@@ -83,7 +86,7 @@ export default function Onboarding() {
       const finalExams = examsSel.filter(e => e !== 'Other').concat(otherExam.trim() ? [otherExam.trim()] : []);
       const finalLanguages = languages.filter(l => l !== 'Other').concat(otherLanguage.trim() ? [otherLanguage.trim()] : []);
       if (finalExams.length === 0) { toast({ title: 'Please add at least one exam.' }); setSaving(false); return; }
-      const { error } = await supabase.from('profiles').update({
+      const payload: any = {
         full_name: fullName,
         country,
         specialty,
@@ -91,12 +94,14 @@ export default function Onboarding() {
         exams: finalExams,
         bio,
         position,
+        hospital,
         years_experience: years === "" ? null : Number(years),
         languages: finalLanguages,
         linkedin,
         twitter,
         website,
-      }).eq('user_id', user.id);
+      };
+      const { error } = await supabase.from('profiles').update(payload).eq('user_id', user.id);
       if (error) throw error;
       toast({ title: 'Profile saved' });
       window.location.href = '/';
@@ -108,7 +113,7 @@ export default function Onboarding() {
   };
 
   return (
-    <main className="container mx-auto px-4 py-8 min-h-[calc(100vh-4rem)]">
+    <main className="container mx-auto px-4 py-8 min-h-[calc(100vh-4rem)] pb-[env(safe-area-inset-bottom)]">
       <header className="mb-6">
         <h1 className="text-3xl font-bold">Complete your profile</h1>
         <p className="text-muted-foreground">We need a few details to personalize your experience.</p>
@@ -124,7 +129,7 @@ export default function Onboarding() {
             <Label>Country *</Label>
             <Select value={country} onValueChange={setCountry}>
               <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50 bg-popover">
                 {countries.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
               </SelectContent>
             </Select>
@@ -133,7 +138,7 @@ export default function Onboarding() {
             <Label>Specialty *</Label>
             <Select value={specialty} onValueChange={setSpecialty}>
               <SelectTrigger><SelectValue placeholder="Select specialty" /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50 bg-popover">
                 {specialties.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
               </SelectContent>
             </Select>
@@ -142,7 +147,7 @@ export default function Onboarding() {
             <Label>Timezone *</Label>
             <Select value={tz} onValueChange={setTz}>
               <SelectTrigger><SelectValue placeholder="Select timezone" /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50 bg-popover">
                 {timezones.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
               </SelectContent>
             </Select>
@@ -171,8 +176,12 @@ export default function Onboarding() {
             <Input value={position} onChange={(e) => setPosition(e.target.value)} />
           </div>
           <div className="grid gap-1">
+            <Label>Hospital</Label>
+            <Input value={hospital} onChange={(e) => setHospital(e.target.value)} />
+          </div>
+          <div className="grid gap-1">
             <Label>Years of Experience</Label>
-            <Input type="number" value={years as any} onChange={(e) => setYears(e.target.value === '' ? '' : Number(e.target.value))} />
+            <ExperienceSelect value={years} onChange={setYears} />
           </div>
           <div className="grid gap-1">
             <Label>Languages</Label>

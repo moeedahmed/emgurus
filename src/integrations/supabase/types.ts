@@ -1012,6 +1012,7 @@ export type Database = {
           email: string | null
           exams: string[] | null
           full_name: string | null
+          hospital: string | null
           id: string
           languages: string[] | null
           linkedin: string | null
@@ -1039,6 +1040,7 @@ export type Database = {
           email?: string | null
           exams?: string[] | null
           full_name?: string | null
+          hospital?: string | null
           id?: string
           languages?: string[] | null
           linkedin?: string | null
@@ -1066,6 +1068,7 @@ export type Database = {
           email?: string | null
           exams?: string[] | null
           full_name?: string | null
+          hospital?: string | null
           id?: string
           languages?: string[] | null
           linkedin?: string | null
