@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import QuestionCard from "@/components/exams/QuestionCard";
-
+import { toast } from "@/hooks/use-toast";
 export default function QuestionDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -20,6 +20,11 @@ export default function QuestionDetail() {
         if (error) throw error;
         if (!cancelled) setQ(data);
       } catch (e) {
+        toast({
+          variant: "destructive",
+          title: "Failed to load question",
+          description: (e as any)?.message || 'Unknown error',
+        });
         // demo fallback
         if (!cancelled) setQ({ id, stem: 'Guru‑reviewed sepsis recognition and management overview.', options: ['A','B','C','D'], explanation: 'Demo explanation' });
       } finally {
@@ -31,7 +36,7 @@ export default function QuestionDetail() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <Button variant="ghost" onClick={() => navigate(-1)} aria-label="Back to list">Back to list</Button>
+      <Button variant="ghost" onClick={() => navigate('/exams/question-bank')} aria-label="Back to list">Back to list</Button>
       <Card className="mt-3">
         <CardHeader>
           <CardTitle>Reviewed Question</CardTitle>
@@ -42,7 +47,11 @@ export default function QuestionDetail() {
           ) : (
             <QuestionCard
               stem={q?.stem || 'Question'}
-              options={['A','B','C','D'].map((k) => ({ key: k, text: `Option ${k}` }))}
+              options={Array.isArray(q?.options)
+                ? (typeof (q.options as any[])[0] === 'string'
+                    ? (q.options as string[]).map((s, idx) => ({ key: String.fromCharCode(65+idx), text: s }))
+                    : (q.options as any[]))
+                : ['A','B','C','D'].map((_, idx) => ({ key: String.fromCharCode(65+idx), text: `Option ${String.fromCharCode(65+idx)}` }))}
               selectedKey={''}
               onSelect={() => {}}
               showExplanation={true}

@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
-
+import { toast } from "@/hooks/use-toast";
 interface Row { id: string; exam: string | null; stem: string | null; tags: string[] | null; topic: string | null; subtopic: string | null; reviewed_at: string | null }
 
 const demo: Row[] = Array.from({ length: 5 }).map((_, i) => ({
@@ -40,6 +40,7 @@ export default function QuestionBankPage() {
     (async () => {
       setLoading(true);
       try {
+        // TODO: replace any with typed client after regenerating Supabase types.
         let q = (supabase as any).from('reviewed_exam_questions')
           .select('id, exam, stem, tags, topic, subtopic, reviewed_at', { count: 'exact' })
           .order('reviewed_at', { ascending: false })
@@ -52,6 +53,11 @@ export default function QuestionBankPage() {
         if (!cancelled) setItems((data as any[]) || []);
       } catch (e) {
         console.warn('Bank fetch failed, using demo', e);
+        toast({
+          variant: "destructive",
+          title: "Failed to load reviewed questions",
+          description: (e as any)?.message || 'Unknown error',
+        });
         if (!cancelled) setItems(demo);
       } finally {
         if (!cancelled) setLoading(false);
@@ -107,7 +113,7 @@ export default function QuestionBankPage() {
             </Card>
           ))
         ) : (
-          <div className="text-center text-muted-foreground py-10">No questions found.</div>
+          <div className="text-center text-muted-foreground py-10">No reviewed questions yet.</div>
         )}
       </div>
 
