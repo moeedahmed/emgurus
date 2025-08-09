@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
 import { toast } from "@/hooks/use-toast";
-interface Row { id: string; exam: string | null; stem: string | null; tags: string[] | null; topic: string | null; subtopic: string | null; reviewed_at: string | null; reviewer_id: string | null }
+interface ReviewedQuestionRow { id: string; exam: string | null; stem: string | null; tags: string[] | null; topic: string | null; subtopic: string | null; reviewed_at: string | null; reviewer_id: string | null }
 
-const demo: Row[] = Array.from({ length: 5 }).map((_, i) => ({
+const demo: ReviewedQuestionRow[] = Array.from({ length: 5 }).map((_, i) => ({
   id: `demo-${i+1}`,
   exam: i % 2 ? 'MRCEM Intermediate SBA' : 'FRCEM SBA',
   stem: 'Guru‑reviewed: Early recognition of sepsis improves outcomes. Identify key features and initial management.',
@@ -20,12 +20,28 @@ const demo: Row[] = Array.from({ length: 5 }).map((_, i) => ({
   reviewer_id: null,
 }));
 
+function toReviewedRow(d: unknown): ReviewedQuestionRow {
+  const o = (d ?? {}) as Record<string, unknown>;
+  const toStr = (v: unknown) => (typeof v === 'string' ? v : null);
+  return {
+    id: String(o['id'] ?? `row-${Math.random().toString(36).slice(2)}`),
+    exam: toStr(o['exam']),
+    stem: toStr(o['stem']),
+    tags: Array.isArray(o['tags']) ? (o['tags'] as string[]) : null,
+    topic: toStr(o['topic']),
+    subtopic: toStr(o['subtopic']),
+    reviewed_at: toStr(o['reviewed_at']),
+    reviewer_id: toStr(o['reviewer_id']),
+  };
+}
+
+
 export default function QuestionBankPage() {
   const [exam, setExam] = useState<ExamName | "">("");
   const [area, setArea] = useState<string>("All areas");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [items, setItems] = useState<Row[]>([]);
+  const [items, setItems] = useState<ReviewedQuestionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [reviewers, setReviewers] = useState<Record<string, string>>({});
   const navigate = useNavigate();
@@ -42,38 +58,40 @@ export default function QuestionBankPage() {
     (async () => {
       setLoading(true);
       try {
-        // TODO: replace any with typed client after regenerating Supabase types.
-        let q = (supabase as any).from('reviewed_exam_questions')
+        let q = supabase
+          .from('reviewed_exam_questions')
           .select('id, exam, stem, tags, topic, subtopic, reviewed_at, reviewer_id', { count: 'exact' })
           .order('reviewed_at', { ascending: false })
           .range((page-1)*pageSize, page*pageSize - 1);
-        if (exam) q = q.eq('exam', exam as any);
-        if (area && area !== 'All areas') q = q.or(`topic.eq.${area},subtopic.eq.${area}` as any);
+        if (exam) q = q.eq('exam', exam);
+        if (area && area !== 'All areas') q = q.or(`topic.eq.${area},subtopic.eq.${area}`);
         if (search) q = q.ilike('stem', `%${search}%`);
         const { data, error } = await q;
         if (error) throw error;
-        const list = (data as any[]) || [];
+        const list: ReviewedQuestionRow[] = (Array.isArray(data) ? data : []).map((d) => toReviewedRow(d));
         // Fetch reviewer names if present
-        const ids = Array.from(new Set(list.map((d: any) => d.reviewer_id).filter(Boolean)));
+        const ids = Array.from(new Set(list.map((d) => d.reviewer_id).filter(Boolean))) as string[];
         if (ids.length) {
-          const { data: gurus, error: gErr } = await (supabase as any)
+          const { data: gurus, error: gErr } = await supabase
             .from('gurus')
             .select('id, name')
             .in('id', ids);
-          if (!gErr) {
-            const map: Record<string, string> = Object.fromEntries(((gurus as any[]) || []).map((g: any) => [g.id, g.name]));
+          if (!gErr && Array.isArray(gurus)) {
+            const gurusArr = gurus as Array<{ id: string; name: string }>;
+            const map: Record<string, string> = Object.fromEntries(gurusArr.map((g) => [g.id, g.name]));
             if (!cancelled) setReviewers(map);
           }
         }
         if (!cancelled) setItems(list);
       } catch (e) {
         console.warn('Bank fetch failed, using demo', e);
+        const message = e instanceof Error ? e.message : 'Unknown error';
         toast({
           variant: "destructive",
           title: "Failed to load reviewed questions",
-          description: (e as any)?.message || 'Unknown error',
+          description: message,
         });
-        if (!cancelled) setItems(demo);
+        if (!cancelled) setItems([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -134,7 +152,7 @@ export default function QuestionBankPage() {
             </Card>
           ))
         ) : (
-          <div className="text-center text-muted-foreground py-10">No reviewed questions yet.</div>
+          <div className="text-center text-muted-foreground py-10">No questions found.</div>
         )}
       </div>
 

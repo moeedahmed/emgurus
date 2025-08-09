@@ -29,21 +29,20 @@ export default function QuestionDetail() {
       if (!user || !q?.id) return;
       const exam = q?.exam || 'Reviewed';
       // Get or create session
-      let { data: sess, error: sErr } = await (supabase as any)
+      let { data: sess } = await supabase
         .from('user_exam_sessions')
         .select('*')
         .eq('user_id', user.id)
         .eq('exam', exam)
         .maybeSingle();
-      if (sErr && sErr.code && sErr.code !== 'PGRST116') throw sErr;
       if (!sess) {
-        const ins = await (supabase as any)
+        const ins = await supabase
           .from('user_exam_sessions')
           .insert({ user_id: user.id, exam })
           .select('*')
           .maybeSingle();
         if (ins.error) throw ins.error;
-        sess = ins.data;
+        sess = ins.data as any;
       }
 
       const chosenIndex = k.toUpperCase().charCodeAt(0) - 65;
