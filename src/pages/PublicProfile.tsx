@@ -36,7 +36,7 @@ export default function PublicProfile() {
     (async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, full_name, timezone, country, specialty, avatar_url, exams, languages, bio, price_per_30min, linkedin, twitter, website')
+        .select('user_id, full_name, timezone, country, specialty, primary_specialty, avatar_url, exam_interests, exams, languages, bio, price_per_30min, show_socials_public, linkedin, twitter')
         .eq('user_id', id)
         .maybeSingle();
       if (!mounted) return;
@@ -62,10 +62,10 @@ export default function PublicProfile() {
     return {
       id: profile.user_id,
       full_name: profile.full_name || 'Guru',
-      specialty: profile.specialty,
+      specialty: (profile as any).primary_specialty || profile.specialty,
       country: profile.country,
       price_per_30min: profile.price_per_30min,
-      exams: profile.exams || [],
+      exams: ((profile as any).exam_interests || profile.exams || []),
       bio: profile.bio,
       avatar_url: profile.avatar_url,
       timezone: profile.timezone || null,
@@ -130,11 +130,15 @@ export default function PublicProfile() {
             </div>
           )}
 
-          {(profile.linkedin || profile.twitter || profile.website) && (
+          {/* Socials */}
+          {((profile as any).show_socials_public && ((profile.linkedin || profile.twitter))) && (
             <div className="flex gap-3 pt-1 text-sm">
-              {profile.linkedin && (<a href={profile.linkedin} target="_blank" rel="noreferrer" className="underline">LinkedIn</a>)}
-              {profile.twitter && (<a href={profile.twitter} target="_blank" rel="noreferrer" className="underline">X (Twitter)</a>)}
-              {profile.website && (<a href={profile.website} target="_blank" rel="noreferrer" className="underline">Website</a>)}
+              {profile.linkedin && (
+                <a href={profile.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="underline">LinkedIn</a>
+              )}
+              {profile.twitter && (
+                <a href={profile.twitter} target="_blank" rel="noreferrer" aria-label="X (Twitter)" className="underline">X</a>
+              )}
             </div>
           )}
 

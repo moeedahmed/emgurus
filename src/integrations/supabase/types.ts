@@ -1136,14 +1136,20 @@ export type Database = {
           created_at: string
           credentials: string | null
           email: string | null
+          exam_interests: string[]
           exams: string[] | null
           full_name: string | null
           hospital: string | null
           id: string
           languages: string[] | null
           linkedin: string | null
+          onboarding_progress: Json
+          onboarding_required: boolean
           position: string | null
           price_per_30min: number | null
+          primary_specialty: string | null
+          show_profile_public: boolean
+          show_socials_public: boolean
           specialty: string | null
           subscription_tier:
             | Database["public"]["Enums"]["subscription_tier"]
@@ -1164,14 +1170,20 @@ export type Database = {
           created_at?: string
           credentials?: string | null
           email?: string | null
+          exam_interests?: string[]
           exams?: string[] | null
           full_name?: string | null
           hospital?: string | null
           id?: string
           languages?: string[] | null
           linkedin?: string | null
+          onboarding_progress?: Json
+          onboarding_required?: boolean
           position?: string | null
           price_per_30min?: number | null
+          primary_specialty?: string | null
+          show_profile_public?: boolean
+          show_socials_public?: boolean
           specialty?: string | null
           subscription_tier?:
             | Database["public"]["Enums"]["subscription_tier"]
@@ -1192,14 +1204,20 @@ export type Database = {
           created_at?: string
           credentials?: string | null
           email?: string | null
+          exam_interests?: string[]
           exams?: string[] | null
           full_name?: string | null
           hospital?: string | null
           id?: string
           languages?: string[] | null
           linkedin?: string | null
+          onboarding_progress?: Json
+          onboarding_required?: boolean
           position?: string | null
           price_per_30min?: number | null
+          primary_specialty?: string | null
+          show_profile_public?: boolean
+          show_socials_public?: boolean
           specialty?: string | null
           subscription_tier?:
             | Database["public"]["Enums"]["subscription_tier"]
@@ -1790,6 +1808,39 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_social_accounts: {
+        Row: {
+          avatar_url: string | null
+          connected_at: string
+          external_user_id: string | null
+          handle: string | null
+          id: string
+          profile_url: string | null
+          provider: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          connected_at?: string
+          external_user_id?: string | null
+          handle?: string | null
+          id?: string
+          profile_url?: string | null
+          provider: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          connected_at?: string
+          external_user_id?: string | null
+          handle?: string | null
+          id?: string
+          profile_url?: string | null
+          provider?: string
           user_id?: string
         }
         Relationships: []
