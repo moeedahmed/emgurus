@@ -41,6 +41,7 @@ export default function ReviewedQuestionDetail() {
   const [timeSpent, setTimeSpent] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const tickRef = useRef<number | null>(null);
+  const latestRef = useRef({ attempts: 0, isFlagged: false, notes: "", selectedKey: "", showExplanation: false, correctKey: "", timeSpent: 0 });
   const ids: string[] = location?.state?.ids || [];
   const index: number = location?.state?.index ?? (ids.indexOf(id as string) || 0);
 
@@ -120,10 +121,60 @@ export default function ReviewedQuestionDetail() {
 
   const correctKey = useMemo(() => letters[(q?.correct_index ?? 0)] || 'A', [q]);
 
+  // keep latest snapshot for safe persistence
+  useEffect(() => {
+    latestRef.current = {
+      attempts,
+      isFlagged,
+      notes,
+      selectedKey,
+      showExplanation,
+      correctKey,
+      timeSpent,
+    } as any;
+  }, [attempts, isFlagged, notes, selectedKey, showExplanation, correctKey, timeSpent]);
+
+  const persistNow = async () => {
+    if (!q) return;
+    const snap = latestRef.current;
+    if (user) {
+      await (supabase as any)
+        .from('user_question_sessions')
+        .update({
+          time_spent_seconds: snap.timeSpent,
+          last_action_at: new Date().toISOString(),
+          last_selected: snap.selectedKey,
+          attempts: snap.attempts,
+          is_flagged: snap.isFlagged,
+          notes: snap.notes,
+          is_correct: snap.showExplanation && snap.selectedKey === snap.correctKey,
+        })
+        .eq('user_id', user.id)
+        .eq('question_id', q.id);
+    } else {
+      const key = 'emgurus.reviewed.session';
+      const raw = localStorage.getItem(key);
+      const store = raw ? JSON.parse(raw) : {};
+      store[q.id] = {
+        time_spent_seconds: snap.timeSpent,
+        last_selected: snap.selectedKey,
+        attempts: snap.attempts,
+        is_flagged: snap.isFlagged,
+        notes: snap.notes,
+        is_correct: snap.showExplanation && snap.selectedKey === snap.correctKey,
+      };
+      localStorage.setItem(key, JSON.stringify(store));
+    }
+  };
+
   // Timer
   useEffect(() => {
     let active = true;
-    const onVis = () => { /* pause handled by checking document.visibilityState */ };
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') {
+        void persistNow();
+      }
+    };
     document.addEventListener('visibilitychange', onVis);
     tickRef.current = window.setInterval(() => {
       if (document.visibilityState === 'visible' && active) {
@@ -134,6 +185,7 @@ export default function ReviewedQuestionDetail() {
       active = false;
       document.removeEventListener('visibilitychange', onVis);
       if (tickRef.current) clearInterval(tickRef.current);
+      void persistNow();
     };
   }, []);
 
