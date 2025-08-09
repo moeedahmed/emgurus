@@ -1,16 +1,71 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import QuestionCard from "@/components/exams/QuestionCard";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 export default function QuestionDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [q, setQ] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [reviewerName, setReviewerName] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [selectedKey, setSelectedKey] = useState<string>("");
+  const startRef = useRef<number>(0);
+
+  useEffect(() => {
+    startRef.current = performance.now();
+  }, []);
+
+  const handleSelect = async (k: string) => {
+    if (selectedKey) return; // prevent multiple submissions
+    setSelectedKey(k);
+    const end = performance.now();
+    const timeMs = Math.max(0, Math.round(end - (startRef.current || end)));
+    try {
+      if (!user || !q?.id) return;
+      const exam = q?.exam || 'Reviewed';
+      // Get or create session
+      let { data: sess, error: sErr } = await (supabase as any)
+        .from('user_exam_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('exam', exam)
+        .maybeSingle();
+      if (sErr && sErr.code && sErr.code !== 'PGRST116') throw sErr;
+      if (!sess) {
+        const ins = await (supabase as any)
+          .from('user_exam_sessions')
+          .insert({ user_id: user.id, exam })
+          .select('*')
+          .maybeSingle();
+        if (ins.error) throw ins.error;
+        sess = ins.data;
+      }
+
+      const chosenIndex = k.toUpperCase().charCodeAt(0) - 65;
+      const correctIndex = typeof q?.correct_index === 'number' ? q.correct_index : null;
+      const outcome = correctIndex === null ? 'skipped' : (chosenIndex === correctIndex ? 'correct' : 'incorrect');
+
+      const evt = await (supabase as any)
+        .from('user_question_events')
+        .insert({ session_id: sess.id, user_id: user.id, question_id: q.id, outcome, time_ms: timeMs });
+      if (evt.error) throw evt.error;
+
+      const newTotal = (sess.total || 0) + 1;
+      const newCorrect = (sess.correct || 0) + (outcome === 'correct' ? 1 : 0);
+      const upd = await (supabase as any)
+        .from('user_exam_sessions')
+        .update({ total: newTotal, correct: newCorrect })
+        .eq('id', sess.id);
+      if (upd.error) throw upd.error;
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Failed to record answer', description: (e as any)?.message || 'Unknown error' });
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -68,8 +123,8 @@ export default function QuestionDetail() {
                     ? (q.options as string[]).map((s, idx) => ({ key: String.fromCharCode(65+idx), text: s }))
                     : (q.options as any[]))
                 : ['A','B','C','D'].map((_, idx) => ({ key: String.fromCharCode(65+idx), text: `Option ${String.fromCharCode(65+idx)}` }))}
-              selectedKey={''}
-              onSelect={() => {}}
+              selectedKey={selectedKey}
+              onSelect={handleSelect}
               showExplanation={true}
               explanation={q?.explanation || 'No explanation provided.'}
             />

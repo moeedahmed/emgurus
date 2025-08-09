@@ -2025,6 +2025,87 @@ export type Database = {
           },
         ]
       }
+      user_exam_sessions: {
+        Row: {
+          completed_at: string | null
+          correct: number
+          created_at: string
+          exam: string
+          id: string
+          started_at: string
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          correct?: number
+          created_at?: string
+          exam: string
+          id?: string
+          started_at?: string
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          correct?: number
+          created_at?: string
+          exam?: string
+          id?: string
+          started_at?: string
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_question_events: {
+        Row: {
+          created_at: string
+          id: string
+          outcome: string
+          question_id: string
+          session_id: string
+          time_ms: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          outcome: string
+          question_id: string
+          session_id: string
+          time_ms?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          outcome?: string
+          question_id?: string
+          session_id?: string
+          time_ms?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_question_events_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "reviewed_exam_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_question_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "user_exam_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
