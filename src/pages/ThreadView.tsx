@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,16 +20,25 @@ export default function ThreadView() {
   const [reply, setReply] = useState("");
   const [posting, setPosting] = useState(false);
   const { session } = useAuth();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const quoteReply = (content: string) => {
+    const quoted = `> ${content.replace(/\n/g, '\n> ')}\n\n`;
+    setReply(prev => (prev ? prev + '\n\n' : '') + quoted);
+    // focus after DOM updates
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  };
 
   useEffect(() => {
-    document.title = "Thread | EMGurus";
+    const title = thread?.title ? `${thread.title} | EMGurus` : 'Thread | EMGurus';
+    document.title = title;
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name','description'); document.head.appendChild(meta); }
-    meta.setAttribute('content','View thread and replies. Join the discussion.');
+    const desc = thread?.content ? thread.content.slice(0, 150) : 'View thread and replies. Join the discussion.';
+    meta.setAttribute('content', desc);
     let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!link) { link = document.createElement('link'); link.rel = 'canonical'; document.head.appendChild(link); }
     link.href = window.location.href;
-  }, []);
+  }, [thread]);
 
   const load = async () => {
     if (!thread_id) return;
@@ -53,16 +62,28 @@ export default function ThreadView() {
 
   const submitReply = async () => {
     if (!thread_id) return;
+    if (!session?.access_token) {
+      toast({ title: 'Sign in required', description: 'Please sign in to post a reply.' });
+      return;
+    }
+    if (reply.trim().length < 10) {
+      toast({ title: 'Reply too short', description: 'Please write at least 10 characters.' });
+      return;
+    }
     try {
       setPosting(true);
       const res = await fetch(`${FORUMS_EDGE}/api/forum/replies`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ thread_id, content: reply }),
       });
+      if (res.status === 401) {
+        toast({ title: 'Sign in required', description: 'Please sign in to post a reply.' });
+        return;
+      }
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to post reply');
       setReply("");
@@ -76,7 +97,27 @@ export default function ThreadView() {
   };
 
   const like = async (replyId: string) => {
-    // likes disabled in favor of reactions; no-op for now
+    try {
+      const res = await fetch(`${FORUMS_EDGE}/api/forum/likes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ reply_id: replyId }),
+      });
+      if (res.status === 401) {
+        toast({ title: 'Sign in required', description: 'Please sign in to react to replies.' });
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to add reaction');
+      }
+      setReplies(prev => prev.map(r => r.id === replyId ? { ...r, likes_count: (r.likes_count || 0) + 1 } : r));
+    } catch (e: any) {
+      toast({ title: 'Could not add reaction', description: e.message });
+    }
   };
 
   return (
@@ -102,6 +143,15 @@ export default function ThreadView() {
               replies.map(r => (
                 <Card key={r.id} className="p-4">
                   <div className="text-sm whitespace-pre-wrap">{r.content}</div>
+                  <div className="mt-2 flex items-center gap-3">
+                    <Button variant="ghost" size="sm" onClick={() => like(r.id)} aria-label="Like reply">
+                      <span role="img" aria-label="thumbs up">👍</span>
+                      <span className="ml-1 text-xs text-muted-foreground">{r.likes_count || 0}</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => quoteReply(r.content)} aria-label="Reply to this reply">
+                      Reply
+                    </Button>
+                  </div>
                   <div className="pt-2 text-xs text-muted-foreground">
                     {new Date(r.created_at).toLocaleString(undefined, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </div>
@@ -112,12 +162,18 @@ export default function ThreadView() {
 
           <section className="mt-4">
             <h3 className="text-base font-semibold mb-2">Add a reply</h3>
-            <div className="grid gap-2">
-              <Textarea rows={5} placeholder="Write your reply" value={reply} onChange={(e) => setReply(e.target.value)} />
-              <div>
-                <Button onClick={submitReply} disabled={posting || reply.trim().length === 0}>{posting ? 'Posting…' : 'Post Reply'}</Button>
+            {!session ? (
+              <div className="rounded-lg border bg-card p-4 text-sm">
+                Please sign in to post a reply. <Link to="/auth" className="underline">Sign in</Link>
               </div>
-            </div>
+            ) : (
+              <div className="grid gap-2">
+                <Textarea ref={textareaRef} rows={5} placeholder="Write your reply" value={reply} onChange={(e) => setReply(e.target.value)} />
+                <div>
+                  <Button onClick={submitReply} disabled={posting || reply.trim().length === 0}>{posting ? 'Posting…' : 'Post Reply'}</Button>
+                </div>
+              </div>
+            )}
           </section>
         </article>
       ) : null}
