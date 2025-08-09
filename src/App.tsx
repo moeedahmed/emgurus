@@ -7,6 +7,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Exams from "./pages/Exams";
 import Auth from "./pages/Auth";
+import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
+import ReviewedQuestionDetail from "@/pages/exams/ReviewedQuestionDetail";
 import NotFound from "./pages/NotFound";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
@@ -61,27 +63,38 @@ const App = () => (
           <Routes>
             <Route element={<SiteLayout />}> 
               <Route path="/" element={<Index />} />
-              <Route path="/exams" element={<Exams />} />
-              <Route path="/exams/ai-practice" element={
-                <ErrorBoundary>
-                  <AiPracticeConfig />
-                </ErrorBoundary>
-              } />
-              <Route path="/exams/ai-practice/session/:id" element={
-                <ErrorBoundary>
-                  <AiPracticeSession />
-                </ErrorBoundary>
-              } />
-              <Route path="/exams/question-bank" element={
-                <ErrorBoundary>
-                  <QuestionBankPage />
-                </ErrorBoundary>
-              } />
-              <Route path="/exams/question/:id" element={
-                <ErrorBoundary>
-                  <QuestionDetail />
-                </ErrorBoundary>
-              } />
+               <Route path="/exams" element={<Exams />} />
+               <Route path="/exams/ai-practice" element={
+                 <ErrorBoundary>
+                   <AiPracticeConfig />
+                 </ErrorBoundary>
+               } />
+               <Route path="/exams/ai-practice/session/:id" element={
+                 <ErrorBoundary>
+                   <AiPracticeSession />
+                 </ErrorBoundary>
+               } />
+               <Route path="/exams/reviewed" element={
+                 <ErrorBoundary>
+                   {/* Reviewed Question Bank (EM only) */}
+                   <ReviewedQuestionBank />
+                 </ErrorBoundary>
+               } />
+               <Route path="/exams/reviewed/:id" element={
+                 <ErrorBoundary>
+                   <ReviewedQuestionDetail />
+                 </ErrorBoundary>
+               } />
+               <Route path="/exams/question-bank" element={
+                 <ErrorBoundary>
+                   <QuestionBankPage />
+                 </ErrorBoundary>
+               } />
+               <Route path="/exams/question/:id" element={
+                 <ErrorBoundary>
+                   <QuestionDetail />
+                 </ErrorBoundary>
+               } />
               <Route path="/quiz" element={<Navigate to="/exams" replace />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/blogs" element={<Blogs />} />

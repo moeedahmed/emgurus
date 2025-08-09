@@ -42,7 +42,7 @@ export default function Exams() {
               </ul>
             </div>
             <div className="pt-4">
-              <Button variant="outline" onClick={() => navigate('/exams/question-bank')} aria-label="Browse reviewed questions">Browse</Button>
+              <Button variant="outline" onClick={() => navigate('/exams/reviewed')} aria-label="Browse reviewed questions">Browse</Button>
             </div>
           </Card>
         </div>
