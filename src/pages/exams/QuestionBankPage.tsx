@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
 import { toast } from "@/hooks/use-toast";
-interface Row { id: string; exam: string | null; stem: string | null; tags: string[] | null; topic: string | null; subtopic: string | null; reviewed_at: string | null }
+interface Row { id: string; exam: string | null; stem: string | null; tags: string[] | null; topic: string | null; subtopic: string | null; reviewed_at: string | null; reviewer_id: string | null }
 
 const demo: Row[] = Array.from({ length: 5 }).map((_, i) => ({
   id: `demo-${i+1}`,
@@ -17,6 +17,7 @@ const demo: Row[] = Array.from({ length: 5 }).map((_, i) => ({
   topic: 'Sepsis',
   subtopic: 'Resuscitation',
   reviewed_at: new Date().toISOString(),
+  reviewer_id: null,
 }));
 
 export default function QuestionBankPage() {
@@ -26,6 +27,7 @@ export default function QuestionBankPage() {
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+  const [reviewers, setReviewers] = useState<Record<string, string>>({});
   const navigate = useNavigate();
 
   const pageSize = 20;
@@ -42,7 +44,7 @@ export default function QuestionBankPage() {
       try {
         // TODO: replace any with typed client after regenerating Supabase types.
         let q = (supabase as any).from('reviewed_exam_questions')
-          .select('id, exam, stem, tags, topic, subtopic, reviewed_at', { count: 'exact' })
+          .select('id, exam, stem, tags, topic, subtopic, reviewed_at, reviewer_id', { count: 'exact' })
           .order('reviewed_at', { ascending: false })
           .range((page-1)*pageSize, page*pageSize - 1);
         if (exam) q = q.eq('exam', exam as any);
@@ -50,7 +52,20 @@ export default function QuestionBankPage() {
         if (search) q = q.ilike('stem', `%${search}%`);
         const { data, error } = await q;
         if (error) throw error;
-        if (!cancelled) setItems((data as any[]) || []);
+        const list = (data as any[]) || [];
+        // Fetch reviewer names if present
+        const ids = Array.from(new Set(list.map((d: any) => d.reviewer_id).filter(Boolean)));
+        if (ids.length) {
+          const { data: gurus, error: gErr } = await (supabase as any)
+            .from('gurus')
+            .select('id, name')
+            .in('id', ids);
+          if (!gErr) {
+            const map: Record<string, string> = Object.fromEntries(((gurus as any[]) || []).map((g: any) => [g.id, g.name]));
+            if (!cancelled) setReviewers(map);
+          }
+        }
+        if (!cancelled) setItems(list);
       } catch (e) {
         console.warn('Bank fetch failed, using demo', e);
         toast({
@@ -109,6 +124,12 @@ export default function QuestionBankPage() {
                 {it.topic && <span className="border rounded px-2 py-0.5">{it.topic}</span>}
                 {it.subtopic && <span className="border rounded px-2 py-0.5">{it.subtopic}</span>}
                 {(it.tags || []).slice(0,3).map(t => (<span key={t} className="border rounded px-2 py-0.5">{t}</span>))}
+                {it.reviewed_at && (
+                  <span className="border rounded px-2 py-0.5">Reviewed {new Date(it.reviewed_at).toLocaleDateString()}</span>
+                )}
+                {it.reviewer_id && (
+                  <span className="border rounded px-2 py-0.5">Reviewer: {reviewers[it.reviewer_id] || '—'}</span>
+                )}
               </CardContent>
             </Card>
           ))

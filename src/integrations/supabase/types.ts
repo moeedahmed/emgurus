@@ -1263,6 +1263,30 @@ export type Database = {
         }
         Relationships: []
       }
+      gurus: {
+        Row: {
+          created_at: string
+          exams: string[]
+          id: string
+          name: string
+          specialty: string | null
+        }
+        Insert: {
+          created_at?: string
+          exams?: string[]
+          id?: string
+          name: string
+          specialty?: string | null
+        }
+        Update: {
+          created_at?: string
+          exams?: string[]
+          id?: string
+          name?: string
+          specialty?: string | null
+        }
+        Relationships: []
+      }
       newsletter_subscribers: {
         Row: {
           created_at: string
@@ -1732,6 +1756,59 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "review_exam_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviewed_exam_questions: {
+        Row: {
+          correct_index: number | null
+          created_at: string
+          exam: string
+          explanation: string | null
+          id: string
+          options: string[] | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string
+          stem: string
+          subtopic: string | null
+          topic: string | null
+        }
+        Insert: {
+          correct_index?: number | null
+          created_at?: string
+          exam: string
+          explanation?: string | null
+          id?: string
+          options?: string[] | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          stem: string
+          subtopic?: string | null
+          topic?: string | null
+        }
+        Update: {
+          correct_index?: number | null
+          created_at?: string
+          exam?: string
+          explanation?: string | null
+          id?: string
+          options?: string[] | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          stem?: string
+          subtopic?: string | null
+          topic?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviewed_exam_questions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "gurus"
             referencedColumns: ["id"]
           },
         ]

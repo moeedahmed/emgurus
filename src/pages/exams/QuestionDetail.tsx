@@ -10,15 +10,28 @@ export default function QuestionDetail() {
   const navigate = useNavigate();
   const [q, setQ] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [reviewerName, setReviewerName] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         // TODO: replace (supabase as any) with typed client once Supabase types are regenerated to include reviewed_exam_questions.
-        const { data, error } = await (supabase as any).from('reviewed_exam_questions').select('*').eq('id', id as any).maybeSingle();
+        const { data, error } = await (supabase as any)
+          .from('reviewed_exam_questions')
+          .select('*')
+          .eq('id', id as any)
+          .maybeSingle();
         if (error) throw error;
         if (!cancelled) setQ(data);
+        if (data?.reviewer_id) {
+          const { data: guru, error: gErr } = await (supabase as any)
+            .from('gurus')
+            .select('id, name')
+            .eq('id', data.reviewer_id)
+            .maybeSingle();
+          if (!gErr && !cancelled) setReviewerName(guru?.name || null);
+        }
       } catch (e) {
         toast({
           variant: "destructive",
@@ -40,6 +53,9 @@ export default function QuestionDetail() {
       <Card className="mt-3">
         <CardHeader>
           <CardTitle>Reviewed Question</CardTitle>
+          {reviewerName && (
+            <div className="text-sm text-muted-foreground">Reviewer: {reviewerName}</div>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
