@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,12 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { createDraft, submitPost } from "@/lib/blogsApi";
-import { supabase } from "@/integrations/supabase/client";
+import { submitPost, updateDraft } from "@/lib/blogsApi";
 
-export default function EditorNew() {
+export default function EditorEdit() {
+  const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+
   const [title, setTitle] = useState("");
   const [cover, setCover] = useState("");
   const [excerpt, setExcerpt] = useState("");
@@ -30,10 +32,15 @@ export default function EditorNew() {
   }, [user]);
 
   useEffect(() => {
-    document.title = "Write Blog | EMGurus";
+    document.title = "Edit Blog | EMGurus";
     const meta = document.querySelector("meta[name='description']");
-    if (meta) meta.setAttribute("content", "Create a draft blog and submit for review.");
-  }, []);
+    if (meta) meta.setAttribute("content", "Edit your draft blog and submit for review.");
+    const link = document.createElement("link");
+    link.setAttribute("rel", "canonical");
+    link.setAttribute("href", `${window.location.origin}/blogs/editor/${id}`);
+    document.head.appendChild(link);
+    return () => { document.head.removeChild(link); };
+  }, [id]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -44,18 +51,40 @@ export default function EditorNew() {
   }, []);
 
   useEffect(() => {
-    if (!excerpt && content) setExcerpt(content.replace(/<[^>]*>/g, " ").slice(0, 160));
-  }, [content]);
+    const loadDraft = async () => {
+      if (!id) return;
+      const { data: post } = await supabase
+        .from("blog_posts")
+        .select("id, title, description, content, cover_image_url, category_id")
+        .eq("id", id)
+        .maybeSingle();
+      if (!post) { toast.error("Draft not found"); navigate("/blogs/dashboard"); return; }
+      setTitle((post as any).title || "");
+      setCover((post as any).cover_image_url || "");
+      setExcerpt((post as any).description || "");
+      setContent((post as any).content || "");
+      setCategoryId((post as any).category_id || undefined);
+      // Load tags
+      const { data: tagRows } = await supabase
+        .from("blog_post_tags")
+        .select("tag:blog_tags(slug)")
+        .eq("post_id", id);
+      const slugs = ((tagRows as any[]) || []).map((t) => t.tag?.slug).filter(Boolean);
+      setTagList(slugs);
+    };
+    loadDraft();
+  }, [id]);
 
   const onSave = async (submit = false) => {
     try {
+      if (!id) return;
       setLoading(true);
       const leftover = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
       const tag_slugs = Array.from(new Set([...tagList, ...leftover].map((t) => t.toLowerCase().replace(/\s+/g, "-"))));
-      const res = await createDraft({ title, content_md: content, category_id: categoryId, tag_slugs, cover_image_url: cover || undefined, excerpt: excerpt || undefined });
-      if (submit) await submitPost(res.id);
-      toast.success(submit ? "Submitted for review" : "Draft saved");
-      navigate("/blogs");
+      await updateDraft(id, { title, content_md: content, category_id, tag_slugs, cover_image_url: cover || undefined, excerpt: excerpt || undefined });
+      if (submit) await submitPost(id);
+      toast.success(submit ? "Submitted for review" : "Draft updated");
+      navigate("/blogs/dashboard");
     } catch (e: any) {
       toast.error(e.message || "Failed to save");
     } finally {
@@ -65,7 +94,7 @@ export default function EditorNew() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-3xl font-bold mb-6">New Blog</h1>
+      <h1 className="text-3xl font-bold mb-6">Edit Draft</h1>
       <Card className="p-6 space-y-6">
         <div className="space-y-2">
           <Label htmlFor="title">Title</Label>
@@ -127,11 +156,10 @@ export default function EditorNew() {
           <Textarea className="min-h-[300px]" value={content} onChange={(e) => setContent(e.target.value)} placeholder="# Heading\nYour content..." />
         </div>
         <div className="flex gap-2 justify-end">
-          <Button variant="outline" onClick={() => onSave(false)} disabled={loading}>Save Draft</Button>
+          <Button variant="outline" onClick={() => onSave(false)} disabled={loading}>Save</Button>
           <Button onClick={() => onSave(true)} disabled={loading}>Submit for Review</Button>
         </div>
       </Card>
-      <link rel="canonical" href={`${window.location.origin}/blogs/editor/new`} />
     </main>
   );
 }

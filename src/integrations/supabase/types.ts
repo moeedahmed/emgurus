@@ -576,6 +576,7 @@ export type Database = {
           reviewer_id: string | null
           slug: string | null
           status: Database["public"]["Enums"]["blog_post_status"]
+          submitted_at: string | null
           tags: string[] | null
           title: string
           updated_at: string
@@ -597,6 +598,7 @@ export type Database = {
           reviewer_id?: string | null
           slug?: string | null
           status?: Database["public"]["Enums"]["blog_post_status"]
+          submitted_at?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string
@@ -618,6 +620,7 @@ export type Database = {
           reviewer_id?: string | null
           slug?: string | null
           status?: Database["public"]["Enums"]["blog_post_status"]
+          submitted_at?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string

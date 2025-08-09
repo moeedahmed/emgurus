@@ -344,7 +344,7 @@ const Blog = () => {
           />
         </div>
         {user && (
-          <Button onClick={() => navigate('/editor')} aria-label="Write a new blog post">
+          <Button onClick={() => navigate('/blogs/editor/new')} aria-label="Write a new blog post">
             <Pencil className="mr-2 h-4 w-4" /> Write Blog
           </Button>
         )}

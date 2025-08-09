@@ -385,6 +385,55 @@ serve(async (req) => {
       });
     }
 
+    // PUT /api/blogs/:id -> update draft (author-only, draft status)
+    const updateMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})$/i);
+    if (req.method === "PUT" && updateMatch) {
+      requireAuth();
+      const id = updateMatch[1];
+      const parsed = createDraftSchema.partial().parse(await req.json());
+
+      // Author owns and status is draft
+      const { data: post } = await supabase
+        .from("blog_posts")
+        .select("id, author_id, status")
+        .eq("id", id)
+        .maybeSingle();
+      if (!post || post.author_id !== user!.id) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (post.status !== "draft") {
+        return new Response(JSON.stringify({ error: "Only drafts can be updated" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const patch: Record<string, any> = {};
+      if (typeof parsed.title === "string") patch.title = parsed.title;
+      if (typeof parsed.excerpt === "string") patch.description = parsed.excerpt;
+      if (typeof parsed.cover_image_url === "string") patch.cover_image_url = parsed.cover_image_url;
+      if (typeof parsed.content_md === "string" || typeof parsed.content_html === "string") {
+        patch.content = (parsed.content_md ?? parsed.content_html) ?? null;
+      }
+      if (typeof parsed.category_id === "string") patch.category_id = parsed.category_id;
+
+      if (Object.keys(patch).length) {
+        const { error } = await supabase.from("blog_posts").update(patch).eq("id", id);
+        if (error) throw error;
+      }
+
+      if (parsed.tag_slugs) {
+        await supabase.from("blog_post_tags").delete().eq("post_id", id);
+        if (parsed.tag_slugs.length) {
+          const { data: tags } = await supabase
+            .from("blog_tags")
+            .select("id, slug")
+            .in("slug", parsed.tag_slugs);
+          const links = (tags ?? []).map((t: any) => ({ post_id: id, tag_id: t.id }));
+          if (links.length) await supabase.from("blog_post_tags").insert(links);
+        }
+      }
+
+      return new Response(JSON.stringify({ ok: true, id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // POST /api/blogs/:id/submit
     const submitMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/submit$/i);
     if (req.method === "POST" && submitMatch) {
@@ -393,7 +442,7 @@ serve(async (req) => {
       // Author only, move to in_review
       const { error } = await supabase
         .from("blog_posts")
-        .update({ status: "in_review" })
+        .update({ status: "in_review", submitted_at: new Date().toISOString() })
         .eq("id", id)
         .eq("author_id", user!.id);
       if (error) throw error;
@@ -433,9 +482,10 @@ serve(async (req) => {
       const canReview = isAdmin || !!(post && (post.reviewer_id === user!.id || post.reviewed_by === user!.id));
       if (!canReview) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+      const nowIso = new Date().toISOString();
       const { error } = await supabase
         .from("blog_posts")
-        .update({ status: "published", reviewed_at: new Date().toISOString() })
+        .update({ status: "published", reviewed_at: nowIso, reviewed_by: user!.id, published_at: nowIso })
         .eq("id", id);
       if (error) throw error;
 

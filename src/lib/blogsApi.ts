@@ -249,6 +249,21 @@ export async function createDraft(body: {
   return res.json();
 }
 
+export async function updateDraft(id: string, body: {
+  title?: string;
+  content_md?: string;
+  content_html?: string;
+  category_id?: string;
+  tag_slugs?: string[];
+  cover_image_url?: string;
+  excerpt?: string;
+}) {
+  const headers = { "Content-Type": "application/json", ...(await authHeader()) };
+  const res = await fetch(`${BASE}/api/blogs/${id}`, { method: "PUT", headers, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error("Failed to update draft");
+  return res.json();
+}
+
 export async function submitPost(id: string) {
   const headers = { ...(await authHeader()) };
   const res = await fetch(`${BASE}/api/blogs/${id}/submit`, { method: "POST", headers });

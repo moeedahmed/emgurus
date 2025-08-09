@@ -5,38 +5,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { listBlogs } from "@/lib/blogsApi";
 import logo from "@/assets/logo-em-gurus.png";
+import { useRoles } from "@/hooks/useRoles";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isGuru, setIsGuru] = useState(false);
-  const [roles, setRoles] = useState<string[]>([]);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const displayName = (user?.user_metadata?.full_name as string) || (user?.email?.split('@')[0] ?? 'Account');
   const initials = displayName.slice(0, 2).toUpperCase();
   const [catCounts, setCatCounts] = useState<Record<string, number>>({});
   const presetCats = ["General","Exam Guidance","Clinical Compendium","Research & Evidence","Careers","Announcements"];
-  useEffect(() => {
-    let canceled = false;
-    const check = async () => {
-      if (!user) { if (!canceled) { setIsGuru(false); setRoles([]); } return; }
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      if (error) { if (!canceled) { setIsGuru(false); setRoles([]); } return; }
-      const rs = (data || []).map(r => r.role as string);
-      if (!canceled) {
-        setRoles(rs);
-        setIsGuru(rs.includes('guru') || rs.includes('admin'));
-      }
-    };
-    check();
-    return () => { canceled = true; };
-  }, [user]);
+  const { roles } = useRoles();
+  const isGuru = roles.includes('guru') || roles.includes('admin');
+
 
   useEffect(() => {
     let cancelled = false;
@@ -84,7 +67,7 @@ const Header = () => {
               </HoverCardContent>
             </HoverCard>
             {user && (
-              <button onClick={() => navigate('/blogs/new')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Write</button>
+              <button onClick={() => navigate('/blogs/editor/new')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Write</button>
             )}
             <button onClick={() => navigate('/exams')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Exams</button>
             <button onClick={() => navigate('/consultations')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Consultations</button>
@@ -110,11 +93,9 @@ const Header = () => {
                   <DropdownMenuItem onClick={() => navigate('/profile')}>
                     <UserIcon className="mr-2 h-4 w-4" /> My Profile
                   </DropdownMenuItem>
-                  {(roles.includes('guru') || roles.includes('admin')) && (
-                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                      <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onClick={() => navigate('/blogs/dashboard')}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+                  </DropdownMenuItem>
                   {roles.includes('guru') && (
                     <DropdownMenuItem onClick={() => navigate('/guru/availability')}>
                       <LayoutDashboard className="mr-2 h-4 w-4" /> My Availability
@@ -155,7 +136,7 @@ const Header = () => {
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/'); setIsMenuOpen(false);}}>Home</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/blogs'); setIsMenuOpen(false);}}>Blogs</button>
               {user && (
-                <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/blogs/new'); setIsMenuOpen(false);}}>Write</button>
+                <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/blogs/editor/new'); setIsMenuOpen(false);}}>Write</button>
               )}
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/exams'); setIsMenuOpen(false);}}>Exams</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/consultations'); setIsMenuOpen(false);}}>Consultations</button>
@@ -167,7 +148,7 @@ const Header = () => {
                       <div className="rounded-md border border-border">
                         <div className="px-3 py-2 text-xs uppercase text-muted-foreground">Guru Tools</div>
                         <div className="flex flex-col space-y-2 p-2 pt-0">
-                          <Button variant="outline" className="justify-start" onClick={() => {navigate('/dashboard'); setIsMenuOpen(false);}}>Dashboard</Button>
+                          <Button variant="outline" className="justify-start" onClick={() => {navigate('/blogs/dashboard'); setIsMenuOpen(false);}}>Dashboard</Button>
                           <Button variant="outline" className="justify-start" onClick={() => {navigate('/guru/availability'); setIsMenuOpen(false);}}>My Availability</Button>
                         </div>
                       </div>

@@ -33,6 +33,11 @@ export default function Blogs() {
     document.title = "Blogs | EMGurus";
     const meta = document.querySelector("meta[name='description']");
     if (meta) meta.setAttribute("content", "Evidence-based articles, exam guidance, and clinical pearls.");
+    const link = document.createElement("link");
+    link.setAttribute("rel", "canonical");
+    link.setAttribute("href", `${window.location.origin}/blogs`);
+    document.head.appendChild(link);
+    return () => { document.head.removeChild(link); };
   }, []);
 
   useEffect(() => {
@@ -160,7 +165,7 @@ export default function Blogs() {
                   />
                 </SheetContent>
               </Sheet>
-              <Button onClick={() => navigate('/blogs/new')}>Write Blog</Button>
+              <Button onClick={() => navigate('/blogs/editor/new')}>Write Blog</Button>
             </div>
           </div>
           <div className="space-y-6">
@@ -173,7 +178,7 @@ export default function Blogs() {
                   title="EM GURUS Blogs"
                   subtitle="Evidence-based articles, exam guidance, and clinical pearls."
                   align="left"
-                  ctas={[{ label: "Write Blog", href: "/blogs/new", variant: "default" }]}
+                  ctas={[{ label: "Write Blog", href: "/blogs/editor/new", variant: "default" }]}
                 />
               );
             })()}
@@ -220,7 +225,6 @@ export default function Blogs() {
           </div>
         </aside>
       </div>
-      <link rel="canonical" href={`${window.location.origin}/blogs`} />
     </main>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useRoles } from "@/hooks/useRoles";
 
 // Restricts access to users having at least one of the required roles
 const RoleProtectedRoute: React.FC<{ roles: Array<"admin" | "guru" | "user">; children: React.ReactNode }>
@@ -14,13 +14,11 @@ const RoleProtectedRoute: React.FC<{ roles: Array<"admin" | "guru" | "user">; ch
     const check = async () => {
       if (loading) return;
       if (!user) { setAllowed(false); return; }
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
-      if (error) { setAllowed(false); return; }
-      const userRoles = (data || []).map(r => r.role as string);
-      setAllowed(userRoles.some(r => roles.includes(r as any)));
+      // Use shared role loader
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const rolesHook = (useRoles as any)();
+      const userRoles: string[] = rolesHook?.roles || [];
+      setAllowed(userRoles.some((r) => roles.includes(r as any)));
     };
     check();
     // eslint-disable-next-line react-hooks/exhaustive-deps
