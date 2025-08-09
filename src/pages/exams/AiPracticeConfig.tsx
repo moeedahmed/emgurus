@@ -28,48 +28,24 @@ export default function AiPracticeConfig() {
 
   const areas = useMemo(() => (exam ? ["All areas", ...CURRICULA[exam]] : ["All areas"]) , [exam]);
 
-  async function invokeWithTimeout(body: any, ms = 20000) {
-    return await Promise.race([
-      supabase.functions.invoke('ai-generate-questions', { body }),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout after 20s')), ms))
-    ]) as Awaited<ReturnType<typeof supabase.functions.invoke>>;
-  }
-
-  function buildDemoSession() {
-    const id = crypto.randomUUID();
-    const questions = [
-      { id: crypto.randomUUID(), stem: 'A 65-year-old patient presents with fever, tachycardia, and hypotension. What is the earliest marker that correlates with mortality in suspected sepsis?', options: ['A. Total WBC','B. Serum lactate','C. ESR','D. D-dimer'], correct: 'B', explanation: 'Serum lactate correlates with tissue hypoperfusion and mortality risk in sepsis. Early measurement guides resuscitation.' },
-      { id: crypto.randomUUID(), stem: 'In septic shock, the first-line vasopressor following adequate fluids is:', options: ['A. Dopamine','B. Phenylephrine','C. Norepinephrine','D. Epinephrine'], correct: 'C', explanation: 'Norepinephrine is first-line given best evidence for efficacy and safety.' },
-      { id: crypto.randomUUID(), stem: 'For suspected community-acquired pneumonia with sepsis, the recommended timing for initial antibiotics is within:', options: ['A. 1 hour','B. 3 hours','C. 6 hours','D. 12 hours'], correct: 'A', explanation: 'Early antibiotics within 1 hour are associated with improved outcomes in sepsis.' },
-    ];
-    return { id, questions };
-  }
-
-  const start = async (skip = false) => {
+  const start = async () => {
     if (!exam) return;
     setLoading(true);
-    const curriculum = skip || area === 'All areas' ? null : area;
+    const slo = area === 'All areas' ? null : area;
     try {
-      console.log('EXAMS start', { exam, count, curriculum });
-      let data: any;
-      try {
-        const res = await invokeWithTimeout({ exam, count, curriculum });
-        if (res.error) throw res.error;
-        data = res.data;
-      } catch (e) {
-        console.warn('ai-generate-questions unavailable, using demo', e);
-        data = { session: buildDemoSession() };
-      }
-      const sessionId = data?.session?.id || crypto.randomUUID();
-      const qs = data?.session?.questions || buildDemoSession().questions;
-      // persist in localStorage
-      const store = JSON.parse(localStorage.getItem('ai_sessions') || '{}');
-      store[sessionId] = { exam, count, curriculum, questions: qs };
-      localStorage.setItem('ai_sessions', JSON.stringify(store));
-      navigate(`/exams/ai-practice/session/${sessionId}`);
+      const res = await supabase.functions.invoke('ai-exams-api', {
+        body: { action: 'start_session', examType: exam }
+      });
+      if (res.error) throw res.error;
+      const sessionId = res.data?.session?.id;
+      if (!sessionId) throw new Error('Failed to start session');
+      const params = new URLSearchParams();
+      params.set('count', String(count));
+      if (slo) params.set('slo', slo);
+      navigate(`/exams/ai-practice/session/${sessionId}?${params.toString()}`);
     } catch (err: any) {
-      console.error('Generate failed', err);
-      toast({ title: "Couldn't start AI practice. Please try again.", description: String(err?.message || err) });
+      console.error('Start session failed', err);
+      toast({ title: "Couldn't start AI practice.", description: String(err?.message || err) });
     } finally {
       setLoading(false);
     }
@@ -110,8 +86,7 @@ export default function AiPracticeConfig() {
             </Select>
           </div>
           <div className="md:col-span-3 flex items-center gap-2 justify-end pt-2">
-            <Button variant="ghost" onClick={() => start(true)} disabled={loading}>Skip</Button>
-            <Button onClick={() => start(false)} disabled={!exam || loading}>
+            <Button onClick={start} disabled={!exam || loading}>
               {loading ? 'Generating…' : 'Generate'}
             </Button>
           </div>

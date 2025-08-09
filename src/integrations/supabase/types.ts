@@ -257,6 +257,45 @@ export type Database = {
           },
         ]
       }
+      ai_gen_logs: {
+        Row: {
+          count: number | null
+          error_code: string | null
+          exam: string | null
+          id: string
+          model_used: string | null
+          slo: string | null
+          source: string
+          success: boolean
+          ts: string
+          user_id: string
+        }
+        Insert: {
+          count?: number | null
+          error_code?: string | null
+          exam?: string | null
+          id?: string
+          model_used?: string | null
+          slo?: string | null
+          source: string
+          success: boolean
+          ts?: string
+          user_id: string
+        }
+        Update: {
+          count?: number | null
+          error_code?: string | null
+          exam?: string | null
+          id?: string
+          model_used?: string | null
+          slo?: string | null
+          source?: string
+          success?: boolean
+          ts?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_messages: {
         Row: {
           content: Json
