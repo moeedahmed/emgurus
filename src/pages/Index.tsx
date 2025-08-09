@@ -28,6 +28,28 @@ const Index = () => {
     run();
   }, [user]);
 
+  // TEMP: one-time seed AI embeddings with small limit
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const key = 'ai_seed_200_done';
+        if (localStorage.getItem(key)) return;
+        toast.message('Seeding AI embeddings (limit 200)...');
+        const { data, error } = await supabase.functions.invoke('seed_ai_embeddings_once', {
+          body: { limit: 200 },
+        });
+        if (error) throw error;
+        console.log('AI_SEED_RESULT', data);
+        toast.success(`Seeded ${data?.docs_embedded || 0} docs / ${data?.chunks_created || 0} chunks`);
+        localStorage.setItem(key, '1');
+      } catch (e: any) {
+        console.error('AI seed failed', e);
+        toast.error(`AI seed failed: ${e?.message || 'Unknown error'}`);
+      }
+    };
+    run();
+  }, []);
+
   return (
     <main>
       <Hero />
