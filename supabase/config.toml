@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.send-review-invites]
 verify_jwt = true
+
+[functions.newsletter-notify]
+verify_jwt = false

@@ -52,6 +52,8 @@ const Footer = () => {
           throw error;
         }
       } else {
+        // Notify admins via email (non-blocking)
+        supabase.functions.invoke('newsletter-notify', { body: { email: e, source_page: window.location.pathname } }).catch(() => {});
         toast({ title: 'Subscribed!', description: "We'll keep you posted." });
         setEmail("");
       }

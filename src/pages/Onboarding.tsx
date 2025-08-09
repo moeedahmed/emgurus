@@ -85,6 +85,38 @@ export default function Onboarding() {
     })();
   }, [user?.id]);
 
+  // After redirect from social connect, upsert identities to DB and adopt avatar when missing
+  useEffect(() => {
+    (async () => {
+      if (!user) return;
+      const { data: authUserRes } = await supabase.auth.getUser();
+      const identities = (authUserRes.user as any)?.identities || [];
+      if (!identities.length) return;
+      let adoptedAvatar = false;
+      for (const ident of identities) {
+        const provider = ident.provider as string;
+        if (provider !== 'linkedin_oidc' && provider !== 'twitter') continue;
+        const idata = ident.identity_data || {};
+        const handle = idata.preferred_username || idata.username || idata.name || null;
+        const avatar = idata.picture || idata.avatar_url || null;
+        const profile_url = idata.url || idata.profile || null;
+        await supabase.from('user_social_accounts').upsert({
+          user_id: user.id,
+          provider,
+          external_user_id: (ident as any).id || null,
+          handle,
+          avatar_url: avatar,
+          profile_url,
+        }, { onConflict: 'user_id,provider' } as any);
+        if (!avatarUrl && avatar && !adoptedAvatar) {
+          await supabase.from('profiles').update({ avatar_url: avatar }).eq('user_id', user.id);
+          setAvatarUrl(avatar);
+          adoptedAvatar = true;
+        }
+      }
+    })();
+  }, [user?.id]);
+
   // Autosave draft
   useEffect(() => {
     if (!user || loading) return;
