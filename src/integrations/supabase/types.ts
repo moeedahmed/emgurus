@@ -2163,6 +2163,57 @@ export type Database = {
           },
         ]
       }
+      user_question_sessions: {
+        Row: {
+          attempts: number
+          created_at: string
+          exam: string
+          id: string
+          is_correct: boolean
+          is_flagged: boolean
+          last_action_at: string
+          last_selected: string | null
+          notes: string | null
+          question_id: string
+          started_at: string
+          time_spent_seconds: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          exam: string
+          id?: string
+          is_correct?: boolean
+          is_flagged?: boolean
+          last_action_at?: string
+          last_selected?: string | null
+          notes?: string | null
+          question_id: string
+          started_at?: string
+          time_spent_seconds?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          exam?: string
+          id?: string
+          is_correct?: boolean
+          is_flagged?: boolean
+          last_action_at?: string
+          last_selected?: string | null
+          notes?: string | null
+          question_id?: string
+          started_at?: string
+          time_spent_seconds?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
