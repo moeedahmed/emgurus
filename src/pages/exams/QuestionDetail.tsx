@@ -15,7 +15,8 @@ export default function QuestionDetail() {
     let cancelled = false;
     (async () => {
       try {
-        const { data, error } = await supabase.from('reviewed_exam_questions').select('*').eq('id', id as any).maybeSingle();
+        // TODO: replace (supabase as any) with typed client once Supabase types are regenerated to include reviewed_exam_questions.
+        const { data, error } = await (supabase as any).from('reviewed_exam_questions').select('*').eq('id', id as any).maybeSingle();
         if (error) throw error;
         if (!cancelled) setQ(data);
       } catch (e) {

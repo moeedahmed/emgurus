@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Users } from "lucide-react";
+import { ArrowRight, Users } from "lucide-react";
 import heroImage from "@/assets/hero-medical-education.jpg";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -13,24 +13,19 @@ const Hero = () => {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content */}
           <div className="animate-fade-in">
-            <div className="mb-4">
-              <a href="https://linktr.ee/emgurus" target="_blank" rel="noopener noreferrer" className="text-sm underline text-muted-foreground hover:text-primary">
-                See our reviews and social proof
-              </a>
-            </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-              AI Exam Prep & Mentorship for Emergency Medicine
+              Master EM Exams.
               <span className="text-transparent bg-clip-text bg-gradient-hero block">
-                Built by Gurus. For clinicians.
+                Get Mentored.
               </span>
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground mb-8 leading-relaxed">
-              Personalized AI tutoring, expert mentorship, and collaborative learning built for modern medical careers.
+              AI practice, guru‑reviewed questions, and 1:1 mentorship built for emergency medicine clinicians.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <div className="flex flex-col sm:flex-row gap-4 mb-3">
               {user ? (
                 <Button 
                   variant="hero" 
@@ -38,7 +33,7 @@ const Hero = () => {
                   className="group"
                   onClick={() => navigate('/exams')}
                 >
-                  Continue Exams
+                  Start Exam Prep
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               ) : (
@@ -46,40 +41,38 @@ const Hero = () => {
                   variant="hero" 
                   size="lg" 
                   className="group"
-                  onClick={() => navigate('/auth')}
+                  onClick={() => navigate('/exams')}
                 >
-                  Get Started
+                  Start Exam Prep
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               )}
               <Button
-                variant="outline"
+                variant="ghost"
                 size="lg"
                 className="group"
-                onClick={() => {
-                  const el = document.getElementById('pricing');
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  else navigate('/#pricing');
-                }}
+                onClick={() => navigate('/consultations')}
               >
-                <Play className="w-5 h-5 mr-2" />
-                Compare Plans
+                Book a Guru
               </Button>
+            </div>
+            <div>
+              <a href="/#pricing" className="text-sm underline text-muted-foreground hover:text-primary">See pricing</a>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-6 pt-8 border-t border-border">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8 border-t border-border">
               <div className="text-center sm:text-left">
-                <div className="text-2xl font-bold text-primary">Growing</div>
-                <div className="text-sm text-muted-foreground">Question Bank</div>
+                <div className="text-2xl font-bold text-primary">50K+</div>
+                <div className="text-sm text-muted-foreground">Practice Questions</div>
               </div>
               <div className="text-center sm:text-left">
-                <div className="text-2xl font-bold text-primary">Building</div>
-                <div className="text-sm text-muted-foreground">Verified Mentors</div>
+                <div className="text-2xl font-bold text-primary">500+</div>
+                <div className="text-sm text-muted-foreground">Expert Mentors</div>
               </div>
               <div className="text-center sm:text-left">
-                <div className="text-2xl font-bold text-primary">Beta</div>
-                <div className="text-sm text-muted-foreground">Outcomes Tracking</div>
+                <div className="text-2xl font-bold text-primary">95%</div>
+                <div className="text-sm text-muted-foreground">Success Rate</div>
               </div>
             </div>
           </div>
