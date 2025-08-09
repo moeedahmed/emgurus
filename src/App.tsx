@@ -17,7 +17,7 @@ import Editor from "./pages/Editor";
 import Review from "./pages/Review";
 import Blogs from "./pages/Blogs";
 import BlogDetail from "./pages/BlogDetail";
-import BlogsEditor from "./pages/BlogsEditor";
+import EditorNew from "./pages/blogs/EditorNew";
 import BlogsReview from "./pages/BlogsReview";
 import Admin from "./pages/Admin";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -99,7 +99,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/blogs" element={<Blogs />} />
               <Route path="/blogs/:slug" element={<BlogDetail />} />
-              <Route path="/blogs/new" element={<ProtectedRoute><BlogsEditor /></ProtectedRoute>} />
+              <Route path="/blogs/new" element={<ProtectedRoute><EditorNew /></ProtectedRoute>} />
               <Route path="/blogs/review" element={<RoleProtectedRoute roles={["guru","admin"]}><BlogsReview /></RoleProtectedRoute>} />
               <Route path="/blog" element={<Navigate to="/blogs" replace />} />
               <Route path="/blog/category/:tag" element={<BlogCategory />} />
