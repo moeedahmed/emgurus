@@ -50,3 +50,15 @@ verify_jwt = true
 
 [functions.newsletter-notify]
 verify_jwt = false
+
+[functions.ai-route]
+verify_jwt = false
+
+[functions.ai-feedback]
+verify_jwt = false
+
+[functions.ai-suggestions]
+verify_jwt = false
+
+[functions.ai-analytics]
+verify_jwt = true

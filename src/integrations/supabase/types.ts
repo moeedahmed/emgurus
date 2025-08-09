@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_content_index: {
+        Row: {
+          created_at: string
+          doc_id: string
+          embedding: string
+          id: string
+          published: boolean
+          slug: string | null
+          source_type: string
+          tags: string[] | null
+          text_chunk: string
+          title: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          doc_id: string
+          embedding: string
+          id?: string
+          published?: boolean
+          slug?: string | null
+          source_type: string
+          tags?: string[] | null
+          text_chunk: string
+          title?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          doc_id?: string
+          embedding?: string
+          id?: string
+          published?: boolean
+          slug?: string | null
+          source_type?: string
+          tags?: string[] | null
+          text_chunk?: string
+          title?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
       ai_exam_answers: {
         Row: {
           answered_at: string
@@ -165,6 +207,109 @@ export type Database = {
           started_at?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      ai_feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          message_id: string | null
+          rating: number
+          session_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          rating: number
+          session_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          rating?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_ai_feedback_session"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_messages: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          role: string
+          session_id: string
+          tokens_in: number | null
+          tokens_out: number | null
+          tool_name: string | null
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          id?: string
+          role: string
+          session_id: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          tool_name?: string | null
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          role?: string
+          session_id?: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          tool_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_ai_messages_session"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_sessions: {
+        Row: {
+          anon_id: string | null
+          created_at: string
+          id: string
+          last_active_at: string
+          page_first_seen: string | null
+          user_id: string | null
+        }
+        Insert: {
+          anon_id?: string | null
+          created_at?: string
+          id?: string
+          last_active_at?: string
+          page_first_seen?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          anon_id?: string | null
+          created_at?: string
+          id?: string
+          last_active_at?: string
+          page_first_seen?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1850,12 +1995,121 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ai_search_content: {
+        Args: {
+          query_embedding: string
+          match_count?: number
+          filter_source?: string
+        }
+        Returns: {
+          id: string
+          title: string
+          url: string
+          slug: string
+          source_type: string
+          tags: string[]
+          text_chunk: string
+          similarity: number
+        }[]
+      }
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
+      halfvec_avg: {
+        Args: { "": number[] }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
       has_role: {
         Args: {
           _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      hnsw_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: string
+      }
+      sparsevec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      vector_avg: {
+        Args: { "": number[] }
+        Returns: string
+      }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
+      vector_norm: {
+        Args: { "": string }
+        Returns: number
+      }
+      vector_out: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: { "": string }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
       }
     }
     Enums: {

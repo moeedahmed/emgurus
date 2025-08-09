@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import AIGuru from "@/components/ai/AIGuru";
 
 function needsOnboarding(profile: any): boolean {
   if (!profile) return true;
@@ -98,6 +99,7 @@ const SiteLayout = () => {
         <Outlet />
       </main>
       <Footer />
+      <AIGuru />
     </div>
   );
 };
