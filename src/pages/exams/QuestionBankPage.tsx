@@ -104,10 +104,10 @@ export default function QuestionBankPage() {
       <Card>
         <CardContent className="py-4 grid gap-3 md:grid-cols-6">
           <div className="md:col-span-2"><Input placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
-          <Select value={exam} onValueChange={(v) => { setExam(v as ExamName); setPage(1); }}>
+          <Select value={exam || "ALL"} onValueChange={(v) => { setExam(v === "ALL" ? "" : (v as ExamName)); setPage(1); }}>
             <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Exams</SelectItem>
+              <SelectItem value="ALL">All Exams</SelectItem>
               {EXAMS.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
             </SelectContent>
           </Select>
