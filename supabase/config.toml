@@ -62,3 +62,9 @@ verify_jwt = false
 
 [functions.ai-analytics]
 verify_jwt = true
+
+[functions.seed_ai_embeddings_once]
+verify_jwt = false
+
+[functions.refresh_ai_embeddings]
+verify_jwt = false

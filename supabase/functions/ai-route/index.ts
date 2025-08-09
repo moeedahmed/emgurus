@@ -9,9 +9,10 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
+const EMBEDDING_MODEL = Deno.env.get("EMBEDDING_MODEL") || "text-embedding-3-small";
+const EMBEDDING_DIM = Number(Deno.env.get("EMBEDDING_DIM") || "1536");
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-
 interface MessageIn { role: 'user'|'assistant'|'system'; content: string }
 
 serve(async (req) => {
@@ -38,11 +39,11 @@ serve(async (req) => {
     const lastUser = [...messages].reverse().find(m => m.role === 'user');
     let retrieved: any[] = [];
     if (lastUser?.content) {
-      // get embedding (1536-dim)
+      // get embedding from configured model
       const embRes = await fetch('https://api.openai.com/v1/embeddings', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'text-embedding-3-small', input: lastUser.content })
+        body: JSON.stringify({ model: EMBEDDING_MODEL, input: lastUser.content })
       });
       const embJson = await embRes.json();
       const embedding: number[] = embJson?.data?.[0]?.embedding || [];
