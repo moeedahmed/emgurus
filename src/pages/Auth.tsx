@@ -24,7 +24,21 @@ const Auth = () => {
   }, []);
 
   useEffect(() => {
-    if (user) navigate('/dashboard');
+    const routeAfterLogin = async () => {
+      if (!user) return;
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('full_name, country, specialty, timezone, exams')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        const missing = !data?.full_name || !data?.country || !data?.specialty || !data?.timezone || !(data?.exams && (data.exams as any[]).length > 0);
+        if (missing) navigate('/onboarding'); else navigate('/exams');
+      } catch {
+        navigate('/exams');
+      }
+    };
+    routeAfterLogin();
   }, [user, navigate]);
 
   // One-time: seed test users via Edge Function

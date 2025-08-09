@@ -108,7 +108,7 @@ export default function Onboarding() {
   };
 
   return (
-    <main className="container mx-auto px-4 py-8">
+    <main className="container mx-auto px-4 py-8 min-h-[calc(100vh-4rem)]">
       <header className="mb-6">
         <h1 className="text-3xl font-bold">Complete your profile</h1>
         <p className="text-muted-foreground">We need a few details to personalize your experience.</p>
