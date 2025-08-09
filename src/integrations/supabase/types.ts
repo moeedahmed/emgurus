@@ -20,6 +20,8 @@ export type Database = {
           doc_id: string
           embedding: string | null
           id: string
+          last_embedded_at: string | null
+          model: string | null
           published: boolean
           slug: string | null
           slug_url: string | null
@@ -35,6 +37,8 @@ export type Database = {
           doc_id: string
           embedding?: string | null
           id?: string
+          last_embedded_at?: string | null
+          model?: string | null
           published?: boolean
           slug?: string | null
           slug_url?: string | null
@@ -50,6 +54,8 @@ export type Database = {
           doc_id?: string
           embedding?: string | null
           id?: string
+          last_embedded_at?: string | null
+          model?: string | null
           published?: boolean
           slug?: string | null
           slug_url?: string | null
