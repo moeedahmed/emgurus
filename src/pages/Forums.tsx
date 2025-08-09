@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import PageHero from "@/components/PageHero";
 
 const FORUMS_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/forums-api";
@@ -12,7 +11,7 @@ const Forums = () => {
   const [items, setItems] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  
 
   useEffect(() => {
     document.title = "Forums | EMGurus";
@@ -55,15 +54,15 @@ const Forums = () => {
       ) : error ? (
         <div className="rounded-lg border bg-card p-6">{error}</div>
       ) : (
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((c) => (
-            <Card key={c.id} className="p-6 flex flex-col">
-              <h2 className="text-xl font-semibold mb-1">{c.title}</h2>
-              <p className="text-muted-foreground flex-1">{c.description || 'Discussion category'}</p>
-              <div className="pt-4">
-                <Button onClick={() => navigate(`/forums/${c.id}`)}>View Threads</Button>
-              </div>
-            </Card>
+            <Link key={c.id} to={`/forums/${c.id}`} className="block group">
+              <Card className="p-6 flex flex-col border-2 transition hover:shadow-md hover:border-primary/20 rounded-xl">
+                <h2 className="text-xl font-semibold mb-1 group-hover:text-primary transition-colors">{c.title}</h2>
+                <p className="text-muted-foreground flex-1">{c.description || 'Discussion category'}</p>
+                <div className="pt-4 text-sm text-primary group-hover:underline">View threads →</div>
+              </Card>
+            </Link>
           ))}
         </section>
       )}

@@ -18,6 +18,9 @@ interface ThreadRow {
 }
 interface Category { id: string; title: string; description: string | null; }
 
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
 export default function ForumCategory() {
   const { category_id } = useParams<{ category_id: string }>();
   const [category, setCategory] = useState<Category | null>(null);
@@ -80,30 +83,29 @@ export default function ForumCategory() {
       ) : threads.length === 0 ? (
         <div className="rounded-lg border bg-card p-6">No threads yet — be the first to start one!</div>
       ) : (
-        <section className="space-y-3">
+        <section className="space-y-4 sm:space-y-5">
           {threads.map(t => (
-            <Card key={t.id} className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <Link to={`/threads/${t.id}`} className="text-lg font-semibold hover:underline">{t.title}</Link>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{t.content}</p>
-                  <div className="flex items-center gap-2 pt-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={t.author?.avatar_url || undefined} alt={t.author?.name || 'User'} />
-                      <AvatarFallback>{(t.author?.name || 'U').slice(0,2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <Link to={t.author ? `/profile/${t.author.id}` : '#'} className="text-xs underline">
-                      {t.author?.name || 'User'}
-                    </Link>
-                    <span className="text-xs text-muted-foreground">• {new Date(t.created_at).toLocaleString()}</span>
-                    <span className="text-xs text-muted-foreground">• {t.reply_count || 0} replies</span>
+            <Link key={t.id} to={`/threads/${t.id}`} className="block group">
+              <Card className="p-5 sm:p-6 border-2 transition hover:shadow-md hover:border-primary/20 rounded-xl">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-semibold group-hover:text-primary transition-colors">{t.title}</h2>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{t.content}</p>
+                    <div className="flex flex-wrap items-center gap-2 pt-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={t.author?.avatar_url || undefined} alt={t.author?.name || 'User'} />
+                        <AvatarFallback>{(t.author?.name || 'U').slice(0,2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <Link to={t.author ? `/profile/${t.author.id}` : '#'} className="text-xs underline" onClick={(e)=>e.stopPropagation()}>
+                        {t.author?.name || 'User'}
+                      </Link>
+                      <span className="text-xs text-muted-foreground">• {formatDateTime(t.created_at)}</span>
+                      <span className="text-xs text-muted-foreground">• {t.reply_count || 0} replies</span>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <Link to={`/threads/${t.id}`}><Button variant="outline">Open</Button></Link>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </Link>
           ))}
         </section>
       )}

@@ -1,4 +1,4 @@
-import { BookOpen, Mail, Twitter, Linkedin, Github } from "lucide-react";
+import { BookOpen, Mail, Twitter, Linkedin, Youtube, Instagram, Play, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 const Footer = () => {
@@ -18,7 +18,7 @@ const Footer = () => {
     resources: [
       { name: "Documentation", href: "/coming-soon" },
       { name: "Help Center", href: "/coming-soon" },
-      { name: "Community", href: "/forums" },
+      { name: "Forums", href: "/forums" },
       { name: "Status", href: "/coming-soon" },
     ],
     legal: [
@@ -46,18 +46,41 @@ const Footer = () => {
               Empowering medical professionals with AI-powered learning, 
               expert mentorship, and collaborative education.
             </p>
-            <div className="flex space-x-4">
-              <Button aria-label="Twitter" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
-                <Twitter className="w-5 h-5" />
+            <div className="flex flex-wrap gap-2">
+              <Button asChild aria-label="YouTube" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
+                <a href="https://youtube.com/@emgurus" target="_blank" rel="noopener noreferrer">
+                  <Youtube className="w-5 h-5" />
+                </a>
               </Button>
-              <Button aria-label="LinkedIn" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
-                <Linkedin className="w-5 h-5" />
+              <Button asChild aria-label="Instagram" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
+                <a href="https://instagram.com/emgurus" target="_blank" rel="noopener noreferrer">
+                  <Instagram className="w-5 h-5" />
+                </a>
               </Button>
-              <Button aria-label="GitHub" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
-                <Github className="w-5 h-5" />
+              <Button asChild aria-label="X (Twitter)" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
+                <a href="https://x.com/emgurus" target="_blank" rel="noopener noreferrer">
+                  <Twitter className="w-5 h-5" />
+                </a>
               </Button>
-              <Button aria-label="Email" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
-                <Mail className="w-5 h-5" />
+              <Button asChild aria-label="TikTok" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
+                <a href="https://tiktok.com/@emgurus" target="_blank" rel="noopener noreferrer">
+                  <Play className="w-5 h-5" />
+                </a>
+              </Button>
+              <Button asChild aria-label="LinkedIn" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
+                <a href="https://linkedin.com/in/emgurus" target="_blank" rel="noopener noreferrer">
+                  <Linkedin className="w-5 h-5" />
+                </a>
+              </Button>
+              <Button asChild aria-label="Linktree" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
+                <a href="https://linktr.ee/emgurus" target="_blank" rel="noopener noreferrer">
+                  <LinkIcon className="w-5 h-5" />
+                </a>
+              </Button>
+              <Button asChild aria-label="Email" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
+                <a href="mailto:emgurus@gmail.com">
+                  <Mail className="w-5 h-5" />
+                </a>
               </Button>
             </div>
           </div>
