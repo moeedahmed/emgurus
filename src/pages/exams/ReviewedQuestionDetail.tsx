@@ -159,6 +159,57 @@ export default function ReviewedQuestionDetail() {
     persist();
   }, [timeSpent]);
 
+  // Navigation helpers
+  const goPrev = () => {
+    if (!ids.length) return;
+    const prevIdx = Math.max(0, index - 1);
+    navigate(`/exams/reviewed/${ids[prevIdx]}`, { state: { ids, index: prevIdx } });
+  };
+  const goNext = () => {
+    if (!ids.length) return;
+    const nextIdx = Math.min(ids.length - 1, index + 1);
+    navigate(`/exams/reviewed/${ids[nextIdx]}`, { state: { ids, index: nextIdx } });
+  };
+
+  // Check answer handler
+  const handleCheck = async () => {
+    setShowExplanation(true);
+    setAttempts((a) => a + 1);
+    if (user && q) {
+      await (supabase as any)
+        .from('user_question_sessions')
+        .update({ attempts: attempts + 1, last_selected: selectedKey, is_correct: selectedKey === correctKey, last_action_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('question_id', q.id);
+    } else if (q) {
+      const key = 'emgurus.reviewed.session';
+      const raw = localStorage.getItem(key);
+      const store = raw ? JSON.parse(raw) : {};
+      const cur = store[q.id] || {};
+      store[q.id] = { ...cur, attempts: (cur.attempts || 0) + 1, last_selected: selectedKey, is_correct: selectedKey === correctKey };
+      localStorage.setItem(key, JSON.stringify(store));
+    }
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key >= '1' && e.key <= '5') {
+        const idx = parseInt(e.key, 10) - 1;
+        const k = letters[idx];
+        if (k) setSelectedKey(k);
+      } else if (e.key === 'Enter') {
+        if (!showExplanation && selectedKey) handleCheck();
+      } else if (e.key === 'ArrowLeft') {
+        goPrev();
+      } else if (e.key === 'ArrowRight') {
+        goNext();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedKey, showExplanation, ids, index]);
+
   return (
     <div className="container mx-auto px-4 py-6">
       <Button variant="outline" onClick={() => navigate('/exams/reviewed')}>Back to list</Button>
