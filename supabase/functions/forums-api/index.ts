@@ -135,22 +135,46 @@ serve(async (req) => {
         (profs || []).forEach((p: any) => { authors[p.user_id] = { name: p.full_name || 'User', avatar_url: p.avatar_url || null }; });
       }
 
-      // Likes count per reply
+      // Reactions per reply (and legacy likes)
       const ids = (replies || []).map((r: any) => r.id);
-      let likeCounts: Record<string, number> = {};
+      const currentUser = await getAuthUser(req);
+      let reactionCounts: Record<string, Record<string, number>> = {};
+      let userReacts: Record<string, Set<string>> = {};
       if (ids.length) {
+        const { data: reactRows } = await svc
+          .from("forum_reactions")
+          .select("reply_id, reaction, user_id")
+          .in("reply_id", ids);
+        (reactRows || []).forEach((row: any) => {
+          reactionCounts[row.reply_id] = reactionCounts[row.reply_id] || {};
+          reactionCounts[row.reply_id][row.reaction] = (reactionCounts[row.reply_id][row.reaction] || 0) + 1;
+          if (currentUser && row.user_id === currentUser.id) {
+            userReacts[row.reply_id] = userReacts[row.reply_id] || new Set<string>();
+            userReacts[row.reply_id].add(row.reaction);
+          }
+        });
+        // Back-compat: also include legacy forum_likes as 'like'
         const { data: likesRows } = await svc
           .from("forum_likes")
           .select("reply_id")
           .in("reply_id", ids);
-        (likesRows || []).forEach((row: any) => { likeCounts[row.reply_id] = (likeCounts[row.reply_id] || 0) + 1; });
+        (likesRows || []).forEach((row: any) => {
+          reactionCounts[row.reply_id] = reactionCounts[row.reply_id] || {};
+          reactionCounts[row.reply_id]["like"] = (reactionCounts[row.reply_id]["like"] || 0) + 1;
+        });
       }
 
-      const repliesWith = (replies || []).map((r: any) => ({
-        ...r,
-        likes_count: likeCounts[r.id] || 0,
-        author: { id: r.author_id, name: authors[r.author_id]?.name || 'User', avatar_url: authors[r.author_id]?.avatar_url || null },
-      }));
+      const repliesWith = (replies || []).map((r: any) => {
+        const counts = reactionCounts[r.id] || {};
+        const likes_count = (counts["like"] || counts["thumbs_up"] || 0);
+        return {
+          ...r,
+          likes_count,
+          reaction_counts: counts,
+          user_reactions: Array.from(userReacts[r.id] || []),
+          author: { id: r.author_id, name: authors[r.author_id]?.name || 'User', avatar_url: authors[r.author_id]?.avatar_url || null },
+        };
+      });
       const threadOut = {
         ...thread,
         author: { id: thread.author_id, name: authors[thread.author_id]?.name || 'User', avatar_url: authors[thread.author_id]?.avatar_url || null },
@@ -179,26 +203,29 @@ serve(async (req) => {
       return json({ thread: data });
     }
 
-    // POST /api/forum/replies { thread_id, content }
+    // POST /api/forum/replies { thread_id, content, parent_id? }
     if (path.endsWith("/api/forum/replies") && req.method === "POST") {
       const user = await getAuthUser(req);
       if (!user) return unauthorized();
       const body = await req.json().catch(() => null) as any;
       if (!body) return bad("Invalid JSON body");
-      const { thread_id, content } = body || {};
+      const { thread_id, content, parent_id } = body || {};
       if (!thread_id || !content) return bad("thread_id and content required");
       if (String(content).trim().length < 10) return bad("Content must be at least 10 characters");
 
+      const insertPayload: any = { thread_id, author_id: user.id, content };
+      if (parent_id) insertPayload.parent_id = parent_id;
+
       const { data, error } = await supabase
         .from("forum_replies")
-        .insert({ thread_id, author_id: user.id, content })
+        .insert(insertPayload)
         .select()
         .maybeSingle();
       if (error) return serverError("Failed to create reply", error);
       return json({ reply: data });
     }
 
-    // POST /api/forum/likes { reply_id }
+    // POST /api/forum/likes { reply_id } (back-compat) -> records a 'like' reaction
     if (path.endsWith("/api/forum/likes") && req.method === "POST") {
       const user = await getAuthUser(req);
       if (!user) return unauthorized();
@@ -208,14 +235,58 @@ serve(async (req) => {
       if (!reply_id) return bad("reply_id required");
 
       const { error } = await supabase
-        .from("forum_likes")
-        .insert({ reply_id, user_id: user.id });
+        .from("forum_reactions")
+        .insert({ reply_id, user_id: user.id, reaction: 'like' });
       if (error) {
-        // Ignore duplicate likes (unique constraint)
+        // Ignore duplicate reactions (unique constraint)
         // @ts-ignore
         if ((error as any).code === '23505') return json({ ok: true, duplicate: true });
-        return serverError("Failed to like reply", error);
+        return serverError("Failed to react to reply", error);
       }
+      return json({ ok: true });
+    }
+
+    // POST /api/forum/reactions { reply_id, reaction, toggle? }
+    if (path.endsWith("/api/forum/reactions") && req.method === "POST") {
+      const user = await getAuthUser(req);
+      if (!user) return unauthorized();
+      const body = await req.json().catch(() => null) as any;
+      if (!body) return bad("Invalid JSON body");
+      const { reply_id, reaction, toggle } = body || {};
+      if (!reply_id || !reaction) return bad("reply_id and reaction required");
+
+      const { error } = await supabase
+        .from("forum_reactions")
+        .insert({ reply_id, user_id: user.id, reaction });
+      if (error) {
+        // If duplicate and toggle requested, remove it (acts as toggle)
+        // @ts-ignore
+        if ((error as any).code === '23505' && toggle) {
+          await supabase.from("forum_reactions").delete().eq("reply_id", reply_id).eq("user_id", user.id).eq("reaction", reaction);
+          return json({ ok: true, toggledOff: true });
+        }
+        // Ignore duplicate otherwise
+        // @ts-ignore
+        if ((error as any).code === '23505') return json({ ok: true, duplicate: true });
+        return serverError("Failed to react to reply", error);
+      }
+      return json({ ok: true });
+    }
+
+    // DELETE /api/forum/reactions?reply_id=...&reaction=...
+    if (path.endsWith("/api/forum/reactions") && req.method === "DELETE") {
+      const user = await getAuthUser(req);
+      if (!user) return unauthorized();
+      const rid = url.searchParams.get("reply_id");
+      const reaction = url.searchParams.get("reaction");
+      if (!rid || !reaction) return bad("reply_id and reaction required");
+      const { error } = await supabase
+        .from("forum_reactions")
+        .delete()
+        .eq("reply_id", rid)
+        .eq("reaction", reaction)
+        .eq("user_id", user.id);
+      if (error) return serverError("Failed to remove reaction", error);
       return json({ ok: true });
     }
 
