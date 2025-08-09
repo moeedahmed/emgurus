@@ -16,9 +16,6 @@ const EXAM_LABELS: Record<ExamCode, string> = {
 interface ReviewedRow {
   id: string;
   exam: ExamCode;
-  topic: string;
-  subtopic: string | null;
-  difficulty: string | null;
   stem: string;
   reviewer_id: string | null;
   reviewed_at: string | null;
@@ -37,6 +34,7 @@ const pageSize = 10;
   const [loading, setLoading] = useState(false);
   const [reviewers, setReviewers] = useState<Record<string, string>>({});
   const [approvedCount, setApprovedCount] = useState<number | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -83,36 +81,23 @@ const pageSize = 10;
         // Build base query
         let base = (supabase as any)
           .from('reviewed_exam_questions')
-          .select('id, exam, topic, subtopic, difficulty, stem, reviewer_id, reviewed_at', { count: 'exact' })
+          .select('id, exam, stem, reviewer_id, reviewed_at', { count: 'exact' })
           .eq('status', 'approved');
         if (exam) base = base.eq('exam', exam);
-
-        if (sloId) {
-          // find matching question ids via junction
-          const { data: qs, error: qsErr } = await (supabase as any)
-            .from('question_slos')
-            .select('question_id')
-            .eq('slo_id', sloId)
-            .limit(2000);
-          if (qsErr) throw qsErr;
-          const ids = (qs || []).map((r: any) => r.question_id);
-          if (!ids.length) {
-            if (!cancelled) setItems([]);
-            setReviewers({});
-            return;
-          }
-          base = base.in('id', ids);
-        }
+        // SLO filtering disabled until slo_code or junction is available
 
         const from = (page - 1) * pageSize;
         const to = from + pageSize - 1;
-        const { data, error } = await base
+        const { data, count, error } = await base
           .order('reviewed_at', { ascending: false })
           .order('id', { ascending: false })
           .range(from, to);
         if (error) throw error;
         const list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
-        if (!cancelled) setItems(list);
+        if (!cancelled) {
+          setItems(list);
+          setTotalCount(count ?? 0);
+        }
         const ids = Array.from(new Set(list.map(d => d.reviewer_id).filter(Boolean))) as string[];
         if (ids.length) {
           const { data: g } = await supabase.from('gurus').select('id, name').in('id', ids);
@@ -153,7 +138,7 @@ const pageSize = 10;
             <SelectTrigger><SelectValue placeholder="SLO" /></SelectTrigger>
             <SelectContent className="max-h-80">
               <SelectItem value="ALL">All SLOs</SelectItem>
-              {slos.map((s) => (<SelectItem key={s.id} value={s.id}>{s.code} — {s.title}</SelectItem>))}
+              {slos.map((s) => (<SelectItem key={s.id} value={s.code}>{s.code} — {s.title}</SelectItem>))}
             </SelectContent>
           </Select>
 
@@ -163,9 +148,9 @@ const pageSize = 10;
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 mt-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => (
+          Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-24 rounded-xl border animate-pulse bg-muted/40" />
           ))
         ) : approvedCount === 0 ? (
@@ -187,8 +172,6 @@ const pageSize = 10;
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
-                <span className="border rounded px-2 py-0.5">{it.topic}{it.subtopic ? ` → ${it.subtopic}` : ''}</span>
-                {it.difficulty && <span className="border rounded px-2 py-0.5">{it.difficulty}</span>}
                 {it.reviewed_at && (
                   <span className="border rounded px-2 py-0.5">Reviewed {formatDistanceToNow(new Date(it.reviewed_at), { addSuffix: true })}</span>
                 )}
