@@ -66,9 +66,6 @@ const Header = () => {
                 </div>
               </HoverCardContent>
             </HoverCard>
-            {user && (
-              <button onClick={() => navigate('/blogs/editor/new')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Write</button>
-            )}
             <button onClick={() => navigate('/exams')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Exams</button>
             <button onClick={() => navigate('/consultations')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Consultations</button>
             <button onClick={() => navigate('/forums')} className="text-muted-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">Forums</button>
@@ -135,9 +132,6 @@ const Header = () => {
             <nav className="flex flex-col space-y-4">
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/'); setIsMenuOpen(false);}}>Home</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/blogs'); setIsMenuOpen(false);}}>Blogs</button>
-              {user && (
-                <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/blogs/editor/new'); setIsMenuOpen(false);}}>Write</button>
-              )}
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/exams'); setIsMenuOpen(false);}}>Exams</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/consultations'); setIsMenuOpen(false);}}>Consultations</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/forums'); setIsMenuOpen(false);}}>Forums</button>

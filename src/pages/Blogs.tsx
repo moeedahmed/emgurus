@@ -6,12 +6,10 @@ import { toast } from "sonner";
 import BlogCard from "@/components/blogs/BlogCard";
 import BlogsFilterPanel from "@/components/blogs/BlogsFilterPanel";
 import TopAuthorsPanel from "@/components/blogs/TopAuthorsPanel";
-import PopularCategoriesPanel from "@/components/blogs/PopularCategoriesPanel";
-import RecentlyDiscussedPanel from "@/components/blogs/RecentlyDiscussedPanel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PageHero from "@/components/PageHero";
-import FeaturedBlogHero from "@/components/blogs/FeaturedBlogHero";
+
 export default function Blogs() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,13 +89,6 @@ export default function Blogs() {
       .slice(0, 5);
   }, [items]);
 
-  const recentDiscussed = useMemo(() => {
-    return [...items]
-      .filter((i) => i.slug)
-      .map((i) => ({ slug: i.slug as string, title: i.title as string, comments: i.counts?.comments || 0 }))
-      .sort((a, b) => b.comments - a.comments)
-      .slice(0, 5);
-  }, [items]);
 
   const filtered = useMemo(() => {
     let arr = [...items];
@@ -169,19 +160,12 @@ export default function Blogs() {
             </div>
           </div>
           <div className="space-y-6">
-            {(() => {
-              const hero = filtered.find((p) => p.cover_image_url) || filtered[0];
-              return hero ? (
-                <FeaturedBlogHero post={hero as any} />
-              ) : (
-                <PageHero
-                  title="EM GURUS Blogs"
-                  subtitle="Evidence-based articles, exam guidance, and clinical pearls."
-                  align="left"
-                  ctas={[{ label: "Write Blog", href: "/blogs/editor/new", variant: "default" }]}
-                />
-              );
-            })()}
+            <PageHero
+              title="EM GURUS Blogs"
+              subtitle="Evidence-based articles, exam guidance, and clinical pearls."
+              align="left"
+              ctas={[{ label: "Write Blog", href: "/blogs/editor/new", variant: "default" }]}
+            />
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i} className="h-72 animate-pulse" />
@@ -219,8 +203,6 @@ export default function Blogs() {
                 onChange={setParam}
               />
               <TopAuthorsPanel authors={topAuthors} />
-              <PopularCategoriesPanel categories={categories} />
-              <RecentlyDiscussedPanel items={recentDiscussed} />
             </div>
           </div>
         </aside>

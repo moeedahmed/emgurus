@@ -81,7 +81,7 @@ export default function EditorEdit() {
       setLoading(true);
       const leftover = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
       const tag_slugs = Array.from(new Set([...tagList, ...leftover].map((t) => t.toLowerCase().replace(/\s+/g, "-"))));
-      await updateDraft(id, { title, content_md: content, category_id, tag_slugs, cover_image_url: cover || undefined, excerpt: excerpt || undefined });
+      await updateDraft(id, { title, content_md: content, category_id: categoryId, tag_slugs, cover_image_url: cover || undefined, excerpt: excerpt || undefined });
       if (submit) await submitPost(id);
       toast.success(submit ? "Submitted for review" : "Draft updated");
       navigate("/blogs/dashboard");
