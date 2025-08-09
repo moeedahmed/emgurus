@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import TrustpilotAnalytics from "@/components/admin/TrustpilotAnalytics";
 const DashboardAdmin = () => {
   const navigate = useNavigate();
   useEffect(() => {
@@ -94,6 +95,23 @@ const DashboardAdmin = () => {
             }
           }}>Add Samples</Button>
         </Card>
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-2">Send Review Invites</h2>
+          <p className="text-muted-foreground mb-4">Send post-onboarding (5 days) Trustpilot invitations.</p>
+          <Button onClick={async () => {
+            try {
+              const { data, error } = await supabase.functions.invoke('send-review-invites');
+              if (error) throw error;
+              toast.success(`Invites sent: ${data?.sent ?? 0}`);
+            } catch (e) {
+              console.error(e);
+              toast.error('Failed to send invites');
+            }
+          }}>Run Now</Button>
+        </Card>
+        <div className="md:col-span-2">
+          <TrustpilotAnalytics />
+        </div>
       </div>
     </main>
   );

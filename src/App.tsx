@@ -41,6 +41,7 @@ import Bookings from "./pages/Bookings";
 import Onboarding from "./pages/Onboarding";
 import ForumCategory from "./pages/ForumCategory";
 import ComingSoon from "./pages/ComingSoon";
+import About from "./pages/About";
 import ThreadView from "@/pages/ThreadView";
 
 const queryClient = new QueryClient();
@@ -126,6 +127,7 @@ const App = () => (
               <Route path="/admin/moderate-posts" element={<RoleProtectedRoute roles={["admin"]}><ModeratePosts /></RoleProtectedRoute>} />
               <Route path="/admin/assign-reviews" element={<RoleProtectedRoute roles={["admin"]}><AssignReviews /></RoleProtectedRoute>} />
               <Route path="/admin/taxonomy" element={<RoleProtectedRoute roles={["admin"]}><Taxonomy /></RoleProtectedRoute>} />
+              <Route path="/about" element={<About />} />
               <Route path="/coming-soon" element={<ComingSoon />} />
             </Route>
 

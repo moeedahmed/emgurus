@@ -28,10 +28,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        try {
+          if (event === 'SIGNED_IN' && session?.user?.email) {
+            await supabase.functions.invoke('send-welcome-email', {
+              body: {
+                user_id: session.user.id,
+                email: session.user.email,
+                full_name: (session.user.user_metadata as any)?.full_name || (session.user.user_metadata as any)?.name || undefined,
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('Welcome email invoke failed', e);
+        }
       }
     );
 

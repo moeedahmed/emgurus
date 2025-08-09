@@ -35,3 +35,15 @@ verify_jwt = false
 
 [functions.import-legacy-blogs]
 verify_jwt = true
+
+[functions.send-welcome-email]
+verify_jwt = true
+
+[functions.resend-webhooks]
+verify_jwt = false
+
+[functions.trustpilot-analytics]
+verify_jwt = false
+
+[functions.send-review-invites]
+verify_jwt = true

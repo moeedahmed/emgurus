@@ -766,6 +766,39 @@ export type Database = {
         }
         Relationships: []
       }
+      email_events: {
+        Row: {
+          created_at: string
+          email: string
+          event: string
+          id: string
+          metadata: Json
+          provider_message_id: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          event: string
+          id?: string
+          metadata?: Json
+          provider_message_id?: string | null
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          event?: string
+          id?: string
+          metadata?: Json
+          provider_message_id?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       forum_categories: {
         Row: {
           created_at: string
@@ -819,12 +852,45 @@ export type Database = {
           },
         ]
       }
+      forum_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          reaction: string
+          reply_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reaction: string
+          reply_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reaction?: string
+          reply_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_reactions_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "forum_replies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forum_replies: {
         Row: {
           author_id: string
           content: string
           created_at: string
           id: string
+          parent_id: string | null
           thread_id: string
           updated_at: string
         }
@@ -833,6 +899,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           thread_id: string
           updated_at?: string
         }
@@ -841,10 +908,18 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           thread_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "forum_replies_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "forum_replies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "forum_replies_thread_id_fkey"
             columns: ["thread_id"]
@@ -889,6 +964,33 @@ export type Database = {
           },
         ]
       }
+      forum_section_requests: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       forum_thread_votes: {
         Row: {
           created_at: string
@@ -928,6 +1030,7 @@ export type Database = {
         Row: {
           author_id: string
           category_id: string
+          closed: boolean
           content: string
           created_at: string
           id: string
@@ -937,6 +1040,7 @@ export type Database = {
         Insert: {
           author_id: string
           category_id: string
+          closed?: boolean
           content: string
           created_at?: string
           id?: string
@@ -946,6 +1050,7 @@ export type Database = {
         Update: {
           author_id?: string
           category_id?: string
+          closed?: boolean
           content?: string
           created_at?: string
           id?: string
@@ -1393,6 +1498,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      review_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          source: string
+          status: string
+          trustpilot_invite_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          source: string
+          status?: string
+          trustpilot_invite_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          source?: string
+          status?: string
+          trustpilot_invite_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       review_publish_log: {
         Row: {

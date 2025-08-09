@@ -14,7 +14,7 @@ const Footer = () => {
       { name: "Integrations", href: "/coming-soon" },
     ],
     company: [
-      { name: "About", href: "/coming-soon" },
+      { name: "About", href: "/about" },
       { name: "Blog", href: "/blogs" },
       { name: "Careers", href: "/coming-soon" },
       { name: "Press", href: "/coming-soon" },
@@ -115,6 +115,20 @@ const Footer = () => {
                   <Mail className="w-5 h-5" />
                 </a>
               </Button>
+            </div>
+            {/* Trustpilot widget */}
+            <div className="mt-6">
+              <div
+                className="trustpilot-widget"
+                data-locale="en-GB"
+                data-template-id="53aa8807dec7e10d38f59f32"
+                data-businessunit-id=""
+                data-style-height="150px"
+                data-style-width="100%"
+                data-theme="light"
+              >
+                <a href="https://uk.trustpilot.com/review/emgurus.com" rel="noopener noreferrer" target="_blank">Trustpilot</a>
+              </div>
             </div>
           </div>
 
