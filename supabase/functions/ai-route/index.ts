@@ -38,11 +38,11 @@ serve(async (req) => {
     const lastUser = [...messages].reverse().find(m => m.role === 'user');
     let retrieved: any[] = [];
     if (lastUser?.content) {
-      // get embedding
+      // get embedding (1536-dim)
       const embRes = await fetch('https://api.openai.com/v1/embeddings', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'text-embedding-3-large', input: lastUser.content })
+        body: JSON.stringify({ model: 'text-embedding-3-small', input: lastUser.content })
       });
       const embJson = await embRes.json();
       const embedding: number[] = embJson?.data?.[0]?.embedding || [];
@@ -57,7 +57,7 @@ serve(async (req) => {
     const openaiMessages = [
       { role: 'system', content: systemPrompt },
       ...messages.map(m => ({ role: m.role, content: m.content })),
-      retrieved.length ? { role: 'system', content: `Relevant content:\n${retrieved.map((r: any, i: number) => `#${i+1} [${r.title}](${r.url||r.slug||''})\n${(r.text_chunk||'').slice(0,800)}`).join('\n\n')}` } : null,
+      retrieved.length ? { role: 'system', content: `Relevant content:\n${retrieved.map((r: any, i: number) => `#${i+1} [${r.title}](${r.slug_url || r.url || r.slug || ''})\n${(r.text_chunk||'').slice(0,800)}`).join('\n\n')}` } : null,
     ].filter(Boolean);
 
     const completionRes = await fetch('https://api.openai.com/v1/chat/completions', {

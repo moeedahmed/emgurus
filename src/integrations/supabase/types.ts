@@ -18,40 +18,46 @@ export type Database = {
         Row: {
           created_at: string
           doc_id: string
-          embedding: string
+          embedding: string | null
           id: string
           published: boolean
           slug: string | null
+          slug_url: string | null
           source_type: string
           tags: string[] | null
           text_chunk: string
           title: string | null
+          updated_at: string
           url: string | null
         }
         Insert: {
           created_at?: string
           doc_id: string
-          embedding: string
+          embedding?: string | null
           id?: string
           published?: boolean
           slug?: string | null
+          slug_url?: string | null
           source_type: string
           tags?: string[] | null
           text_chunk: string
           title?: string | null
+          updated_at?: string
           url?: string | null
         }
         Update: {
           created_at?: string
           doc_id?: string
-          embedding?: string
+          embedding?: string | null
           id?: string
           published?: boolean
           slug?: string | null
+          slug_url?: string | null
           source_type?: string
           tags?: string[] | null
           text_chunk?: string
           title?: string | null
+          updated_at?: string
           url?: string | null
         }
         Relationships: []
@@ -2004,8 +2010,7 @@ export type Database = {
         Returns: {
           id: string
           title: string
-          url: string
-          slug: string
+          slug_url: string
           source_type: string
           tags: string[]
           text_chunk: string
