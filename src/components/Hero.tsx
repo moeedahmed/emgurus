@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Star, Users } from "lucide-react";
+import { ArrowRight, Play, Users } from "lucide-react";
 import heroImage from "@/assets/hero-medical-education.jpg";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -13,21 +13,16 @@ const Hero = () => {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content */}
           <div className="animate-fade-in">
-            <div className="flex items-center space-x-2 mb-6">
-              <div className="flex items-center space-x-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} className="w-4 h-4 fill-warning text-warning" />
-                ))}
-              </div>
-              <span className="text-sm text-muted-foreground">
-                Trusted by learners worldwide
-              </span>
+            <div className="mb-4">
+              <a href="https://linktr.ee/emgurus" target="_blank" rel="noopener noreferrer" className="text-sm underline text-muted-foreground hover:text-primary">
+                See our reviews and social proof
+              </a>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-              Empowering Emergency Medicine & Healthcare Careers
+              AI Exam Prep & Mentorship for Emergency Medicine
               <span className="text-transparent bg-clip-text bg-gradient-hero block">
-                with AI, Mentorship, and Global Collaboration
+                Built by Gurus. For clinicians.
               </span>
             </h1>
 
@@ -57,7 +52,16 @@ const Hero = () => {
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               )}
-              <Button variant="outline" size="lg" className="group" onClick={() => navigate('/#pricing')}>
+              <Button
+                variant="outline"
+                size="lg"
+                className="group"
+                onClick={() => {
+                  const el = document.getElementById('pricing');
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  else navigate('/#pricing');
+                }}
+              >
                 <Play className="w-5 h-5 mr-2" />
                 Compare Plans
               </Button>

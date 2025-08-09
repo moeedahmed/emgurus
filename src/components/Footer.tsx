@@ -1,6 +1,10 @@
-import { BookOpen, Mail, Twitter, Linkedin, Youtube, Instagram, Play, Link as LinkIcon } from "lucide-react";
+import { useState } from "react";
+import { BookOpen, Mail, Twitter, Linkedin, Youtube, Instagram, Link as LinkIcon, PlaySquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
 const Footer = () => {
   const footerLinks = {
     product: [
@@ -18,7 +22,7 @@ const Footer = () => {
     resources: [
       { name: "Documentation", href: "/coming-soon" },
       { name: "Help Center", href: "/coming-soon" },
-      { name: "Forums", href: "/forums" },
+      { name: "Community", href: "/forums" },
       { name: "Status", href: "/coming-soon" },
     ],
     legal: [
@@ -27,6 +31,35 @@ const Footer = () => {
       { name: "Security", href: "/coming-soon" },
       { name: "Compliance", href: "/coming-soon" },
     ],
+  };
+
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubscribe = async () => {
+    const e = email.trim();
+    if (!/^[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}$/.test(e)) {
+      toast({ title: "Please enter a valid email" });
+      return;
+    }
+    try {
+      setLoading(true);
+      const { error } = await supabase.from('newsletter_subscribers').insert({ email: e, source_page: window.location.pathname });
+      if (error) {
+        if ((error as any).code === '23505') {
+          toast({ title: 'You are already subscribed' });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({ title: 'Subscribed!', description: "We'll keep you posted." });
+        setEmail("");
+      }
+    } catch (err: any) {
+      toast({ title: 'Subscription failed', description: err.message });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -64,7 +97,7 @@ const Footer = () => {
               </Button>
               <Button asChild aria-label="TikTok" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
                 <a href="https://tiktok.com/@emgurus" target="_blank" rel="noopener noreferrer">
-                  <Play className="w-5 h-5" />
+                  <PlaySquare className="w-5 h-5" />
                 </a>
               </Button>
               <Button asChild aria-label="LinkedIn" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
@@ -148,10 +181,13 @@ const Footer = () => {
                 placeholder="Enter your email"
                 aria-label="Email address"
                 autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSubscribe(); }}
                 className="flex-1 px-3 py-2 rounded-md bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary-foreground/50"
               />
-              <Button variant="secondary" className="whitespace-nowrap">
-                Subscribe
+              <Button variant="secondary" className="whitespace-nowrap" onClick={handleSubscribe} disabled={loading}>
+                {loading ? 'Subscribing…' : 'Subscribe'}
               </Button>
             </div>
           </div>
