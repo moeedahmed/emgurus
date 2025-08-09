@@ -1,7 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import PageHero from "@/components/PageHero";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const FORUMS_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/forums-api";
 
@@ -11,8 +19,8 @@ const Forums = () => {
   const [items, setItems] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isNewOpen = searchParams.get('new') === '1';
   useEffect(() => {
     document.title = "Forums | EMGurus";
     let meta = document.querySelector('meta[name="description"]');
@@ -44,9 +52,15 @@ const Forums = () => {
         title="EM Gurus Forums"
         subtitle="Discuss by topic or exam. Join the EM community."
         align="left"
-        ctas={[{ label: "Start a Thread", href: "/coming-soon", variant: "outline" }]}
+        ctas={[{ label: "Start a Thread", href: "?new=1", variant: "outline" }]}
       />
 
+      <CreateThreadGlobal
+        open={isNewOpen}
+        onClose={() => { const p = new URLSearchParams(searchParams); p.delete('new'); setSearchParams(p); }}
+      />
+
+      <h2 className="mt-8 mb-4 text-lg font-semibold">Sections</h2>
       {loading ? (
         <div className="min-h-[30vh] flex items-center justify-center">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
@@ -69,5 +83,80 @@ const Forums = () => {
     </main>
   );
 };
+
+function CreateThreadGlobal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { session } = useAuth();
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [categoryId, setCategoryId] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      try {
+        const res = await fetch(`${FORUMS_EDGE}/api/forum/categories`);
+        const data = await res.json();
+        setCategories(data.items || []);
+      } catch {}
+    })();
+  }, [open]);
+
+  const disabled = title.trim().length < 5 || content.trim().length < 10 || !categoryId;
+
+  const submit = async () => {
+    try {
+      setSaving(true);
+      const res = await fetch(`${FORUMS_EDGE}/api/forum/threads`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ category_id: categoryId, title, content }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to create thread');
+      toast({ title: 'Thread created' });
+      setTitle("");
+      setContent("");
+      setCategoryId("");
+      onClose();
+    } catch (e: any) {
+      toast({ title: 'Could not create thread', description: e.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Start a new thread</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3">
+          <Select value={categoryId} onValueChange={setCategoryId}>
+            <SelectTrigger aria-label="Section">
+              <SelectValue placeholder="Select section" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input placeholder="Title (min 5 chars)" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <Textarea rows={6} placeholder="Write your post (min 10 chars)" value={content} onChange={(e) => setContent(e.target.value)} />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button onClick={submit} disabled={disabled || saving}>{saving ? 'Posting…' : 'Post'}</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default Forums;
