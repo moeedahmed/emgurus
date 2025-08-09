@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,13 +18,22 @@ serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
 
   try {
-    const payload = await req.json();
+    const raw = await req.text();
 
-    // TODO: Verify signature if WEBHOOK_SECRET is provided (implementation depends on Resend's current webhook format)
-    if (!WEBHOOK_SECRET) {
+    if (WEBHOOK_SECRET) {
+      try {
+        const headersObj = Object.fromEntries(req.headers);
+        const wh = new Webhook(WEBHOOK_SECRET);
+        wh.verify(raw, headersObj);
+      } catch (e) {
+        console.warn('Invalid Resend webhook signature', e);
+        return new Response('Invalid signature', { status: 401, headers: corsHeaders });
+      }
+    } else {
       console.warn('RESEND_WEBHOOK_SECRET not set. Events are not verified.');
     }
 
+    const payload = JSON.parse(raw);
     const type: string = payload?.type || payload?.event || '';
     const data = payload?.data || payload || {};
     const email = data?.to || data?.email || data?.recipient || data?.to_email || null;
