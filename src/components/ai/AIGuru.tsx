@@ -135,10 +135,26 @@ export default function AIGuru() {
       const res = await invokeWithTimeout(fetchPromise, 60000);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
 
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error('No response body');
+      const ctype = res.headers.get('content-type') || '';
       clearTimeout(statusTimer);
       setStatusText('');
+
+      // Non-streaming JSON fallback
+      if (!ctype.includes('text/event-stream')) {
+        try {
+          const json = await res.json();
+          const serverMsg = json?.message || json?.error || JSON.stringify(json);
+          setMsgs(m => [...m, { role: 'assistant', content: String(serverMsg || 'Sorry, I could not generate a response.') }]);
+          return;
+        } catch {
+          const txt = await res.text();
+          setMsgs(m => [...m, { role: 'assistant', content: txt || 'Sorry, I could not generate a response.' }]);
+          return;
+        }
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No response body');
 
       const decoder = new TextDecoder();
       let full = '';

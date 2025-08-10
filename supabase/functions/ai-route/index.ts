@@ -99,6 +99,15 @@ serve(async (req) => {
 
     const systemPrompt = `You are AI Guru, a helpful assistant for EM Gurus. Provide concise, friendly answers using EM Gurus content first. Never give medical advice; include a short disclaimer when medical questions arise. Current page context: ${JSON.stringify(pageContext)}.`;
 
+    // Validate secrets early to surface clear errors
+    if (!OPENAI_API_KEY) {
+      return new Response(sseEncode({ error: 'missing_key', message: 'Missing OPENAI_API_KEY in Supabase secrets. Set it in Project Settings → Functions.' }), {
+        status: 500,
+        headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'text/event-stream' },
+      });
+    }
+
+
     // Prepare OpenAI payload
     const openaiMessages = [
       { role: 'system', content: systemPrompt },
