@@ -63,6 +63,8 @@ serve(async (req) => {
     const anonId: string | null = body.anon_id || null;
     const pageContext: any = body.page_context || {};
     const messages: MessageIn[] = Array.isArray(body.messages) ? body.messages.slice(-20) : [];
+    const purpose: string = typeof body.purpose === 'string' ? body.purpose : 'chatbot';
+    const model: string = purpose === 'exam-generation' ? 'gpt-5.0-pro' : 'gpt-5.0-nano';
 
     const now = new Date().toISOString();
     let dbSessionId = sessionId;
@@ -119,7 +121,7 @@ serve(async (req) => {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  model: 'gpt-4.1-2025-04-14',
+                  model: model,
                   temperature: 0.3,
                   max_tokens: 1024,
                   messages: openaiMessages,

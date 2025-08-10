@@ -71,3 +71,21 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+---
+
+## AI Guru: Models, Timeouts, Streaming, RAG
+- Model routing: chatbot/summaries → gpt-5.0-nano; exam generation → gpt-5.0-pro
+- Timeouts: client 60s; edge completions 60s; embeddings 30s; max_tokens 1024
+- Streaming: Server-Sent Events (text/event-stream) from edge → UI
+- RAG: seed/refresh in 500-doc batches, chunk size 800/overlap 120, includes blogs + help; retrieval top-8 with URL dedupe
+
+## Environment Variables
+Copy `.env.example` to your environment and set:
+- OPENAI_API_KEY
+- SUPABASE_URL
+- SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE_KEY
+- EMBEDDING_MODEL (default text-embedding-3-small)
+- EMBEDDING_DIM (default 1536)
+

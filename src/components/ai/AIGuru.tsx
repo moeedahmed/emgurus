@@ -127,6 +127,7 @@ export default function AIGuru() {
           page_context: pageContext,
           messages: newMsgs,
           allow_browsing: allowBrowsing,
+          purpose: "chatbot",
         }),
         signal: controller.signal,
       });
