@@ -12,14 +12,17 @@ export default function BlogsFilterPanel({
   sort,
   categories,
   onChange,
+  onReset,
 }: {
   q: string;
   category: string;
   sort: string;
   categories: CategoryItem[];
   onChange: (k: string, v: string) => void;
+  onReset?: () => void;
 }) {
   const clearFilters = () => {
+    if (onReset) return onReset();
     onChange("q", "");
     onChange("category", "");
     onChange("sort", "newest");

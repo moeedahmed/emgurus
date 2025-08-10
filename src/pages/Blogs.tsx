@@ -152,6 +152,7 @@ export default function Blogs() {
                     sort={sort}
                     categories={categories}
                     onChange={setParam}
+                    onReset={() => setSearchParams(new URLSearchParams())}
                   />
                 </SheetContent>
               </Sheet>
@@ -192,6 +193,7 @@ export default function Blogs() {
                 sort={sort}
                 categories={categories}
                 onChange={setParam}
+                onReset={() => setSearchParams(new URLSearchParams())}
               />
               <TopAuthorsPanel authors={topAuthors} />
             </div>
