@@ -1,35 +1,27 @@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Search } from "lucide-react";
 
 interface CategoryItem { title: string; count: number }
-interface TagItem { slug: string; count: number }
 
 export default function BlogsFilterPanel({
   q,
   category,
   sort,
-  tag,
   categories,
-  tags,
   onChange,
 }: {
   q: string;
   category: string;
   sort: string;
-  tag: string;
   categories: CategoryItem[];
-  tags: TagItem[];
   onChange: (k: string, v: string) => void;
 }) {
-  const activeTag = tag;
   const clearFilters = () => {
     onChange("q", "");
     onChange("category", "");
-    onChange("tag", "");
     onChange("sort", "newest");
   };
 
@@ -62,31 +54,6 @@ export default function BlogsFilterPanel({
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      {/* Tags */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm text-muted-foreground">Tags</label>
-          {activeTag && (
-            <button className="text-xs text-muted-foreground hover:text-foreground underline" onClick={() => onChange("tag", "")}>Clear</button>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {tags.map((t) => {
-            const selected = t.slug === activeTag;
-            return (
-              <Badge
-                key={t.slug}
-                variant={selected ? "secondary" : "outline"}
-                className="cursor-pointer"
-                onClick={() => onChange("tag", selected ? "" : t.slug)}
-              >
-                #{t.slug} · {t.count}
-              </Badge>
-            );
-          })}
-        </div>
       </div>
 
       {/* Sort */}

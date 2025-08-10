@@ -20,7 +20,6 @@ export default function Blogs() {
   const q = searchParams.get("q") || "";
   const category = searchParams.get("category") || "";
   const sort = searchParams.get("sort") || "newest";
-  const tag = searchParams.get("tag") || "";
 
   const setParam = (k: string, v: string) => {
     const next = new URLSearchParams(searchParams);
@@ -43,7 +42,7 @@ export default function Blogs() {
     const load = async () => {
       try {
         setLoading(true);
-        const res = await listBlogs({ status: "published", q, category: category || undefined, tag: tag || undefined, page_size: 50 });
+        const res = await listBlogs({ status: "published", q, category: category || undefined, page_size: 50 });
         setItems(res.items || []);
       } catch (e: any) {
         toast.error(e.message || "Failed to load blogs");
@@ -52,7 +51,7 @@ export default function Blogs() {
       }
     };
     load();
-  }, [q, category, tag]);
+  }, [q, category]);
 
   const categories = useMemo(() => {
     const map = new Map<string, number>();
@@ -65,11 +64,6 @@ export default function Blogs() {
     return CATEGORIES.map((title) => ({ title, count: map.get(title) || 0 }));
   }, [items]);
 
-  const tags = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const it of items) for (const t of it.tags || []) map.set(t.slug || t.title, (map.get(t.slug || t.title) || 0) + 1);
-    return Array.from(map.entries()).map(([slug, count]) => ({ slug, count })).slice(0, 12);
-  }, [items]);
 
   const topAuthors = useMemo(() => {
     const stats = new Map<string, { id: string; name: string; avatar: string | null; posts: number; views: number; likes: number; lastDate: number }>();
@@ -99,7 +93,6 @@ export default function Blogs() {
       arr = arr.filter((i) => i.title.toLowerCase().includes(s) || (i.excerpt || "").toLowerCase().includes(s));
     }
     if (category) arr = arr.filter((i) => (i.category?.title || "General") === category);
-    if (tag) arr = arr.filter((i) => (i.tags || []).some((t: any) => (t.slug || t.title) === tag));
     switch (sort) {
       case "liked":
         arr.sort((a, b) => (b.counts?.likes || 0) - (a.counts?.likes || 0));
@@ -117,7 +110,7 @@ export default function Blogs() {
         arr.sort((a, b) => new Date(b.published_at || 0).getTime() - new Date(a.published_at || 0).getTime());
     }
     return arr;
-  }, [items, q, category, tag, sort]);
+  }, [items, q, category, sort]);
   const topByCat = useMemo(() => {
     const byCat = new Map<string, any[]>();
     for (const it of filtered) {
@@ -157,9 +150,7 @@ export default function Blogs() {
                     q={q}
                     category={category}
                     sort={sort}
-                    tag={tag}
                     categories={categories}
-                    tags={tags}
                     onChange={setParam}
                   />
                 </SheetContent>
@@ -199,9 +190,7 @@ export default function Blogs() {
                 q={q}
                 category={category}
                 sort={sort}
-                tag={tag}
                 categories={categories}
-                tags={tags}
                 onChange={setParam}
               />
               <TopAuthorsPanel authors={topAuthors} />
