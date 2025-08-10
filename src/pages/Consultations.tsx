@@ -196,13 +196,15 @@ const Consultations = () => {
   }, [search, country, exam, specialty, gurus]);
 
   return (
-    <main className="container mx-auto px-4 py-8">
+    <main>
       <PageHero
-        title="EM Gurus Consultations"
+        title="EMGurus Consultations"
         subtitle="Filter by specialty, country, or exam to find the right mentor."
-        align="left"
+        align="center"
         ctas={[{ label: "How Consultations Work", href: "/coming-soon", variant: "outline" }]}
       />
+
+      <section className="container mx-auto px-4 py-8">
 
       <section className="grid gap-4 md:grid-cols-4 mb-6">
         <Input placeholder="Search by name or specialty" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -239,7 +241,8 @@ const Consultations = () => {
       )}
 
       <BookingModal guru={bookingGuru} open={open} onOpenChange={(v) => { setOpen(v); if (!v) setBookingGuru(null); }} />
-    </main>
+    </section>
+  </main>
   );
 };
 

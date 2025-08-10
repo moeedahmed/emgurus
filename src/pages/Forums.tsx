@@ -47,13 +47,15 @@ const Forums = () => {
   }, []);
 
   return (
-    <main className="container mx-auto px-4 py-8">
+    <main>
       <PageHero
-        title="EM Gurus Forums"
+        title="EMGurus Forums"
         subtitle="Discuss by topic or exam. Join the EM community."
-        align="left"
+        align="center"
         ctas={[{ label: "Start a Thread", href: "?new=1", variant: "outline" }]}
       />
+
+      <section className="container mx-auto px-4 py-8">
 
       <CreateThreadGlobal
         open={isNewOpen}
@@ -79,7 +81,8 @@ const Forums = () => {
           ))}
         </section>
       )}
-    </main>
+    </section>
+  </main>
   );
 };
 

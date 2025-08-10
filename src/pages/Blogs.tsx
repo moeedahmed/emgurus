@@ -133,10 +133,16 @@ export default function Blogs() {
   }, [filtered]);
 
   return (
-    <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Main list - vertical cards, left aligned */}
+    <main>
+      <PageHero
+        title="EMGurus Blogs"
+        subtitle="Evidence-based articles, exam guidance, and clinical pearls."
+        align="center"
+        ctas={[{ label: "Write Blog", href: "/blogs/editor/new", variant: "default" }]}
+      />
+      <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Main list - vertical cards, left aligned */}
         <section className="lg:col-span-8">
           <div className="mb-4 lg:hidden">
             <div className="flex items-center justify-between gap-3">
@@ -160,12 +166,6 @@ export default function Blogs() {
             </div>
           </div>
           <div className="space-y-6">
-            <PageHero
-              title="EM GURUS Blogs"
-              subtitle="Evidence-based articles, exam guidance, and clinical pearls."
-              align="left"
-              ctas={[{ label: "Write Blog", href: "/blogs/editor/new", variant: "default" }]}
-            />
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i} className="h-72 animate-pulse" />
@@ -206,7 +206,8 @@ export default function Blogs() {
             </div>
           </div>
         </aside>
-      </div>
+        </div>
+      </section>
     </main>
   );
 }
