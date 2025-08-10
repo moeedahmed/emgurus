@@ -135,7 +135,9 @@ const App = () => (
                 path="/dashboard/guru"
                 element={
                   <ProtectedRoute>
-                    <DashboardGuru />
+                    <RoleProtectedRoute roles={["guru", "admin"]}>
+                      <DashboardGuru />
+                    </RoleProtectedRoute>
                   </ProtectedRoute>
                 }
               />

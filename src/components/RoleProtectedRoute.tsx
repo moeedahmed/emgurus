@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoles } from "@/hooks/useRoles";
@@ -8,23 +8,12 @@ const RoleProtectedRoute: React.FC<{ roles: Array<"admin" | "guru" | "user">; ch
 = ({ roles, children }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const [allowed, setAllowed] = useState<boolean | null>(null);
+  // IMPORTANT: call hooks at top-level (no hooks in effects)
+  const { roles: userRoles, isLoading } = useRoles();
 
-  useEffect(() => {
-    const check = async () => {
-      if (loading) return;
-      if (!user) { setAllowed(false); return; }
-      // Use shared role loader
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      const rolesHook = (useRoles as any)();
-      const userRoles: string[] = rolesHook?.roles || [];
-      setAllowed(userRoles.some((r) => roles.includes(r as any)));
-    };
-    check();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, loading]);
+  const isAllowed = !!user && userRoles.some((r) => roles.includes(r));
 
-  if (loading || allowed === null) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary" />
@@ -32,7 +21,8 @@ const RoleProtectedRoute: React.FC<{ roles: Array<"admin" | "guru" | "user">; ch
     );
   }
 
-  if (!allowed) {
+  if (!isAllowed) {
+    // redirect to dashboard (or home) with return location
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
