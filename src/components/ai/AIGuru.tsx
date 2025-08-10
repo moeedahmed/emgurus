@@ -3,6 +3,7 @@ import { MessageCircle, Send, Sparkles, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import DOMPurify from "dompurify";
 
 interface ChatMsg { role: 'user'|'assistant'; content: string }
 
@@ -290,7 +291,7 @@ export default function AIGuru() {
             {msgs.map((m, i) => (
               <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
                 <div className={`inline-block max-w-[85%] rounded-lg px-3 py-2 ${m.role==='user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                  <div className="prose prose-sm dark:prose-invert" dangerouslySetInnerHTML={{ __html: m.content.replace(/\n/g,'<br/>') }} />
+                  <div className="prose prose-sm dark:prose-invert" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(m.content).replace(/\n/g,'<br/>') }} />
                 </div>
               </div>
             ))}

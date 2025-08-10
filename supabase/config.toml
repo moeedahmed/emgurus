@@ -55,7 +55,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.ai-feedback]
-verify_jwt = false
+verify_jwt = true
 
 [functions.ai-suggestions]
 verify_jwt = false
@@ -73,7 +73,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.ai-search]
-verify_jwt = false
+verify_jwt = true
 
 [functions.review-exams-api]
 verify_jwt = true

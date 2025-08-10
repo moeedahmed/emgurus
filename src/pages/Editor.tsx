@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import DOMPurify from "dompurify";
 
 interface Category { id: string; name: string; }
 
@@ -154,7 +155,7 @@ const Editor = () => {
                 {description && <p className="text-muted-foreground">{description}</p>}
                 {content ? (
                   /<\w+[^>]*>/.test(content) ? (
-                    <div dangerouslySetInnerHTML={{ __html: content }} />
+                    <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} />
                   ) : (
                     <pre className="whitespace-pre-wrap font-sans text-base">{content}</pre>
                   )
