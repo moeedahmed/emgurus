@@ -52,7 +52,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.ai-route]
-verify_jwt = false
+verify_jwt = true
 
 [functions.ai-feedback]
 verify_jwt = false

@@ -1,0 +1,265 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// Dynamic CORS with allowlist from env
+function parseAllowlist() {
+  const raw = Deno.env.get('ORIGIN_ALLOWLIST') || '*';
+  return raw.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function allowOrigin(origin: string | null) {
+  const list = parseAllowlist();
+  if (!origin) return '';
+  if (list.includes('*')) return origin;
+  return list.includes(origin) ? origin : '';
+}
+
+const baseCors = {
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+} as const;
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || '';
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || '';
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || '';
+
+// Models and limits via ENV with sane defaults
+const OPENAI_MODEL_CHAT_BASIC = Deno.env.get('OPENAI_MODEL_CHAT_BASIC') ?? 'gpt-5.0-nano';
+const OPENAI_MODEL_CHAT_EXAM  = Deno.env.get('OPENAI_MODEL_CHAT_EXAM')  ?? 'gpt-5.0-pro';
+const OPENAI_EMBED_MODEL_RAW  = Deno.env.get('OPENAI_EMBED_MODEL') || Deno.env.get('EMBEDDING_MODEL') || 'text-embedding-3-small';
+const OPENAI_EMBED_DIM        = Number(Deno.env.get('OPENAI_EMBED_DIM') ?? Deno.env.get('EMBEDDING_DIM') ?? '1536');
+const CHAT_MAX_TOKENS         = Number(Deno.env.get('CHAT_MAX_TOKENS')  ?? '300');
+const EXAM_MAX_TOKENS         = Number(Deno.env.get('EXAM_MAX_TOKENS')  ?? '800');
+
+// Timeouts
+const OPENAI_CHAT_TIMEOUT_MS  = Number(Deno.env.get('OPENAI_CHAT_TIMEOUT_MS')  ?? '60000');
+const OPENAI_EMBED_TIMEOUT_MS = Number(Deno.env.get('OPENAI_EMBED_TIMEOUT_MS') ?? '30000');
+
+function resolveModel(label: string): string {
+  // Map project labels to real OpenAI model names
+  if (label === 'gpt-5.0-pro') return 'gpt-4o';
+  if (label === 'gpt-5.0-nano') return 'gpt-4o-mini';
+  return label; // allow direct override
+}
+
+function withTimeout(input: RequestInfo | URL, init: RequestInit, ms: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
+const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+interface MessageIn { role: 'user'|'assistant'|'system'; content: string }
+
+function sseEncode(data: unknown) {
+  return `data: ${JSON.stringify(data)}\n\n`;
+}
+
+async function getEmbedding(input: string) {
+  const res = await withTimeout('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: OPENAI_EMBED_MODEL_RAW, input })
+  }, OPENAI_EMBED_TIMEOUT_MS);
+  if (!res.ok) throw new Error(`Embeddings failed (${res.status})`);
+  const json = await res.json();
+  return json?.data?.[0]?.embedding as number[];
+}
+
+serve(async (req) => {
+  const origin = req.headers.get('Origin');
+  const allowed = allowOrigin(origin);
+
+  // Preflight
+  if (req.method === 'OPTIONS') {
+    if (!allowed) return new Response(null, { status: 403, headers: { ...baseCors } });
+    return new Response(null, { headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed } });
+  }
+
+  if (!allowed) return new Response('Forbidden', { status: 403, headers: { ...baseCors } });
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed } });
+
+  // JWT required (verify_jwt=true in config)
+  const authHeader = req.headers.get('Authorization') || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'unauthorized', message: 'Missing or invalid Authorization header' }), {
+      status: 401,
+      headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (!OPENAI_API_KEY) {
+    return new Response(JSON.stringify({ error: 'missing_key', message: 'Missing OPENAI_API_KEY in Supabase secrets.' }), {
+      status: 500,
+      headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const allow_browsing: boolean = !!body.allow_browsing; // kept for backward compat
+    const sessionId: string | null = body.session_id || null;
+    const anonId: string | null = body.anon_id || null;
+    const pageContext: any = body.page_context || {};
+    const messages: MessageIn[] = Array.isArray(body.messages) ? body.messages.slice(-20) : [];
+    const purpose: string = typeof body.purpose === 'string' ? body.purpose : 'chatbot';
+
+    const requested = purpose === 'exam-generation' ? OPENAI_MODEL_CHAT_EXAM : OPENAI_MODEL_CHAT_BASIC;
+    const model = resolveModel(requested);
+    const maxTokens = purpose === 'exam-generation' ? EXAM_MAX_TOKENS : CHAT_MAX_TOKENS;
+
+    const now = new Date().toISOString();
+    let dbSessionId = sessionId;
+    try {
+      if (!dbSessionId) {
+        const { data: s, error: sErr } = await supabase
+          .from('ai_sessions')
+          .insert({ anon_id: anonId || crypto.randomUUID(), page_first_seen: pageContext?.page_type || null })
+          .select('id')
+          .maybeSingle();
+        if (!sErr) dbSessionId = s?.id ?? null;
+      } else {
+        await supabase.from('ai_sessions').update({ last_active_at: now }).eq('id', dbSessionId);
+      }
+    } catch (_) {
+      dbSessionId = null; // non-fatal
+    }
+
+    // Build retrieval context if browsing allowed
+    let retrieved: any[] = [];
+    const lastUser = [...messages].reverse().find(m => m.role === 'user');
+    if (allow_browsing && lastUser?.content) {
+      try {
+        const embedding = await getEmbedding(lastUser.content);
+        if (embedding?.length) {
+          const { data } = await supabase.rpc('ai_search_content', { query_embedding: embedding as any, match_count: 8, filter_source: null as any });
+          const seen = new Set<string>();
+          for (const r of (data || [])) {
+            const key = r.slug_url || r.url || r.slug || '';
+            if (key && !seen.has(key)) { seen.add(key); retrieved.push(r); }
+          }
+        }
+      } catch (_) {
+        // retrieval fail is fine; will continue
+      }
+    }
+
+    const hadContext = retrieved.length > 0;
+
+    const systemPrompt = `You are AI Guru, a helpful assistant for EM Gurus. Provide concise, friendly answers using EM Gurus content first. Never give medical advice; include a short disclaimer when medical questions arise. Current page context: ${JSON.stringify(pageContext)}.`;
+
+    const openaiMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages.map(m => ({ role: m.role, content: m.content })),
+    ] as Array<{ role: string; content: string }>;
+
+    if (hadContext) {
+      const ctx = retrieved.map((r: any, i: number) => `#${i+1} [${r.title}](${r.slug_url || r.url || r.slug || ''})\n${(r.text_chunk||'').slice(0,800)}`).join('\n\n');
+      openaiMessages.push({ role: 'system', content: `Relevant EM Gurus content:\n${ctx}` });
+    } else {
+      openaiMessages.push({ role: 'system', content: 'No relevant EMGurus context found; answering from general knowledge. If this seems off, enable browsing or add sources.' });
+    }
+
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream<Uint8Array>({
+      start: async (controller) => {
+        const send = (d: unknown) => controller.enqueue(encoder.encode(sseEncode(d)));
+        let hb: number | undefined;
+        const startHeartbeat = () => {
+          // SSE heartbeat every 15s
+          hb = setInterval(() => {
+            try { controller.enqueue(encoder.encode('event: ping\ndata: {}\n\n')); } catch (_) { /* ignore */ }
+          }, 15000) as unknown as number;
+        };
+        const stopHeartbeat = () => { if (hb) clearInterval(hb as unknown as number); };
+
+        async function run() {
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), OPENAI_CHAT_TIMEOUT_MS);
+          try {
+            const res = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model,
+                temperature: 0.3,
+                max_tokens: maxTokens,
+                messages: openaiMessages,
+                stream: true,
+              }),
+              signal: ctrl.signal,
+            });
+            clearTimeout(timer);
+
+            if (!res.ok) {
+              const errText = await res.text().catch(() => 'OpenAI error');
+              send({ error: 'final', message: errText.slice(0, 300), modelUsed: model, hadContext });
+              return;
+            }
+
+            startHeartbeat();
+
+            const reader = res.body!.getReader();
+            const decoder = new TextDecoder();
+            let full = '';
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split(/\r?\n/);
+              for (const line of lines) {
+                if (!line.startsWith('data:')) continue;
+                const data = line.slice(5).trim();
+                if (!data || data === '[DONE]') continue;
+                try {
+                  const json = JSON.parse(data);
+                  const delta = json?.choices?.[0]?.delta?.content || '';
+                  if (delta) {
+                    full += delta;
+                    send({ choices: [{ delta: { content: delta } }] });
+                  }
+                } catch { /* ignore parse */ }
+              }
+            }
+            // Persist
+            try {
+              if (dbSessionId) {
+                const userMsg = lastUser ? [{ session_id: dbSessionId, role: 'user', content: { text: lastUser.content } }] : [];
+                const asstMsg = [{ session_id: dbSessionId, role: 'assistant', content: { text: full, retrieved: (retrieved||[]).slice(0,3) } }];
+                if (userMsg.length) await supabase.from('ai_messages').insert(userMsg as any);
+                await supabase.from('ai_messages').insert(asstMsg as any);
+              }
+            } catch (_) { /* non-fatal */ }
+          } catch (err: any) {
+            const isTimeout = /AbortError|timeout/i.test(String(err?.name || err?.message || ''));
+            const msg = isTimeout ? `Request timeout after ${OPENAI_CHAT_TIMEOUT_MS}ms` : 'AI Guru failed—try again later.';
+            send({ error: isTimeout ? 'timeout' : 'final', message: msg, modelUsed: model, hadContext });
+          } finally {
+            stopHeartbeat();
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
+          }
+        }
+
+        await run();
+      }
+    });
+
+    return new Response(stream, {
+      headers: {
+        ...baseCors,
+        'Access-Control-Allow-Origin': allowed,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'x-model-used': model,
+        'x-rag-hits': String(hadContext ? retrieved.length : 0),
+      }
+    });
+  } catch (err: any) {
+    console.error('ai-route error', String(err?.message || err));
+    return new Response(JSON.stringify({ error: 'server_error' }), { status: 500, headers: { ...baseCors, 'Access-Control-Allow-Origin': allowOrigin(req.headers.get('Origin')), 'Content-Type': 'application/json' } });
+  }
+});
