@@ -71,11 +71,19 @@ serve(async (req) => {
 
     const now = new Date().toISOString();
     let dbSessionId = sessionId;
-    if (!dbSessionId) {
-      const { data: s } = await supabase.from('ai_sessions').insert({ anon_id: anonId || crypto.randomUUID(), page_first_seen: pageContext?.page_type || null }).select('id').single();
-      dbSessionId = s?.id ?? null;
-    } else {
-      await supabase.from('ai_sessions').update({ last_active_at: now }).eq('id', dbSessionId);
+    try {
+      if (!dbSessionId) {
+        const { data: s, error: sErr } = await supabase
+          .from('ai_sessions')
+          .insert({ anon_id: anonId || crypto.randomUUID(), page_first_seen: pageContext?.page_type || null })
+          .select('id')
+          .maybeSingle();
+        if (!sErr) dbSessionId = s?.id ?? null;
+      } else {
+        await supabase.from('ai_sessions').update({ last_active_at: now }).eq('id', dbSessionId);
+      }
+    } catch (_) {
+      dbSessionId = null; // non-fatal
     }
 
     // Build retrieval context if browsing allowed

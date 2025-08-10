@@ -110,6 +110,8 @@ export default function AIGuru() {
     const url = `https://cgtvvpzrzwyvsbavboxa.functions.supabase.co/ai-route`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      // Public anon key is required by Supabase Edge Functions even when JWT is not verified
+      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNndHZ2cHpyend5dnNiYXZib3hhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1MjYyNTAsImV4cCI6MjA3MDEwMjI1MH0.IkZEQamwiYvGvb3gFMmL8IDNfh_rAtwyrzwF8zqV7xw',
     };
     if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
 
