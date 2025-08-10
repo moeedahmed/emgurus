@@ -243,10 +243,16 @@ export async function createDraft(body: {
   cover_image_url?: string;
   excerpt?: string;
 }): Promise<{ id: string; slug: string }> {
-  const headers = { "Content-Type": "application/json", ...(await authHeader()) };
-  const res = await fetch(`${BASE}/api/blogs`, { method: "POST", headers, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error("Failed to create draft");
-  return res.json();
+  const content = body.content_md ?? body.content_html ?? null;
+  const { data, error } = await supabase.rpc('create_blog_draft', {
+    p_title: body.title,
+    p_content_md: content,
+    p_category_id: body.category_id ?? null,
+    p_tags: body.tag_slugs ?? []
+  });
+  if (error) throw new Error(error.message || 'Failed to create draft');
+  const row: any = Array.isArray(data) ? data[0] : data; // some clients wrap
+  return { id: row.id, slug: row.slug };
 }
 
 export async function updateDraft(id: string, body: {
@@ -258,17 +264,39 @@ export async function updateDraft(id: string, body: {
   cover_image_url?: string;
   excerpt?: string;
 }) {
-  const headers = { "Content-Type": "application/json", ...(await authHeader()) };
-  const res = await fetch(`${BASE}/api/blogs/${id}`, { method: "PUT", headers, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error("Failed to update draft");
-  return res.json();
+  const patch: Record<string, any> = {};
+  if (typeof body.title === 'string') patch.title = body.title;
+  if (typeof body.excerpt === 'string') patch.description = body.excerpt;
+  if (typeof body.cover_image_url === 'string') patch.cover_image_url = body.cover_image_url;
+  if (typeof body.content_md === 'string' || typeof body.content_html === 'string')
+    patch.content = (body.content_md ?? body.content_html) ?? null;
+  if (typeof body.category_id === 'string') patch.category_id = body.category_id;
+
+  if (Object.keys(patch).length) {
+    const { error } = await supabase.from('blog_posts').update(patch).eq('id', id);
+    if (error) throw new Error(error.message || 'Failed to update draft');
+  }
+
+  if (body.tag_slugs) {
+    await supabase.from('blog_post_tags').delete().eq('post_id', id);
+    if (body.tag_slugs.length) {
+      const { data: tags, error: tErr } = await supabase.from('blog_tags').select('id, slug').in('slug', body.tag_slugs);
+      if (tErr) throw new Error(tErr.message);
+      const links = (tags ?? []).map((t: any) => ({ post_id: id, tag_id: t.id }));
+      if (links.length) {
+        const { error: lErr } = await supabase.from('blog_post_tags').insert(links);
+        if (lErr) throw new Error(lErr.message);
+      }
+    }
+  }
+
+  return { ok: true, id };
 }
 
 export async function submitPost(id: string) {
-  const headers = { ...(await authHeader()) };
-  const res = await fetch(`${BASE}/api/blogs/${id}/submit`, { method: "POST", headers });
-  if (!res.ok) throw new Error("Failed to submit");
-  return res.json();
+  const { error } = await supabase.rpc('submit_blog_for_review', { p_post_id: id });
+  if (error) throw new Error(error.message || 'Failed to submit');
+  return { ok: true };
 }
 
 export async function reviewPost(id: string, body: { notes?: string; is_featured?: boolean; is_editors_pick?: boolean }) {
