@@ -2384,6 +2384,10 @@ export type Database = {
         Args: { _val: string }
         Returns: Database["public"]["Enums"]["exam_type_enum"]
       }
+      _require_auth: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       ai_search_content: {
         Args: {
           query_embedding: string
