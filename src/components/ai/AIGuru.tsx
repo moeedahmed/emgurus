@@ -154,12 +154,22 @@ export default function AIGuru() {
           try {
             const json = JSON.parse(data);
             const delta = json?.choices?.[0]?.delta?.content || json?.delta || json?.content || '';
+            const errMsg = json?.message || json?.error || '';
             if (delta) {
               full += delta;
               setMsgs(m => {
                 const copy = [...m];
                 const idx = copy.length - 1;
                 copy[idx] = { ...copy[idx], content: (copy[idx].content || '') + delta } as ChatMsg;
+                return copy;
+              });
+            } else if (errMsg) {
+              // Surface server-sent error messages in the chat bubble
+              full = String(errMsg);
+              setMsgs(m => {
+                const copy = [...m];
+                const idx = copy.length - 1;
+                copy[idx] = { ...copy[idx], content: String(errMsg) } as ChatMsg;
                 return copy;
               });
             }

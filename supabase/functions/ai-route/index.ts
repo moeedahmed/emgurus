@@ -6,6 +6,7 @@ const allowOrigin = (origin: string | null) => {
   const o = origin || '';
   if (o.includes('localhost')) return o;
   if (o.endsWith('.lovable.app')) return o;
+  if (o.endsWith('.lovableproject.com')) return o;
   return '';
 };
 
@@ -169,17 +170,23 @@ serve(async (req) => {
 
         try {
           await run(!!allow_browsing);
-        } catch (err) {
+        } catch (err: any) {
           if (allow_browsing) {
             // Tool path failed — inform and retry without tools
             send({ delta: 'Browsing failed; answering without browsing… ' });
             try {
               await run(false);
-            } catch (finalErr) {
-              send({ error: 'final', message: 'AI Guru failed—try again with browsing off or reload.' });
+            } catch (finalErr: any) {
+              const msg = /quota/i.test(String(finalErr?.message || '')) ? 'AI is temporarily unavailable (OpenAI quota exceeded). Please try again later.' : 'AI Guru failed—try again with browsing off or reload.';
+              send({ error: 'final', message: msg });
             }
           } else {
-            send({ error: 'timeout', message: 'Request timeout after 60s' });
+            const isTimeout = /timeout/i.test(String(err?.message || ''));
+            const isQuota = /quota/i.test(String(err?.message || ''));
+            const message = isTimeout
+              ? 'Request timeout after 60s'
+              : (isQuota ? 'AI is temporarily unavailable (OpenAI quota exceeded). Please try again later.' : 'AI Guru failed—try again with browsing off or reload.');
+            send({ error: isTimeout ? 'timeout' : 'final', message });
           }
         } finally {
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
