@@ -95,23 +95,41 @@ function readingMinutesFrom({ md, html }: { md?: string; html?: string }) {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const origin = req.headers.get("Origin") ?? "";
+  const allowed = isAllowedOrigin(origin);
+  const corsHeaders = buildCors(origin);
+
+  if (req.method === "OPTIONS") {
+    if (!allowed) return new Response(JSON.stringify({ error: "Disallowed origin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!allowed) {
+    return new Response(JSON.stringify({ error: "Disallowed origin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 
   try {
+    const supabase = getClient(req);
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const url = new URL(req.url);
     // Normalize path to work with both direct domain and function subpath
     const rawPath = url.pathname;
     let pathname = rawPath
       // strip common prefixes when calling via full URL or gateway
-      .replace(/^\/functions\/v1\/blogs-api(?=\/|$)/, "")
-      .replace(/^\/blogs-api(?=\/|$)/, "")
+      .replace(/^\/functions\/v1\/blogs-api(?=\/$|$)/, "")
+      .replace(/^\/blogs-api(?=\/$|$)/, "")
       .replace(/^\/+/, "/");
     // default root to list endpoint
     if (pathname === "/") pathname = "/api/blogs";
-    const supabase = getClient(req);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
     // GET /api/blogs -> list
     if (req.method === "GET" && pathname === "/api/blogs") {
