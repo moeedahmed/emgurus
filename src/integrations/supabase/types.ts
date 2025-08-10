@@ -198,7 +198,7 @@ export type Database = {
       ai_exam_sessions: {
         Row: {
           created_at: string
-          exam_type: Database["public"]["Enums"]["exam_type"]
+          exam_type: Database["public"]["Enums"]["exam_type_enum"] | null
           id: string
           started_at: string
           updated_at: string
@@ -206,7 +206,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          exam_type: Database["public"]["Enums"]["exam_type"]
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
           id?: string
           started_at?: string
           updated_at?: string
@@ -214,7 +214,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          exam_type?: Database["public"]["Enums"]["exam_type"]
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
           id?: string
           started_at?: string
           updated_at?: string
@@ -945,7 +945,7 @@ export type Database = {
       curriculum_map: {
         Row: {
           created_at: string
-          exam_type: Database["public"]["Enums"]["exam_type"]
+          exam_type: Database["public"]["Enums"]["exam_type_enum"] | null
           id: string
           key_capability_number: number
           key_capability_title: string
@@ -955,7 +955,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          exam_type: Database["public"]["Enums"]["exam_type"]
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
           id?: string
           key_capability_number: number
           key_capability_title: string
@@ -965,7 +965,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          exam_type?: Database["public"]["Enums"]["exam_type"]
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
           id?: string
           key_capability_number?: number
           key_capability_title?: string
@@ -1707,6 +1707,13 @@ export type Database = {
             foreignKeyName: "review_assignments_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
+            referencedRelation: "exam_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_assignments_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
             referencedRelation: "review_exam_questions"
             referencedColumns: ["id"]
           },
@@ -1717,7 +1724,7 @@ export type Database = {
           correct_answer: string
           created_at: string
           created_by: string
-          exam_type: Database["public"]["Enums"]["exam_type"]
+          exam_type: Database["public"]["Enums"]["exam_type_enum"] | null
           explanation: string | null
           id: string
           options: Json
@@ -1730,7 +1737,7 @@ export type Database = {
           correct_answer: string
           created_at?: string
           created_by: string
-          exam_type: Database["public"]["Enums"]["exam_type"]
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
           explanation?: string | null
           id?: string
           options: Json
@@ -1743,7 +1750,7 @@ export type Database = {
           correct_answer?: string
           created_at?: string
           created_by?: string
-          exam_type?: Database["public"]["Enums"]["exam_type"]
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
           explanation?: string | null
           id?: string
           options?: Json
@@ -1851,6 +1858,13 @@ export type Database = {
           question_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "review_publish_log_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "exam_questions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "review_publish_log_question_id_fkey"
             columns: ["question_id"]
@@ -2322,9 +2336,54 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      exam_questions: {
+        Row: {
+          choices: Json | null
+          correct_index: number | null
+          created_at: string | null
+          created_by: string | null
+          exam_type: Database["public"]["Enums"]["exam_type_enum"] | null
+          explanation: string | null
+          id: string | null
+          status: string | null
+          stem: string | null
+          tags: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          choices?: Json | null
+          correct_index?: never
+          created_at?: string | null
+          created_by?: string | null
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
+          explanation?: string | null
+          id?: string | null
+          status?: never
+          stem?: string | null
+          tags?: never
+          updated_at?: string | null
+        }
+        Update: {
+          choices?: Json | null
+          correct_index?: never
+          created_at?: string | null
+          created_by?: string | null
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
+          explanation?: string | null
+          id?: string | null
+          status?: never
+          stem?: string | null
+          tags?: never
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      _map_exam_type_to_enum: {
+        Args: { _val: string }
+        Returns: Database["public"]["Enums"]["exam_type_enum"]
+      }
       ai_search_content: {
         Args: {
           query_embedding: string
@@ -2341,9 +2400,78 @@ export type Database = {
           similarity: number
         }[]
       }
+      assign_reviewer: {
+        Args: { p_post_id: string; p_reviewer_id: string; p_note: string }
+        Returns: undefined
+      }
       binary_quantize: {
         Args: { "": string } | { "": unknown }
         Returns: unknown
+      }
+      create_blog_draft: {
+        Args: {
+          p_title: string
+          p_content_md: string
+          p_category_id: string
+          p_tags: string[]
+        }
+        Returns: {
+          author_id: string
+          category_id: string | null
+          content: string | null
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          likes_count: number
+          published_at: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_id: string | null
+          slug: string | null
+          status: Database["public"]["Enums"]["blog_post_status"]
+          submitted_at: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          view_count: number
+        }
+      }
+      create_exam_draft: {
+        Args: {
+          p_stem: string
+          p_choices: Json
+          p_correct_index: number
+          p_explanation: string
+          p_tags: string[]
+          p_exam_type: Database["public"]["Enums"]["exam_type_enum"]
+        }
+        Returns: {
+          choices: Json | null
+          correct_index: number | null
+          created_at: string | null
+          created_by: string | null
+          exam_type: Database["public"]["Enums"]["exam_type_enum"] | null
+          explanation: string | null
+          id: string | null
+          status: string | null
+          stem: string | null
+          tags: string[] | null
+          updated_at: string | null
+        }[]
+      }
+      exam_approve: {
+        Args: { p_question_id: string }
+        Returns: undefined
+      }
+      exam_publish: {
+        Args: { p_question_id: string }
+        Returns: undefined
+      }
+      exam_request_changes: {
+        Args: { p_question_id: string; p_note: string }
+        Returns: undefined
       }
       halfvec_avg: {
         Args: { "": number[] }
@@ -2404,6 +2532,137 @@ export type Database = {
         Args: { "": string } | { "": unknown } | { "": unknown }
         Returns: string
       }
+      list_exam_reviewer_queue: {
+        Args: { p_limit: number; p_offset: number }
+        Returns: {
+          choices: Json | null
+          correct_index: number | null
+          created_at: string | null
+          created_by: string | null
+          exam_type: Database["public"]["Enums"]["exam_type_enum"] | null
+          explanation: string | null
+          id: string | null
+          status: string | null
+          stem: string | null
+          tags: string[] | null
+          updated_at: string | null
+        }[]
+      }
+      list_my_drafts: {
+        Args: { p_limit: number; p_offset: number }
+        Returns: {
+          author_id: string
+          category_id: string | null
+          content: string | null
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          likes_count: number
+          published_at: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_id: string | null
+          slug: string | null
+          status: Database["public"]["Enums"]["blog_post_status"]
+          submitted_at: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          view_count: number
+        }[]
+      }
+      list_my_exam_drafts: {
+        Args: { p_limit: number; p_offset: number }
+        Returns: {
+          choices: Json | null
+          correct_index: number | null
+          created_at: string | null
+          created_by: string | null
+          exam_type: Database["public"]["Enums"]["exam_type_enum"] | null
+          explanation: string | null
+          id: string | null
+          status: string | null
+          stem: string | null
+          tags: string[] | null
+          updated_at: string | null
+        }[]
+      }
+      list_my_exam_submissions: {
+        Args: { p_limit: number; p_offset: number }
+        Returns: {
+          choices: Json | null
+          correct_index: number | null
+          created_at: string | null
+          created_by: string | null
+          exam_type: Database["public"]["Enums"]["exam_type_enum"] | null
+          explanation: string | null
+          id: string | null
+          status: string | null
+          stem: string | null
+          tags: string[] | null
+          updated_at: string | null
+        }[]
+      }
+      list_my_submissions: {
+        Args: { p_limit: number; p_offset: number }
+        Returns: {
+          author_id: string
+          category_id: string | null
+          content: string | null
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          likes_count: number
+          published_at: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_id: string | null
+          slug: string | null
+          status: Database["public"]["Enums"]["blog_post_status"]
+          submitted_at: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          view_count: number
+        }[]
+      }
+      list_reviewer_queue: {
+        Args: { p_limit: number; p_offset: number }
+        Returns: {
+          author_id: string
+          category_id: string | null
+          content: string | null
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          likes_count: number
+          published_at: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_id: string | null
+          slug: string | null
+          status: Database["public"]["Enums"]["blog_post_status"]
+          submitted_at: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          view_count: number
+        }[]
+      }
+      review_approve_publish: {
+        Args: { p_post_id: string }
+        Returns: undefined
+      }
+      review_request_changes: {
+        Args: { p_post_id: string; p_note: string }
+        Returns: undefined
+      }
       sparsevec_out: {
         Args: { "": unknown }
         Returns: unknown
@@ -2415,6 +2674,14 @@ export type Database = {
       sparsevec_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      submit_blog_for_review: {
+        Args: { p_post_id: string }
+        Returns: undefined
+      }
+      submit_exam_for_review: {
+        Args: { p_question_id: string }
+        Returns: undefined
       }
       vector_avg: {
         Args: { "": number[] }
@@ -2477,6 +2744,7 @@ export type Database = {
         | "MRCEM_PRIMARY"
         | "MRCEM_SBA"
         | "FRCEM_SBA"
+      exam_type_enum: "MRCEM_PRIMARY" | "MRCEM_SBA" | "FRCEM_SBA" | "OTHER"
       guru_application_status: "pending" | "approved" | "rejected"
       payment_method: "stripe" | "paypal" | "free"
       payment_status: "pending" | "completed" | "refunded" | "failed"
@@ -2660,6 +2928,7 @@ export const Constants = {
         "MRCEM_SBA",
         "FRCEM_SBA",
       ],
+      exam_type_enum: ["MRCEM_PRIMARY", "MRCEM_SBA", "FRCEM_SBA", "OTHER"],
       guru_application_status: ["pending", "approved", "rejected"],
       payment_method: ["stripe", "paypal", "free"],
       payment_status: ["pending", "completed", "refunded", "failed"],
