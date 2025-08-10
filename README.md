@@ -89,3 +89,14 @@ Copy `.env.example` to your environment and set:
 - EMBEDDING_MODEL (default text-embedding-3-small)
 - EMBEDDING_DIM (default 1536)
 
+---
+
+## QA & Seeding
+- User IDs: Supabase → Auth → Users → copy UUIDs for test accounts (author, guru, admin)
+- Seeding (cloud): Open Supabase SQL Editor → paste `supabase/seed/seed_roles_and_samples.sql` after replacing `__USER_ID_*__`
+- Seeding (local): `supabase db reset --seed` (ensure the seed file is included)
+- Rollback: run `supabase/seed/rollback_seed_roles_and_samples.sql`
+- Smoke: edit `scripts/qa-smoke.sh` placeholders and run; verify PASS/FAIL lines
+- Functions env: set ORIGIN_ALLOWLIST and OPENAI_API_KEY; then redeploy blogs-api, review-exams-api, ai-route
+
+
