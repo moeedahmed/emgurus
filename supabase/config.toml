@@ -31,7 +31,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.blogs-api]
-verify_jwt = false
+verify_jwt = true
 
 [functions.import-legacy-blogs]
 verify_jwt = true
@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.ai-search]
 verify_jwt = false
+
+[functions.review-exams-api]
+verify_jwt = true

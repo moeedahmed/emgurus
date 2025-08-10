@@ -2,10 +2,26 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Dynamic CORS allowlist
+function parseAllowlist(): string[] {
+  const raw = Deno.env.get("ORIGIN_ALLOWLIST")?.split(",") || [];
+  return raw.map((s) => s.trim()).filter(Boolean);
+}
+function isAllowedOrigin(origin: string): boolean {
+  const list = parseAllowlist();
+  if (!list.length) return false;
+  if (list.includes("*")) return true;
+  return !!origin && list.includes(origin);
+}
+function buildCors(origin: string) {
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Vary": "Origin",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+  } as const;
+}
+
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;

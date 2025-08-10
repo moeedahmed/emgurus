@@ -2,10 +2,26 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Dynamic CORS via allowlist
+function parseAllowlist(): string[] {
+  const raw = Deno.env.get("ORIGIN_ALLOWLIST")?.split(",") || [];
+  return raw.map((s) => s.trim()).filter(Boolean);
+}
+function isAllowedOrigin(origin: string): boolean {
+  const list = parseAllowlist();
+  if (!list.length) return false;
+  if (list.includes("*")) return true;
+  return !!origin && list.includes(origin);
+}
+function buildCors(origin: string) {
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Vary": "Origin",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  } as const;
+}
+
 
 type ActionBody =
   | { action: "admin_create_question"; payload: { question: string; options: any; correct_answer: string; explanation?: string; topic?: string; exam_type: string } }
@@ -14,7 +30,18 @@ type ActionBody =
   | { action: "admin_publish"; payload: { question_id: string } };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const origin = req.headers.get("Origin") ?? "";
+  const allowed = isAllowedOrigin(origin);
+  const cors = buildCors(origin);
+
+  if (req.method === "OPTIONS") {
+    if (!allowed) return new Response(JSON.stringify({ error: "Disallowed origin" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+    return new Response(null, { headers: cors });
+  }
+
+  if (!allowed) {
+    return new Response(JSON.stringify({ error: "Disallowed origin" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+  }
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
@@ -23,12 +50,15 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing Authorization header");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
+    }
     const token = authHeader.replace("Bearer ", "");
 
     const { data: { user }, error: userErr } = await supabase.auth.getUser(token);
-    if (userErr) throw userErr;
-    if (!user) throw new Error("User not authenticated");
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
+    }
 
     // Resolve roles
     const { data: roles } = await supabase
@@ -51,7 +81,7 @@ serve(async (req) => {
           .select("*")
           .single();
         if (error) throw error;
-        return new Response(JSON.stringify({ question: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ question: data }), { headers: { ...cors, "Content-Type": "application/json" } });
       }
       case "admin_assign": {
         if (!isAdmin) throw new Error("Forbidden: admin only");
@@ -62,7 +92,7 @@ serve(async (req) => {
           .select("*")
           .single();
         if (error) throw error;
-        return new Response(JSON.stringify({ assignment: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ assignment: data }), { headers: { ...cors, "Content-Type": "application/json" } });
       }
       case "guru_feedback": {
         if (!isGuru) throw new Error("Forbidden: guru only");
@@ -82,7 +112,7 @@ serve(async (req) => {
           .select("*")
           .single();
         if (error) throw error;
-        return new Response(JSON.stringify({ feedback: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ feedback: data }), { headers: { ...cors, "Content-Type": "application/json" } });
       }
       case "admin_publish": {
         if (!isAdmin) throw new Error("Forbidden: admin only");
@@ -98,13 +128,13 @@ serve(async (req) => {
           .select("*")
           .single();
         if (lErr) throw lErr;
-        return new Response(JSON.stringify({ published: true, log }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ published: true, log }), { headers: { ...cors, "Content-Type": "application/json" } });
       }
       default:
         throw new Error("Unknown action");
     }
   } catch (e) {
     console.error("review-exams-api error", e);
-    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
   }
 });
