@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { listBlogs } from "@/lib/blogsApi";
+import { getJson } from "@/lib/functionsClient";
 import { Card } from "@/components/ui/card";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -40,10 +41,28 @@ export default function Blogs() {
 
   useEffect(() => {
     const load = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const res = await listBlogs({ status: "published", q, category: category || undefined, page_size: 50 });
-        setItems(res.items || []);
+        try {
+          const res = await getJson('/public-blogs');
+          const mapped = (res.items || []).map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            slug: p.slug,
+            excerpt: p.excerpt ?? null,
+            cover_image_url: p.cover_image_url ?? null,
+            category: null,
+            tags: [],
+            author: { id: p.author_id || '', name: 'Author', avatar: null },
+            reading_minutes: null,
+            published_at: p.created_at ?? null,
+            counts: { likes: 0, comments: 0, views: 0 },
+          }));
+          setItems(mapped);
+        } catch {
+          const res = await listBlogs({ status: "published", q, category: category || undefined, page_size: 50 });
+          setItems(res.items || []);
+        }
       } catch (e: any) {
         toast.error(e.message || "Failed to load blogs");
       } finally {

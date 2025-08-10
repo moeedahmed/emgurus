@@ -77,3 +77,9 @@ verify_jwt = false
 
 [functions.review-exams-api]
 verify_jwt = true
+
+[functions.public-blogs]
+verify_jwt = false
+
+[functions.public-reviewed-exams]
+verify_jwt = false

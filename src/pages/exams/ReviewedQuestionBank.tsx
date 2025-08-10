@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import { getJson } from "@/lib/functionsClient";
 
 type ExamCode = "MRCEM_Primary" | "MRCEM_SBA" | "FRCEM_SBA";
 const EXAM_LABELS: Record<ExamCode, string> = {
@@ -78,33 +79,50 @@ const pageSize = 10;
     (async () => {
       setLoading(true);
       try {
-        // Build base query
-        let base = (supabase as any)
-          .from('reviewed_exam_questions')
-          .select('id, exam, stem, reviewer_id, reviewed_at', { count: 'exact' })
-          .eq('status', 'approved');
-        if (exam) base = base.eq('exam', exam);
-        // SLO filtering disabled until slo_code or junction is available
+        try {
+          const res = await getJson('/public-reviewed-exams');
+          let list = ((res.items || []) as any[]).map((q: any) => ({
+            id: q.id,
+            exam: (q.exam || q.exam_type) as ExamCode,
+            stem: q.stem,
+            reviewer_id: null,
+            reviewed_at: q.created_at || null,
+          })) as ReviewedRow[];
+          if (exam) list = list.filter((r) => r.exam === exam);
+          if (!cancelled) {
+            setItems(list);
+            setTotalCount(res.count ?? list.length);
+            if (approvedCount === null) setApprovedCount(res.count ?? list.length);
+            setReviewers({});
+          }
+        } catch {
+          // Fallback to direct table query as before
+          let base = (supabase as any)
+            .from('reviewed_exam_questions')
+            .select('id, exam, stem, reviewer_id, reviewed_at', { count: 'exact' })
+            .eq('status', 'approved');
+          if (exam) base = base.eq('exam', exam);
 
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize - 1;
-        const { data, count, error } = await base
-          .order('reviewed_at', { ascending: false })
-          .order('id', { ascending: false })
-          .range(from, to);
-        if (error) throw error;
-        const list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
-        if (!cancelled) {
-          setItems(list);
-          setTotalCount(count ?? 0);
-        }
-        const ids = Array.from(new Set(list.map(d => d.reviewer_id).filter(Boolean))) as string[];
-        if (ids.length) {
-          const { data: g } = await supabase.from('gurus').select('id, name').in('id', ids);
-          const map: Record<string, string> = Object.fromEntries((g || []).map((r: any) => [r.id, r.name]));
-          if (!cancelled) setReviewers(map);
-        } else {
-          if (!cancelled) setReviewers({});
+          const from = (page - 1) * pageSize;
+          const to = from + pageSize - 1;
+          const { data, count, error } = await base
+            .order('reviewed_at', { ascending: false })
+            .order('id', { ascending: false })
+            .range(from, to);
+          if (error) throw error;
+          const list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
+          if (!cancelled) {
+            setItems(list);
+            setTotalCount(count ?? 0);
+          }
+          const ids = Array.from(new Set(list.map(d => d.reviewer_id).filter(Boolean))) as string[];
+          if (ids.length) {
+            const { data: g } = await supabase.from('gurus').select('id, name').in('id', ids);
+            const map: Record<string, string> = Object.fromEntries((g || []).map((r: any) => [r.id, r.name]));
+            if (!cancelled) setReviewers(map);
+          } else {
+            if (!cancelled) setReviewers({});
+          }
         }
       } catch (e) {
         console.error('Reviewed bank fetch failed', e);
