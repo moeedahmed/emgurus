@@ -140,7 +140,7 @@ export default function Blogs() {
           {/* Main list - vertical cards, left aligned */}
         <section className="lg:col-span-8">
           <div className="mb-4 lg:hidden">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline">Filters</Button>
@@ -156,7 +156,6 @@ export default function Blogs() {
                   />
                 </SheetContent>
               </Sheet>
-              <Button onClick={() => navigate('/blogs/editor/new')}>Write Blog</Button>
             </div>
           </div>
           <div className="space-y-6">
