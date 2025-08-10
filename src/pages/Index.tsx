@@ -30,11 +30,13 @@ const Index = () => {
 
   // TEMP: orchestrate AI seeding + search + refresh
   useEffect(() => {
+    const enabled = localStorage.getItem('enable_ai_orchestration') === '1';
+    if (!enabled) return;
     (async () => {
       try {
         const key = 'ai_seed_200_done_v2';
         if (localStorage.getItem(key)) return;
-        toast.message('Seeding AI embeddings (limit 200)...');
+        toast.message('Seeding AI embeddings...');
 
         const seedOnce = async () => {
           const { data, error } = await supabase.functions.invoke('seed_ai_embeddings_once', { body: { limit: 200 } });

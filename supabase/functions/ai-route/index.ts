@@ -64,7 +64,10 @@ serve(async (req) => {
     const pageContext: any = body.page_context || {};
     const messages: MessageIn[] = Array.isArray(body.messages) ? body.messages.slice(-20) : [];
     const purpose: string = typeof body.purpose === 'string' ? body.purpose : 'chatbot';
-    const model: string = purpose === 'exam-generation' ? 'gpt-5.0-pro' : 'gpt-5.0-nano';
+    // Map requested purpose to real OpenAI models compatible with Chat Completions
+    // "gpt-5.0-nano/pro" are project-level labels; route to OpenAI equivalents
+    const requested = purpose === 'exam-generation' ? 'gpt-5.0-pro' : 'gpt-5.0-nano';
+    const model: string = requested === 'gpt-5.0-pro' ? 'gpt-4o' : 'gpt-4o-mini';
 
     const now = new Date().toISOString();
     let dbSessionId = sessionId;
