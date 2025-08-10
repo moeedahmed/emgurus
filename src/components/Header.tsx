@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { listBlogs } from "@/lib/blogsApi";
-import logo from "@/assets/logo-em-gurus.png";
+import Logo from "@/components/branding/Logo";
 import { useRoles } from "@/hooks/useRoles";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -45,8 +45,7 @@ const Header = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <button aria-label="Go to home" onClick={() => navigate('/')} className="flex items-center space-x-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">
-            <img src={logo} alt="EM Gurus logo" className="w-8 h-8 rounded-md" />
-            <span className="text-xl font-bold text-primary">EM Gurus</span>
+            <Logo />
           </button>
 
           <nav className="hidden md:flex items-center space-x-8">
