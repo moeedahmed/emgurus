@@ -307,10 +307,9 @@ export async function reviewPost(id: string, body: { notes?: string; is_featured
 }
 
 export async function publishPost(id: string) {
-  const headers = { ...(await authHeader()) };
-  const res = await fetch(`${BASE}/api/blogs/${id}/publish`, { method: "POST", headers });
-  if (!res.ok) throw new Error("Failed to publish");
-  return res.json();
+  const { error } = await supabase.rpc('review_approve_publish', { p_post_id: id });
+  if (error) throw new Error(error.message || 'Failed to publish');
+  return { ok: true };
 }
 
 export async function reactToPost(id: string, reaction: ReactionKey): Promise<{ toggled: boolean }> {
