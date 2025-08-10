@@ -50,6 +50,8 @@ import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
 import AiPracticeSession from "@/pages/exams/AiPracticeSession";
 import QuestionBankPage from "@/pages/exams/QuestionBankPage";
 import QuestionDetail from "@/pages/exams/QuestionDetail";
+import GenerateExamQuestion from "@/pages/tools/GenerateExamQuestion";
+import MyExamDrafts from "@/pages/tools/MyExamDrafts";
 
 const queryClient = new QueryClient();
 
@@ -170,6 +172,8 @@ const App = () => (
               <Route path="/admin/taxonomy" element={<RoleProtectedRoute roles={["admin"]}><Taxonomy /></RoleProtectedRoute>} />
               <Route path="/about" element={<About />} />
               <Route path="/coming-soon" element={<ComingSoon />} />
+              <Route path="/tools/generate-exam-question" element={<GenerateExamQuestion />} />
+              <Route path="/tools/my-exam-drafts" element={<MyExamDrafts />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
