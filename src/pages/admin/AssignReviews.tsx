@@ -26,11 +26,8 @@ const AssignReviews = () => {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("blog_posts")
-      .select("id,title,description,created_at")
-      .eq("status", "in_review")
-      .order("created_at", { ascending: true });
+    const { data, error } = await (supabase as any).rpc("list_all_posts_admin", { p_status: "in_review", p_limit: 100, p_offset: 0 });
+    if (error) console.error(error);
     setPosts((data as any) || []);
 
     const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "guru");
@@ -59,10 +56,7 @@ const AssignReviews = () => {
     const ids = posts.filter(p => selected[p.id]).map(p => p.id);
     if (!reviewerId || ids.length === 0) return toast.error("Pick a reviewer and at least one post");
     try {
-      const rows = ids.map(pid => ({ post_id: pid, reviewer_id: reviewerId, assigned_by: user.id }));
-      const { error } = await supabase.from("blog_review_assignments").insert(rows as any);
-      if (error) throw error;
-      await supabase.from("blog_review_logs").insert(ids.map(pid => ({ post_id: pid, action: "assigned", actor_id: user.id, note: `Assigned to ${reviewerId}` })) as any);
+      await Promise.all(ids.map(pid => supabase.rpc('assign_reviewer', { p_post_id: pid, p_reviewer_id: reviewerId, p_note: '' })));
       toast.success("Assigned successfully");
       setSelected({});
       load();

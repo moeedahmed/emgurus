@@ -51,11 +51,7 @@ const ModeratePosts = () => {
 
   const loadPosts = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("blog_posts")
-      .select("id,title,description,author_id,created_at,status")
-      .eq("status", "in_review")
-      .order("created_at", { ascending: true });
+    const { data, error } = await (supabase as any).rpc("list_all_posts_admin", { p_status: "in_review", p_limit: 100, p_offset: 0 });
     if (error) console.error(error);
     const list = (data as any) || [];
     setPosts(list);
@@ -84,19 +80,8 @@ const ModeratePosts = () => {
     const reviewerId = selectedReviewer[postId];
     if (!user || !reviewerId) return;
     try {
-      const { error } = await supabase.from("blog_review_assignments").insert({
-        post_id: postId,
-        reviewer_id: reviewerId,
-        assigned_by: user.id,
-        notes: null,
-      } as any);
+      const { error } = await supabase.rpc('assign_reviewer', { p_post_id: postId, p_reviewer_id: reviewerId, p_note: '' });
       if (error) throw error;
-      await supabase.from("blog_review_logs").insert({
-        post_id: postId,
-        action: "assigned",
-        actor_id: user.id,
-        note: `Assigned to ${reviewerId}`,
-      } as any);
       toast.success("Reviewer assigned");
       loadPosts();
     } catch (e) {
@@ -108,24 +93,15 @@ const ModeratePosts = () => {
   const act = async (postId: string, status: "published" | "archived") => {
     if (!user) return;
     try {
-      const { error } = await supabase
-        .from("blog_posts")
-        .update({ status, reviewed_by: user.id, reviewed_at: new Date().toISOString() })
-        .eq("id", postId);
-      if (error) throw error;
-      await supabase.from("blog_review_logs").insert({
-        post_id: postId,
-        action: status,
-        actor_id: user.id,
-        note: null,
-      } as any);
-      // Complete any pending assignments for this post
-      await supabase
-        .from("blog_review_assignments")
-        .update({ status: "completed" })
-        .eq("post_id", postId)
-        .eq("status", "pending");
-      toast.success(status === "published" ? "Post published" : "Post archived");
+      if (status === 'published') {
+        const { error } = await supabase.rpc('review_approve_publish', { p_post_id: postId });
+        if (error) throw error;
+        toast.success('Post published');
+      } else {
+        const { error } = await supabase.rpc('review_request_changes', { p_post_id: postId, p_note: '' });
+        if (error) throw error;
+        toast.success('Changes requested');
+      }
       loadPosts();
     } catch (e) {
       console.error(e);
