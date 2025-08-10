@@ -4,27 +4,41 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-
+import { showErrorToast } from "@/lib/errors";
 const DashboardUser = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [drafts, setDrafts] = useState<{ id: string; title: string; status: string | null; updated_at: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = "Learner Dashboard | EM Gurus";
+    const meta = document.querySelector("meta[name='description']");
+    if (meta) meta.setAttribute("content", "Your personal dashboard: drafts, exams, consultations.");
   }, []);
 
   useEffect(() => {
     const loadDrafts = async () => {
       if (!user?.id) return;
-      const { data } = await supabase
-        .from("blog_posts")
-        .select("id,title,status,updated_at")
-        .eq("author_id", user.id)
-        .eq("status", "draft")
-        .order("updated_at", { ascending: false })
-        .limit(5);
-      setDrafts((data as any) || []);
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error } = await supabase
+          .from("blog_posts")
+          .select("id,title,status,updated_at")
+          .eq("author_id", user.id)
+          .eq("status", "draft")
+          .order("updated_at", { ascending: false })
+          .limit(5);
+        if (error) throw error;
+        setDrafts((data as any) || []);
+      } catch (e) {
+        setError("Failed to load drafts");
+        showErrorToast(e, "Failed to load drafts");
+      } finally {
+        setLoading(false);
+      }
     };
     loadDrafts();
   }, [user?.id]);
@@ -55,7 +69,11 @@ const DashboardUser = () => {
         </Card>
         <Card className="p-6 md:col-span-2">
           <h2 className="text-xl font-semibold mb-2">My Drafts</h2>
-          {drafts.length > 0 ? (
+          {loading ? (
+            <p className="text-muted-foreground">Loading drafts...</p>
+          ) : error ? (
+            <p className="text-destructive">{error}</p>
+          ) : drafts.length > 0 ? (
             <ul className="space-y-2">
               {drafts.map((d) => (
                 <li key={d.id} className="flex items-center justify-between">
