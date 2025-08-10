@@ -9,6 +9,7 @@ import TopAuthorsPanel from "@/components/blogs/TopAuthorsPanel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PageHero from "@/components/PageHero";
+import { CATEGORIES, sanitizeCategory } from "@/lib/taxonomy";
 
 export default function Blogs() {
   const [items, setItems] = useState<any[]>([]);
@@ -55,12 +56,13 @@ export default function Blogs() {
 
   const categories = useMemo(() => {
     const map = new Map<string, number>();
+    // seed with our canonical taxonomy so UI stays consistent
+    for (const c of CATEGORIES) map.set(c, 0);
     for (const it of items) {
-      const key = it.category?.title || "General";
-      if (/^imported$/i.test(key)) continue; // hide 'Imported' from UI
+      const key = sanitizeCategory(it.category?.title || "General");
       map.set(key, (map.get(key) || 0) + 1);
     }
-    return Array.from(map.entries()).map(([title, count]) => ({ title, count }));
+    return CATEGORIES.map((title) => ({ title, count: map.get(title) || 0 }));
   }, [items]);
 
   const tags = useMemo(() => {

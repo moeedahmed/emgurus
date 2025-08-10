@@ -6,9 +6,10 @@ import { useNavigate } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { listBlogs } from "@/lib/blogsApi";
 import Logo from "@/components/branding/Logo";
 import { useRoles } from "@/hooks/useRoles";
+import { CATEGORIES } from "@/lib/taxonomy";
+import { listBlogs } from "@/lib/blogsApi";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
@@ -16,7 +17,6 @@ const Header = () => {
   const displayName = (user?.user_metadata?.full_name as string) || (user?.email?.split('@')[0] ?? 'Account');
   const initials = displayName.slice(0, 2).toUpperCase();
   const [catCounts, setCatCounts] = useState<Record<string, number>>({});
-  const presetCats = ["General","Exam Guidance","Clinical Compendium","Research & Evidence","Careers","Announcements"];
   const { roles } = useRoles();
   const isGuru = roles.includes('guru') || roles.includes('admin');
 
@@ -27,7 +27,7 @@ const Header = () => {
       try {
         const res = await listBlogs({ status: "published", page_size: 200 });
         const map: Record<string, number> = {};
-        for (const t of presetCats) map[t] = 0;
+        for (const t of CATEGORIES) map[t] = 0;
         for (const it of res.items || []) {
           const key = it.category?.title || "General";
           if (map[key] === undefined) map[key] = 0;
@@ -56,7 +56,7 @@ const Header = () => {
               </HoverCardTrigger>
               <HoverCardContent className="w-[520px]">
                 <div className="grid grid-cols-2 gap-3">
-                  {presetCats.map((c) => (
+                  {CATEGORIES.map((c) => (
                     <button key={c} onClick={() => navigate(`/blogs?category=${encodeURIComponent(c)}`)} className="flex items-center justify-between rounded-md border p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">
                       <span>{c}</span>
                       <span className="text-xs text-muted-foreground">{catCounts[c] ?? 0}</span>
