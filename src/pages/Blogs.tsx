@@ -34,11 +34,6 @@ export default function Blogs() {
     const cur = searchParams.get(k) || "";
     setParam(k, cur === v ? "" : v);
   };
-  const toggleParam = (k: string, v: string) => {
-    const cur = searchParams.get(k) || "";
-    setParam(k, cur === v ? "" : v);
-  };
-
   useEffect(() => {
     document.title = "Blogs | EMGurus";
     const meta = document.querySelector("meta[name='description']");
@@ -183,7 +178,7 @@ export default function Blogs() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Main list - vertical cards, left aligned */}
         <section className="lg:col-span-8">
-          <div className="mb-4">
+          <div className="mb-4 space-y-3">
             <div className="flex items-center gap-3">
               <Sheet>
                 <SheetTrigger asChild>
@@ -203,6 +198,35 @@ export default function Blogs() {
                 </SheetContent>
               </Sheet>
             </div>
+            {/* Sort chips */}
+            <div className="flex flex-wrap gap-2">
+              {[{k:'newest',l:'Newest'},{k:'liked',l:'Most Liked'},{k:'discussed',l:'Most Discussed'},{k:'editors',l:"Editor’s Picks"},{k:'featured',l:'Featured'}].map(s => (
+                <Button
+                  key={s.k}
+                  size="sm"
+                  variant={sort === s.k ? 'secondary' : 'outline'}
+                  aria-pressed={sort === s.k}
+                  onClick={() => setParam('sort', sort === s.k ? 'newest' : s.k)}
+                >
+                  {s.l}
+                </Button>
+              ))}
+            </div>
+            {/* Active filters row */}
+            {(category || tag || author) && (
+              <div className="flex flex-wrap items-center gap-2">
+                {category && (
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('category','')}>Category: {category} ×</Button>
+                )}
+                {tag && (
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('tag','')}>Tag: {tag} ×</Button>
+                )}
+                {author && (
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('author','')}>Author ×</Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => setSearchParams(new URLSearchParams())}>Clear all</Button>
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <div className="text-sm text-muted-foreground">{filtered.length} posts</div>
@@ -214,16 +238,21 @@ export default function Blogs() {
               <Card className="p-6">No posts yet. Check back soon.</Card>
             ) : (
               filtered.map((p) => (
-                <BlogCard
-                  key={p.id}
-                  post={p}
-                  onOpen={() => navigate(`/blogs/${p.slug}`)}
-                  topBadge={topByCat.has(p.id) ? { label: 'Most Liked' } : null}
-                  onTagClick={(type, value) => {
-                    if (type === 'category') setParam('category', value);
-                    if (type === 'tag') setParam('tag', value);
-                  }}
-                />
+              <BlogCard
+                key={p.id}
+                post={p}
+                onOpen={() => navigate(`/blogs/${p.slug}`)}
+                topBadge={topByCat.has(p.id) ? { label: 'Most Liked' } : null}
+                selectedCategory={category}
+                selectedTag={tag}
+                onTagClick={(type, value) => {
+                  if (type === 'category') toggleParam('category', value);
+                  if (type === 'tag') {
+                    if (value === 'most-liked') setParam('sort', sort === 'liked' ? 'newest' : 'liked');
+                    else toggleParam('tag', value);
+                  }
+                }}
+              />
               ))
             )}
             {/* Mobile: Top authors below the list */}
