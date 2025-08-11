@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import KpiCard from "@/components/dashboard/KpiCard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const SUPABASE_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/consultations-api";
 interface ProfileRow {
   user_id: string;
@@ -157,6 +158,8 @@ export default function Profile() {
     return name.split(' ').map(s => s[0]).slice(0,2).join('').toUpperCase();
   }, [profile?.full_name, user?.email]);
 
+  const isGuru = roles.includes('guru');
+  const isAdmin = roles.includes('admin');
   return (
     <main className="container mx-auto px-4 md:px-6 py-6 md:py-10 overflow-x-hidden">
       {/* Cover Banner */}
@@ -221,102 +224,165 @@ export default function Profile() {
             </div>
           </Card>
 
-          {/* Right column: Details, Pricing, Bookings, Security */}
-          <div className="md:col-span-2 grid gap-6">
-            {/* Details */}
-            <Card className="p-6 space-y-4 shadow-md">
-              <div className="font-semibold">About</div>
-              {profile?.bio && (
-                <p className="text-sm text-muted-foreground break-words">{profile.bio}</p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {(profile?.exams || []).map((e) => (
-                  <Badge key={e} variant="outline">{e}</Badge>
-                ))}
-              </div>
-              {(profile?.languages || []).length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {(profile?.languages || []).map((l) => (
-                    <Badge key={l} variant="outline">{l}</Badge>
-                  ))}
-                </div>
-              )}
-            </Card>
+          {/* Right column: Tabs with role-aware sections */}
+          <div className="md:col-span-2">
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className={`w-full grid ${isGuru ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="bookings">Bookings</TabsTrigger>
+                <TabsTrigger value="security">Security</TabsTrigger>
+                {isGuru && <TabsTrigger value="guru">Guru</TabsTrigger>}
+              </TabsList>
 
-            {/* Pricing */}
-            <Card id="pricing" className="p-6 space-y-4 shadow-md">
-              <div className="flex items-center justify-between">
-                <div className="font-semibold">Pricing</div>
-                {profile?.price_per_30min ? (
-                  <div className="text-sm text-muted-foreground">Stored as ${'{'}profile.price_per_30min{'}'} / 30 min</div>
-                ) : null}
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full max-w-md">
-                <Label htmlFor="hourly" className="sm:w-44">Hourly rate (USD)</Label>
-                <div className="flex w-full gap-3">
-                  <Input id="hourly" className="flex-1" type="number" min={0} step={1} value={hourly} onChange={(e) => setHourly(e.target.value === '' ? '' : Number(e.target.value))} />
-                  <Button className="sm:w-auto w-full" onClick={async () => {
-                    if (hourly === '' || hourly < 0) { toast({ title: 'Enter a valid hourly rate' }); return; }
-                    const per30 = Math.round((Number(hourly) / 2) * 100) / 100;
-                    const { error } = await supabase.from('profiles').update({ price_per_30min: per30 }).eq('user_id', user!.id);
-                    if (error) { toast({ title: 'Could not save', description: error.message }); } else { toast({ title: 'Pricing updated' }); setProfile(p => p ? ({ ...p, price_per_30min: per30 }) : p); }
-                  }}>Save</Button>
-                </div>
-              </div>
-            </Card>
+              {/* OVERVIEW */}
+              <TabsContent value="overview" className="mt-4 space-y-6">
+                <Card className="p-6 space-y-4 shadow-md">
+                  <div className="font-semibold">About</div>
+                  {profile?.bio && (
+                    <p className="text-sm text-muted-foreground break-words">{profile.bio}</p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {(profile?.exams || []).map((e) => (
+                      <Badge key={e} variant="outline">{e}</Badge>
+                    ))}
+                  </div>
+                  {(profile?.languages || []).length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {(profile?.languages || []).map((l) => (
+                        <Badge key={l} variant="outline">{l}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </Card>
 
-            {/* Recent Bookings */}
-            <Card className="p-6 space-y-3 shadow-md">
-              <div className="font-semibold">Recent Bookings</div>
-              <Separator />
-              {bookings.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No bookings yet.</div>
-              ) : (
-                <ul className="space-y-3">
-                  {bookings.map((b) => {
-                    const isFuture = new Date(b.start_datetime).getTime() > Date.now();
-                    const isCancelable = b.status === 'confirmed' && isFuture;
-                    return (
-                      <li key={b.id} className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-medium text-sm"><Link to={`/profile/${b.guru_id}`} className="hover:underline">{guruNames[b.guru_id]?.name || 'Guru'}</Link></div>
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(b.start_datetime).toLocaleString()} • {b.status}
+                <Card className="p-6 space-y-3 shadow-md">
+                  <div className="font-semibold">Recent Bookings</div>
+                  <Separator />
+                  {bookings.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No bookings yet.</div>
+                  ) : (
+                    <ul className="space-y-3">
+                      {bookings.slice(0,3).map((b) => (
+                        <li key={b.id} className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-medium text-sm"><Link to={`/profile/${b.guru_id}`} className="hover:underline">{guruNames[b.guru_id]?.name || 'Guru'}</Link></div>
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(b.start_datetime).toLocaleString()} • {b.status}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
                           <div className="text-sm font-medium">{b.price ? `$${b.price}` : 'Free'}</div>
-                          {isCancelable && (
-                            <Button size="sm" variant="outline" onClick={() => { setCancelId(b.id); setConfirmOpen(true); }} disabled={cancellingId === b.id}>
-                              {cancellingId === b.id ? 'Cancelling…' : 'Cancel'}
-                            </Button>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <div className="pt-2">
-                <Link to="/bookings"><Button variant="link" className="px-0">View all bookings</Button></Link>
-              </div>
-            </Card>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="pt-2">
+                    <Link to="/bookings"><Button variant="link" className="px-0">View all bookings</Button></Link>
+                  </div>
+                </Card>
+              </TabsContent>
 
-            {/* Security */}
-            <Card className="p-6 max-w-xl space-y-4 shadow-md">
-              <div className="font-semibold">Change Password</div>
-              <div className="grid gap-3">
-                <div className="grid gap-1">
-                  <Label htmlFor="new-password">New password</Label>
-                  <Input id="new-password" type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} />
-                </div>
-                <div className="grid gap-1">
-                  <Label htmlFor="confirm-password">Confirm new password</Label>
-                  <Input id="confirm-password" type="password" value={pwd2} onChange={(e) => setPwd2(e.target.value)} />
-                </div>
-                <Button onClick={handleChangePassword}>Update Password</Button>
-              </div>
-            </Card>
+              {/* BOOKINGS */}
+              <TabsContent value="bookings" className="mt-4">
+                <Card className="p-6 space-y-3 shadow-md">
+                  <div className="font-semibold">Your Bookings</div>
+                  <Separator />
+                  {bookings.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No bookings yet.</div>
+                  ) : (
+                    <ul className="space-y-3">
+                      {bookings.map((b) => {
+                        const isFuture = new Date(b.start_datetime).getTime() > Date.now();
+                        const isCancelable = b.status === 'confirmed' && isFuture;
+                        return (
+                          <li key={b.id} className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-medium text-sm"><Link to={`/profile/${b.guru_id}`} className="hover:underline">{guruNames[b.guru_id]?.name || 'Guru'}</Link></div>
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(b.start_datetime).toLocaleString()} • {b.status}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-medium">{b.price ? `$${b.price}` : 'Free'}</div>
+                              {isCancelable && (
+                                <Button size="sm" variant="outline" onClick={() => { setCancelId(b.id); setConfirmOpen(true); }} disabled={cancellingId === b.id}>
+                                  {cancellingId === b.id ? 'Cancelling…' : 'Cancel'}
+                                </Button>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </Card>
+              </TabsContent>
+
+              {/* SECURITY */}
+              <TabsContent value="security" className="mt-4">
+                <Card className="p-6 max-w-xl space-y-4 shadow-md">
+                  <div className="font-semibold">Change Password</div>
+                  <div className="grid gap-3">
+                    <div className="grid gap-1">
+                      <Label htmlFor="new-password">New password</Label>
+                      <Input id="new-password" type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} />
+                    </div>
+                    <div className="grid gap-1">
+                      <Label htmlFor="confirm-password">Confirm new password</Label>
+                      <Input id="confirm-password" type="password" value={pwd2} onChange={(e) => setPwd2(e.target.value)} />
+                    </div>
+                    <Button onClick={handleChangePassword}>Update Password</Button>
+                  </div>
+                </Card>
+              </TabsContent>
+
+              {/* GURU */}
+              <TabsContent value="guru" className="mt-4 space-y-6">
+                {isGuru ? (
+                  <>
+                    <Card id="pricing" className="p-6 space-y-4 shadow-md">
+                      <div className="flex items-center justify-between">
+                        <div className="font-semibold">Pricing</div>
+                        {profile?.price_per_30min ? (
+                          <div className="text-sm text-muted-foreground">Stored as ${'{'}profile.price_per_30min{'}'} / 30 min</div>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full max-w-md">
+                        <Label htmlFor="hourly" className="sm:w-44">Hourly rate (USD)</Label>
+                        <div className="flex w-full gap-3">
+                          <Input id="hourly" className="flex-1" type="number" min={0} step={1} value={hourly} onChange={(e) => setHourly(e.target.value === '' ? '' : Number(e.target.value))} />
+                          <Button className="sm:w-auto w-full" onClick={async () => {
+                            if (hourly === '' || hourly < 0) { toast({ title: 'Enter a valid hourly rate' }); return; }
+                            const per30 = Math.round((Number(hourly) / 2) * 100) / 100;
+                            const { error } = await supabase.from('profiles').update({ price_per_30min: per30 }).eq('user_id', user!.id);
+                            if (error) { toast({ title: 'Could not save', description: error.message }); } else { toast({ title: 'Pricing updated' }); setProfile(p => p ? ({ ...p, price_per_30min: per30 }) : p); }
+                          }}>Save</Button>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="p-6 shadow-md">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold">Availability</div>
+                          <p className="text-sm text-muted-foreground">Manage time slots students can book.</p>
+                        </div>
+                        <Link to="/guru/availability"><Button>Open Availability</Button></Link>
+                      </div>
+                    </Card>
+                  </>
+                ) : (
+                  <Card className="p-6 shadow-md">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold">Become a Guru</div>
+                        <p className="text-sm text-muted-foreground">Share your expertise and earn by mentoring learners.</p>
+                      </div>
+                      <ApplyGuruButton />
+                    </div>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </article>
