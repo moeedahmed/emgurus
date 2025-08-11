@@ -16,7 +16,7 @@ export default function Exams() {
 
   return (
     <main>
-      <PageHero title="EMGurus Exam Practice" subtitle="Targeted Emergency Medicine exam prep for MRCEM Primary, MRCEM SBA, and FRCEM SBA — learn smarter, score higher." align="center" />
+      <PageHero title="EMGurus Exam Practice" subtitle="Targeted Emergency Medicine exam prep for MRCEM Primary, MRCEM SBA, and FRCEM SBA — learn smarter, score higher." align="center" ctas={[{ label: "Exams monthly membership", href: "/membership/exams", variant: "outline" }]} />
       <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mx-auto max-w-5xl grid items-stretch gap-6 md:grid-cols-2">
           <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">

@@ -10,16 +10,17 @@ import Logo from "@/components/branding/Logo";
 import { useRoles } from "@/hooks/useRoles";
 import { CATEGORIES } from "@/lib/taxonomy";
 import { listBlogs } from "@/lib/blogsApi";
+import { supabase } from "@/integrations/supabase/client";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const displayName = (user?.user_metadata?.full_name as string) || (user?.email?.split('@')[0] ?? 'Account');
+  const [profile, setProfile] = useState<{ full_name?: string; avatar_url?: string } | null>(null);
+  const displayName = (profile?.full_name as string) || (user?.user_metadata?.full_name as string) || (user?.email?.split('@')[0] ?? 'Account');
   const initials = displayName.slice(0, 2).toUpperCase();
   const [catCounts, setCatCounts] = useState<Record<string, number>>({});
   const { roles } = useRoles();
   const isGuru = roles.includes('guru') || roles.includes('admin');
-
 
   useEffect(() => {
     let cancelled = false;
@@ -39,6 +40,24 @@ const Header = () => {
     load();
     return () => { cancelled = true; };
   }, []);
+
+  // Load user profile for name/avatar and subscribe to changes
+  useEffect(() => {
+    let sub: any;
+    (async () => {
+      if (!user) { setProfile(null); return; }
+      const { data } = await supabase.from('profiles').select('full_name, avatar_url').eq('user_id', user.id).maybeSingle();
+      setProfile(data || null);
+      sub = supabase
+        .channel('profile-updates')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `user_id=eq.${user.id}` }, (payload) => {
+          const rec: any = payload.new;
+          setProfile({ full_name: rec.full_name, avatar_url: rec.avatar_url });
+        })
+        .subscribe();
+    })();
+    return () => { if (sub) supabase.removeChannel(sub); };
+  }, [user?.id]);
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border pt-[env(safe-area-inset-top)]">
@@ -77,7 +96,7 @@ const Header = () => {
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-accent">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.user_metadata?.avatar_url} alt={displayName} />
+                      <AvatarImage src={profile?.avatar_url || (user.user_metadata?.avatar_url as string)} alt={displayName} />
                       <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
                     <span className="text-sm text-foreground">{displayName}</span>

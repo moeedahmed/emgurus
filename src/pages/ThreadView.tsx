@@ -149,7 +149,7 @@ export default function ThreadView() {
 
   return (
     <main className="container mx-auto px-4 py-8">
-      <div className="mb-4">{thread ? (<Link to={`/forums/${thread.category_id}`} className="text-sm no-underline text-foreground/70 hover:text-foreground">← Back to Section</Link>) : (<Link to="/forums" className="text-sm no-underline text-foreground/70 hover:text-foreground">← Back to Forums</Link>)}</div>
+      <div className="mb-4"><Button variant="outline" asChild><Link to="/forums">Back to Forums</Link></Button></div>
       {loading ? (
         <div className="min-h-[30vh] flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" /></div>
       ) : error ? (

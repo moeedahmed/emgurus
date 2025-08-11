@@ -55,6 +55,8 @@ import QuestionDetail from "@/pages/exams/QuestionDetail";
 import GenerateExamQuestion from "@/pages/tools/GenerateExamQuestion";
 import MyExamDrafts from "@/pages/tools/MyExamDrafts";
 import ReviewedByMe from "@/pages/guru/ReviewedByMe";
+import ConsultationMembership from "@/pages/ConsultationMembership";
+import ExamsMembership from "@/pages/ExamsMembership";
 
 const queryClient = new QueryClient();
 
@@ -179,6 +181,8 @@ const App = () => (
               <Route path="/coming-soon" element={<ComingSoon />} />
               <Route path="/tools/generate-exam-question" element={<GenerateExamQuestion />} />
               <Route path="/tools/my-exam-drafts" element={<MyExamDrafts />} />
+              <Route path="/membership/consultations" element={<ProtectedRoute><ConsultationMembership /></ProtectedRoute>} />
+              <Route path="/membership/exams" element={<ProtectedRoute><ExamsMembership /></ProtectedRoute>} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

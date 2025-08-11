@@ -53,7 +53,7 @@ export default function BlogsFilterPanel({
             <SelectItem value="__all__">All</SelectItem>
             {categories.map((c) => (
               <SelectItem key={c.title} value={c.title}>
-                {c.title} ({c.count})
+                {c.title}
               </SelectItem>
             ))}
           </SelectContent>

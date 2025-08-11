@@ -41,7 +41,7 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick }: Blog
         <img
           src={cover}
           alt={`${p.title} cover image`}
-          className="w-full aspect-video object-cover"
+          className="w-full h-40 md:h-48 object-cover"
           loading="lazy"
           decoding="async"
         />

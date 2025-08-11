@@ -150,9 +150,9 @@ export default function Onboarding() {
     setArr(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
   };
 
-  const step1Valid = fullName && country && tz && languages.filter(l => l !== 'Other').concat(otherLanguage.trim() ? [otherLanguage.trim()] : []).length > 0 && avatarUrl;
-  const step2Valid = primarySpecialty && (examInterests.filter(e => e !== 'Other').concat(otherExam.trim() ? [otherExam.trim()] : []).length > 0);
-  const step3Valid = bio.trim().length >= 100;
+  const step1Valid = true;
+  const step2Valid = true;
+  const step3Valid = true;
 
   const next = () => setStep(s => Math.min(3, s + 1));
   const prev = () => setStep(s => Math.max(1, s - 1));
@@ -232,11 +232,9 @@ export default function Onboarding() {
       </header>
 
       <nav className="flex items-center gap-2 mb-6 text-sm">
-        <span className={step >= 1 ? 'font-semibold' : ''}>1. Basics</span>
-        <span>›</span>
-        <span className={step >= 2 ? 'font-semibold' : ''}>2. Specialty & Exams</span>
-        <span>›</span>
-        <span className={step >= 3 ? 'font-semibold' : ''}>3. Bio & Socials</span>
+        <Button variant={step===1?"default":"outline"} size="sm" onClick={()=>setStep(1)}>1. Basics</Button>
+        <Button variant={step===2?"default":"outline"} size="sm" onClick={()=>setStep(2)}>2. Specialty & Exams</Button>
+        <Button variant={step===3?"default":"outline"} size="sm" onClick={()=>setStep(3)}>3. Bio & Socials</Button>
       </nav>
 
       {step === 1 && (
@@ -343,9 +341,8 @@ export default function Onboarding() {
         <section className="grid gap-6 md:grid-cols-2">
           <div className="space-y-4">
             <div className="grid gap-1">
-              <Label>Bio (min 100 chars) *</Label>
+              <Label>Bio *</Label>
               <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={6} />
-              <div className="text-xs text-muted-foreground">{bio.length}/100</div>
             </div>
 
             <div className="flex items-center justify-between py-2">
@@ -366,20 +363,12 @@ export default function Onboarding() {
           </div>
 
           <div className="space-y-4">
-            <div className="grid gap-2">
-              <Label>Connect Socials</Label>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => onConnect('linkedin_oidc')}>Connect LinkedIn</Button>
-                <Button variant="outline" onClick={() => onConnect('twitter')}>Connect X (Twitter)</Button>
-              </div>
-              <div className="text-xs text-muted-foreground">If connection fails, paste your profile link below.</div>
-            </div>
             <div className="grid gap-1">
-              <Label>LinkedIn URL (fallback)</Label>
+              <Label>LinkedIn URL</Label>
               <Input value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="https://linkedin.com/in/username" />
             </div>
             <div className="grid gap-1">
-              <Label>X (Twitter) URL (fallback)</Label>
+              <Label>X (Twitter) URL</Label>
               <Input value={twitterUrl} onChange={(e) => setTwitterUrl(e.target.value)} placeholder="https://x.com/username" />
             </div>
           </div>

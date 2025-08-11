@@ -32,11 +32,12 @@ function getFlag(country?: string | null): string {
   return (country && map[country]) || "🌍";
 }
 
-export function GuruCard({ guru, onBook, disabled, onBadgeClick }: {
+export function GuruCard({ guru, onBook, disabled, onBadgeClick, onCardClick }: {
   guru: Guru;
   onBook: (g: Guru) => void;
   disabled?: boolean;
   onBadgeClick?: (type: 'exam' | 'specialty', value: string) => void;
+  onCardClick?: (g: Guru) => void;
 }) {
   const initials = guru.full_name
     ?.split(" ")
@@ -46,7 +47,7 @@ export function GuruCard({ guru, onBook, disabled, onBadgeClick }: {
     .toUpperCase();
 
   return (
-    <Card className="p-5 space-y-3">
+    <Card className="p-5 space-y-3 hover:bg-accent/30 cursor-pointer" onClick={() => onCardClick?.(guru)} role="button" tabIndex={0}>
       <div className="flex items-center gap-4">
         <Avatar className="h-12 w-12">
           <AvatarImage src={guru.avatar_url || undefined} alt={`${guru.full_name} avatar`} />
@@ -94,7 +95,7 @@ export function GuruCard({ guru, onBook, disabled, onBadgeClick }: {
 
       <div className="flex items-center justify-between pt-2">
         <span className="font-medium">{guru.price_per_30min ? `$${guru.price_per_30min} / 30 min` : "Free"}</span>
-        <Button onClick={() => onBook(guru)} disabled={disabled}>
+        <Button onClick={(e) => { e.stopPropagation(); onBook(guru); }} disabled={disabled}>
           Book Now
         </Button>
       </div>

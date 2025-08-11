@@ -179,7 +179,8 @@ export default function Blogs() {
               </Sheet>
             </div>
           </div>
-          <div className="space-y-6">
+          <div className="space-y-2">
+            <div className="text-sm text-muted-foreground">{filtered.length} posts</div>
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i} className="h-72 animate-pulse" />

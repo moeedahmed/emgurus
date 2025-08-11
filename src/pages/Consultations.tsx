@@ -8,6 +8,7 @@ import { BookingModal } from "@/components/consultations/BookingModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import PageHero from "@/components/PageHero";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const Consultations = () => {
   const [search, setSearch] = useState("");
@@ -201,32 +202,43 @@ const Consultations = () => {
         title="EMGurus Consultations"
         subtitle="Filter by specialty, country, or exam to find the right mentor."
         align="center"
-        ctas={[{ label: "How Consultations Work", href: "/coming-soon", variant: "outline" }]}
+        ctas={[{ label: "Consultation monthly membership", href: "/membership/consultations", variant: "outline" }]}
       />
 
       <section className="container mx-auto px-4 py-8">
 
-      <section className="grid gap-4 md:grid-cols-4 mb-6">
-        <Input placeholder="Search by name or specialty" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <Select value={country} onValueChange={setCountry}>
-          <SelectTrigger><SelectValue placeholder="Country" /></SelectTrigger>
-          <SelectContent>
-            {countries.map((c) => (<SelectItem key={c} value={c}>{c === "all" ? "All Countries" : c}</SelectItem>))}
-          </SelectContent>
-        </Select>
-        <Select value={specialty} onValueChange={setSpecialty}>
-          <SelectTrigger><SelectValue placeholder="Specialty" /></SelectTrigger>
-          <SelectContent>
-            {specialties.map((s) => (<SelectItem key={s} value={s}>{s === "all" ? "All Specialties" : s}</SelectItem>))}
-          </SelectContent>
-        </Select>
-        <Select value={exam} onValueChange={setExam}>
-          <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
-          <SelectContent>
-            {exams.map((e) => (<SelectItem key={e} value={e}>{e === "all" ? "All Exams" : e}</SelectItem>))}
-          </SelectContent>
-        </Select>
-      </section>
+      <div className="mb-4">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline">Filters</Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-80 sm:w-96">
+            <div className="space-y-4">
+              <Input placeholder="Search by name or specialty" value={search} onChange={(e) => setSearch(e.target.value)} />
+              <Select value={country} onValueChange={setCountry}>
+                <SelectTrigger><SelectValue placeholder="Country" /></SelectTrigger>
+                <SelectContent className="z-50">
+                  {countries.map((c) => (<SelectItem key={c} value={c}>{c === "all" ? "All Countries" : c}</SelectItem>))}
+                </SelectContent>
+              </Select>
+              <Select value={specialty} onValueChange={setSpecialty}>
+                <SelectTrigger><SelectValue placeholder="Specialty" /></SelectTrigger>
+                <SelectContent className="z-50">
+                  {specialties.map((s) => (<SelectItem key={s} value={s}>{s === "all" ? "All Specialties" : s}</SelectItem>))}
+                </SelectContent>
+              </Select>
+              <Select value={exam} onValueChange={setExam}>
+                <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
+                <SelectContent className="z-50">
+                  {exams.map((e) => (<SelectItem key={e} value={e}>{e === "all" ? "All Exams" : e}</SelectItem>))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" onClick={() => { setSearch(""); setCountry("all"); setSpecialty("all"); setExam("all"); }}>Reset</Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+        <div className="text-sm text-muted-foreground mt-2">{filtered.length} mentors found</div>
+      </div>
 
       {filtered.length === 0 ? (
         <section className="text-center text-muted-foreground py-12">
@@ -243,6 +255,7 @@ const Consultations = () => {
                 if (type === 'exam') setExam(value);
                 if (type === 'specialty') setSpecialty(value);
               }}
+              onCardClick={(gg) => { if (gg.specialty) setSpecialty(gg.specialty); }}
             />
           ))}
         </section>
