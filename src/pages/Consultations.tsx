@@ -262,13 +262,13 @@ const Consultations = () => {
             {(country !== 'all' || specialty !== 'all' || exam !== 'all') && (
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 {country !== 'all' && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setCountry('all')}>Country: {country} ×</Button>
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setCountry('all')}>{country} ×</Button>
                 )}
                 {specialty !== 'all' && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setSpecialty('all')}>Specialty: {specialty} ×</Button>
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setSpecialty('all')}>{specialty} ×</Button>
                 )}
                 {exam !== 'all' && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setExam('all')}>Exam: {exam} ×</Button>
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setExam('all')}>{exam} ×</Button>
                 )}
                 <Button size="sm" variant="ghost" onClick={() => { setCountry('all'); setSpecialty('all'); setExam('all'); }}>Clear all</Button>
               </div>

@@ -165,10 +165,10 @@ const Forums = () => {
             {(section || topic) && (
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 {section && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setSection("")}>Section ×</Button>
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setSection("")}>{categoryMap[section] || 'Section'} ×</Button>
                 )}
                 {topic && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setTopic("")}>Topic: {topic} ×</Button>
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setTopic("")}>{topic} ×</Button>
                 )}
                 <Button size="sm" variant="ghost" onClick={() => { setQ(""); setSection(""); setTopic(""); }}>Clear all</Button>
               </div>

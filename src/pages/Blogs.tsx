@@ -221,17 +221,19 @@ export default function Blogs() {
               {(category || tag || author || sort !== 'newest') && (
                 <div className="flex flex-wrap items-center gap-2">
                   {category && (
-                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('category','')}>Category: {category} ×</Button>
+                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('category','')}>{category} ×</Button>
                   )}
                   {tag && (
-                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('tag','')}>Tag: {tag} ×</Button>
+                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('tag','')}>{tag} ×</Button>
                   )}
                   {author && (
-                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('author','')}>Author ×</Button>
+                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('author','')}>
+                      {(authors.find(a => a.id === author)?.name) || 'Author'} ×
+                    </Button>
                   )}
                   {sort !== 'newest' && (
                     <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('sort','newest')}>
-                      Sort: {sort === 'liked' ? 'Most Liked' : sort === 'discussed' ? 'Most Discussed' : sort === 'editors' ? "Editor's Picks" : sort === 'featured' ? 'Featured' : 'Newest'} ×
+                      {sort === 'liked' ? 'Most Liked' : sort === 'discussed' ? 'Most Discussed' : sort === 'editors' ? "Editor's Picks" : sort === 'featured' ? 'Featured' : 'Newest'} ×
                     </Button>
                   )}
                   <Button size="sm" variant="ghost" onClick={() => setSearchParams(new URLSearchParams())}>Clear all</Button>
