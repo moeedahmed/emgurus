@@ -2,6 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 
 interface CategoryItem { title: string; count: number }
@@ -78,7 +79,7 @@ export default function BlogsFilterPanel({
 
       {/* Reset */}
       <div className="pt-2">
-        <button className="text-xs text-muted-foreground hover:text-foreground underline" onClick={clearFilters}>Reset filters</button>
+        <Button variant="outline" size="sm" onClick={clearFilters}>Reset</Button>
       </div>
     </Card>
   );
