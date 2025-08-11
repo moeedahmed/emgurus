@@ -111,7 +111,7 @@ const Header = () => {
                   <DropdownMenuItem onClick={() => navigate('/blogs/dashboard')}>
                     <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
                   </DropdownMenuItem>
-                  {roles.includes('guru') && (
+                  {false && roles.includes('guru') && (
                     <DropdownMenuItem onClick={() => navigate('/guru/availability')}>
                       <LayoutDashboard className="mr-2 h-4 w-4" /> My Availability
                     </DropdownMenuItem>
@@ -156,7 +156,7 @@ const Header = () => {
               <div className="flex flex-col space-y-4 pt-4">
                 {user ? (
                   <>
-                    {isGuru && (
+                    {false && isGuru && (
                       <div className="rounded-md border border-border">
                         <div className="px-3 py-2 text-xs uppercase text-muted-foreground">Guru Tools</div>
                         <div className="flex flex-col space-y-2 p-2 pt-0">

@@ -155,20 +155,6 @@ const Forums = () => {
           </Sheet>
         </div>
 
-        {/* Desktop Filters */}
-        <section className="hidden lg:grid grid-cols-2 gap-4 mb-6">
-          <Input placeholder="Search title or content" value={q} onChange={(e) => setQ(e.target.value)} />
-          <Select value={section || "__all__"} onValueChange={(v) => setSection(v === "__all__" ? "" : v)}>
-            <SelectTrigger><SelectValue placeholder="Section" /></SelectTrigger>
-            <SelectContent className="z-50">
-              <SelectItem value="__all__">All Sections</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </section>
-
         {/* Results */}
         {loading ? (
           <div className="min-h-[30vh] flex items-center justify-center">
