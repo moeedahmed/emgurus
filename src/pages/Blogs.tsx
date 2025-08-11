@@ -21,6 +21,7 @@ export default function Blogs() {
   const q = searchParams.get("q") || "";
   const category = searchParams.get("category") || "";
   const sort = searchParams.get("sort") || "newest";
+  const tag = searchParams.get("tag") || "";
 
   const setParam = (k: string, v: string) => {
     const next = new URLSearchParams(searchParams);
@@ -112,6 +113,7 @@ export default function Blogs() {
       arr = arr.filter((i) => i.title.toLowerCase().includes(s) || (i.excerpt || "").toLowerCase().includes(s));
     }
     if (category) arr = arr.filter((i) => (i.category?.title || "General") === category);
+    if (tag) arr = arr.filter((i) => (i.tags || []).some((t: any) => (t.slug || t.title) === tag));
     switch (sort) {
       case "liked":
         arr.sort((a, b) => (b.counts?.likes || 0) - (a.counts?.likes || 0));
@@ -129,7 +131,7 @@ export default function Blogs() {
         arr.sort((a, b) => new Date(b.published_at || 0).getTime() - new Date(a.published_at || 0).getTime());
     }
     return arr;
-  }, [items, q, category, sort]);
+  }, [items, q, category, sort, tag]);
   const topByCat = useMemo(() => {
     const byCat = new Map<string, any[]>();
     for (const it of filtered) {
@@ -191,6 +193,10 @@ export default function Blogs() {
                   post={p}
                   onOpen={() => navigate(`/blogs/${p.slug}`)}
                   topBadge={topByCat.has(p.id) ? { label: 'Most Liked' } : null}
+                  onTagClick={(type, value) => {
+                    if (type === 'category') setParam('category', value);
+                    if (type === 'tag') setParam('tag', value);
+                  }}
                 />
               ))
             )}

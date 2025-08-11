@@ -32,10 +32,11 @@ function getFlag(country?: string | null): string {
   return (country && map[country]) || "🌍";
 }
 
-export function GuruCard({ guru, onBook, disabled }: {
+export function GuruCard({ guru, onBook, disabled, onBadgeClick }: {
   guru: Guru;
   onBook: (g: Guru) => void;
   disabled?: boolean;
+  onBadgeClick?: (type: 'exam' | 'specialty', value: string) => void;
 }) {
   const initials = guru.full_name
     ?.split(" ")
@@ -62,14 +63,30 @@ export function GuruCard({ guru, onBook, disabled }: {
         </div>
       </div>
 
-      {guru.exams && guru.exams.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {guru.exams.slice(0, 4).map((e) => (
-            <Badge key={e} variant="secondary" className="text-xs">{e}</Badge>
+      {(guru.exams && guru.exams.length > 0) || guru.specialty ? (
+        <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+          {guru.specialty && (
+            <Badge
+              variant="outline"
+              className="text-xs cursor-pointer"
+              onClick={() => onBadgeClick?.('specialty', guru.specialty!)}
+            >
+              {guru.specialty}
+            </Badge>
+          )}
+          {guru.exams && guru.exams.slice(0, 4).map((e) => (
+            <Badge
+              key={e}
+              variant="secondary"
+              className="text-xs cursor-pointer"
+              onClick={() => onBadgeClick?.('exam', e)}
+            >
+              {e}
+            </Badge>
           ))}
-          {guru.exams.length > 4 && <Badge variant="outline" className="text-xs">+{guru.exams.length - 4}</Badge>}
+          {guru.exams && guru.exams.length > 4 && <Badge variant="outline" className="text-xs">+{guru.exams.length - 4}</Badge>}
         </div>
-      )}
+      ) : null}
 
       {guru.bio && (
         <p className={cn("text-sm text-muted-foreground", "line-clamp-3")}>{guru.bio}</p>

@@ -235,7 +235,15 @@ const Consultations = () => {
       ) : (
         <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((g) => (
-            <GuruCard key={g.id} guru={g} onBook={(gg) => { setBookingGuru(gg); setOpen(true); }} />
+            <GuruCard
+              key={g.id}
+              guru={g}
+              onBook={(gg) => { setBookingGuru(gg); setOpen(true); }}
+              onBadgeClick={(type, value) => {
+                if (type === 'exam') setExam(value);
+                if (type === 'specialty') setSpecialty(value);
+              }}
+            />
           ))}
         </section>
       )}

@@ -2,6 +2,7 @@ import AuthorChip from "@/components/blogs/AuthorChip";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import fallbackImage from "@/assets/medical-blog.jpg";
+
 interface BlogCardProps {
   post: {
     id: string;
@@ -17,9 +18,10 @@ interface BlogCardProps {
   };
   topBadge?: { label: string } | null;
   onOpen?: () => void;
+  onTagClick?: (type: 'category' | 'tag', value: string) => void;
 }
 
-export default function BlogCard({ post: p, topBadge, onOpen }: BlogCardProps) {
+export default function BlogCard({ post: p, topBadge, onOpen, onTagClick }: BlogCardProps) {
   const cover = p.cover_image_url || fallbackImage;
   const words = (p.excerpt || "").split(/\s+/).filter(Boolean).length;
   const readMin = Math.max(1, Math.ceil(words / 220));
@@ -57,16 +59,23 @@ export default function BlogCard({ post: p, topBadge, onOpen }: BlogCardProps) {
         )}
       </div>
       <div className="p-4 space-y-3">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
           {p.category?.title && !/^imported$/i.test(p.category.title) && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+            <button
+              className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:opacity-90"
+              onClick={() => onTagClick?.('category', p.category!.title!)}
+            >
               {p.category.title}
-            </span>
+            </button>
           )}
           {(p.tags || []).slice(0, 3).map((t) => (
-            <span key={t.slug || t.title} className="text-xs px-2 py-0.5 rounded-full border">
+            <button
+              key={t.slug || t.title}
+              className="text-xs px-2 py-0.5 rounded-full border hover:bg-accent"
+              onClick={() => onTagClick?.('tag', t.slug || t.title)}
+            >
               #{t.slug || t.title}
-            </span>
+            </button>
           ))}
         </div>
 
