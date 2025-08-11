@@ -158,7 +158,7 @@ export default function Profile() {
   }, [profile?.full_name, user?.email]);
 
   return (
-    <main className="container mx-auto px-0 md:px-4 py-0 md:py-8 overflow-x-hidden">
+    <main className="container mx-auto px-4 md:px-6 py-6 md:py-10 overflow-x-hidden">
       {/* Cover Banner */}
       <section className="w-full h-40 md:h-56 relative bg-muted">
         {profile?.cover_image_url ? (
@@ -176,7 +176,7 @@ export default function Profile() {
       <article className="-mt-10 md:-mt-14 px-4">
         <div className="grid gap-6 md:grid-cols-3">
           {/* Left column: Profile summary */}
-          <Card className="p-6 md:col-span-1">
+          <Card className="p-6 md:col-span-1 shadow-md">
             <div className="flex items-start gap-4">
               <Avatar className="h-16 w-16 ring-2 ring-background">
                 <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || 'Avatar'} />
@@ -224,7 +224,7 @@ export default function Profile() {
           {/* Right column: Details, Pricing, Bookings, Security */}
           <div className="md:col-span-2 grid gap-6">
             {/* Details */}
-            <Card className="p-6 space-y-4">
+            <Card className="p-6 space-y-4 shadow-md">
               <div className="font-semibold">About</div>
               {profile?.bio && (
                 <p className="text-sm text-muted-foreground break-words">{profile.bio}</p>
@@ -244,27 +244,29 @@ export default function Profile() {
             </Card>
 
             {/* Pricing */}
-            <Card id="pricing" className="p-6 space-y-4">
+            <Card id="pricing" className="p-6 space-y-4 shadow-md">
               <div className="flex items-center justify-between">
                 <div className="font-semibold">Pricing</div>
                 {profile?.price_per_30min ? (
                   <div className="text-sm text-muted-foreground">Stored as ${'{'}profile.price_per_30min{'}'} / 30 min</div>
                 ) : null}
               </div>
-              <div className="flex items-center gap-3 max-w-sm">
-                <Label htmlFor="hourly">Hourly rate (USD)</Label>
-                <Input id="hourly" type="number" min={0} step={1} value={hourly} onChange={(e) => setHourly(e.target.value === '' ? '' : Number(e.target.value))} />
-                <Button onClick={async () => {
-                  if (hourly === '' || hourly < 0) { toast({ title: 'Enter a valid hourly rate' }); return; }
-                  const per30 = Math.round((Number(hourly) / 2) * 100) / 100;
-                  const { error } = await supabase.from('profiles').update({ price_per_30min: per30 }).eq('user_id', user!.id);
-                  if (error) { toast({ title: 'Could not save', description: error.message }); } else { toast({ title: 'Pricing updated' }); setProfile(p => p ? ({ ...p, price_per_30min: per30 }) : p); }
-                }}>Save</Button>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full max-w-md">
+                <Label htmlFor="hourly" className="sm:w-44">Hourly rate (USD)</Label>
+                <div className="flex w-full gap-3">
+                  <Input id="hourly" className="flex-1" type="number" min={0} step={1} value={hourly} onChange={(e) => setHourly(e.target.value === '' ? '' : Number(e.target.value))} />
+                  <Button className="sm:w-auto w-full" onClick={async () => {
+                    if (hourly === '' || hourly < 0) { toast({ title: 'Enter a valid hourly rate' }); return; }
+                    const per30 = Math.round((Number(hourly) / 2) * 100) / 100;
+                    const { error } = await supabase.from('profiles').update({ price_per_30min: per30 }).eq('user_id', user!.id);
+                    if (error) { toast({ title: 'Could not save', description: error.message }); } else { toast({ title: 'Pricing updated' }); setProfile(p => p ? ({ ...p, price_per_30min: per30 }) : p); }
+                  }}>Save</Button>
+                </div>
               </div>
             </Card>
 
             {/* Recent Bookings */}
-            <Card className="p-6 space-y-3">
+            <Card className="p-6 space-y-3 shadow-md">
               <div className="font-semibold">Recent Bookings</div>
               <Separator />
               {bookings.length === 0 ? (
@@ -301,7 +303,7 @@ export default function Profile() {
             </Card>
 
             {/* Security */}
-            <Card className="p-6 max-w-xl space-y-4">
+            <Card className="p-6 max-w-xl space-y-4 shadow-md">
               <div className="font-semibold">Change Password</div>
               <div className="grid gap-3">
                 <div className="grid gap-1">
