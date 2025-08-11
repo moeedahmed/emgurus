@@ -20,6 +20,7 @@ export default function Blogs() {
 
   const q = searchParams.get("q") || "";
   const category = searchParams.get("category") || "";
+  const author = searchParams.get("author") || "";
   const sort = searchParams.get("sort") || "newest";
   const tag = searchParams.get("tag") || "";
 
@@ -84,6 +85,18 @@ export default function Blogs() {
     return CATEGORIES.map((title) => ({ title, count: map.get(title) || 0 }));
   }, [items]);
 
+  const authors = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; count: number }>();
+    for (const it of items) {
+      const id = it.author?.id;
+      const name = it.author?.name;
+      if (!id || !name) continue;
+      const cur = map.get(id) || { id, name, count: 0 };
+      cur.count += 1;
+      map.set(id, cur);
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }, [items]);
 
   const topAuthors = useMemo(() => {
     const stats = new Map<string, { id: string; name: string; avatar: string | null; posts: number; views: number; likes: number; lastDate: number }>();
@@ -113,6 +126,7 @@ export default function Blogs() {
       arr = arr.filter((i) => i.title.toLowerCase().includes(s) || (i.excerpt || "").toLowerCase().includes(s));
     }
     if (category) arr = arr.filter((i) => (i.category?.title || "General") === category);
+    if (author) arr = arr.filter((i) => (i.author?.id || "") === author);
     if (tag) arr = arr.filter((i) => (i.tags || []).some((t: any) => (t.slug || t.title) === tag));
     switch (sort) {
       case "liked":
@@ -160,7 +174,7 @@ export default function Blogs() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Main list - vertical cards, left aligned */}
         <section className="lg:col-span-8">
-          <div className="mb-4 lg:hidden">
+          <div className="mb-4">
             <div className="flex items-center gap-3">
               <Sheet>
                 <SheetTrigger asChild>
@@ -170,8 +184,10 @@ export default function Blogs() {
                   <BlogsFilterPanel
                     q={q}
                     category={category}
+                    author={author}
                     sort={sort}
                     categories={categories}
+                    authors={authors}
                     onChange={setParam}
                     onReset={() => setSearchParams(new URLSearchParams())}
                   />
@@ -215,8 +231,10 @@ export default function Blogs() {
               <BlogsFilterPanel
                 q={q}
                 category={category}
+                author={author}
                 sort={sort}
                 categories={categories}
+                authors={authors}
                 onChange={setParam}
                 onReset={() => setSearchParams(new URLSearchParams())}
               />

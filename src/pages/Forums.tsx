@@ -114,8 +114,8 @@ const Forums = () => {
           onClose={() => { const p = new URLSearchParams(searchParams); p.delete('new'); setSearchParams(p); }}
         />
 
-        {/* Mobile Filters Button */}
-        <div className="mb-4 lg:hidden">
+        {/* Filters Button (All viewports) */}
+        <div className="mb-4">
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline">Filters</Button>

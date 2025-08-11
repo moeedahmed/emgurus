@@ -6,19 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 
 interface CategoryItem { title: string; count: number }
+interface AuthorItem { id: string; name: string; count: number }
 
 export default function BlogsFilterPanel({
   q,
   category,
+  author,
   sort,
   categories,
+  authors,
   onChange,
   onReset,
 }: {
   q: string;
   category: string;
+  author: string;
   sort: string;
   categories: CategoryItem[];
+  authors: AuthorItem[];
   onChange: (k: string, v: string) => void;
   onReset?: () => void;
 }) {
@@ -26,6 +31,7 @@ export default function BlogsFilterPanel({
     if (onReset) return onReset();
     onChange("q", "");
     onChange("category", "");
+    onChange("author", "");
     onChange("sort", "newest");
   };
 
@@ -54,6 +60,24 @@ export default function BlogsFilterPanel({
             {categories.map((c) => (
               <SelectItem key={c.title} value={c.title}>
                 {c.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Author */}
+      <div>
+        <label className="text-sm text-muted-foreground">Author</label>
+        <Select value={author || "__all__"} onValueChange={(v) => onChange("author", v === "__all__" ? "" : v)}>
+          <SelectTrigger>
+            <SelectValue placeholder="All" />
+          </SelectTrigger>
+          <SelectContent className="z-50">
+            <SelectItem value="__all__">All</SelectItem>
+            {authors.map((a) => (
+              <SelectItem key={a.id} value={a.id}>
+                {a.name}
               </SelectItem>
             ))}
           </SelectContent>

@@ -1,6 +1,7 @@
 import AuthorChip from "@/components/blogs/AuthorChip";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import fallbackImage from "@/assets/medical-blog.jpg";
 
 interface BlogCardProps {
@@ -18,7 +19,7 @@ interface BlogCardProps {
   };
   topBadge?: { label: string } | null;
   onOpen?: () => void;
-  onTagClick?: (type: 'category' | 'tag', value: string) => void;
+  onTagClick?: (type: 'category' | 'tag' | 'author', value: string) => void;
 }
 
 export default function BlogCard({ post: p, topBadge, onOpen, onTagClick }: BlogCardProps) {
@@ -27,7 +28,7 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick }: Blog
   const readMin = Math.max(1, Math.ceil(words / 220));
   const summary = p.excerpt || "Summary not available yet.";
   const badges: string[] = [];
-  if ((p.counts?.comments || 0) >= 10) badges.push("Most Discussed");
+  if ((p.counts?.likes || 0) >= 10) badges.push("Most Discussed");
   if ((p.tags || []).some((t) => /editor|pick/i.test(t.slug || t.title))) badges.push("Editor’s Pick");
   if ((p.tags || []).some((t) => /featured|star|top/i.test(t.slug || t.title))) badges.push("Featured");
 
@@ -41,41 +42,45 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick }: Blog
         <img
           src={cover}
           alt={`${p.title} cover image`}
-          className="w-full h-40 md:h-48 object-cover"
+          className="w-full h-32 md:h-40 object-cover"
           loading="lazy"
           decoding="async"
         />
-        {topBadge?.label && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="absolute top-3 right-3 text-xs px-2 py-1 rounded-full bg-primary/90 text-primary-foreground shadow">
-                  🏅 {topBadge.label}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>Top ranked in category</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
       </div>
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+          {topBadge?.label && (
+            <Badge
+              variant="secondary"
+              className="text-xs cursor-pointer"
+              onClick={() => onTagClick?.('tag', 'most-liked')}
+            >
+              {topBadge.label}
+            </Badge>
+          )}
+          {badges.map((b) => (
+            <Badge key={b} variant="outline" className="text-xs">
+              {b}
+            </Badge>
+          ))}
           {p.category?.title && !/^imported$/i.test(p.category.title) && (
-            <button
-              className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:opacity-90"
+            <Badge
+              variant="secondary"
+              className="text-xs cursor-pointer"
               onClick={() => onTagClick?.('category', p.category!.title!)}
             >
               {p.category.title}
-            </button>
+            </Badge>
           )}
           {(p.tags || []).slice(0, 3).map((t) => (
-            <button
+            <Badge
               key={t.slug || t.title}
-              className="text-xs px-2 py-0.5 rounded-full border hover:bg-accent"
+              variant="outline"
+              className="text-xs cursor-pointer"
               onClick={() => onTagClick?.('tag', t.slug || t.title)}
             >
               #{t.slug || t.title}
-            </button>
+            </Badge>
           ))}
         </div>
 
@@ -84,7 +89,7 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick }: Blog
 
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-3">
-            <AuthorChip id={p.author.id} name={p.author.name} avatar={p.author.avatar} />
+            <AuthorChip id={p.author.id} name={p.author.name} avatar={p.author.avatar} onClick={() => onTagClick?.('author', p.author.id)} />
             <span className="text-xs text-muted-foreground">
               {p.published_at ? new Date(p.published_at).toLocaleDateString() : ""}
               {words ? ` · ${readMin} min read` : ""}

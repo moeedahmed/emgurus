@@ -40,11 +40,11 @@ serve(async (req) => {
       customerId = customer.id;
     }
 
-    // Define tier pricing
+    // Define tier pricing - keep in sync with UI cards ($29 / $79 / $149)
     const pricing = {
-      exam: { amount: 2999, name: "Exam Access" }, // $29.99
-      consultation: { amount: 4999, name: "Consultation Access" }, // $49.99
-      premium: { amount: 9999, name: "Premium Access" } // $99.99
+      exam: { amount: 2900, name: "Exam Access" }, // $29
+      consultation: { amount: 7900, name: "Consultation Access" }, // $79
+      premium: { amount: 14900, name: "Premium Access" } // $149
     };
 
     const tierData = pricing[tier as keyof typeof pricing];
