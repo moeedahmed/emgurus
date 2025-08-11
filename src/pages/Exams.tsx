@@ -21,10 +21,12 @@ export default function Exams() {
         <div className="mx-auto max-w-5xl grid items-stretch gap-6 md:grid-cols-2">
           <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
-              <h3 className="text-xl font-semibold mb-2">AI Practice (Beta)</h3>
-              <p className="text-sm text-muted-foreground">
-                Instantly generated MCQs with on-demand explanations.
-              </p>
+              <h3 className="text-xl font-semibold mb-2">Realtime AI Questions</h3>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Instantly generated MCQs</li>
+                <li>• Immediate, concise explanations</li>
+                <li>• Topic‑guided practice</li>
+              </ul>
             </div>
             <div className="pt-6">
               <Button size="lg" onClick={() => navigate('/exams/ai-practice')} aria-label="Start AI Practice">
@@ -35,16 +37,18 @@ export default function Exams() {
 
           <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
-              <h3 className="text-xl font-semibold mb-2">Question Bank</h3>
-              <p className="text-sm text-muted-foreground">
-                Human-reviewed MCQs. Filter by exam, topic, and difficulty. Track your progress.
-              </p>
+              <h3 className="text-xl font-semibold mb-2">Gurus Reviewed Questions</h3>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Human‑reviewed MCQs</li>
+                <li>• Filter by exam and topic</li>
+                <li>• Track your progress</li>
+              </ul>
             </div>
             <div className="pt-6">
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                  <Button onClick={() => navigate('/exams/reviewed?mode=practice')} aria-label="Practice mode">Practice mode</Button>
-                  <Button variant="outline" onClick={() => navigate('/exams/reviewed?mode=exam')} aria-label="Exam mode">Exam mode</Button>
-                </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <Button onClick={() => navigate('/exams/reviewed?mode=practice')} aria-label="Practice mode">Practice mode</Button>
+                <Button onClick={() => navigate('/exams/reviewed?mode=exam')} aria-label="Exam mode">Exam mode</Button>
+              </div>
             </div>
           </Card>
         </div>

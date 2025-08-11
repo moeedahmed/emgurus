@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Menu, X, Brain, LogOut, LayoutDashboard, User as UserIcon } from "lucide-react";
+import { Menu, X, Brain, LogOut, LayoutDashboard, User as UserIcon, Search as SearchIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -13,8 +13,10 @@ import { CATEGORIES } from "@/lib/taxonomy";
 import { listBlogs } from "@/lib/blogsApi";
 import { supabase } from "@/integrations/supabase/client";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
+import GlobalSearch from "@/components/GlobalSearch";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ full_name?: string; avatar_url?: string } | null>(null);
@@ -93,6 +95,10 @@ const Header = () => {
 
           {/* Desktop User Menu */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Search trigger */}
+            <Button variant="ghost" size="icon" aria-label="Search" onClick={() => setSearchOpen(true)}>
+              <SearchIcon className="h-5 w-5" />
+            </Button>
             {/* Notifications */}
             {user && (
               <div className="mr-1">
@@ -188,6 +194,7 @@ const Header = () => {
           </div>
         )}
       </div>
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   );
 };
