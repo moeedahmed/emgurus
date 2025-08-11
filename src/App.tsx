@@ -57,15 +57,9 @@ import MyExamDrafts from "@/pages/tools/MyExamDrafts";
 import ReviewedByMe from "@/pages/guru/ReviewedByMe";
 import PricingPage from "./pages/Pricing";
 import { useRoles } from "@/hooks/useRoles";
+import RoleRedirector from "@/components/auth/RoleRedirector";
+import AuthLandingGuard from "@/components/auth/AuthLandingGuard";
 
-function RoleRedirector() {
-  const { roles } = useRoles();
-  const { user } = useAuth();
-  if (!user) return <Navigate to="/auth" replace />;
-  if (roles.includes('admin')) return <Navigate to="/dashboard/admin" replace />;
-  if (roles.includes('guru')) return <Navigate to="/dashboard/guru" replace />;
-  return <Navigate to="/dashboard/user" replace />;
-}
 
 function LegacyBlogsDashboardRedirect() {
   const { roles } = useRoles();
@@ -82,6 +76,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <AuthLandingGuard />
           <Routes>
             <Route element={<SiteLayout />}> 
               <Route path="/" element={<Index />} />
