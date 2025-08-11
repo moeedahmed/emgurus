@@ -48,7 +48,7 @@ const Forums = () => {
     document.title = "Forums | EMGurus";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name','description'); document.head.appendChild(meta); }
-    meta.setAttribute('content','Browse all EMGurus forum threads. Filter by section and topic.');
+    meta.setAttribute('content','Browse all EMGurus forum threads. Filter by section.');
     let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!link) { link = document.createElement('link'); link.rel = 'canonical'; document.head.appendChild(link); }
     link.href = window.location.href;
@@ -104,7 +104,7 @@ const Forums = () => {
     <main>
       <PageHero
         title="EMGurus Forums"
-        subtitle="All threads. Filter by section and topic, or start a new discussion."
+        subtitle="All threads. Filter by section, or start a new discussion."
         align="center"
         ctas={[{ label: "Start a Thread", href: "?new=1", variant: "outline" }]}
       />
@@ -141,27 +141,6 @@ const Forums = () => {
                   </Select>
                 </div>
 
-                <Separator />
-
-                <div>
-                  <h3 className="text-sm font-medium">Topics</h3>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {topicsAll.length === 0 ? (
-                      <span className="text-xs text-muted-foreground">No topics yet</span>
-                    ) : (
-                      topicsAll.map((t) => (
-                        <Badge
-                          key={t}
-                          variant={topic === t ? "secondary" : "outline"}
-                          className="text-xs cursor-pointer"
-                          onClick={() => setTopic(topic === t ? "" : t)}
-                        >
-                          #{t}
-                        </Badge>
-                      ))
-                    )}
-                  </div>
-                </div>
 
                 <div className="pt-2">
                   <Button
@@ -178,7 +157,7 @@ const Forums = () => {
         </div>
 
         {/* Desktop Filters */}
-        <section className="hidden lg:grid grid-cols-3 gap-4 mb-6">
+        <section className="hidden lg:grid grid-cols-2 gap-4 mb-6">
           <Input placeholder="Search title or content" value={q} onChange={(e) => setQ(e.target.value)} />
           <Select value={section || "__all__"} onValueChange={(v) => setSection(v === "__all__" ? "" : v)}>
             <SelectTrigger><SelectValue placeholder="Section" /></SelectTrigger>
@@ -189,8 +168,8 @@ const Forums = () => {
               ))}
             </SelectContent>
           </Select>
-          {topicsAll.length > 0 ? (
-            <Select value={topic || "__all__"} onValueChange={(v) => setTopic(v === "__all__" ? "" : v)}>
+          
+            
               <SelectTrigger><SelectValue placeholder="Topic" /></SelectTrigger>
               <SelectContent className="z-50">
                 <SelectItem value="__all__">All Topics</SelectItem>
