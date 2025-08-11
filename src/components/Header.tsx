@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Menu, X, Brain, LogOut, LayoutDashboard, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -147,26 +148,30 @@ const Header = () => {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
-            <nav className="flex flex-col space-y-4">
+            <nav className="flex flex-col space-y-3">
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/'); setIsMenuOpen(false);}}>Home</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/blogs'); setIsMenuOpen(false);}}>Blogs</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/exams'); setIsMenuOpen(false);}}>Exams</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/consultations'); setIsMenuOpen(false);}}>Consultations</button>
               <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/forums'); setIsMenuOpen(false);}}>Forums</button>
-              <div className="flex flex-col space-y-4 pt-4">
+              {user && (
+                <button className="text-left text-muted-foreground hover:text-primary transition-colors py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background" onClick={() => {navigate('/dashboard'); setIsMenuOpen(false);}}>Dashboard</button>
+              )}
+
+              <Separator className="my-4" />
+
+              <div className="flex flex-col space-y-3">
                 {user ? (
                   <>
-                    {false && isGuru && (
-                      <div className="rounded-md border border-border">
-                        <div className="px-3 py-2 text-xs uppercase text-muted-foreground">Guru Tools</div>
-                        <div className="flex flex-col space-y-2 p-2 pt-0">
-                          <Button variant="outline" className="justify-start" onClick={() => {navigate('/dashboard'); setIsMenuOpen(false);}}>Dashboard</Button>
-                          <Button variant="outline" className="justify-start" onClick={() => {navigate('/guru/availability'); setIsMenuOpen(false);}}>My Availability</Button>
-                        </div>
-                      </div>
-                    )}
+                    <div className="px-2 text-xs uppercase text-muted-foreground">Account</div>
+                    <div className="flex items-center gap-3 px-2 py-2 rounded-md border border-border bg-card/30">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={profile?.avatar_url || (user?.user_metadata?.avatar_url as string)} alt={displayName} />
+                        <AvatarFallback>{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="text-sm text-foreground">{displayName}</div>
+                    </div>
                     <Button variant="outline" className="justify-start" onClick={() => {navigate('/profile'); setIsMenuOpen(false);}}>My Profile</Button>
-                    <div className="text-sm text-muted-foreground px-2 py-1">{user.email}</div>
                     <Button variant="outline" className="justify-start" onClick={signOut}>Sign Out</Button>
                   </>
                 ) : (
