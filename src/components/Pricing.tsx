@@ -2,23 +2,37 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckCircle, Star, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Pricing = () => {
   const navigate = useNavigate();
   
-  const handlePlanClick = (planName: string) => {
+  const handlePlanClick = async (planName: string) => {
     if (planName === "Free") {
       navigate("/exams");
-    } else if (planName === "Exams") {
-      navigate("/exams");
-    } else if (planName === "Consultation") {
-      navigate("/consultations");
-    } else {
-      // TODO: Handle paid plan subscriptions
-      console.log(`Selected plan: ${planName}`);
+      return;
     }
-  };
 
+    const tierMap: Record<string, 'exam' | 'consultation' | 'premium'> = {
+      Exams: 'exam',
+      Consultation: 'consultation',
+      Premium: 'premium',
+    };
+    const tier = tierMap[planName as keyof typeof tierMap];
+    if (!tier) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      navigate('/auth');
+      return;
+    }
+    const { data, error } = await supabase.functions.invoke('create-payment', { body: { tier, mode: 'subscription' } });
+    if (error) {
+      console.error(error);
+      return;
+    }
+    if (data?.url) window.open(data.url, '_blank');
+  };
   const plans = [
     {
       name: "Free",

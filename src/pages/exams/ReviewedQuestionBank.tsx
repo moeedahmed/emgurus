@@ -254,8 +254,8 @@ export default function ReviewedQuestionBank() {
   return (
     <main>
       <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-4">
-          <h1 className="text-2xl font-semibold">Reviewed Question Bank</h1>
+        <div className="sticky top-20 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border mb-4">
+          <h1 className="text-2xl font-semibold py-2">Reviewed Question Bank</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

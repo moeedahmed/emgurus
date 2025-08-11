@@ -9,11 +9,11 @@
 ---
 
 ## Tech Stack (current)
-- **Frontend:** Next.js (React, TypeScript), Tailwind, Shadcn
-- **Backend/DB:** Supabase (Postgres + RLS, Edge Functions)
-- **Vector Search:** `pgvector` with IVF index
-- **Deploy/Preview:** Lovable (primary editing) → Vercel (deployment)
-- **Search/Embeddings:** OpenAI embeddings via Edge Functions
+- Frontend: React (Vite, TypeScript), Tailwind, shadcn/ui
+- Backend/DB: Supabase (Postgres + RLS, Edge Functions)
+- Vector Search: pgvector with IVF index
+- Deploy/Preview: Lovable (primary editing)
+- Search/Embeddings: OpenAI embeddings via Edge Functions
 
 ---
 
@@ -125,33 +125,39 @@
 
 ---
 
+## UI/UX Implementation Rules
+
+- Filters pattern
+  - Each main page has a Filters control: Sheet on mobile, sticky sidebar on desktop (top: 5rem/20).
+  - Search inputs accept continuous typing and do not throttle to 1 char.
+  - Chips/tags on cards trigger filters when clicked.
+- Sticky page titles
+  - Section titles like “Reviewed Question Bank” are sticky below the app header and remain visible while scrolling.
+- Memberships
+  - All membership CTAs link to /pricing.
+  - Pricing page triggers Stripe checkout for Exams, Consultation, Premium.
+- Header and profile
+  - Show user avatar if available; otherwise initials.
+  - Reflect profile name changes live via realtime subscription.
+- Blogs
+  - Category dropdown shows names only (no counts); show total results separately.
+  - Blog cards use moderate image heights and clickable category/tags chips.
+- Consultations
+  - Guru cards are clickable; their badges set the corresponding filters.
+- Auth & Onboarding
+  - Remove redundant branding; keep flows minimal.
+- Accessibility & Theming
+  - Use semantic Tailwind tokens (bg-background, text-foreground, border-border, etc.). No raw colors.
+  - Images are lazy-loaded with alt text and appropriate decoding.
+
+---
+
 ## MVP Acceptance (what “working” means)
 - AI Practice: generate session, show MCQs+answers+explanations.
 - Reviewed Bank: list loads (filters work), detail shows reviewer name & date.
 - AI Chat: opens as compact widget; sends & receives.
-- Pricing CTAs: go to pricing anchors or dedicated `/pricing`.
+- Pricing CTAs: go to /pricing; Stripe opens in a new tab.
 - No uncaught runtime errors on mobile & desktop.
-
----
-
-## Codex – Quick Commands
-
-> Run these in Codex (connected to this repo). It will open PRs.
-
-1. **Fix reviewed bank crash + empty state**
-   - “Find and fix the runtime error when tapping **Browse** on Reviewed Question Bank. Ensure list queries only `status='approved'`, add try/catch with toast, and return an empty-state component. Add a regression test if test setup exists.”
-
-2. **Generate fresh Supabase types & remove `any`**
-   - “Add a `gen:types` npm script using Supabase CLI, check in `src/lib/supabase/types.generated.ts`, wire imports, and replace `(supabase as any)` with typed calls.”
-
-3. **AI chat: convert to floating widget**
-   - “Refactor the AI Guru chat to a bottom-right floating widget with a small launcher button; avoid full-screen on mobile; keep state across route changes.”
-
-4. **Landing polish**
-   - “Tighten hero spacing, center CTAs, make ‘Book a Guru’ and ‘See Pricing’ real buttons, hide fake stats, and link ‘See Pricing’ to the pricing section.”
-
-5. **Seed task**
-   - “Add an admin-only button or edge function call to run `seed_ai_embeddings_once` with limit 200; show JSON summary.”
 
 ---
 

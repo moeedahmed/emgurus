@@ -202,7 +202,7 @@ const Consultations = () => {
         title="EMGurus Consultations"
         subtitle="Filter by specialty, country, or exam to find the right mentor."
         align="center"
-        ctas={[{ label: "Consultation monthly membership", href: "/membership/consultations", variant: "outline" }]}
+        ctas={[{ label: "Consultation monthly membership", href: "/pricing", variant: "outline" }]}
       />
 
       <section className="container mx-auto px-4 py-8">
