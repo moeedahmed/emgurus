@@ -208,6 +208,37 @@ export default function Profile() {
             <div className="flex gap-3 pt-2 flex-wrap">
               <Link to="/onboarding"><Button variant="outline" className="w-full sm:w-auto">Edit Profile</Button></Link>
             </div>
+
+            <Separator className="my-4" />
+            <div className="space-y-4">
+              {profile?.bio && (
+                <div>
+                  <div className="font-semibold">About</div>
+                  <p className="text-sm text-muted-foreground break-words">{profile.bio}</p>
+                </div>
+              )}
+              {(profile?.exams || []).length > 0 && (
+                <div>
+                  <div className="font-semibold">Exams</div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {(profile?.exams || []).map((e) => (
+                      <Badge key={e} variant="outline">{e}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(profile?.languages || []).length > 0 && (
+                <div>
+                  <div className="font-semibold">Languages</div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {(profile?.languages || []).map((l) => (
+                      <Badge key={l} variant="outline">{l}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
           </Card>
 
           {/* Right column: Tabs with role-aware sections */}
@@ -222,24 +253,6 @@ export default function Profile() {
 
               {/* OVERVIEW */}
               <TabsContent value="overview" className="mt-4 space-y-6">
-                <Card className="w-full overflow-hidden p-6 space-y-4 shadow-md">
-                  <div className="font-semibold">About</div>
-                  {profile?.bio && (
-                    <p className="text-sm text-muted-foreground break-words">{profile.bio}</p>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {(profile?.exams || []).map((e) => (
-                      <Badge key={e} variant="outline">{e}</Badge>
-                    ))}
-                  </div>
-                  {(profile?.languages || []).length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {(profile?.languages || []).map((l) => (
-                        <Badge key={l} variant="outline">{l}</Badge>
-                      ))}
-                    </div>
-                  )}
-                </Card>
 
               </TabsContent>
 
