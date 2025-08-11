@@ -46,7 +46,7 @@ export default function ReviewedQuestionDetail() {
   const index: number = location?.state?.index ?? (ids.indexOf(id as string) || 0);
   const SESSION_KEY = 'emgurus.reviewed.session';
   const [ended, setEnded] = useState(false);
-  const [summary, setSummary] = useState<{ score: number; attempted: number; total: number; byTopic: Record<string, { total: number; correct: number }>; durationSec: number }>({ score: 0, attempted: 0, total: 0, byTopic: {}, durationSec: 0 });
+  const [summary, setSummary] = useState<{ score: number; attempted: number; total: number; byTopic: Record<string, { total: number; correct: number }>; durationSec: number; questionIds: string[] }>({ score: 0, attempted: 0, total: 0, byTopic: {}, durationSec: 0, questionIds: [] });
   const loggedRef = useRef(false);
 
   useEffect(() => {
@@ -118,9 +118,20 @@ export default function ReviewedQuestionDetail() {
   };
 
   const handleSelect = (k: string) => {
-    if (showExplanation) return;
+    if (showExplanation || !q) return;
     setSelectedKey(k);
     setShowExplanation(true);
+    // Save attempt to session store for summary
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      const store = raw ? JSON.parse(raw) : {};
+      store[q.id] = {
+        last_selected: k,
+        is_correct: k === correctKey,
+        topic: q.topic || 'General'
+      };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(store));
+    } catch {}
     // Announce feedback via live region
     setTimeout(() => { (document.getElementById('practice-feedback-live') as HTMLElement | null)?.focus?.(); }, 0);
   };
@@ -161,6 +172,32 @@ export default function ReviewedQuestionDetail() {
     toast({ title: 'Practice reset', description: 'Your selections were cleared.' });
   };
 
+  const endPractice = () => {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      const store = raw ? JSON.parse(raw) : {};
+      const qids: string[] = (ids.length ? ids : Object.keys(store));
+      const attempted = qids.filter((qid) => store[qid]?.last_selected).length;
+      let score = 0;
+      const byTopic: Record<string, { total: number; correct: number }> = {};
+      qids.forEach((qid) => {
+        const entry = store[qid];
+        if (entry && entry.last_selected) {
+          const t = entry.topic || 'General';
+          byTopic[t] = byTopic[t] || { total: 0, correct: 0 };
+          byTopic[t].total += 1;
+          if (entry.is_correct) { byTopic[t].correct += 1; score += 1; }
+        }
+      });
+      setSummary({ score, attempted, total: qids.length, byTopic, durationSec: timeSpent, questionIds: qids });
+      setEnded(true);
+    } catch {
+      const qids: string[] = ids;
+      setSummary({ score: 0, attempted: 0, total: qids.length, byTopic: {}, durationSec: timeSpent, questionIds: qids });
+      setEnded(true);
+    }
+  };
+
   // Timer
   useEffect(() => {
     let active = true;
@@ -177,6 +214,29 @@ export default function ReviewedQuestionDetail() {
       if (tickRef.current) clearInterval(tickRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!ended || loggedRef.current) return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const payload = {
+        user_id: user.id,
+        mode: 'practice',
+        source: 'reviewed',
+        question_ids: summary.questionIds,
+        correct_count: summary.score,
+        total_attempted: summary.attempted,
+        total_questions: summary.total,
+        started_at: new Date(Date.now() - summary.durationSec * 1000).toISOString(),
+        finished_at: new Date().toISOString(),
+        duration_sec: summary.durationSec,
+        breakdown: summary.byTopic,
+      } as any;
+      try { await (supabase as any).from('exam_attempts').insert(payload); } catch (e) { console.warn('exam_attempts insert skipped', e); }
+      loggedRef.current = true;
+    })();
+  }, [ended, summary]);
 
   // Navigation helpers
   const goPrev = () => {
@@ -211,7 +271,26 @@ export default function ReviewedQuestionDetail() {
     <div className="container mx-auto px-4 py-6">
       <Button variant="outline" onClick={() => navigate('/exams')}>Back to exams</Button>
 
-      {loading ? (
+      {ended ? (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>Practice Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <div className="text-lg font-semibold">Score: {summary.score} / {summary.attempted}</div>
+            <div className="text-sm text-muted-foreground">Attempts: {summary.attempted} / {summary.total} • Time: {formatMMSS(summary.durationSec)}</div>
+            <div className="grid gap-2">
+              {Object.entries(summary.byTopic).map(([t, v]) => (
+                <div key={t} className="text-sm">{t}: {v.correct}/{v.total}</div>
+              ))}
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => navigate('/exams')}>Back to Exams</Button>
+              <Button onClick={() => setEnded(false)}>Continue Practice</Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : loading ? (
         <div className="h-40 rounded-xl border animate-pulse bg-muted/40 mt-4" />
       ) : q ? (
         <div className="mt-4 grid gap-6 md:grid-cols-3">
@@ -297,7 +376,7 @@ export default function ReviewedQuestionDetail() {
                     <Button variant="outline" onClick={goPrev} disabled={!ids.length || index===0}>Previous</Button>
                     <Button variant="outline" onClick={goNext} disabled={!ids.length || index===ids.length-1}>Next</Button>
                   </div>
-                  <Button variant="outline" onClick={() => navigate('/exams')}>End Practice</Button>
+                  <Button variant="outline" onClick={endPractice}>End Practice</Button>
                 </div>
 
 

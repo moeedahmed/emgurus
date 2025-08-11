@@ -41,11 +41,10 @@ export default function Exams() {
               </p>
             </div>
             <div className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <Button onClick={() => navigate('/exams/reviewed?mode=practice')} aria-label="Practice mode">Practice mode</Button>
-                <Button variant="outline" onClick={() => navigate('/exams/reviewed?mode=exam')} aria-label="Exam mode">Exam mode</Button>
-                <Button variant="ghost" onClick={() => navigate('/exams/reviewed')} aria-label="Browse bank">Browse bank</Button>
-              </div>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <Button onClick={() => navigate('/exams/reviewed?mode=practice')} aria-label="Practice mode">Practice mode</Button>
+                  <Button variant="outline" onClick={() => navigate('/exams/reviewed?mode=exam')} aria-label="Exam mode">Exam mode</Button>
+                </div>
             </div>
           </Card>
         </div>

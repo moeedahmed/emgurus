@@ -40,9 +40,9 @@ const DashboardAdmin = () => {
           </div>
         </Card>
         <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Manage Categories & Tags</h2>
-          <p className="text-muted-foreground mb-4">Maintain taxonomy across the platform.</p>
-          <Button onClick={() => navigate('/admin/taxonomy')}>Manage</Button>
+          <h2 className="text-xl font-semibold mb-2">Question Bank Overview</h2>
+          <p className="text-muted-foreground mb-4">Browse and filter the reviewed question bank.</p>
+          <Button onClick={() => navigate('/exams/reviewed')}>Open Question Bank</Button>
         </Card>
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-2">Import EMGurus Content</h2>
