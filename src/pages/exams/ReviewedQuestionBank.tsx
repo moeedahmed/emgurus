@@ -42,6 +42,8 @@ export default function ReviewedQuestionBank() {
   const [approvedCount, setApprovedCount] = useState<number | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [mode, setMode] = useState<'function' | 'direct'>('function');
+  const [topicFilter, setTopicFilter] = useState<string | "">("");
+  const [difficulty, setDifficulty] = useState<string | "">("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -106,6 +108,13 @@ export default function ReviewedQuestionBank() {
         })) as ReviewedRow[];
         if (exam) list = list.filter((r) => r.exam === exam);
         if (q) list = list.filter((r) => r.stem.toLowerCase().includes(q.toLowerCase()));
+        if (topicFilter) list = list.filter((r) => (r.topic || '').toLowerCase() === topicFilter.toLowerCase());
+        if (difficulty) {
+          const pickDiff = (row: ReviewedRow) =>
+            ((row as any).difficulty as string | undefined) ||
+            (row.tags || []).find(t => ['easy','medium','hard'].includes(String(t).toLowerCase()));
+          list = list.filter(r => (pickDiff(r) || '').toLowerCase() === difficulty.toLowerCase());
+        }
         if (!cancelled) {
           setItems(list);
           setTotalCount(list.length);
@@ -120,6 +129,7 @@ export default function ReviewedQuestionBank() {
           .select('id, exam, stem, reviewer_id, reviewed_at, topic', { count: 'exact' })
           .eq('status', 'approved');
         if (exam) base = base.eq('exam', exam);
+        if (topicFilter) base = base.eq('topic', topicFilter);
         if (q) base = base.ilike('stem', `%${q}%`);
 
         const from = (page - 1) * pageSize;
@@ -129,10 +139,12 @@ export default function ReviewedQuestionBank() {
           .order('id', { ascending: false })
           .range(from, to);
         if (error) throw error;
-        const list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
+        let list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
+        // Difficulty might not exist as a column; filter client-side if requested
+        if (difficulty) list = list.filter(r => String((r as any).difficulty || '').toLowerCase() === difficulty.toLowerCase());
         if (!cancelled) {
           setItems(list);
-          setTotalCount(count ?? 0);
+          setTotalCount(difficulty || topicFilter ? list.length : (count ?? 0));
           setMode('direct');
         }
         const ids = Array.from(new Set(list.map(d => d.reviewer_id).filter(Boolean))) as string[];
@@ -148,39 +160,64 @@ export default function ReviewedQuestionBank() {
       }
     })();
     return () => { cancelled = true; };
-  }, [exam, sloId, q, page]);
+  }, [exam, sloId, q, topicFilter, difficulty, page]);
 
-  const FiltersPanel = () => (
-    <Card className="p-4 space-y-3">
-      <div className="space-y-2">
-        <div className="text-sm font-medium">Search</div>
-        <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search questions..." />
-      </div>
-      <div className="space-y-2">
-        <div className="text-sm font-medium">Exam</div>
-        <Select value={exam || "ALL"} onValueChange={(v) => { setExam(v === "ALL" ? "" : (v as ExamCode)); setPage(1); }}>
-          <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All exams</SelectItem>
-            {(Object.keys(EXAM_LABELS) as ExamCode[]).map((code) => (
-              <SelectItem key={code} value={code}>{EXAM_LABELS[code]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <div className="text-sm font-medium">Curriculum</div>
-        <Select value={sloId || "ALL"} onValueChange={(v) => { setSloId(v === "ALL" ? "" : v); setPage(1); }}>
-          <SelectTrigger><SelectValue placeholder="Curriculum" /></SelectTrigger>
-          <SelectContent className="max-h-80">
-            <SelectItem value="ALL">All curriculum</SelectItem>
-            {slos.map((s) => (<SelectItem key={s.id} value={s.id}>{s.code} — {s.title}</SelectItem>))}
-          </SelectContent>
-        </Select>
-      </div>
-      <Button variant="outline" onClick={() => { setQ(""); setExam(""); setSloId(""); setPage(1); }}>Reset</Button>
-    </Card>
-  );
+  const FiltersPanel = () => {
+    const topics = Array.from(new Set(items.map(i => i.topic).filter(Boolean))) as string[];
+    return (
+      <Card className="p-4 space-y-3">
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Search</div>
+          <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search questions..." />
+        </div>
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Exam</div>
+          <Select value={exam || "ALL"} onValueChange={(v) => { setExam(v === "ALL" ? "" : (v as ExamCode)); setPage(1); }}>
+            <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All exams</SelectItem>
+              {(Object.keys(EXAM_LABELS) as ExamCode[]).map((code) => (
+                <SelectItem key={code} value={code}>{EXAM_LABELS[code]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Topic</div>
+          <Select value={topicFilter || "ALL"} onValueChange={(v) => { setTopicFilter(v === "ALL" ? "" : v); setPage(1); }}>
+            <SelectTrigger><SelectValue placeholder="Topic" /></SelectTrigger>
+            <SelectContent className="max-h-80">
+              <SelectItem value="ALL">All topics</SelectItem>
+              {topics.map((t) => (<SelectItem key={t} value={t!}>{t}</SelectItem>))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Difficulty</div>
+          <Select value={difficulty || "ALL"} onValueChange={(v) => { setDifficulty(v === "ALL" ? "" : v); setPage(1); }}>
+            <SelectTrigger><SelectValue placeholder="Difficulty" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All levels</SelectItem>
+              <SelectItem value="Easy">Easy</SelectItem>
+              <SelectItem value="Medium">Medium</SelectItem>
+              <SelectItem value="Hard">Hard</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Curriculum</div>
+          <Select value={sloId || "ALL"} onValueChange={(v) => { setSloId(v === "ALL" ? "" : v); setPage(1); }}>
+            <SelectTrigger><SelectValue placeholder="Curriculum" /></SelectTrigger>
+            <SelectContent className="max-h-80">
+              <SelectItem value="ALL">All curriculum</SelectItem>
+              {slos.map((s) => (<SelectItem key={s.id} value={s.id}>{s.code} — {s.title}</SelectItem>))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button variant="outline" onClick={() => { setQ(""); setExam(""); setSloId(""); setTopicFilter(""); setDifficulty(""); setPage(1); }}>Reset</Button>
+      </Card>
+    );
+  };
 
   return (
     <main>
@@ -222,16 +259,24 @@ export default function ReviewedQuestionBank() {
                         <span className="line-clamp-2">{it.stem.slice(0, 200)}</span>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
-                      {it.reviewed_at && (
-                        <span className="border rounded px-2 py-0.5">Reviewed {formatDistanceToNow(new Date(it.reviewed_at), { addSuffix: true })}</span>
-                      )}
-                      <span className="border rounded px-2 py-0.5">Exam: {(EXAM_LABELS as any)[it.exam] || String(it.exam)}</span>
-                      {!!it.topic && <span className="border rounded px-2 py-0.5">Topic: {it.topic}</span>}
-                      {(it as any).difficulty && <span className="border rounded px-2 py-0.5">Difficulty: {(it as any).difficulty}</span>}
-                      {it.reviewer_id && (
-                        <span className="border rounded px-2 py-0.5">Reviewer: {reviewers[it.reviewer_id] || '—'}</span>
-                      )}
+                    <CardContent className="text-sm text-muted-foreground flex flex-col gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {it.reviewed_at && (
+                          <span className="border rounded px-2 py-0.5">
+                            Reviewed {formatDistanceToNow(new Date(it.reviewed_at), { addSuffix: true })}
+                            {it.reviewer_id && (
+                              <> by {reviewers[it.reviewer_id] ? reviewers[it.reviewer_id].replace(/^Dr\s+/i,'') : '—'}</>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="border rounded px-2 py-0.5">{(EXAM_LABELS as any)[it.exam] || String(it.exam)}</span>
+                        {!!it.topic && <span className="border rounded px-2 py-0.5">{it.topic}</span>}
+                        {((it as any).difficulty || (it as any).level) && (
+                          <span className="border rounded px-2 py-0.5">{(it as any).difficulty || (it as any).level}</span>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))
