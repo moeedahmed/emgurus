@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import QuestionCard from "@/components/exams/QuestionCard";
 import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
+import { useToast } from "@/hooks/use-toast";
 
 const letters = ['A','B','C','D','E'];
 
@@ -31,18 +31,16 @@ export default function ReviewedQuestionDetail() {
   const navigate = useNavigate();
   const location = useLocation() as any;
   const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState<any>(null);
   const [selectedKey, setSelectedKey] = useState("");
   const [showExplanation, setShowExplanation] = useState(false);
   const [reviewerName, setReviewerName] = useState<string | null>(null);
-  const [attempts, setAttempts] = useState(0);
-  const [isFlagged, setIsFlagged] = useState(false);
-  const [notes, setNotes] = useState("");
   const [timeSpent, setTimeSpent] = useState(0);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [notes, setNotes] = useState("");
+  const [issueTypes, setIssueTypes] = useState<string[]>([]);
   const tickRef = useRef<number | null>(null);
-  const latestRef = useRef({ attempts: 0, isFlagged: false, notes: "", selectedKey: "", showExplanation: false, correctKey: "", timeSpent: 0 });
   const ids: string[] = location?.state?.ids || [];
   const index: number = location?.state?.index ?? (ids.indexOf(id as string) || 0);
 
@@ -68,43 +66,13 @@ export default function ReviewedQuestionDetail() {
           const { data: g } = await supabase.from('gurus').select('id, name').eq('id', row.reviewer_id).maybeSingle();
           if (!cancelled) setReviewerName((g as any)?.name || null);
         }
-        // Load session state
-        if (user && row) {
-          const { data: sess } = await (supabase as any)
-            .from('user_question_sessions')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('question_id', row.id)
-            .maybeSingle();
-          if (sess) {
-            setSessionId(sess.id);
-            setAttempts(sess.attempts || 0);
-            setIsFlagged(!!sess.is_flagged);
-            setNotes(sess.notes || "");
-            setTimeSpent(sess.time_spent_seconds || 0);
-            setSelectedKey(sess.last_selected || "");
-            setShowExplanation(!!sess.is_correct); // if correct already, show
-          } else {
-            const { data: ins, error: insErr } = await (supabase as any)
-              .from('user_question_sessions')
-              .insert({ user_id: user.id, question_id: row.id, exam: row.exam })
-              .select('*')
-              .maybeSingle();
-            if (!insErr && ins) setSessionId(ins.id);
-          }
-        } else if (row) {
-          // anon localStorage
-          const key = 'emgurus.reviewed.session';
-          const raw = localStorage.getItem(key);
-          const store = raw ? JSON.parse(raw) : {};
-          const s = store[row.id] || {};
-          setAttempts(s.attempts || 0);
-          setIsFlagged(!!s.is_flagged);
-          setNotes(s.notes || "");
-          setTimeSpent(s.time_spent_seconds || 0);
-          setSelectedKey(s.last_selected || "");
-          setShowExplanation(!!s.is_correct);
-        }
+        // Practice mode is ephemeral: do not restore prior selections
+        setSelectedKey("");
+        setShowExplanation(false);
+        setTimeSpent(0);
+        setNotes("");
+        setIssueTypes([]);
+
       } catch (e) {
         console.error('Reviewed question fetch failed', e);
         if (!cancelled) setQ(null);
@@ -123,18 +91,6 @@ export default function ReviewedQuestionDetail() {
 
   const correctKey = useMemo(() => letters[(q?.correct_index ?? 0)] || 'A', [q]);
 
-  // keep latest snapshot for safe persistence
-  useEffect(() => {
-    latestRef.current = {
-      attempts,
-      isFlagged,
-      notes,
-      selectedKey,
-      showExplanation,
-      correctKey,
-      timeSpent,
-    } as any;
-  }, [attempts, isFlagged, notes, selectedKey, showExplanation, correctKey, timeSpent]);
 
   const totalQuestions = ids.length || 1;
   const answeredCount = useMemo(() => {
@@ -178,39 +134,7 @@ export default function ReviewedQuestionDetail() {
     setTimeout(() => { document.getElementById('explanation-heading')?.focus(); }, 0);
   };
 
-
-  const persistNow = async () => {
-    if (!q) return;
-    const snap = latestRef.current;
-    if (user) {
-      await (supabase as any)
-        .from('user_question_sessions')
-        .update({
-          time_spent_seconds: snap.timeSpent,
-          last_action_at: new Date().toISOString(),
-          last_selected: snap.selectedKey,
-          attempts: snap.attempts,
-          is_flagged: snap.isFlagged,
-          notes: snap.notes,
-          is_correct: snap.showExplanation && snap.selectedKey === snap.correctKey,
-        })
-        .eq('user_id', user.id)
-        .eq('question_id', q.id);
-    } else {
-      const key = 'emgurus.reviewed.session';
-      const raw = localStorage.getItem(key);
-      const store = raw ? JSON.parse(raw) : {};
-      store[q.id] = {
-        time_spent_seconds: snap.timeSpent,
-        last_selected: snap.selectedKey,
-        attempts: snap.attempts,
-        is_flagged: snap.isFlagged,
-        notes: snap.notes,
-        is_correct: snap.showExplanation && snap.selectedKey === snap.correctKey,
-      };
-      localStorage.setItem(key, JSON.stringify(store));
-    }
-  };
+  const persistNow = async () => { /* Practice mode: no persistence */ };
 
   const saveFlag = async (v: boolean) => {
     setIsFlagged(v);
