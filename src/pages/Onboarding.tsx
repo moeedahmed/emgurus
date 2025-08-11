@@ -19,7 +19,7 @@ const languageOptions = ["English","Arabic","Hindi","Urdu","French","Spanish","O
 
 export default function Onboarding() {
   const { user } = useAuth();
-  const [step, setStep] = useState(1);
+  const [step] = useState(1);
 
   // Step 1
   const [fullName, setFullName] = useState("");
@@ -77,9 +77,8 @@ export default function Onboarding() {
         setShowSocialsPublic((data as any).show_socials_public ?? true);
         setLinkedinUrl((data as any).linkedin || "");
         setTwitterUrl((data as any).twitter || "");
-        // load draft
         const draft = (data as any).onboarding_progress || {};
-        if (draft.step) setStep(draft.step);
+        if (draft.step) {/* no-op now that onboarding is single page */}
       }
       setLoading(false);
     })();
@@ -117,12 +116,11 @@ export default function Onboarding() {
     })();
   }, [user?.id]);
 
-  // Autosave draft
+  // Autosave draft (kept for resilience)
   useEffect(() => {
     if (!user || loading) return;
     const timer = setTimeout(async () => {
       const draft = {
-        step,
         fullName,
         avatarUrl,
         country,
@@ -144,7 +142,7 @@ export default function Onboarding() {
       await supabase.from('profiles').update({ onboarding_progress: draft }).eq('user_id', user.id);
     }, 600);
     return () => clearTimeout(timer);
-  }, [user?.id, loading, step, fullName, avatarUrl, country, tz, languages, otherLanguage, primarySpecialty, examInterests, otherExam, years, position, hospital, bio, showProfilePublic, showSocialsPublic, linkedinUrl, twitterUrl]);
+  }, [user?.id, loading, fullName, avatarUrl, country, tz, languages, otherLanguage, primarySpecialty, examInterests, otherExam, years, position, hospital, bio, showProfilePublic, showSocialsPublic, linkedinUrl, twitterUrl]);
 
   const toggleChip = (arr: string[], setArr: (v: string[]) => void, val: string) => {
     setArr(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
@@ -154,8 +152,8 @@ export default function Onboarding() {
   const step2Valid = true;
   const step3Valid = true;
 
-  const next = () => setStep(s => Math.min(3, s + 1));
-  const prev = () => setStep(s => Math.max(1, s - 1));
+  const next = () => {};
+  const prev = () => {};
 
   const uploadAvatar = async (file: File) => {
     if (!user) return;
@@ -216,169 +214,91 @@ export default function Onboarding() {
     }
   };
 
-  if (loading) {
-    return (
-      <main className="min-h-[50vh] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-      </main>
-    );
-  }
-
   return (
     <main className="container mx-auto px-4 py-8 min-h-[calc(100vh-4rem)] pb-[env(safe-area-inset-bottom)]">
       <header className="mb-6">
         <h1 className="text-3xl font-bold">Complete your profile</h1>
-        <p className="text-muted-foreground">We need a few details to personalize your experience.</p>
+        <p className="text-muted-foreground">Just the essentials to get started. You can refine details anytime in your Profile.</p>
       </header>
 
-      <nav className="flex items-center gap-2 mb-6 text-sm">
-        <Button variant={step===1?"default":"outline"} size="sm" onClick={()=>setStep(1)}>1. Basics</Button>
-        <Button variant={step===2?"default":"outline"} size="sm" onClick={()=>setStep(2)}>2. Specialty & Exams</Button>
-        <Button variant={step===3?"default":"outline"} size="sm" onClick={()=>setStep(3)}>3. Bio & Socials</Button>
-      </nav>
-
-      {step === 1 && (
-        <section className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-4">
-            <div className="grid gap-1">
-              <Label>Full name *</Label>
-              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
-            </div>
-            <div className="grid gap-1">
-              <Label>Avatar *</Label>
-              <input type="file" accept="image/*" onChange={(e) => e.target.files && uploadAvatar(e.target.files[0])} />
-              {avatarUrl && <img src={avatarUrl} alt="Avatar preview" className="h-16 w-16 rounded-full object-cover" />}
-            </div>
-            <div className="grid gap-1">
-              <Label>Country *</Label>
-              <Select value={country} onValueChange={setCountry}>
-                <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
-                <SelectContent className="z-50 bg-popover">
-                  {countries.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1">
-              <Label>Timezone *</Label>
-              <Select value={tz} onValueChange={setTz}>
-                <SelectTrigger><SelectValue placeholder="Select timezone" /></SelectTrigger>
-                <SelectContent className="z-50 bg-popover">
-                  {timezones.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
+      <section className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-4">
+          <div className="grid gap-1">
+            <Label>Full name *</Label>
+            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
           </div>
+          <div className="grid gap-1">
+            <Label>Avatar</Label>
+            <input type="file" accept="image/*" onChange={(e) => e.target.files && uploadAvatar(e.target.files[0])} />
+            {avatarUrl && <img src={avatarUrl} alt="Avatar preview" className="h-16 w-16 rounded-full object-cover" />}
+          </div>
+          <div className="grid gap-1">
+            <Label>Country *</Label>
+            <Select value={country} onValueChange={setCountry}>
+              <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+              <SelectContent className="z-50 bg-popover">
+                {countries.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-1">
+            <Label>Timezone *</Label>
+            <Select value={tz} onValueChange={setTz}>
+              <SelectTrigger><SelectValue placeholder="Select timezone" /></SelectTrigger>
+              <SelectContent className="z-50 bg-popover">
+                {timezones.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
-          <div className="space-y-4">
-            <div className="grid gap-1">
-              <Label>Languages *</Label>
-              <div className="flex flex-wrap gap-2">
-                {languageOptions.map(l => (
-                  <Badge key={l} variant={languages.includes(l) ? 'default' : 'outline'} className="cursor-pointer" onClick={() => toggleChip(languages, setLanguages, l)}>
-                    {l}
-                  </Badge>
-                ))}
+        <div className="space-y-4">
+          <div className="grid gap-1">
+            <Label>Primary specialty *</Label>
+            <Select value={primarySpecialty} onValueChange={setPrimarySpecialty}>
+              <SelectTrigger><SelectValue placeholder="Select specialty" /></SelectTrigger>
+              <SelectContent className="z-50 bg-popover">
+                {specialties.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-1">
+            <Label>Exam interests *</Label>
+            <div className="flex flex-wrap gap-2">
+              {examOptions.map(e => (
+                <Badge key={e} variant={examInterests.includes(e) ? 'default' : 'outline'} className="cursor-pointer" onClick={() => toggleChip(examInterests, setExamInterests, e)}>
+                  {e}
+                </Badge>
+              ))}
+            </div>
+            {examInterests.includes('Other') && (
+              <div className="grid gap-1 pt-2">
+                <Label>Other exam</Label>
+                <Input value={otherExam} onChange={(e) => setOtherExam(e.target.value)} placeholder="Enter other exam" />
               </div>
-              {languages.includes('Other') && (
-                <div className="grid gap-1 pt-2">
-                  <Label>Other language</Label>
-                  <Input value={otherLanguage} onChange={(e) => setOtherLanguage(e.target.value)} placeholder="Enter other language" />
-                </div>
-              )}
-            </div>
+            )}
           </div>
-        </section>
-      )}
-
-      {step === 2 && (
-        <section className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-4">
-            <div className="grid gap-1">
-              <Label>Primary specialty *</Label>
-              <Select value={primarySpecialty} onValueChange={setPrimarySpecialty}>
-                <SelectTrigger><SelectValue placeholder="Select specialty" /></SelectTrigger>
-                <SelectContent className="z-50 bg-popover">
-                  {specialties.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
-                </SelectContent>
-              </Select>
+          <div className="grid gap-1">
+            <Label>Languages *</Label>
+            <div className="flex flex-wrap gap-2">
+              {languageOptions.map(l => (
+                <Badge key={l} variant={languages.includes(l) ? 'default' : 'outline'} className="cursor-pointer" onClick={() => toggleChip(languages, setLanguages, l)}>
+                  {l}
+                </Badge>
+              ))}
             </div>
-            <div className="grid gap-1">
-              <Label>Exam interests *</Label>
-              <div className="flex flex-wrap gap-2">
-                {examOptions.map(e => (
-                  <Badge key={e} variant={examInterests.includes(e) ? 'default' : 'outline'} className="cursor-pointer" onClick={() => toggleChip(examInterests, setExamInterests, e)}>
-                    {e}
-                  </Badge>
-                ))}
+            {languages.includes('Other') && (
+              <div className="grid gap-1 pt-2">
+                <Label>Other language</Label>
+                <Input value={otherLanguage} onChange={(e) => setOtherLanguage(e.target.value)} placeholder="Enter other language" />
               </div>
-              {examInterests.includes('Other') && (
-                <div className="grid gap-1 pt-2">
-                  <Label>Other exam</Label>
-                  <Input value={otherExam} onChange={(e) => setOtherExam(e.target.value)} placeholder="Enter other exam" />
-                </div>
-              )}
-            </div>
+            )}
           </div>
-
-          <div className="space-y-4">
-            <div className="grid gap-1">
-              <Label>Years of Experience</Label>
-              <ExperienceSelect value={years} onChange={setYears} />
-            </div>
-            <div className="grid gap-1">
-              <Label>Position/Title</Label>
-              <Input value={position} onChange={(e) => setPosition(e.target.value)} />
-            </div>
-            <div className="grid gap-1">
-              <Label>Hospital/Organization</Label>
-              <Input value={hospital} onChange={(e) => setHospital(e.target.value)} />
-            </div>
-          </div>
-        </section>
-      )}
-
-      {step === 3 && (
-        <section className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-4">
-            <div className="grid gap-1">
-              <Label>Bio *</Label>
-              <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={6} />
-            </div>
-
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <div className="font-medium">Show my profile publicly</div>
-                <div className="text-sm text-muted-foreground">Allow others to see your profile.</div>
-              </div>
-              <Switch checked={showProfilePublic} onCheckedChange={setShowProfilePublic} />
-            </div>
-
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <div className="font-medium">Show my socials publicly</div>
-                <div className="text-sm text-muted-foreground">Display your connected accounts.</div>
-              </div>
-              <Switch checked={showSocialsPublic} onCheckedChange={setShowSocialsPublic} />
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="grid gap-1">
-              <Label>LinkedIn URL</Label>
-              <Input value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="https://linkedin.com/in/username" />
-            </div>
-            <div className="grid gap-1">
-              <Label>X (Twitter) URL</Label>
-              <Input value={twitterUrl} onChange={(e) => setTwitterUrl(e.target.value)} placeholder="https://x.com/username" />
-            </div>
-          </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       <div className="mt-6 flex items-center gap-3">
-        {step > 1 && <Button variant="outline" onClick={prev}>Back</Button>}
-        {step < 3 && <Button onClick={next} disabled={(step === 1 && !step1Valid) || (step === 2 && !step2Valid)}>Continue</Button>}
-        {step === 3 && <Button onClick={onFinish} disabled={saving || !step3Valid}>{saving ? 'Saving…' : 'Finish'}</Button>}
+        <Button onClick={onFinish} disabled={saving || !step3Valid}>{saving ? 'Saving…' : 'Finish'}</Button>
       </div>
     </main>
   );

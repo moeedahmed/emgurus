@@ -1500,6 +1500,7 @@ export type Database = {
           bio: string | null
           calendar_sync_token: string | null
           country: string | null
+          cover_image_url: string | null
           created_at: string
           credentials: string | null
           email: string | null
@@ -1534,6 +1535,7 @@ export type Database = {
           bio?: string | null
           calendar_sync_token?: string | null
           country?: string | null
+          cover_image_url?: string | null
           created_at?: string
           credentials?: string | null
           email?: string | null
@@ -1568,6 +1570,7 @@ export type Database = {
           bio?: string | null
           calendar_sync_token?: string | null
           country?: string | null
+          cover_image_url?: string | null
           created_at?: string
           credentials?: string | null
           email?: string | null

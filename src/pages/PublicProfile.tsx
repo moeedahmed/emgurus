@@ -23,6 +23,7 @@ interface ProfileRow {
   linkedin: string | null;
   twitter: string | null;
   website: string | null;
+  cover_image_url: string | null;
 }
 
 export default function PublicProfile() {
@@ -36,7 +37,7 @@ export default function PublicProfile() {
     (async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, full_name, timezone, country, specialty, primary_specialty, avatar_url, exam_interests, exams, languages, bio, price_per_30min, show_socials_public, linkedin, twitter')
+        .select('user_id, full_name, timezone, country, specialty, primary_specialty, avatar_url, exam_interests, exams, languages, bio, price_per_30min, cover_image_url, linkedin, twitter, website')
         .eq('user_id', id)
         .maybeSingle();
       if (!mounted) return;
@@ -92,70 +93,88 @@ export default function PublicProfile() {
   const initials = (profile.full_name || 'GU').split(' ').map(s => s[0]).slice(0,2).join('').toUpperCase();
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      <article className="grid gap-6 md:grid-cols-3">
-        <Card className="p-6 space-y-4 md:col-span-2">
-          <header className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={profile.avatar_url || undefined} alt={profile.full_name || 'Avatar'} />
-              <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-semibold">{profile.full_name}</h1>
+    <main className="container mx-auto px-0 md:px-4 py-0 md:py-8">
+      {/* Cover Banner */}
+      <section className="w-full h-40 md:h-56 relative bg-muted">
+        {(profile as any).cover_image_url ? (
+          <img
+            src={(profile as any).cover_image_url as any}
+            alt={`${profile.full_name || 'Profile'} cover`}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-r from-primary/20 to-primary/5" />
+        )}
+      </section>
+
+      <article className="-mt-10 md:-mt-14 px-4">
+        <div className="grid gap-6 md:grid-cols-3">
+          <Card className="p-6 md:col-span-2">
+            <header className="flex items-center gap-4">
+              <Avatar className="h-16 w-16 ring-2 ring-background">
+                <AvatarImage src={profile.avatar_url || undefined} alt={profile.full_name || 'Avatar'} />
+                <AvatarFallback>{initials}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-2xl font-semibold">{profile.full_name}</h1>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {(profile.specialty || 'Emergency Medicine')} • {(profile.country || 'Global')} • {(profile.timezone || 'UTC')}
+                </div>
               </div>
-              <div className="text-sm text-muted-foreground">
-                {(profile.specialty || 'Emergency Medicine')} • {(profile.country || 'Global')} • {(profile.timezone || 'UTC')}
-              </div>
-            </div>
-          </header>
+            </header>
 
-          {profile.bio && (
-            <p className="text-sm text-muted-foreground">{profile.bio}</p>
-          )}
-
-          {(profile.exams || []).length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {(profile.exams || []).map((e) => (
-                <Badge key={e} variant="outline">{e}</Badge>
-              ))}
-            </div>
-          )}
-
-          {(profile.languages || []).length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-1">
-              {(profile.languages || []).map((l) => (
-                <Badge key={l} variant="outline">{l}</Badge>
-              ))}
-            </div>
-          )}
-
-          {/* Socials */}
-          {((profile as any).show_socials_public && ((profile.linkedin || profile.twitter))) && (
-            <div className="flex gap-3 pt-1 text-sm">
-              {profile.linkedin && (
-                <a href={profile.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="underline">LinkedIn</a>
-              )}
-              {profile.twitter && (
-                <a href={profile.twitter} target="_blank" rel="noreferrer" aria-label="X (Twitter)" className="underline">X</a>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-2">
-            <div className="text-lg font-medium">{profile.price_per_30min ? `$${profile.price_per_30min} / 30 min` : 'Free'}</div>
-            {guru && (
-              <Button onClick={() => setOpen(true)}>Book Now</Button>
+            {profile.bio && (
+              <p className="text-sm text-muted-foreground mt-3">{profile.bio}</p>
             )}
-          </div>
-        </Card>
 
-        <Card className="p-6 space-y-3">
-          <div className="font-semibold">Next available</div>
-          <Separator />
-          {/* Optional quick view: show only explicit-dated slots if any */}
-          <UpcomingSlots guruId={profile.user_id} />
-        </Card>
+            {(profile.exams || []).length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {(profile.exams || []).map((e) => (
+                  <Badge key={e} variant="outline">{e}</Badge>
+                ))}
+              </div>
+            )}
+
+            {(profile.languages || []).length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {(profile.languages || []).map((l) => (
+                  <Badge key={l} variant="outline">{l}</Badge>
+                ))}
+              </div>
+            )}
+
+            {/* Socials are always public if present */}
+            {(profile.linkedin || profile.twitter || profile.website) && (
+              <div className="flex gap-3 pt-3 text-sm">
+                {profile.linkedin && (
+                  <a href={profile.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="underline">LinkedIn</a>
+                )}
+                {profile.twitter && (
+                  <a href={profile.twitter} target="_blank" rel="noreferrer" aria-label="X (Twitter)" className="underline">X</a>
+                )}
+                {profile.website && (
+                  <a href={profile.website} target="_blank" rel="noreferrer" aria-label="Website" className="underline">Website</a>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-4">
+              <div className="text-lg font-medium">{profile.price_per_30min ? `$${profile.price_per_30min} / 30 min` : 'Free'}</div>
+              {guru && (
+                <Button onClick={() => setOpen(true)}>Book Now</Button>
+              )}
+            </div>
+          </Card>
+
+          <Card className="p-6 space-y-3">
+            <div className="font-semibold">Next available</div>
+            <Separator />
+            <UpcomingSlots guruId={profile.user_id} />
+          </Card>
+        </div>
       </article>
 
       <BookingModal guru={guru} open={open} onOpenChange={setOpen} />
