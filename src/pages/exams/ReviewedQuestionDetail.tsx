@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const letters = ['A','B','C','D','E'];
 
@@ -134,6 +135,34 @@ export default function ReviewedQuestionDetail() {
     } as any;
   }, [attempts, isFlagged, notes, selectedKey, showExplanation, correctKey, timeSpent]);
 
+  const formatMMSS = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  };
+
+  const handleSelect = async (k: string) => {
+    if (showExplanation) return;
+    setSelectedKey(k);
+    setShowExplanation(true);
+    setAttempts((a) => a + 1);
+    if (user && q) {
+      await (supabase as any)
+        .from('user_question_sessions')
+        .update({ attempts: attempts + 1, last_selected: k, is_correct: k === correctKey, last_action_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('question_id', q.id);
+    } else if (q) {
+      const key = 'emgurus.reviewed.session';
+      const raw = localStorage.getItem(key);
+      const store = raw ? JSON.parse(raw) : {};
+      const cur = store[q.id] || {};
+      store[q.id] = { ...cur, attempts: (cur.attempts || 0) + 1, last_selected: k, is_correct: k === correctKey };
+      localStorage.setItem(key, JSON.stringify(store));
+    }
+    setTimeout(() => { document.getElementById('explanation-heading')?.focus(); }, 0);
+  };
+
   const persistNow = async () => {
     if (!q) return;
     const snap = latestRef.current;
@@ -249,9 +278,7 @@ export default function ReviewedQuestionDetail() {
       if (e.key >= '1' && e.key <= '5') {
         const idx = parseInt(e.key, 10) - 1;
         const k = letters[idx];
-        if (k) setSelectedKey(k);
-      } else if (e.key === 'Enter') {
-        if (!showExplanation && selectedKey) handleCheck();
+        if (k && !showExplanation) { void handleSelect(k); }
       } else if (e.key === 'ArrowLeft') {
         goPrev();
       } else if (e.key === 'ArrowRight') {
@@ -294,11 +321,12 @@ export default function ReviewedQuestionDetail() {
                   stem={q.stem}
                   options={options}
                   selectedKey={selectedKey}
-                  onSelect={(k) => setSelectedKey(k)}
+                  onSelect={handleSelect}
                   showExplanation={showExplanation}
-                  explanation={q.explanation || ''}
+                  explanation={q.explanation || "Explanation: This is a temporary explanation preview. The correct answer is highlighted above."}
                   source={`${q.exam} • ${q.topic}${q.subtopic ? ' — ' + q.subtopic : ''}`}
                   correctKey={correctKey}
+                  lockSelection={showExplanation}
                 />
 
                 {!showExplanation ? (

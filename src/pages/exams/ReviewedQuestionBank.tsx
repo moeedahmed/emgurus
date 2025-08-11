@@ -232,8 +232,8 @@ export default function ReviewedQuestionBank() {
         <div className="sticky top-20 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border mb-4">
           <h1 className="text-2xl font-semibold py-2">Reviewed Question Bank</h1>
           <div className="py-2 flex gap-2 flex-wrap">
-            <Button onClick={() => { if (items.length) navigate(`/exams/reviewed/${items[0].id}`, { state: { ids: items.map(i => i.id), index: 0 } }); }} disabled={!items.length}>Start Practice</Button>
-            <Button variant="outline" onClick={() => { if (items.length) navigate('/exams/reviewed-exam', { state: { ids: items.map(i => i.id) } }); }} disabled={!items.length}>Start Exam</Button>
+            <Button onClick={() => { if (items.length) navigate(`/exams/reviewed/${items[0].id}`, { state: { ids: items.map(i => i.id), index: 0 } }); }} disabled={!items.length}>Practice mode</Button>
+            <Button variant="outline" onClick={() => { if (items.length) navigate('/exams/reviewed-exam', { state: { ids: items.map(i => i.id) } }); }} disabled={!items.length}>Exam mode</Button>
           </div>
         </div>
 

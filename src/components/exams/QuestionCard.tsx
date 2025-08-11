@@ -17,6 +17,7 @@ export default function QuestionCard({
   explanation,
   source,
   correctKey,
+  lockSelection,
 }: {
   stem: string;
   options: Option[];
@@ -26,6 +27,7 @@ export default function QuestionCard({
   explanation?: string;
   source?: string;
   correctKey?: string;
+  lockSelection?: boolean;
 }) {
   return (
     <div className="grid gap-4">
@@ -45,11 +47,11 @@ export default function QuestionCard({
                   key={o.key}
                   className={cn(
                     "flex items-start gap-3 py-2 rounded-md px-2 transition-colors",
-                    isCorrect && "bg-accent/40 ring-1 ring-primary/30",
-                    isWrongSel && "opacity-70"
+                    isCorrect && "bg-success/20 ring-1 ring-success/40",
+                    isWrongSel && "bg-destructive/10 ring-1 ring-destructive/40"
                   )}
                 >
-                  <RadioGroupItem value={o.key} id={`opt-${o.key}`} />
+                  <RadioGroupItem value={o.key} id={`opt-${o.key}`} disabled={!!lockSelection} />
                   <div className="grid gap-1">
                     <div className="font-medium">{o.key}.</div>
                     <div className="text-sm text-foreground/90">
@@ -65,7 +67,7 @@ export default function QuestionCard({
       {showExplanation && (
         <Card>
           <CardContent className="py-4">
-            <div className="font-semibold mb-2">Explanation</div>
+            <div id="explanation-heading" tabIndex={-1} className="font-semibold mb-2 outline-none">Explanation</div>
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanation || "No explanation provided."}</ReactMarkdown>
             </div>
