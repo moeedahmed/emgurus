@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
@@ -49,7 +49,7 @@ export function GuruCard({ guru, onBook, disabled, onBadgeClick, onCardClick, se
     .toUpperCase();
 
   return (
-    <Card className="p-5 space-y-3 hover:bg-accent/30 cursor-pointer" onClick={() => onCardClick?.(guru)} role="button" tabIndex={0}>
+    <Card className="p-5 space-y-3 hover:bg-accent/30 cursor-pointer" onClick={() => onBook(guru)} role="button" tabIndex={0}>
       <div className="flex items-center gap-4">
         <Avatar className="h-12 w-12">
           <AvatarImage src={guru.avatar_url || undefined} alt={`${guru.full_name} avatar`} />
@@ -58,7 +58,7 @@ export function GuruCard({ guru, onBook, disabled, onBadgeClick, onCardClick, se
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold text-lg truncate">
-              <Link to={`/profile/${guru.id}`} className="hover:underline">{guru.full_name}</Link>
+              <Link to={`/profile/${guru.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{guru.full_name}</Link>
             </h3>
             <span title={guru.country || undefined}>{getFlag(guru.country)}</span>
           </div>
@@ -97,11 +97,8 @@ export function GuruCard({ guru, onBook, disabled, onBadgeClick, onCardClick, se
         <p className={cn("text-sm text-muted-foreground", "line-clamp-3")}>{guru.bio}</p>
       )}
 
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex items-center justify-end pt-2">
         <span className="font-medium">{guru.price_per_30min ? `$${guru.price_per_30min} / 30 min` : "Free"}</span>
-        <Button onClick={(e) => { e.stopPropagation(); onBook(guru); }} disabled={disabled}>
-          Book Now
-        </Button>
       </div>
     </Card>
   );

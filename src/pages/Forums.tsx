@@ -115,108 +115,112 @@ const Forums = () => {
           onClose={() => { const p = new URLSearchParams(searchParams); p.delete('new'); setSearchParams(p); }}
         />
 
-        {/* Filters Button (mobile only) */}
-        <div className="mb-4 lg:hidden">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline">Filters</Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-80 sm:w-96">
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm text-muted-foreground">Search</label>
-                  <Input className="mt-1" placeholder="Search title or content" value={q} onChange={(e) => setQ(e.target.value)} />
-                </div>
+        <div className="lg:grid lg:grid-cols-[280px_1fr] gap-6">
+          {/* Desktop sidebar */}
+          <aside className="hidden lg:block">
+            <ForumsFilterPanel
+              q={q}
+              section={section}
+              sections={categories.map(c => ({ id: c.id, title: c.title }))}
+              topics={topicsAll}
+              onChange={(k, v) => {
+                if (k === 'q') setQ(v);
+                if (k === 'section') setSection(v);
+                if (k === 'topic') setTopic(v);
+              }}
+              onReset={() => { setQ(''); setSection(''); setTopic(''); }}
+            />
+          </aside>
 
-                <div>
-                  <label className="text-sm text-muted-foreground">Section</label>
-                  <Select value={section || "__all__"} onValueChange={(v) => setSection(v === "__all__" ? "" : v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="All Sections" /></SelectTrigger>
-                    <SelectContent className="z-50">
-                      <SelectItem value="__all__">All Sections</SelectItem>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* Main */}
+          <div>
+            {/* Filters Button (mobile only) */}
+            <div className="mb-4 lg:hidden">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline">Filters</Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-80 sm:w-96">
+                  <ForumsFilterPanel
+                    q={q}
+                    section={section}
+                    sections={categories.map(c => ({ id: c.id, title: c.title }))}
+                    topics={topicsAll}
+                    onChange={(k, v) => {
+                      if (k === 'q') setQ(v);
+                      if (k === 'section') setSection(v);
+                      if (k === 'topic') setTopic(v);
+                    }}
+                    onReset={() => { setQ(''); setSection(''); setTopic(''); }}
+                  />
+                </SheetContent>
+              </Sheet>
+            </div>
 
-                <div className="pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => { setQ(""); setSection(""); setTopic(""); setSearchParams(new URLSearchParams(), { replace: true }); }}
-                  >
-                    Reset
-                  </Button>
-                </div>
+            {/* Active filters row */}
+            {(section || topic) && (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                {section && (
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setSection("")}>Section ×</Button>
+                )}
+                {topic && (
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setTopic("")}>Topic: {topic} ×</Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => { setQ(""); setSection(""); setTopic(""); }}>Clear all</Button>
               </div>
-            </SheetContent>
-          </Sheet>
+            )}
+
+            {/* Results */}
+            {loading ? (
+              <div className="min-h-[30vh] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+              </div>
+            ) : error ? (
+              <div className="rounded-lg border bg-card p-6">{error}</div>
+            ) : filtered.length === 0 ? (
+              <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground">No threads found. Try different filters.</div>
+            ) : (
+              <section className="space-y-4">
+                {filtered.map((t) => (
+                  <Link key={t.id} to={`/threads/${t.id}`} className="block group">
+                    <Card className="p-5 border-2 transition hover:shadow-md hover:border-primary/20 rounded-xl">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <h2 className="text-lg font-semibold group-hover:text-primary transition-colors">{t.title}</h2>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{t.content}</p>
+                          <div className="flex flex-wrap items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
+                            {/* Section tag */}
+                            <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setSection(t.category_id)}>
+                              {categoryMap[t.category_id] || 'Section'}
+                            </Badge>
+                            {/* Topic tags if available */}
+                            {(t.topics || []).slice(0, 4).map((tag) => (
+                              <Badge key={tag} variant="outline" className="text-xs cursor-pointer" onClick={() => setTopic(tag)}>
+                                #{tag}
+                              </Badge>
+                            ))}
+                            {(t.topics || []).length > 4 && (
+                              <Badge variant="outline" className="text-xs">+{(t.topics || []).length - 4}</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={t.author?.avatar_url || undefined} alt={t.author?.name || 'User'} />
+                              <AvatarFallback>{(t.author?.name || 'U').slice(0,2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <span>{t.author?.name || 'User'}</span>
+                            <span>• {new Date(t.created_at).toLocaleDateString()}</span>
+                            <span>• {t.reply_count || 0} replies</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
+                ))}
+              </section>
+            )}
+          </div>
         </div>
-
-        {/* Active filters row */}
-        {(section || topic) && (
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            {section && (
-              <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setSection("")}>Section ×</Button>
-            )}
-            {topic && (
-              <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setTopic("")}>Topic: {topic} ×</Button>
-            )}
-            <Button size="sm" variant="ghost" onClick={() => { setQ(""); setSection(""); setTopic(""); }}>Clear all</Button>
-          </div>
-        )}
-
-        {/* Results */}
-        {loading ? (
-          <div className="min-h-[30vh] flex items-center justify-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
-          </div>
-        ) : error ? (
-          <div className="rounded-lg border bg-card p-6">{error}</div>
-        ) : filtered.length === 0 ? (
-          <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground">No threads found. Try different filters.</div>
-        ) : (
-          <section className="space-y-4">
-            {filtered.map((t) => (
-              <Link key={t.id} to={`/threads/${t.id}`} className="block group">
-                <Card className="p-5 border-2 transition hover:shadow-md hover:border-primary/20 rounded-xl">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <h2 className="text-lg font-semibold group-hover:text-primary transition-colors">{t.title}</h2>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{t.content}</p>
-                      <div className="flex flex-wrap items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
-                        {/* Section tag */}
-                        <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setSection(t.category_id)}>
-                          {categoryMap[t.category_id] || 'Section'}
-                        </Badge>
-                        {/* Topic tags if available */}
-                        {(t.topics || []).slice(0, 4).map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-xs cursor-pointer" onClick={() => setTopic(tag)}>
-                            #{tag}
-                          </Badge>
-                        ))}
-                        {(t.topics || []).length > 4 && (
-                          <Badge variant="outline" className="text-xs">+{(t.topics || []).length - 4}</Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={t.author?.avatar_url || undefined} alt={t.author?.name || 'User'} />
-                          <AvatarFallback>{(t.author?.name || 'U').slice(0,2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <span>{t.author?.name || 'User'}</span>
-                        <span>• {new Date(t.created_at).toLocaleDateString()}</span>
-                        <span>• {t.reply_count || 0} replies</span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            ))}
-          </section>
-        )}
       </section>
     </main>
   );

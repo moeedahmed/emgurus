@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GuruCard, type Guru } from "@/components/consultations/GuruCard";
 import { BookingModal } from "@/components/consultations/BookingModal";
 import { supabase } from "@/integrations/supabase/client";
@@ -207,78 +204,98 @@ const Consultations = () => {
       />
 
       <section className="container mx-auto px-4 py-8">
-
-        <div className="mb-4 space-y-3">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline">Filters</Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-80 sm:w-96">
-              <div className="space-y-4">
-                <Input placeholder="Search by name or specialty" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <Select value={country} onValueChange={setCountry}>
-                  <SelectTrigger><SelectValue placeholder="Country" /></SelectTrigger>
-                  <SelectContent className="z-50">
-                    {countries.map((c) => (<SelectItem key={c} value={c}>{c === "all" ? "All Countries" : c}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-                <Select value={specialty} onValueChange={setSpecialty}>
-                  <SelectTrigger><SelectValue placeholder="Specialty" /></SelectTrigger>
-                  <SelectContent className="z-50">
-                    {specialties.map((s) => (<SelectItem key={s} value={s}>{s === "all" ? "All Specialties" : s}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-                <Select value={exam} onValueChange={setExam}>
-                  <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
-                  <SelectContent className="z-50">
-                    {exams.map((e) => (<SelectItem key={e} value={e}>{e === "all" ? "All Exams" : e}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" onClick={() => { setSearch(""); setCountry("all"); setSpecialty("all"); setExam("all"); }}>Reset</Button>
-              </div>
-            </SheetContent>
-          </Sheet>
-          {/* Active filters row */}
-          {(country !== 'all' || specialty !== 'all' || exam !== 'all') && (
-            <div className="flex flex-wrap items-center gap-2">
-              {country !== 'all' && (
-                <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setCountry('all')}>Country: {country} ×</Button>
-              )}
-              {specialty !== 'all' && (
-                <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setSpecialty('all')}>Specialty: {specialty} ×</Button>
-              )}
-              {exam !== 'all' && (
-                <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setExam('all')}>Exam: {exam} ×</Button>
-              )}
-              <Button size="sm" variant="ghost" onClick={() => { setCountry('all'); setSpecialty('all'); setExam('all'); }}>Clear all</Button>
-            </div>
-          )}
-          <div className="text-sm text-muted-foreground">{filtered.length} mentors found</div>
-        </div>
-
-      {filtered.length === 0 ? (
-        <section className="text-center text-muted-foreground py-12">
-          No Gurus found. Try changing filters or come back later.
-        </section>
-      ) : (
-        <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((g) => (
-            <GuruCard
-              key={g.id}
-              guru={g}
-              onBook={(gg) => { setBookingGuru(gg); setOpen(true); }}
-              onBadgeClick={(type, value) => {
-                if (type === 'exam') setExam(value);
-                if (type === 'specialty') setSpecialty(value);
+        <div className="md:grid md:grid-cols-[280px_1fr] gap-6">
+          {/* Desktop sidebar */}
+          <aside className="hidden md:block">
+            <ConsultationsFilterPanel
+              search={search}
+              country={country}
+              specialty={specialty}
+              exam={exam}
+              countries={countries}
+              specialties={specialties}
+              exams={exams}
+              onChange={(k, v) => {
+                if (k === 'search') setSearch(v);
+                if (k === 'country') setCountry(v);
+                if (k === 'specialty') setSpecialty(v);
+                if (k === 'exam') setExam(v);
               }}
-              onCardClick={(gg) => { if (gg.specialty) setSpecialty(gg.specialty); }}
+              onReset={() => { setSearch(''); setCountry('all'); setSpecialty('all'); setExam('all'); }}
             />
-          ))}
-        </section>
-      )}
+          </aside>
 
-      <BookingModal guru={bookingGuru} open={open} onOpenChange={(v) => { setOpen(v); if (!v) setBookingGuru(null); }} />
-    </section>
+          {/* Main content */}
+          <div>
+            {/* Filters Button (mobile only) */}
+            <div className="mb-4 md:hidden">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline">Filters</Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-80 sm:w-96">
+                  <ConsultationsFilterPanel
+                    search={search}
+                    country={country}
+                    specialty={specialty}
+                    exam={exam}
+                    countries={countries}
+                    specialties={specialties}
+                    exams={exams}
+                    onChange={(k, v) => {
+                      if (k === 'search') setSearch(v);
+                      if (k === 'country') setCountry(v);
+                      if (k === 'specialty') setSpecialty(v);
+                      if (k === 'exam') setExam(v);
+                    }}
+                    onReset={() => { setSearch(''); setCountry('all'); setSpecialty('all'); setExam('all'); }}
+                  />
+                </SheetContent>
+              </Sheet>
+            </div>
+
+            {/* Active filters row */}
+            {(country !== 'all' || specialty !== 'all' || exam !== 'all') && (
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                {country !== 'all' && (
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setCountry('all')}>Country: {country} ×</Button>
+                )}
+                {specialty !== 'all' && (
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setSpecialty('all')}>Specialty: {specialty} ×</Button>
+                )}
+                {exam !== 'all' && (
+                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setExam('all')}>Exam: {exam} ×</Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => { setCountry('all'); setSpecialty('all'); setExam('all'); }}>Clear all</Button>
+              </div>
+            )}
+
+            <div className="text-sm text-muted-foreground mb-4">{filtered.length} mentors found</div>
+
+            {filtered.length === 0 ? (
+              <section className="text-center text-muted-foreground py-12">
+                No Gurus found. Try changing filters or come back later.
+              </section>
+            ) : (
+              <section className="space-y-4">
+                {filtered.map((g) => (
+                  <GuruCard
+                    key={g.id}
+                    guru={g}
+                    onBook={(gg) => { setBookingGuru(gg); setOpen(true); }}
+                    onBadgeClick={(type, value) => {
+                      if (type === 'exam') setExam(value);
+                      if (type === 'specialty') setSpecialty(value);
+                    }}
+                  />
+                ))}
+              </section>
+            )}
+
+            <BookingModal guru={bookingGuru} open={open} onOpenChange={(v) => { setOpen(v); if (!v) setBookingGuru(null); }} />
+          </div>
+        </div>
+      </section>
   </main>
   );
 };
