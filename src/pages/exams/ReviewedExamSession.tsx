@@ -26,6 +26,8 @@ interface FullQuestion {
   topic?: string | null;
 }
 
+type OptWithIdx = { key: string; text: string; origIndex: number };
+
 export default function ReviewedExamSession() {
   const navigate = useNavigate();
   const location = useLocation() as any;
@@ -38,6 +40,7 @@ export default function ReviewedExamSession() {
   const [answers, setAnswers] = useState<{ id: string; selected: string; correct: string; topic?: string | null }[]>([]);
   const [reviewMode, setReviewMode] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [dispOptions, setDispOptions] = useState<OptWithIdx[]>([]);
 
   useEffect(() => {
     document.title = "Exam Mode • Reviewed Bank";
@@ -70,8 +73,21 @@ export default function ReviewedExamSession() {
     } finally { setLoading(false); }
   }
 
-  const correctKey = (q ? letters[q.correct_index ?? 0] : 'A');
-  const options = (q?.options || []).map((t, i) => ({ key: letters[i] || String(i+1), text: t }));
+  useEffect(() => {
+    if (!q) { setDispOptions([]); return; }
+    const arr = (q.options || []).map((t, i) => ({ text: t, origIndex: i }));
+    const shuffled = shuffle(arr);
+    const mapped: OptWithIdx[] = shuffled.map((o, idx) => ({ key: letters[idx] || String(idx+1), text: o.text, origIndex: o.origIndex }));
+    setDispOptions(mapped);
+  }, [q?.id]);
+
+  const correctKey = useMemo(() => {
+    if (!q || !dispOptions.length) return letters[0];
+    const pos = dispOptions.findIndex(o => o.origIndex === (q.correct_index ?? 0));
+    return letters[Math.max(0, pos)];
+  }, [q, dispOptions]);
+
+  const options = useMemo(() => dispOptions.map(({ key, text }) => ({ key, text })), [dispOptions]);
 
   function submit() {
     if (!q || !selected) return;
