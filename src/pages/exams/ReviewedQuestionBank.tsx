@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { getJson } from "@/lib/functionsClient";
@@ -16,11 +17,14 @@ const EXAM_LABELS: Record<ExamCode, string> = {
 
 interface ReviewedRow {
   id: string;
-  exam: ExamCode;
+  exam: ExamCode | string;
   stem: string;
   reviewer_id: string | null;
   reviewed_at: string | null;
+  topic?: string | null;
+  tags?: string[] | null;
 }
+
 
 interface SLO { id: string; code: string; title: string }
 
@@ -83,10 +87,12 @@ const pageSize = 10;
           const res = await getJson('/public-reviewed-exams');
           let list = ((res.items || []) as any[]).map((q: any) => ({
             id: q.id,
-            exam: (q.exam || q.exam_type) as ExamCode,
+            exam: (q.exam_type || q.exam) as ExamCode | string,
             stem: q.stem,
             reviewer_id: null,
             reviewed_at: q.created_at || null,
+            topic: Array.isArray(q.tags) && q.tags.length ? q.tags[0] : null,
+            tags: Array.isArray(q.tags) ? q.tags : null,
           })) as ReviewedRow[];
           if (exam) list = list.filter((r) => r.exam === exam);
           if (!cancelled) {
@@ -134,81 +140,107 @@ const pageSize = 10;
     return () => { cancelled = true; };
   }, [exam, sloId, page]);
 
+  const FiltersPanel = () => (
+    <Card className="p-4 space-y-3">
+      <div className="space-y-2">
+        <div className="text-sm font-medium">Exam</div>
+        <Select value={exam || "ALL"} onValueChange={(v) => { setExam(v === "ALL" ? "" : (v as ExamCode)); setPage(1); }}>
+          <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All exams</SelectItem>
+            {(Object.keys(EXAM_LABELS) as ExamCode[]).map((code) => (
+              <SelectItem key={code} value={code}>{EXAM_LABELS[code]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <div className="text-sm font-medium">SLO</div>
+        <Select value={sloId || "ALL"} onValueChange={(v) => { setSloId(v === "ALL" ? "" : v); setPage(1); }}>
+          <SelectTrigger><SelectValue placeholder="SLO" /></SelectTrigger>
+          <SelectContent className="max-h-80">
+            <SelectItem value="ALL">All SLOs</SelectItem>
+            {slos.map((s) => (<SelectItem key={s.id} value={s.code}>{s.code} — {s.title}</SelectItem>))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Button variant="outline" onClick={() => { setExam(""); setSloId(""); setPage(1); }}>Reset</Button>
+    </Card>
+  );
+
   return (
-    <div className="container mx-auto px-4 py-6">
-      <header className="mb-4">
-        <h1 className="text-2xl font-semibold">Reviewed Question Bank</h1>
-      </header>
+    <main>
+      <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-4">
+          <h1 className="text-2xl font-semibold">Reviewed Question Bank</h1>
+        </div>
 
-      <Card>
-        <CardContent className="py-4 grid gap-3 md:grid-cols-6">
-          <Select value={exam || "ALL"} onValueChange={(v) => { setExam(v === "ALL" ? "" : (v as ExamCode)); setPage(1); }}>
-            <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All exams</SelectItem>
-              {(Object.keys(EXAM_LABELS) as ExamCode[]).map((code) => (
-                <SelectItem key={code} value={code}>{EXAM_LABELS[code]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={sloId || "ALL"} onValueChange={(v) => { setSloId(v === "ALL" ? "" : v); setPage(1); }}>
-            <SelectTrigger><SelectValue placeholder="SLO" /></SelectTrigger>
-            <SelectContent className="max-h-80">
-              <SelectItem value="ALL">All SLOs</SelectItem>
-              {slos.map((s) => (<SelectItem key={s.id} value={s.code}>{s.code} — {s.title}</SelectItem>))}
-            </SelectContent>
-          </Select>
-
-          <div className="md:col-span-4 flex items-center justify-end">
-            <Button variant="outline" onClick={() => { setExam(""); setSloId(""); setPage(1); }}>Reset</Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-        {loading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-24 rounded-xl border animate-pulse bg-muted/40" />
-          ))
-        ) : approvedCount === 0 ? (
-          <Card className="p-6 text-center">
-            <div className="text-muted-foreground">
-              No reviewed questions yet. Ask an admin to seed EM questions (MRCEM Primary/SBA, FRCEM SBA).
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <section className="lg:col-span-8">
+            <div className="mb-4 lg:hidden">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline">Filters</Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-80 sm:w-96">
+                  <FiltersPanel />
+                </SheetContent>
+              </Sheet>
             </div>
-          </Card>
-        ) : visible.length ? (
-          visible.map((it, idx) => (
-            <Card key={it.id} className="hover:bg-accent/30">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center justify-between gap-3">
-                  <span className="truncate">{it.stem.slice(0, 140)}</span>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{EXAM_LABELS[it.exam]}</span>
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/exams/reviewed/${it.id}`, { state: { ids: visible.map(v => v.id), index: idx } })}>Open</Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
-                {it.reviewed_at && (
-                  <span className="border rounded px-2 py-0.5">Reviewed {formatDistanceToNow(new Date(it.reviewed_at), { addSuffix: true })}</span>
-                )}
-                {it.reviewer_id && (
-                  <span className="border rounded px-2 py-0.5">Reviewer: {reviewers[it.reviewer_id] || '—'}</span>
-                )}
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <Card className="p-6 text-center"><div className="text-muted-foreground">No results match your filters.</div></Card>
-        )}
-      </div>
 
-      <div className="flex items-center justify-center mt-4 gap-4">
-        <Button variant="outline" disabled={page===1} onClick={() => setPage(p=>Math.max(1,p-1))}>Previous</Button>
-        <div className="text-sm text-muted-foreground">Page {page}</div>
-        <Button variant="outline" onClick={() => setPage(p=>p+1)}>Next</Button>
-      </div>
-    </div>
+            <div className="space-y-3">
+              {loading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <Card key={i} className="h-24 animate-pulse" />
+                ))
+              ) : approvedCount === 0 ? (
+                <Card className="p-6 text-center"><div className="text-muted-foreground">No reviewed questions yet. Ask an admin to seed EM questions.</div></Card>
+              ) : visible.length ? (
+                visible.map((it, idx) => (
+                  <Card
+                    key={it.id}
+                    className="hover:bg-accent/30 cursor-pointer"
+                    role="button"
+                    onClick={() => navigate(`/exams/reviewed/${it.id}`, { state: { ids: visible.map(v => v.id), index: idx } })}
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        <span className="line-clamp-2">{it.stem.slice(0, 200)}</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
+                      {it.reviewed_at && (
+                        <span className="border rounded px-2 py-0.5">Reviewed {formatDistanceToNow(new Date(it.reviewed_at), { addSuffix: true })}</span>
+                      )}
+                      <span className="border rounded px-2 py-0.5">Exam: {(EXAM_LABELS as any)[it.exam] || String(it.exam)}</span>
+                      {!!it.topic && <span className="border rounded px-2 py-0.5">Topic: {it.topic}</span>}
+                      {it.reviewer_id && (
+                        <span className="border rounded px-2 py-0.5">Reviewer: {reviewers[it.reviewer_id] || '—'}</span>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card className="p-6 text-center"><div className="text-muted-foreground">No results match your filters.</div></Card>
+              )}
+            </div>
+
+            <div className="flex items-center justify-center mt-4 gap-4">
+              <Button variant="outline" disabled={page===1} onClick={() => setPage(p=>Math.max(1,p-1))}>Previous</Button>
+              <div className="text-sm text-muted-foreground">Page {page}</div>
+              <Button variant="outline" onClick={() => setPage(p=>p+1)}>Next</Button>
+            </div>
+          </section>
+
+          <aside className="lg:col-span-4 hidden lg:block">
+            <div className="lg:sticky lg:top-20">
+              <div className="max-h-[calc(100vh-6rem)] overflow-auto pr-2">
+                <FiltersPanel />
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
   );
 }
