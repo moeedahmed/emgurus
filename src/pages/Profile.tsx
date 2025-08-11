@@ -162,24 +162,22 @@ export default function Profile() {
   const isAdmin = roles.includes('admin');
   return (
     <main className="container mx-auto px-4 md:px-6 py-6 md:py-10 overflow-x-hidden">
-      {/* Cover Banner */}
-      <section className="w-full h-16 md:h-40 relative bg-muted">
-        {profile?.cover_image_url ? (
+      {/* Cover Banner (only when image exists) */}
+      {profile?.cover_image_url && (
+        <section className="w-full h-32 md:h-44 relative">
           <img
             src={profile.cover_image_url}
             alt="Profile cover image"
             className="w-full h-full object-cover"
             loading="lazy"
           />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-r from-primary/20 to-primary/5" />
-        )}
-      </section>
+        </section>
+      )}
 
-      <article className="mt-4 md:mt-6 px-4 md:px-6">
+      <article className="mt-4 md:mt-6 px-4 md:px-4 max-w-full overflow-x-hidden">
         <div className="grid gap-6 md:grid-cols-3">
           {/* Left column: Profile summary */}
-          <Card className="p-6 md:col-span-1 shadow-md">
+          <Card className="w-full overflow-hidden p-6 md:col-span-1 shadow-md">
             <div className="flex items-start gap-4">
               <Avatar className="h-16 w-16 ring-2 ring-background">
                 <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || 'Avatar'} />
@@ -225,9 +223,9 @@ export default function Profile() {
           </Card>
 
           {/* Right column: Tabs with role-aware sections */}
-          <div className="md:col-span-2">
+          <div className="md:col-span-2 min-w-0">
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className={`w-full grid ${isGuru ? 'grid-cols-4' : 'grid-cols-3'}`}>
+              <TabsList className={`w-full max-w-full overflow-x-auto grid ${isGuru ? 'grid-cols-4' : 'grid-cols-3'}`}>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="bookings">Bookings</TabsTrigger>
                 <TabsTrigger value="security">Security</TabsTrigger>
@@ -236,7 +234,7 @@ export default function Profile() {
 
               {/* OVERVIEW */}
               <TabsContent value="overview" className="mt-4 space-y-6">
-                <Card className="p-6 space-y-4 shadow-md">
+                <Card className="w-full overflow-hidden p-6 space-y-4 shadow-md">
                   <div className="font-semibold">About</div>
                   {profile?.bio && (
                     <p className="text-sm text-muted-foreground break-words">{profile.bio}</p>
@@ -255,7 +253,7 @@ export default function Profile() {
                   )}
                 </Card>
 
-                <Card className="p-6 space-y-3 shadow-md">
+                <Card className="w-full overflow-hidden p-6 space-y-3 shadow-md">
                   <div className="font-semibold">Recent Bookings</div>
                   <Separator />
                   {bookings.length === 0 ? (
@@ -283,7 +281,7 @@ export default function Profile() {
 
               {/* BOOKINGS */}
               <TabsContent value="bookings" className="mt-4">
-                <Card className="p-6 space-y-3 shadow-md">
+                <Card className="w-full overflow-hidden p-6 space-y-3 shadow-md">
                   <div className="font-semibold">Your Bookings</div>
                   <Separator />
                   {bookings.length === 0 ? (
@@ -319,7 +317,7 @@ export default function Profile() {
 
               {/* SECURITY */}
               <TabsContent value="security" className="mt-4">
-                <Card className="p-6 max-w-xl space-y-4 shadow-md">
+                <Card className="w-full overflow-hidden p-6 max-w-xl space-y-4 shadow-md">
                   <div className="font-semibold">Change Password</div>
                   <div className="grid gap-3">
                     <div className="grid gap-1">
@@ -339,7 +337,7 @@ export default function Profile() {
               <TabsContent value="guru" className="mt-4 space-y-6">
                 {isGuru ? (
                   <>
-                    <Card id="pricing" className="p-6 space-y-4 shadow-md">
+                    <Card id="pricing" className="w-full overflow-hidden p-6 space-y-4 shadow-md">
                       <div className="flex items-center justify-between">
                         <div className="font-semibold">Pricing</div>
                         {profile?.price_per_30min ? (
@@ -360,7 +358,7 @@ export default function Profile() {
                       </div>
                     </Card>
 
-                    <Card className="p-6 shadow-md">
+                    <Card className="w-full overflow-hidden p-6 shadow-md">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Availability</div>
@@ -371,7 +369,7 @@ export default function Profile() {
                     </Card>
                   </>
                 ) : (
-                  <Card className="p-6 shadow-md">
+                  <Card className="w-full overflow-hidden p-6 shadow-md">
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="font-semibold">Become a Guru</div>
