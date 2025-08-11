@@ -12,6 +12,7 @@ import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import { useToast } from "@/hooks/use-toast";
 
 const letters = ['A','B','C','D','E'];
+const FEEDBACK_TAGS = ["Wrong answer","Ambiguous","Outdated","Typo"] as const;
 
 type SessionRow = {
   id: string;
@@ -112,74 +113,54 @@ export default function ReviewedQuestionDetail() {
     return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   };
 
-  const handleSelect = async (k: string) => {
+  const handleSelect = (k: string) => {
     if (showExplanation) return;
     setSelectedKey(k);
     setShowExplanation(true);
-    setAttempts((a) => a + 1);
-    if (user && q) {
-      await (supabase as any)
-        .from('user_question_sessions')
-        .update({ attempts: attempts + 1, last_selected: k, is_correct: k === correctKey, last_action_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .eq('question_id', q.id);
-    } else if (q) {
-      const key = 'emgurus.reviewed.session';
-      const raw = localStorage.getItem(key);
-      const store = raw ? JSON.parse(raw) : {};
-      const cur = store[q.id] || {};
-      store[q.id] = { ...cur, attempts: (cur.attempts || 0) + 1, last_selected: k, is_correct: k === correctKey };
-      localStorage.setItem(key, JSON.stringify(store));
-    }
-    setTimeout(() => { document.getElementById('explanation-heading')?.focus(); }, 0);
+    // Announce feedback via live region
+    setTimeout(() => { (document.getElementById('practice-feedback-live') as HTMLElement | null)?.focus?.(); }, 0);
   };
 
-  const persistNow = async () => { /* Practice mode: no persistence */ };
+  const handleToggleTag = (tag: string) => {
+    setIssueTypes((prev) => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  };
 
-  const saveFlag = async (v: boolean) => {
-    setIsFlagged(v);
-    if (user && q) {
-      await (supabase as any)
-        .from('user_question_sessions')
-        .update({ is_flagged: v, last_action_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .eq('question_id', q.id);
-    } else if (q) {
-      const key = 'emgurus.reviewed.session';
-      const raw = localStorage.getItem(key);
-      const store = raw ? JSON.parse(raw) : {};
-      const cur = store[q.id] || {};
-      store[q.id] = { ...cur, is_flagged: v };
-      localStorage.setItem(key, JSON.stringify(store));
+  const sendFeedback = async () => {
+    if (!q) return;
+    if (!user) {
+      toast({ title: 'Sign in required', description: 'Please sign in to send feedback.', variant: 'destructive' });
+      return;
+    }
+    try {
+      const comment = (issueTypes.length ? `[${issueTypes.join(', ')}] ` : '') + (notes || '');
+      await supabase.from('exam_question_flags').insert({
+        question_id: q.id,
+        question_source: `${q.exam || 'Reviewed'}${q.topic ? ' • ' + q.topic : ''}`,
+        flagged_by: user.id,
+        comment: comment || null,
+      } as any);
+      toast({ title: 'Thanks—your feedback was sent' });
+      setIssueTypes([]);
+      setNotes('');
+    } catch (e: any) {
+      toast({ title: 'Failed to send feedback', description: e.message, variant: 'destructive' });
     }
   };
 
-  const saveNotes = async (v: string) => {
-    setNotes(v);
-    if (user && q) {
-      await (supabase as any)
-        .from('user_question_sessions')
-        .update({ notes: v, last_action_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .eq('question_id', q.id);
-    } else if (q) {
-      const key = 'emgurus.reviewed.session';
-      const raw = localStorage.getItem(key);
-      const store = raw ? JSON.parse(raw) : {};
-      const cur = store[q.id] || {};
-      store[q.id] = { ...cur, notes: v };
-      localStorage.setItem(key, JSON.stringify(store));
-    }
+  const handleReset = () => {
+    setSelectedKey("");
+    setShowExplanation(false);
+    setNotes("");
+    setIssueTypes([]);
+    setTimeSpent(0);
+    try { localStorage.removeItem('emgurus.reviewed.session'); } catch {}
+    toast({ title: 'Practice reset', description: 'Your selections were cleared.' });
   };
 
   // Timer
   useEffect(() => {
     let active = true;
-    const onVis = () => {
-      if (document.visibilityState === 'hidden') {
-        void persistNow();
-      }
-    };
+    const onVis = () => {};
     document.addEventListener('visibilitychange', onVis);
     tickRef.current = window.setInterval(() => {
       if (document.visibilityState === 'visible' && active) {
@@ -190,31 +171,8 @@ export default function ReviewedQuestionDetail() {
       active = false;
       document.removeEventListener('visibilitychange', onVis);
       if (tickRef.current) clearInterval(tickRef.current);
-      void persistNow();
     };
   }, []);
-
-  // Persist every ~5s
-  useEffect(() => {
-    if (!q) return;
-    if (timeSpent % 5 !== 0) return;
-    const persist = async () => {
-      if (user) {
-        await (supabase as any)
-          .from('user_question_sessions')
-          .update({ time_spent_seconds: timeSpent, last_action_at: new Date().toISOString(), last_selected: selectedKey, attempts, is_flagged: isFlagged, notes, is_correct: showExplanation && selectedKey === correctKey })
-          .eq('user_id', user.id)
-          .eq('question_id', q.id);
-      } else {
-        const key = 'emgurus.reviewed.session';
-        const raw = localStorage.getItem(key);
-        const store = raw ? JSON.parse(raw) : {};
-        store[q.id] = { time_spent_seconds: timeSpent, last_selected: selectedKey, attempts, is_flagged: isFlagged, notes, is_correct: showExplanation && selectedKey === correctKey };
-        localStorage.setItem(key, JSON.stringify(store));
-      }
-    };
-    persist();
-  }, [timeSpent]);
 
   // Navigation helpers
   const goPrev = () => {
@@ -226,26 +184,6 @@ export default function ReviewedQuestionDetail() {
     if (!ids.length) return;
     const nextIdx = Math.min(ids.length - 1, index + 1);
     navigate(`/exams/reviewed/${ids[nextIdx]}`, { state: { ids, index: nextIdx } });
-  };
-
-  // Check answer handler
-  const handleCheck = async () => {
-    setShowExplanation(true);
-    setAttempts((a) => a + 1);
-    if (user && q) {
-      await (supabase as any)
-        .from('user_question_sessions')
-        .update({ attempts: attempts + 1, last_selected: selectedKey, is_correct: selectedKey === correctKey, last_action_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .eq('question_id', q.id);
-    } else if (q) {
-      const key = 'emgurus.reviewed.session';
-      const raw = localStorage.getItem(key);
-      const store = raw ? JSON.parse(raw) : {};
-      const cur = store[q.id] || {};
-      store[q.id] = { ...cur, attempts: (cur.attempts || 0) + 1, last_selected: selectedKey, is_correct: selectedKey === correctKey };
-      localStorage.setItem(key, JSON.stringify(store));
-    }
   };
 
   // Keyboard shortcuts
@@ -273,38 +211,61 @@ export default function ReviewedQuestionDetail() {
         <div className="h-40 rounded-xl border animate-pulse bg-muted/40 mt-4" />
       ) : q ? (
         <div className="mt-4 grid gap-6 md:grid-cols-3">
-          {/* Mobile top bar */}
           <div className="md:hidden">
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="progress">
-                <AccordionTrigger>Progress</AccordionTrigger>
-                <AccordionContent>
-                  <div className="text-sm mb-2">Question {ids.length ? index + 1 : 1}{ids.length ? ` of ${ids.length}` : ''}</div>
-                  <Progress value={ids.length ? ((index+1)/ids.length)*100 : 100} />
-                  <div className="text-xs text-muted-foreground mt-1">{answeredCount} / {totalQuestions} answered</div>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="timer">
-                <AccordionTrigger>Timer</AccordionTrigger>
-                <AccordionContent>
-                  <div aria-live="polite" role="status" className="text-sm font-medium">{formatMMSS(timeSpent)}</div>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="notes">
-                <AccordionTrigger>My Notes & Flags</AccordionTrigger>
-                <AccordionContent>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Switch id="mark-m" checked={isFlagged} onCheckedChange={saveFlag} />
-                    <Label htmlFor="mark-m">Mark for review</Label>
-                  </div>
-                  <Label htmlFor="notes-m" className="text-sm">Notes</Label>
-                  <Textarea id="notes-m" value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={(e) => void saveNotes(e.target.value)} placeholder="Your quick notes..." className="mt-1" />
-                  <div className="mt-2">
-                    <Button size="sm" variant="outline" onClick={() => void saveNotes(notes)}>Save note</Button>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+            <Drawer>
+              <DrawerTrigger asChild>
+                <Button variant="outline" size="sm">Practice Tools</Button>
+              </DrawerTrigger>
+              <DrawerContent>
+                <div className="p-4 space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Progress</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-sm mb-2">Question {ids.length ? index + 1 : 1}{ids.length ? ` of ${ids.length}` : ''}</div>
+                      <Progress value={ids.length ? ((index+1)/ids.length)*100 : 100} />
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Timer</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div aria-live="polite" role="status" className="text-sm font-medium">{formatMMSS(timeSpent)}</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Feedback</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {FEEDBACK_TAGS.map(tag => (
+                          <Button
+                            key={tag}
+                            variant={issueTypes.includes(tag) ? 'secondary' : 'outline'}
+                            size="sm"
+                            aria-pressed={issueTypes.includes(tag)}
+                            onClick={() => handleToggleTag(tag)}
+                          >
+                            {tag}
+                          </Button>
+                        ))}
+                      </div>
+                      <Label htmlFor="notes-m" className="text-sm">Notes (optional)</Label>
+                      <Textarea id="notes-m" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add a short note…" className="mt-1" />
+                      <div className="mt-3 flex items-center gap-2">
+                        <Button size="sm" onClick={sendFeedback}>Send feedback</Button>
+                        <Button size="sm" variant="outline" onClick={handleReset}>Reset Session</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </DrawerContent>
+            </Drawer>
           </div>
 
           {/* Left/main */}
@@ -365,17 +326,27 @@ export default function ReviewedQuestionDetail() {
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">My Notes & Flags</CardTitle>
+                  <CardTitle className="text-base">Feedback</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Switch id="mark" checked={isFlagged} onCheckedChange={saveFlag} />
-                    <Label htmlFor="mark">Mark for review</Label>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {FEEDBACK_TAGS.map(tag => (
+                      <Button
+                        key={tag}
+                        variant={issueTypes.includes(tag) ? 'secondary' : 'outline'}
+                        size="sm"
+                        aria-pressed={issueTypes.includes(tag)}
+                        onClick={() => handleToggleTag(tag)}
+                      >
+                        {tag}
+                      </Button>
+                    ))}
                   </div>
-                  <Label htmlFor="notes" className="text-sm">Notes</Label>
-                  <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={(e) => void saveNotes(e.target.value)} placeholder="Your quick notes..." className="mt-1" />
-                  <div className="mt-2">
-                    <Button size="sm" variant="outline" onClick={() => void saveNotes(notes)}>Save note</Button>
+                  <Label htmlFor="notes" className="text-sm">Notes (optional)</Label>
+                  <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add a short note…" className="mt-1" />
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button size="sm" onClick={sendFeedback}>Send feedback</Button>
+                    <Button size="sm" variant="outline" onClick={handleReset}>Reset Session</Button>
                   </div>
                 </CardContent>
               </Card>
