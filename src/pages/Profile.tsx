@@ -28,6 +28,8 @@ interface ProfileRow {
   linkedin: string | null;
   twitter: string | null;
   website: string | null;
+  price_per_30min: number | null;
+  onboarding_progress?: any;
 }
 
 interface BookingRow {
