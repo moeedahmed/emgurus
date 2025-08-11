@@ -218,7 +218,7 @@ export default function Blogs() {
                 </Sheet>
               </div>
               {/* Active filters row */}
-              {(category || tag || author) && (
+              {(category || tag || author || sort !== 'newest') && (
                 <div className="flex flex-wrap items-center gap-2">
                   {category && (
                     <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('category','')}>Category: {category} ×</Button>
@@ -228,6 +228,11 @@ export default function Blogs() {
                   )}
                   {author && (
                     <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('author','')}>Author ×</Button>
+                  )}
+                  {sort !== 'newest' && (
+                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('sort','newest')}>
+                      Sort: {sort === 'liked' ? 'Most Liked' : sort === 'discussed' ? 'Most Discussed' : sort === 'editors' ? "Editor's Picks" : sort === 'featured' ? 'Featured' : 'Newest'} ×
+                    </Button>
                   )}
                   <Button size="sm" variant="ghost" onClick={() => setSearchParams(new URLSearchParams())}>Clear all</Button>
                 </div>
