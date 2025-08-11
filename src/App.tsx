@@ -54,6 +54,7 @@ import QuestionBankPage from "@/pages/exams/QuestionBankPage";
 import QuestionDetail from "@/pages/exams/QuestionDetail";
 import GenerateExamQuestion from "@/pages/tools/GenerateExamQuestion";
 import MyExamDrafts from "@/pages/tools/MyExamDrafts";
+import ReviewedByMe from "@/pages/guru/ReviewedByMe";
 
 const queryClient = new QueryClient();
 
@@ -168,6 +169,7 @@ const App = () => (
 <Route path="/guru/questions" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruQuestions /></RoleProtectedRoute>} />
 <Route path="/guru/reviews" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruReviewQueue /></RoleProtectedRoute>} />
 <Route path="/guru/exams/review" element={<RoleProtectedRoute roles={["guru", "admin"]}><ExamsReviewQueue /></RoleProtectedRoute>} />
+<Route path="/guru/reviewed" element={<RoleProtectedRoute roles={["guru", "admin"]}><ReviewedByMe /></RoleProtectedRoute>} />
 <Route path="/guru/availability" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruAvailability /></RoleProtectedRoute>} />
               <Route path="/admin/approve-gurus" element={<RoleProtectedRoute roles={["admin"]}><ApproveGurus /></RoleProtectedRoute>} />
               <Route path="/admin/moderate-posts" element={<RoleProtectedRoute roles={["admin"]}><ModeratePosts /></RoleProtectedRoute>} />

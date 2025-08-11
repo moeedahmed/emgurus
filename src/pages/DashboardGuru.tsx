@@ -24,7 +24,10 @@ const DashboardGuru = () => {
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-2">Review AI-Generated Questions</h2>
           <p className="text-muted-foreground mb-4">Approve, edit, and tag with your reviewer identity.</p>
-          <Button onClick={() => navigate('/guru/reviews')}>Review Queue</Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={() => navigate('/guru/reviews')}>Review Queue</Button>
+            <Button variant="outline" onClick={() => navigate('/guru/reviewed')}>Reviewed by Me</Button>
+          </div>
         </Card>
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-2">Define Availability & Pricing</h2>
