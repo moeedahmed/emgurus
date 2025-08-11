@@ -9,10 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Brain, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useRoles } from "@/hooks/useRoles";
 
 const Auth = () => {
   const { user, signInWithGoogle, loading } = useAuth();
   const navigate = useNavigate();
+  const { isAdmin } = useRoles();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,22 +43,26 @@ const Auth = () => {
     routeAfterLogin();
   }, [user, navigate]);
 
-  // One-time: seed test users via Edge Function
-  useEffect(() => {
-    const already = localStorage.getItem('seed_users_done');
-    if (already) return;
-    supabase.functions.invoke('seed-test-users')
-      .then(({ error }) => {
-        if (error) {
-          console.error('Seeding failed', error);
-          toast.error("Failed to seed test users");
-        } else {
-          toast.success("Test users seeded: admin, guru, user");
-          localStorage.setItem('seed_users_done', '1');
-        }
-      })
-      .catch((e) => console.error('Seed invoke error', e));
-  }, []);
+// One-time: seed test users via Edge Function (admin-only)
+useEffect(() => {
+  if (!user || !isAdmin) return;
+  const already = localStorage.getItem('seed_users_done');
+  if (already) return;
+  supabase.functions.invoke('seed-test-users')
+    .then(({ error }) => {
+      if (error) {
+        console.error('Seeding failed', error);
+        toast.error("Failed to seed test users");
+      } else {
+        toast.success("Test users seeded: admin, guru, user");
+        localStorage.setItem('seed_users_done', '1');
+      }
+    })
+    .catch((e) => {
+      console.error('Seed invoke error', e);
+      toast.error("Failed to seed test users");
+    });
+}, [user, isAdmin]);
 
   const handleGoogleSignIn = async () => {
     try {
