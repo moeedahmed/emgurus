@@ -11,6 +11,7 @@ const UserProgress = () => {
   const [correct, setCorrect] = useState(0);
   const [timeMs, setTimeMs] = useState(0);
   const [topics, setTopics] = useState<{ topic: string; attempts: number; correct: number }[]>([]);
+  const [recent, setRecent] = useState<any[]>([]);
 
   useEffect(() => {
     document.title = "Your Progress | EMGurus";
@@ -53,6 +54,14 @@ const UserProgress = () => {
           .sort((x, y) => y.attempts - x.attempts)
           .slice(0, 5);
         if (!cancel) setTopics(rows);
+
+        // Recent exam attempts
+        const { data: rec } = await (supabase as any)
+          .from('exam_attempts')
+          .select('created_at, correct_count, total_attempted, total_questions, duration_sec, mode, source')
+          .order('created_at', { ascending: false })
+          .limit(10);
+        if (!cancel) setRecent(rec || []);
       } catch (e) {
         console.warn('Progress load failed', e);
       } finally {
@@ -112,6 +121,42 @@ const UserProgress = () => {
                 })
               ) : (
                 <TableRow><TableCell colSpan={3}>No data yet.</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader><CardTitle>Recent Exam Attempts</CardTitle></CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Score</TableHead>
+                <TableHead>Attempts</TableHead>
+                <TableHead>Time</TableHead>
+                <TableHead>Mode</TableHead>
+                <TableHead>Source</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow><TableCell colSpan={6}>Loading…</TableCell></TableRow>
+              ) : recent.length ? (
+                recent.map((r, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{new Date(r.created_at).toLocaleString()}</TableCell>
+                    <TableCell>{r.correct_count} / {r.total_attempted}</TableCell>
+                    <TableCell>{r.total_attempted} / {r.total_questions}</TableCell>
+                    <TableCell>{Math.round((r.duration_sec || 0) / 60)} min</TableCell>
+                    <TableCell className="capitalize">{r.mode}</TableCell>
+                    <TableCell className="uppercase text-xs tracking-wide">{r.source}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow><TableCell colSpan={6}>No attempts yet.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

@@ -103,6 +103,11 @@ const DashboardAdmin = () => {
             }
           }}>Run Now</Button>
         </Card>
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-2">Track Progress</h2>
+          <p className="text-muted-foreground mb-4">Review your exam attempts and strengths.</p>
+          <Button variant="secondary" onClick={() => navigate('/dashboard/user/progress')}>Open Progress</Button>
+        </Card>
         <div className="md:col-span-2 space-y-4">
           <Card className="p-6 flex items-center justify-between">
             <h2 className="text-xl font-semibold">Trustpilot Analytics</h2>

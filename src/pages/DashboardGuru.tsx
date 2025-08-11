@@ -113,6 +113,12 @@ const DashboardGuru = () => {
             <Button variant="outline" onClick={() => navigate('/profile#pricing')}>Set price</Button>
           </div>
         </Card>
+
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-2">Track Progress</h2>
+          <p className="text-muted-foreground mb-4">Review your exam attempts and strengths.</p>
+          <Button variant="secondary" onClick={() => navigate('/dashboard/user/progress')}>Open Progress</Button>
+        </Card>
       </div>
     </main>
   );

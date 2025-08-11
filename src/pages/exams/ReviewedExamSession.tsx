@@ -105,8 +105,9 @@ export default function ReviewedExamSession() {
     if (idx < order.length - 1) {
       setIdx(idx + 1);
     } else {
-      // finished
+      // finished or early end: show summary
       setReviewMode(false);
+      setEnded(true);
     }
   }
 
@@ -193,7 +194,7 @@ export default function ReviewedExamSession() {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mx-auto w-full md:max-w-5xl">
-        {!finished ? (
+        {!showSummary ? (
           <div className="grid gap-6 md:grid-cols-3">
             <div className="md:col-span-2">
               <Card>
