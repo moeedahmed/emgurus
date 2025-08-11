@@ -9,6 +9,7 @@ import { formatDistanceToNow } from "date-fns";
 import { getJson } from "@/lib/functionsClient";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type ExamCode = "MRCEM_Primary" | "MRCEM_SBA" | "FRCEM_SBA";
 const EXAM_LABELS: Record<ExamCode, string> = {
@@ -45,6 +46,7 @@ export default function ReviewedQuestionBank() {
   const [mode, setMode] = useState<'function' | 'direct'>('function');
   const [topicFilter, setTopicFilter] = useState<string | "">("");
   const [difficulty, setDifficulty] = useState<string | "">("");
+  const [reviewerProfiles, setReviewerProfiles] = useState<Record<string, { id: string; name: string; avatar_url?: string }>>({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -154,6 +156,34 @@ export default function ReviewedQuestionBank() {
           const { data: g } = await supabase.from('gurus').select('id, name').in('id', ids);
           const map: Record<string, string> = Object.fromEntries((g || []).map((r: any) => [r.id, r.name]));
           if (!cancelled) setReviewers(map);
+
+          // Try to map guru -> public profile for linking and avatar
+          const names = (g || []).map((r: any) => r.name).filter(Boolean);
+          let profs: any[] = [];
+          if (names.length) {
+            const { data: p } = await supabase
+              .from('profiles')
+              .select('user_id, full_name, avatar_url, email')
+              .in('full_name', names as any);
+            profs = p || [];
+          }
+          // Special-case: ensure Test Guru email maps
+          const { data: testGuru } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, avatar_url, email')
+            .eq('email', 'guru@emgurus.com')
+            .maybeSingle();
+
+          const byName: Record<string, any> = Object.fromEntries(profs.map((p: any) => [p.full_name, p]));
+          const pmap: Record<string, { id: string; name: string; avatar_url?: string }> = {};
+          (g || []).forEach((row: any) => {
+            const nm = row.name as string;
+            const prof = byName[nm] || ((testGuru && /test\s+guru/i.test(nm)) ? testGuru : undefined);
+            if (prof) {
+              pmap[row.id] = { id: prof.user_id, name: prof.full_name || nm, avatar_url: prof.avatar_url || undefined };
+            }
+          });
+          if (!cancelled) setReviewerProfiles(pmap);
         } else {
           if (!cancelled) setReviewers({});
         }
@@ -272,10 +302,18 @@ export default function ReviewedQuestionBank() {
                                 <Button
                                   variant="link"
                                   size="sm"
-                                  className="px-0"
-                                  onClick={(e) => { e.stopPropagation(); navigate(`/profile/${it.reviewer_id}`); }}
+                                  className="px-0 gap-1 inline-flex items-center"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const pid = reviewerProfiles[it.reviewer_id!]?.id || it.reviewer_id!;
+                                    navigate(`/profile/${pid}`);
+                                  }}
                                 >
-                                  {reviewers[it.reviewer_id] ? reviewers[it.reviewer_id].replace(/^Dr\s+/i,'') : 'Guru'}
+                                  <Avatar className="h-4 w-4">
+                                    <AvatarImage src={reviewerProfiles[it.reviewer_id!]?.avatar_url || undefined} alt={reviewerProfiles[it.reviewer_id!]?.name || reviewers[it.reviewer_id!] || 'Guru'} />
+                                    <AvatarFallback>GU</AvatarFallback>
+                                  </Avatar>
+                                  {(reviewerProfiles[it.reviewer_id!]?.name || reviewers[it.reviewer_id!] || 'Guru').replace(/^Dr\s+/i,'')}
                                 </Button>
                               </>
                             )}
