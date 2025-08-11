@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import { useToast } from "@/hooks/use-toast";
-
+import { Badge } from "@/components/ui/badge";
 const letters = ['A','B','C','D','E'];
 const FEEDBACK_TAGS = ["Wrong answer","Ambiguous","Outdated","Typo"] as const;
 
@@ -46,7 +46,7 @@ export default function ReviewedQuestionDetail() {
   const index: number = location?.state?.index ?? (ids.indexOf(id as string) || 0);
 
   useEffect(() => {
-    document.title = "Reviewed Question • EM Gurus";
+    document.title = "Practice Mode • EM Gurus";
   }, []);
 
   useEffect(() => {
@@ -205,7 +205,7 @@ export default function ReviewedQuestionDetail() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <Button variant="outline" onClick={() => navigate('/exams/reviewed')}>Back to list</Button>
+      <Button variant="outline" onClick={() => navigate('/exams')}>Back to exams</Button>
 
       {loading ? (
         <div className="h-40 rounded-xl border animate-pulse bg-muted/40 mt-4" />
@@ -272,7 +272,7 @@ export default function ReviewedQuestionDetail() {
           <div className="md:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Reviewed Question</CardTitle>
+                <CardTitle className="text-xl">Practice Mode</CardTitle>
               </CardHeader>
               <CardContent>
                 <QuestionCard
@@ -282,23 +282,32 @@ export default function ReviewedQuestionDetail() {
                   onSelect={handleSelect}
                   showExplanation={showExplanation}
                   explanation={q.explanation || "Explanation: This is a temporary explanation preview. The correct answer is highlighted above."}
-                  source={`${q.exam} • ${q.topic}${q.subtopic ? ' — ' + q.subtopic : ''}`}
+                  source={q.source || undefined}
                   correctKey={correctKey}
                   lockSelection={showExplanation}
                 />
 
 
-                <div className="mt-4 flex items-center gap-3">
-                  <Button variant="outline" onClick={goPrev} disabled={!ids.length || index===0}>Previous</Button>
-                  <Button variant="outline" onClick={goNext} disabled={!ids.length || index===ids.length-1}>Next</Button>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Button variant="outline" onClick={goPrev} disabled={!ids.length || index===0}>Previous</Button>
+                    <Button variant="outline" onClick={goNext} disabled={!ids.length || index===ids.length-1}>Next</Button>
+                  </div>
+                  <Button variant="outline" onClick={() => navigate('/exams')}>End Practice</Button>
                 </div>
 
 
-                <div className="mt-6 text-sm text-muted-foreground flex flex-wrap gap-2">
-                  {q.difficulty && <span className="border rounded px-2 py-0.5">{q.difficulty}</span>}
-                  {q.reviewed_at && <span className="border rounded px-2 py-0.5">Reviewed {new Date(q.reviewed_at).toLocaleDateString()}</span>}
-                  <span className="border rounded px-2 py-0.5">Reviewer: {reviewerName || '—'}</span>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {q.exam && <Badge variant="secondary">{q.exam}</Badge>}
+                  {q.topic && <Badge variant="secondary">{q.topic}</Badge>}
+                  {q.subtopic && <Badge variant="outline">{q.subtopic}</Badge>}
+                  {q.difficulty && <Badge variant="outline">{q.difficulty}</Badge>}
+                  {q.reviewed_at && <Badge variant="outline">Reviewed {new Date(q.reviewed_at).toLocaleDateString()}</Badge>}
+                  <a href={q.reviewer_id ? `/profile/${q.reviewer_id}` : undefined} className="no-underline">
+                    <Badge variant="secondary">Reviewer: {reviewerName || '—'}</Badge>
+                  </a>
                 </div>
+                {q.source && <div className="mt-2 text-sm text-muted-foreground">Source: {q.source}</div>}
               </CardContent>
             </Card>
           </div>

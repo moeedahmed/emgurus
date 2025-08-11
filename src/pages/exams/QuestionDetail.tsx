@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import QuestionCard from "@/components/exams/QuestionCard";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 export default function QuestionDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -103,10 +104,10 @@ export default function QuestionDetail() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <Button variant="ghost" onClick={() => navigate('/exams/question-bank')} aria-label="Back to list">Back to list</Button>
+      <Button variant="ghost" onClick={() => navigate('/exams')} aria-label="Back to exams">Back to exams</Button>
       <Card className="mt-3">
         <CardHeader>
-          <CardTitle>Reviewed Question</CardTitle>
+          <CardTitle>Practice Mode</CardTitle>
           {reviewerName && (
             <div className="text-sm text-muted-foreground">Reviewer: {reviewerName}</div>
           )}
@@ -115,18 +116,31 @@ export default function QuestionDetail() {
           {loading ? (
             <div className="h-24 rounded-xl border animate-pulse bg-muted/40" />
           ) : (
-            <QuestionCard
-              stem={q?.stem || 'Question'}
-              options={Array.isArray(q?.options)
-                ? (typeof (q.options as any[])[0] === 'string'
-                    ? (q.options as string[]).map((s, idx) => ({ key: String.fromCharCode(65+idx), text: s }))
-                    : (q.options as any[]))
-                : ['A','B','C','D'].map((_, idx) => ({ key: String.fromCharCode(65+idx), text: `Option ${String.fromCharCode(65+idx)}` }))}
-              selectedKey={selectedKey}
-              onSelect={handleSelect}
-              showExplanation={true}
-              explanation={q?.explanation || 'No explanation provided.'}
-            />
+            <>
+              <QuestionCard
+                stem={q?.stem || 'Question'}
+                options={Array.isArray(q?.options)
+                  ? (typeof (q.options as any[])[0] === 'string'
+                      ? (q.options as string[]).map((s, idx) => ({ key: String.fromCharCode(65+idx), text: s }))
+                      : (q.options as any[]))
+                  : ['A','B','C','D'].map((_, idx) => ({ key: String.fromCharCode(65+idx), text: `Option ${String.fromCharCode(65+idx)}` }))}
+                selectedKey={selectedKey}
+                onSelect={handleSelect}
+                showExplanation={true}
+                explanation={q?.explanation || 'No explanation provided.'}
+                source={q?.source || undefined}
+              />
+              <div className="mt-6 flex flex-wrap gap-2">
+                {q?.exam && <Badge variant="secondary">{q.exam}</Badge>}
+                {q?.topic && <Badge variant="secondary">{q.topic}</Badge>}
+                {q?.difficulty && <Badge variant="outline">{q.difficulty}</Badge>}
+                {q?.reviewed_at && <Badge variant="outline">Reviewed {new Date(q.reviewed_at).toLocaleDateString()}</Badge>}
+                <a href={q?.reviewer_id ? `/profile/${q.reviewer_id}` : undefined} className="no-underline">
+                  <Badge variant="secondary">Reviewer: {reviewerName || '—'}</Badge>
+                </a>
+              </div>
+              {q?.source && <div className="mt-2 text-sm text-muted-foreground">Source: {q.source}</div>}
+            </>
           )}
         </CardContent>
       </Card>
