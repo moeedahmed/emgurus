@@ -98,17 +98,18 @@ export default function ReviewedQuestionBank() {
       try {
         // Try public function first
         const res = await getJson('/public-reviewed-exams');
-        let list = ((res.items || []) as any[]).map((q: any) => ({
-          id: q.id,
-          exam: (q.exam_type || q.exam) as ExamCode | string,
-          stem: q.stem,
+        let list = ((res.items || []) as any[]).map((row: any) => ({
+          id: row.id,
+          exam: (row.exam_type || row.exam) as ExamCode | string,
+          stem: row.stem,
           reviewer_id: null,
-          reviewed_at: q.created_at || null,
-          topic: Array.isArray(q.tags) && q.tags.length ? q.tags[0] : null,
-          tags: Array.isArray(q.tags) ? q.tags : null,
+          reviewed_at: row.created_at || null,
+          topic: Array.isArray(row.tags) && row.tags.length ? row.tags[0] : null,
+          tags: Array.isArray(row.tags) ? row.tags : null,
         })) as ReviewedRow[];
+        const qtext = q.trim();
         if (exam) list = list.filter((r) => r.exam === exam);
-        if (q) list = list.filter((r) => r.stem.toLowerCase().includes(q.toLowerCase()));
+        if (qtext) list = list.filter((r) => r.stem.toLowerCase().includes(qtext.toLowerCase()));
         if (topicFilter) list = list.filter((r) => (r.topic || '').toLowerCase() === topicFilter.toLowerCase());
         if (difficulty) {
           const pickDiff = (row: ReviewedRow) =>
