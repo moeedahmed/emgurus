@@ -204,21 +204,9 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* KPIs */}
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              <KpiCard title="Total bookings" value={String(bookingCounts.total)} />
-              <KpiCard title="Upcoming" value={String(bookingCounts.upcoming)} />
-            </div>
-
-            {/* Quick actions */}
-            <div className="flex gap-3 pt-4 flex-wrap">
-              <Link to="/consultations"><Button variant="secondary" className="w-full sm:w-auto">Find Gurus</Button></Link>
+            {/* Actions (profile only) */}
+            <div className="flex gap-3 pt-2 flex-wrap">
               <Link to="/onboarding"><Button variant="outline" className="w-full sm:w-auto">Edit Profile</Button></Link>
-              {roles.includes('guru') ? (
-                <Link to="/guru/availability"><Button className="w-full sm:w-auto">My Availability</Button></Link>
-              ) : (
-                <ApplyGuruButton />
-              )}
             </div>
           </Card>
 
@@ -281,6 +269,16 @@ export default function Profile() {
 
               {/* BOOKINGS */}
               <TabsContent value="bookings" className="mt-4">
+                <Card className="w-full overflow-hidden p-6 shadow-md mb-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <KpiCard title="Total bookings" value={String(bookingCounts.total)} />
+                    <KpiCard title="Upcoming" value={String(bookingCounts.upcoming)} />
+                  </div>
+                  <div className="flex gap-3 pt-4 flex-wrap">
+                    <Link to="/consultations"><Button variant="secondary" className="w-full sm:w-auto">Find Gurus</Button></Link>
+                    {!isGuru && <ApplyGuruButton />}
+                  </div>
+                </Card>
                 <Card className="w-full overflow-hidden p-6 space-y-3 shadow-md">
                   <div className="font-semibold">Your Bookings</div>
                   <Separator />
