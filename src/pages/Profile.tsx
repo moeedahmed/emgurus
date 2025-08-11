@@ -11,10 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { KpiCard } from "@/components/dashboard/KpiCard";
-
+import KpiCard from "@/components/dashboard/KpiCard";
 const SUPABASE_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/consultations-api";
-import { KpiCard } from "@/components/dashboard/KpiCard";
 interface ProfileRow {
   user_id: string;
   full_name: string | null;
@@ -207,8 +205,8 @@ export default function Profile() {
 
             {/* KPIs */}
             <div className="grid grid-cols-2 gap-3 mt-4">
-              <KpiCard title="Total bookings" value={String(bookingCounts.total)} trend={{ value: 0, label: '' }} />
-              <KpiCard title="Upcoming" value={String(bookingCounts.upcoming)} trend={{ value: 0, label: '' }} />
+              <KpiCard title="Total bookings" value={String(bookingCounts.total)} />
+              <KpiCard title="Upcoming" value={String(bookingCounts.upcoming)} />
             </div>
 
             {/* Quick actions */}
