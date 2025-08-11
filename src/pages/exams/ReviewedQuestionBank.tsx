@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { getJson } from "@/lib/functionsClient";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 type ExamCode = "MRCEM_Primary" | "MRCEM_SBA" | "FRCEM_SBA";
 const EXAM_LABELS: Record<ExamCode, string> = {
@@ -262,19 +263,49 @@ export default function ReviewedQuestionBank() {
                     <CardContent className="text-sm text-muted-foreground flex flex-col gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         {it.reviewed_at && (
-                          <span className="border rounded px-2 py-0.5">
+                          <Badge variant="outline" className="text-xs">
                             Reviewed {formatDistanceToNow(new Date(it.reviewed_at), { addSuffix: true })}
                             {it.reviewer_id && (
-                              <> by {reviewers[it.reviewer_id] ? reviewers[it.reviewer_id].replace(/^Dr\s+/i,'') : '—'}</>
+                              <>
+                                {" "}by{" "}
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="px-0"
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/profile/${it.reviewer_id}`); }}
+                                >
+                                  {reviewers[it.reviewer_id] ? reviewers[it.reviewer_id].replace(/^Dr\s+/i,'') : 'Guru'}
+                                </Button>
+                              </>
                             )}
-                          </span>
+                          </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="border rounded px-2 py-0.5">{(EXAM_LABELS as any)[it.exam] || String(it.exam)}</span>
-                        {!!it.topic && <span className="border rounded px-2 py-0.5">{it.topic}</span>}
+                        <Badge
+                          variant="secondary"
+                          className="text-xs cursor-pointer"
+                          onClick={(e) => { e.stopPropagation(); setExam((it.exam as ExamCode) || ""); setPage(1); }}
+                        >
+                          {(EXAM_LABELS as any)[it.exam] || String(it.exam)}
+                        </Badge>
+                        {!!it.topic && (
+                          <Badge
+                            variant="secondary"
+                            className="text-xs cursor-pointer"
+                            onClick={(e) => { e.stopPropagation(); setTopicFilter(it.topic!); setPage(1); }}
+                          >
+                            {it.topic}
+                          </Badge>
+                        )}
                         {((it as any).difficulty || (it as any).level) && (
-                          <span className="border rounded px-2 py-0.5">{(it as any).difficulty || (it as any).level}</span>
+                          <Badge
+                            variant="secondary"
+                            className="text-xs cursor-pointer"
+                            onClick={(e) => { e.stopPropagation(); setDifficulty(String((it as any).difficulty || (it as any).level)); setPage(1); }}
+                          >
+                            {(it as any).difficulty || (it as any).level}
+                          </Badge>
                         )}
                       </div>
                     </CardContent>

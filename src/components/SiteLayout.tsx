@@ -89,10 +89,10 @@ const SiteLayout = () => {
             <div>
               Complete your profile to get the best experience (about 2 minutes).
             </div>
-              <div className="flex items-center gap-2">
-                <Button variant="link" className="px-0" onClick={() => navigate('/onboarding')}>Complete now</Button>
-                <Button variant="ghost" onClick={dismissBanner}>Dismiss</Button>
-              </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => navigate('/onboarding')}>Complete now</Button>
+              <Button variant="ghost" size="sm" onClick={dismissBanner}>Dismiss</Button>
+            </div>
           </div>
         </div>
       )}
