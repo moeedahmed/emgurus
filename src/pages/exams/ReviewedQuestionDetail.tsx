@@ -115,6 +115,7 @@ export default function ReviewedQuestionDetail() {
     return () => { cancelled = true; };
   }, [id, user]);
 
+
   const options = useMemo(() => {
     const arr: string[] = Array.isArray(q?.options) ? q.options : [];
     return arr.map((text, idx) => ({ key: letters[idx] || String(idx+1), text }));
@@ -134,6 +135,20 @@ export default function ReviewedQuestionDetail() {
       timeSpent,
     } as any;
   }, [attempts, isFlagged, notes, selectedKey, showExplanation, correctKey, timeSpent]);
+
+  const totalQuestions = ids.length || 1;
+  const answeredCount = useMemo(() => {
+    if (!ids.length) return (showExplanation || !!selectedKey) ? 1 : 0;
+    let count = 0;
+    try {
+      const raw = localStorage.getItem('emgurus.reviewed.session');
+      const store = raw ? JSON.parse(raw) : {};
+      ids.forEach((qid, i) => {
+        if (i < index && store[qid]?.last_selected) count += 1;
+      });
+    } catch {}
+    return count + ((showExplanation || !!selectedKey) ? 1 : 0);
+  }, [ids, index, selectedKey, showExplanation]);
 
   const formatMMSS = (s: number) => {
     const m = Math.floor(s / 60);
@@ -162,6 +177,7 @@ export default function ReviewedQuestionDetail() {
     }
     setTimeout(() => { document.getElementById('explanation-heading')?.focus(); }, 0);
   };
+
 
   const persistNow = async () => {
     if (!q) return;
@@ -192,6 +208,42 @@ export default function ReviewedQuestionDetail() {
         notes: snap.notes,
         is_correct: snap.showExplanation && snap.selectedKey === snap.correctKey,
       };
+      localStorage.setItem(key, JSON.stringify(store));
+    }
+  };
+
+  const saveFlag = async (v: boolean) => {
+    setIsFlagged(v);
+    if (user && q) {
+      await (supabase as any)
+        .from('user_question_sessions')
+        .update({ is_flagged: v, last_action_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('question_id', q.id);
+    } else if (q) {
+      const key = 'emgurus.reviewed.session';
+      const raw = localStorage.getItem(key);
+      const store = raw ? JSON.parse(raw) : {};
+      const cur = store[q.id] || {};
+      store[q.id] = { ...cur, is_flagged: v };
+      localStorage.setItem(key, JSON.stringify(store));
+    }
+  };
+
+  const saveNotes = async (v: string) => {
+    setNotes(v);
+    if (user && q) {
+      await (supabase as any)
+        .from('user_question_sessions')
+        .update({ notes: v, last_action_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('question_id', q.id);
+    } else if (q) {
+      const key = 'emgurus.reviewed.session';
+      const raw = localStorage.getItem(key);
+      const store = raw ? JSON.parse(raw) : {};
+      const cur = store[q.id] || {};
+      store[q.id] = { ...cur, notes: v };
       localStorage.setItem(key, JSON.stringify(store));
     }
   };
@@ -299,15 +351,36 @@ export default function ReviewedQuestionDetail() {
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           {/* Mobile top bar */}
           <div className="md:hidden">
-            <Card>
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <div>Question {ids.length ? index + 1 : 1}{ids.length ? ` of ${ids.length}` : ''}</div>
-                  <div>{Math.floor((timeSpent/ (ids.length? ids.length:1)) || 0)}s</div>
-                </div>
-                <Progress value={ids.length ? ((index+1)/ids.length)*100 : 100} />
-              </CardContent>
-            </Card>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="progress">
+                <AccordionTrigger>Progress</AccordionTrigger>
+                <AccordionContent>
+                  <div className="text-sm mb-2">Question {ids.length ? index + 1 : 1}{ids.length ? ` of ${ids.length}` : ''}</div>
+                  <Progress value={ids.length ? ((index+1)/ids.length)*100 : 100} />
+                  <div className="text-xs text-muted-foreground mt-1">{answeredCount} / {totalQuestions} answered</div>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="timer">
+                <AccordionTrigger>Timer</AccordionTrigger>
+                <AccordionContent>
+                  <div aria-live="polite" role="status" className="text-sm font-medium">{formatMMSS(timeSpent)}</div>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="notes">
+                <AccordionTrigger>My Notes & Flags</AccordionTrigger>
+                <AccordionContent>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Switch id="mark-m" checked={isFlagged} onCheckedChange={saveFlag} />
+                    <Label htmlFor="mark-m">Mark for review</Label>
+                  </div>
+                  <Label htmlFor="notes-m" className="text-sm">Notes</Label>
+                  <Textarea id="notes-m" value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={(e) => void saveNotes(e.target.value)} placeholder="Your quick notes..." className="mt-1" />
+                  <div className="mt-2">
+                    <Button size="sm" variant="outline" onClick={() => void saveNotes(notes)}>Save note</Button>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
 
           {/* Left/main */}
@@ -329,60 +402,12 @@ export default function ReviewedQuestionDetail() {
                   lockSelection={showExplanation}
                 />
 
-                {!showExplanation ? (
-                  <Button className="mt-4" onClick={handleCheck} disabled={!selectedKey}>Check answer</Button>
-                ) : (
-                  <div className="mt-4 text-sm">
-                    Correct answer: <span className="font-semibold">{correctKey}</span>
-                  </div>
-                )}
 
                 <div className="mt-4 flex items-center gap-3">
                   <Button variant="outline" onClick={goPrev} disabled={!ids.length || index===0}>Previous</Button>
                   <Button variant="outline" onClick={goNext} disabled={!ids.length || index===ids.length-1}>Next</Button>
                 </div>
 
-                <div className="mt-6 flex items-center gap-2">
-                  <Switch id="mark" checked={isFlagged} onCheckedChange={async (v) => {
-                    setIsFlagged(v);
-                    if (user && q) {
-                      await (supabase as any)
-                        .from('user_question_sessions')
-                        .update({ is_flagged: v, last_action_at: new Date().toISOString() })
-                        .eq('user_id', user.id)
-                        .eq('question_id', q.id);
-                    } else if (q) {
-                      const key = 'emgurus.reviewed.session';
-                      const raw = localStorage.getItem(key);
-                      const store = raw ? JSON.parse(raw) : {};
-                      const cur = store[q.id] || {};
-                      store[q.id] = { ...cur, is_flagged: v };
-                      localStorage.setItem(key, JSON.stringify(store));
-                    }
-                  }} />
-                  <Label htmlFor="mark">Mark for review</Label>
-                </div>
-
-                <div className="mt-3">
-                  <Label htmlFor="notes" className="text-sm">Notes</Label>
-                  <Textarea id="notes" value={notes} onChange={async (e) => {
-                    const v = e.target.value; setNotes(v);
-                    if (user && q) {
-                      await (supabase as any)
-                        .from('user_question_sessions')
-                        .update({ notes: v, last_action_at: new Date().toISOString() })
-                        .eq('user_id', user.id)
-                        .eq('question_id', q.id);
-                    } else if (q) {
-                      const key = 'emgurus.reviewed.session';
-                      const raw = localStorage.getItem(key);
-                      const store = raw ? JSON.parse(raw) : {};
-                      const cur = store[q.id] || {};
-                      store[q.id] = { ...cur, notes: v };
-                      localStorage.setItem(key, JSON.stringify(store));
-                    }
-                  }} placeholder="Your quick notes..." className="mt-1" />
-                </div>
 
                 <div className="mt-6 text-sm text-muted-foreground flex flex-wrap gap-2">
                   {q.difficulty && <span className="border rounded px-2 py-0.5">{q.difficulty}</span>}
@@ -397,28 +422,37 @@ export default function ReviewedQuestionDetail() {
           <aside className="hidden md:block md:col-span-1">
             <div className="sticky top-20 space-y-4">
               <Card>
-                <CardContent className="py-4">
-                  <div className="flex items-center justify-between text-sm mb-2">
-                    <div>Question {ids.length ? index + 1 : 1}{ids.length ? ` of ${ids.length}` : ''}</div>
-                    <div>{timeSpent}s</div>
-                  </div>
+                <CardHeader>
+                  <CardTitle className="text-base">Progress</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm mb-2">Question {ids.length ? index + 1 : 1}{ids.length ? ` of ${ids.length}` : ''}</div>
                   <Progress value={ids.length ? ((index+1)/ids.length)*100 : 100} />
+                  <div className="text-xs text-muted-foreground mt-1">{answeredCount} / {totalQuestions} answered</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Attempts</CardTitle>
+                  <CardTitle className="text-base">Timer</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-semibold">{attempts}</div>
+                  <div aria-live="polite" role="status" className="text-lg font-semibold">{formatMMSS(timeSpent)}</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Marked for Review</CardTitle>
+                  <CardTitle className="text-base">My Notes & Flags</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-sm">{isFlagged ? 'Yes' : 'No'}</div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Switch id="mark" checked={isFlagged} onCheckedChange={saveFlag} />
+                    <Label htmlFor="mark">Mark for review</Label>
+                  </div>
+                  <Label htmlFor="notes" className="text-sm">Notes</Label>
+                  <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={(e) => void saveNotes(e.target.value)} placeholder="Your quick notes..." className="mt-1" />
+                  <div className="mt-2">
+                    <Button size="sm" variant="outline" onClick={() => void saveNotes(notes)}>Save note</Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
