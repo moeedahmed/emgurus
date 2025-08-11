@@ -93,67 +93,60 @@ export default function ReviewedQuestionBank() {
     (async () => {
       setLoading(true);
       try {
-        try {
-          const res = await getJson('/public-reviewed-exams');
-          let list = ((res.items || []) as any[]).map((q: any) => ({
-            id: q.id,
-            exam: (q.exam_type || q.exam) as ExamCode | string,
-            stem: q.stem,
-            reviewer_id: null,
-            reviewed_at: q.created_at || null,
-            topic: Array.isArray(q.tags) && q.tags.length ? q.tags[0] : null,
-            tags: Array.isArray(q.tags) ? q.tags : null,
-          })) as ReviewedRow[];
-          if (exam) list = list.filter((r) => r.exam === exam);
-          if (q) list = list.filter((r) => r.stem.toLowerCase().includes(q.toLowerCase()));
-          if (!cancelled) {
-            setItems(list);
-            setTotalCount(list.length);
-            if (approvedCount === null) setApprovedCount(res.count ?? list.length);
-            setReviewers({});
-            setMode('function');
-          }
-        } catch {
-          // Fallback to direct table query with filters
-          let base = (supabase as any)
-            .from('reviewed_exam_questions')
-            .select('id, exam, stem, reviewer_id, reviewed_at, topic', { count: 'exact' })
-            .eq('status', 'approved');
-          if (exam) base = base.eq('exam', exam);
-          if (q) base = base.ilike('stem', `%${q}%`);
+        // Try public function first
+        const res = await getJson('/public-reviewed-exams');
+        let list = ((res.items || []) as any[]).map((q: any) => ({
+          id: q.id,
+          exam: (q.exam_type || q.exam) as ExamCode | string,
+          stem: q.stem,
+          reviewer_id: null,
+          reviewed_at: q.created_at || null,
+          topic: Array.isArray(q.tags) && q.tags.length ? q.tags[0] : null,
+          tags: Array.isArray(q.tags) ? q.tags : null,
+        })) as ReviewedRow[];
+        if (exam) list = list.filter((r) => r.exam === exam);
+        if (q) list = list.filter((r) => r.stem.toLowerCase().includes(q.toLowerCase()));
+        if (!cancelled) {
+          setItems(list);
+          setTotalCount(list.length);
+          if (approvedCount === null) setApprovedCount(res.count ?? list.length);
+          setReviewers({});
+          setMode('function');
+        }
+      } catch {
+        // Fallback to direct table query with filters
+        let base = (supabase as any)
+          .from('reviewed_exam_questions')
+          .select('id, exam, stem, reviewer_id, reviewed_at, topic', { count: 'exact' })
+          .eq('status', 'approved');
+        if (exam) base = base.eq('exam', exam);
+        if (q) base = base.ilike('stem', `%${q}%`);
 
-          const from = (page - 1) * pageSize;
-          const to = from + pageSize - 1;
-          const { data, count, error } = await base
-            .order('reviewed_at', { ascending: false })
-            .order('id', { ascending: false })
-            .range(from, to);
-          if (error) throw error;
-          const list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
-          if (!cancelled) {
-            setItems(list);
-            setTotalCount(count ?? 0);
-            setMode('direct');
-          }
-          const ids = Array.from(new Set(list.map(d => d.reviewer_id).filter(Boolean))) as string[];
-          if (ids.length) {
-            const { data: g } = await supabase.from('gurus').select('id, name').in('id', ids);
-            const map: Record<string, string> = Object.fromEntries((g || []).map((r: any) => [r.id, r.name]));
-            if (!cancelled) setReviewers(map);
-          } else {
-            if (!cancelled) setReviewers({});
-          }
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+        const { data, count, error } = await base
+          .order('reviewed_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(from, to);
+        if (error) throw error;
+        const list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
+        if (!cancelled) {
+          setItems(list);
+          setTotalCount(count ?? 0);
+          setMode('direct');
         }
+        const ids = Array.from(new Set(list.map(d => d.reviewer_id).filter(Boolean))) as string[];
+        if (ids.length) {
+          const { data: g } = await supabase.from('gurus').select('id, name').in('id', ids);
+          const map: Record<string, string> = Object.fromEntries((g || []).map((r: any) => [r.id, r.name]));
+          if (!cancelled) setReviewers(map);
+        } else {
+          if (!cancelled) setReviewers({});
         }
-      } catch (e) {
-        console.error('Reviewed bank fetch failed', e);
-        if (!cancelled) { setItems([]); setReviewers({}); }
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [exam, sloId, topic, difficulty, page]);
+  }, [exam, sloId, q, page]);
 
   const FiltersPanel = () => (
     <Card className="p-4 space-y-3">
