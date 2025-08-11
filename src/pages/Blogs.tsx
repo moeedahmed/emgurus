@@ -176,96 +176,96 @@ export default function Blogs() {
       />
       <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Main list - vertical cards, left aligned */}
-        <section className="lg:col-span-8">
-          <div className="mb-4 space-y-3">
-            <div className="flex items-center gap-3">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline">Filters</Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-80 sm:w-96">
-                  <BlogsFilterPanel
-                    q={q}
-                    category={category}
-                    author={author}
-                    sort={sort}
-                    categories={categories}
-                    authors={authors}
-                    onChange={setParam}
-                    onReset={() => setSearchParams(new URLSearchParams())}
-                  />
-                </SheetContent>
-              </Sheet>
-            </div>
-            {/* Active filters row */}
-            {(category || tag || author) && (
-              <div className="flex flex-wrap items-center gap-2">
-                {category && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('category','')}>Category: {category} ×</Button>
-                )}
-                {tag && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('tag','')}>Tag: {tag} ×</Button>
-                )}
-                {author && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('author','')}>Author ×</Button>
-                )}
-                <Button size="sm" variant="ghost" onClick={() => setSearchParams(new URLSearchParams())}>Clear all</Button>
+          {/* Left filters panel - sticky and independently scrollable */}
+          <aside className="lg:col-span-4 hidden lg:block">
+            <div className="lg:sticky lg:top-20">
+              <div className="max-h-[calc(100vh-6rem)] overflow-auto pr-2 space-y-6">
+                <BlogsFilterPanel
+                  q={q}
+                  category={category}
+                  author={author}
+                  sort={sort}
+                  categories={categories}
+                  authors={authors}
+                  onChange={setParam}
+                  onReset={() => setSearchParams(new URLSearchParams())}
+                />
+                <TopAuthorsPanel authors={topAuthors} />
               </div>
-            )}
-          </div>
-          <div className="space-y-2">
-            <div className="text-sm text-muted-foreground">{filtered.length} posts</div>
-            {loading ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <Card key={i} className="h-72 animate-pulse" />
-              ))
-            ) : filtered.length === 0 ? (
-              <Card className="p-6">No posts yet. Check back soon.</Card>
-            ) : (
-              filtered.map((p) => (
-              <BlogCard
-                key={p.id}
-                post={p}
-                onOpen={() => navigate(`/blogs/${p.slug}`)}
-                topBadge={topByCat.has(p.id) ? { label: 'Most Liked' } : null}
-                selectedCategory={category}
-                selectedTag={tag}
-                onTagClick={(type, value) => {
-                  if (type === 'category') toggleParam('category', value);
-                  if (type === 'tag') {
-                    if (value === 'most-liked') setParam('sort', sort === 'liked' ? 'newest' : 'liked');
-                    else toggleParam('tag', value);
-                  }
-                }}
-              />
-              ))
-            )}
-            {/* Mobile: Top authors below the list */}
-            <div className="lg:hidden">
-              <TopAuthorsPanel authors={topAuthors} />
             </div>
-          </div>
-        </section>
+          </aside>
 
-        {/* Right filters panel - sticky and independently scrollable */}
-        <aside className="lg:col-span-4 hidden lg:block">
-          <div className="lg:sticky lg:top-20">
-            <div className="max-h-[calc(100vh-6rem)] overflow-auto pr-2 space-y-6">
-              <BlogsFilterPanel
-                q={q}
-                category={category}
-                author={author}
-                sort={sort}
-                categories={categories}
-                authors={authors}
-                onChange={setParam}
-                onReset={() => setSearchParams(new URLSearchParams())}
-              />
-              <TopAuthorsPanel authors={topAuthors} />
+          {/* Main list - vertical cards, left aligned */}
+          <section className="lg:col-span-8">
+            <div className="mb-4 space-y-3">
+              <div className="flex items-center gap-3 lg:hidden">
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline">Filters</Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-80 sm:w-96">
+                    <BlogsFilterPanel
+                      q={q}
+                      category={category}
+                      author={author}
+                      sort={sort}
+                      categories={categories}
+                      authors={authors}
+                      onChange={setParam}
+                      onReset={() => setSearchParams(new URLSearchParams())}
+                    />
+                  </SheetContent>
+                </Sheet>
+              </div>
+              {/* Active filters row */}
+              {(category || tag || author) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {category && (
+                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('category','')}>Category: {category} ×</Button>
+                  )}
+                  {tag && (
+                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('tag','')}>Tag: {tag} ×</Button>
+                  )}
+                  {author && (
+                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('author','')}>Author ×</Button>
+                  )}
+                  <Button size="sm" variant="ghost" onClick={() => setSearchParams(new URLSearchParams())}>Clear all</Button>
+                </div>
+              )}
             </div>
-          </div>
-        </aside>
+            <div className="space-y-2">
+              <div className="text-sm text-muted-foreground">{filtered.length} posts</div>
+              {loading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <Card key={i} className="h-72 animate-pulse" />
+                ))
+              ) : filtered.length === 0 ? (
+                <Card className="p-6">No posts yet. Check back soon.</Card>
+              ) : (
+                filtered.map((p) => (
+                <BlogCard
+                  key={p.id}
+                  post={p}
+                  onOpen={() => navigate(`/blogs/${p.slug}`)}
+                  topBadge={topByCat.has(p.id) ? { label: 'Most Liked' } : null}
+                  selectedCategory={category}
+                  selectedTag={tag}
+                  onTagClick={(type, value) => {
+                    if (type === 'category') toggleParam('category', value);
+                    if (type === 'tag') {
+                      if (value === 'most-liked') setParam('sort', sort === 'liked' ? 'newest' : 'liked');
+                      else toggleParam('tag', value);
+                    }
+                  }}
+                />
+                ))
+              )}
+              {/* Mobile: Top authors below the list */}
+              <div className="lg:hidden">
+                <TopAuthorsPanel authors={topAuthors} />
+              </div>
+            </div>
+          </section>
         </div>
       </section>
     </main>

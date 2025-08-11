@@ -204,31 +204,35 @@ const Consultations = () => {
       />
 
       <section className="container mx-auto px-4 py-8">
-        <div className="md:grid md:grid-cols-[280px_1fr] gap-6">
+        <div className="lg:grid lg:grid-cols-[280px_1fr] gap-6">
           {/* Desktop sidebar */}
-          <aside className="hidden md:block">
-            <ConsultationsFilterPanel
-              search={search}
-              country={country}
-              specialty={specialty}
-              exam={exam}
-              countries={countries}
-              specialties={specialties}
-              exams={exams}
-              onChange={(k, v) => {
-                if (k === 'search') setSearch(v);
-                if (k === 'country') setCountry(v);
-                if (k === 'specialty') setSpecialty(v);
-                if (k === 'exam') setExam(v);
-              }}
-              onReset={() => { setSearch(''); setCountry('all'); setSpecialty('all'); setExam('all'); }}
-            />
+          <aside className="hidden lg:block">
+            <div className="lg:sticky lg:top-20">
+              <div className="max-h-[calc(100vh-6rem)] overflow-auto pr-2 space-y-6">
+                <ConsultationsFilterPanel
+                  search={search}
+                  country={country}
+                  specialty={specialty}
+                  exam={exam}
+                  countries={countries}
+                  specialties={specialties}
+                  exams={exams}
+                  onChange={(k, v) => {
+                    if (k === 'search') setSearch(v);
+                    if (k === 'country') setCountry(v);
+                    if (k === 'specialty') setSpecialty(v);
+                    if (k === 'exam') setExam(v);
+                  }}
+                  onReset={() => { setSearch(''); setCountry('all'); setSpecialty('all'); setExam('all'); }}
+                />
+              </div>
+            </div>
           </aside>
 
           {/* Main content */}
           <div>
             {/* Filters Button (mobile only) */}
-            <div className="mb-4 md:hidden">
+            <div className="mb-4 lg:hidden">
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline">Filters</Button>

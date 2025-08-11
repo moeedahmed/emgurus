@@ -118,18 +118,22 @@ const Forums = () => {
         <div className="lg:grid lg:grid-cols-[280px_1fr] gap-6">
           {/* Desktop sidebar */}
           <aside className="hidden lg:block">
-            <ForumsFilterPanel
-              q={q}
-              section={section}
-              sections={categories.map(c => ({ id: c.id, title: c.title }))}
-              topics={topicsAll}
-              onChange={(k, v) => {
-                if (k === 'q') setQ(v);
-                if (k === 'section') setSection(v);
-                if (k === 'topic') setTopic(v);
-              }}
-              onReset={() => { setQ(''); setSection(''); setTopic(''); }}
-            />
+            <div className="lg:sticky lg:top-20">
+              <div className="max-h-[calc(100vh-6rem)] overflow-auto pr-2 space-y-6">
+                <ForumsFilterPanel
+                  q={q}
+                  section={section}
+                  sections={categories.map(c => ({ id: c.id, title: c.title }))}
+                  topics={topicsAll}
+                  onChange={(k, v) => {
+                    if (k === 'q') setQ(v);
+                    if (k === 'section') setSection(v);
+                    if (k === 'topic') setTopic(v);
+                  }}
+                  onReset={() => { setQ(''); setSection(''); setTopic(''); }}
+                />
+              </div>
+            </div>
           </aside>
 
           {/* Main */}
