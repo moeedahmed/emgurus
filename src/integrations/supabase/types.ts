@@ -1026,6 +1026,48 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_question_flags: {
+        Row: {
+          assigned_to: string | null
+          comment: string | null
+          created_at: string
+          flagged_by: string
+          id: string
+          question_id: string
+          question_source: string
+          resolution_note: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["flag_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          comment?: string | null
+          created_at?: string
+          flagged_by: string
+          id?: string
+          question_id: string
+          question_source?: string
+          resolution_note?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["flag_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          comment?: string | null
+          created_at?: string
+          flagged_by?: string
+          id?: string
+          question_id?: string
+          question_source?: string
+          resolution_note?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["flag_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       exam_review_assignments: {
         Row: {
           assigned_by: string
@@ -1419,6 +1461,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          data: Json
+          id: string
+          read_at: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          read_at?: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          read_at?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1556,6 +1631,74 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      question_set_items: {
+        Row: {
+          created_at: string
+          position: number
+          question_id: string
+          set_id: string
+        }
+        Insert: {
+          created_at?: string
+          position?: number
+          question_id: string
+          set_id: string
+        }
+        Update: {
+          created_at?: string
+          position?: number
+          question_id?: string
+          set_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_set_items_set_id_fkey"
+            columns: ["set_id"]
+            isOneToOne: false
+            referencedRelation: "question_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_sets: {
+        Row: {
+          created_at: string
+          created_by: string
+          currency: Database["public"]["Enums"]["currency_code"]
+          description: string | null
+          id: string
+          price_cents: number
+          status: Database["public"]["Enums"]["question_set_status"]
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          currency?: Database["public"]["Enums"]["currency_code"]
+          description?: string | null
+          id?: string
+          price_cents?: number
+          status?: Database["public"]["Enums"]["question_set_status"]
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
+          description?: string | null
+          id?: string
+          price_cents?: number
+          status?: Database["public"]["Enums"]["question_set_status"]
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       question_slos: {
         Row: {
@@ -2809,6 +2952,7 @@ export type Database = {
         | "cancelled"
         | "completed"
       communication_method: "zoom" | "google_meet" | "phone"
+      currency_code: "USD" | "GBP" | "PKR"
       difficulty_level: "easy" | "medium" | "hard"
       exam_type:
         | "FCPS"
@@ -2821,10 +2965,19 @@ export type Database = {
         | "MRCEM_SBA"
         | "FRCEM_SBA"
       exam_type_enum: "MRCEM_PRIMARY" | "MRCEM_SBA" | "FRCEM_SBA" | "OTHER"
+      flag_status: "open" | "assigned" | "resolved" | "removed" | "archived"
       guru_application_status: "pending" | "approved" | "rejected"
+      notification_type:
+        | "question_flagged"
+        | "flag_assigned"
+        | "flag_resolved"
+        | "assignment_created"
+        | "message"
+        | "system"
       payment_method: "stripe" | "paypal" | "free"
       payment_status: "pending" | "completed" | "refunded" | "failed"
       post_status: "draft" | "submitted" | "approved" | "rejected" | "published"
+      question_set_status: "draft" | "published" | "archived"
       question_status: "pending" | "approved" | "rejected"
       reaction_target:
         | "forum_thread"
@@ -2992,6 +3145,7 @@ export const Constants = {
         "completed",
       ],
       communication_method: ["zoom", "google_meet", "phone"],
+      currency_code: ["USD", "GBP", "PKR"],
       difficulty_level: ["easy", "medium", "hard"],
       exam_type: [
         "FCPS",
@@ -3005,10 +3159,20 @@ export const Constants = {
         "FRCEM_SBA",
       ],
       exam_type_enum: ["MRCEM_PRIMARY", "MRCEM_SBA", "FRCEM_SBA", "OTHER"],
+      flag_status: ["open", "assigned", "resolved", "removed", "archived"],
       guru_application_status: ["pending", "approved", "rejected"],
+      notification_type: [
+        "question_flagged",
+        "flag_assigned",
+        "flag_resolved",
+        "assignment_created",
+        "message",
+        "system",
+      ],
       payment_method: ["stripe", "paypal", "free"],
       payment_status: ["pending", "completed", "refunded", "failed"],
       post_status: ["draft", "submitted", "approved", "rejected", "published"],
+      question_set_status: ["draft", "published", "archived"],
       question_status: ["pending", "approved", "rejected"],
       reaction_target: [
         "forum_thread",
