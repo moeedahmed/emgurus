@@ -7,6 +7,15 @@ import QuestionCard from "@/components/exams/QuestionCard";
 
 const letters = ['A','B','C','D','E'];
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 interface FullQuestion {
   id: string;
   stem: string;
@@ -23,6 +32,7 @@ export default function ReviewedExamSession() {
   const ids: string[] = Array.isArray(location?.state?.ids) ? location.state.ids : [];
 
   const [idx, setIdx] = useState(0);
+  const [order, setOrder] = useState<string[]>([]);
   const [q, setQ] = useState<FullQuestion | null>(null);
   const [selected, setSelected] = useState<string>("");
   const [answers, setAnswers] = useState<{ id: string; selected: string; correct: string; topic?: string | null }[]>([]);
@@ -35,9 +45,16 @@ export default function ReviewedExamSession() {
 
   useEffect(() => {
     if (!ids.length) return;
-    void load(ids[idx]);
+    // Initialize a fresh random order for this session
+    setOrder(shuffle(ids));
+    setIdx(0);
+  }, [ids.join(',')]);
+
+  useEffect(() => {
+    if (!order.length) return;
+    void load(order[idx]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, ids.join(',')]);
+  }, [idx, order.join(',')]);
 
   async function load(id: string) {
     try {
@@ -60,7 +77,7 @@ export default function ReviewedExamSession() {
     if (!q || !selected) return;
     const next = answers.filter(a => a.id !== q.id).concat([{ id: q.id, selected, correct: correctKey, topic: q.topic }]);
     setAnswers(next);
-    if (idx < ids.length - 1) {
+    if (idx < order.length - 1) {
       setIdx(idx + 1);
     } else {
       // finished
@@ -90,7 +107,7 @@ export default function ReviewedExamSession() {
     );
   }
 
-  const finished = answers.length === ids.length;
+  const finished = answers.length === order.length;
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -98,7 +115,7 @@ export default function ReviewedExamSession() {
         {!finished ? (
           <Card>
             <CardHeader>
-              <CardTitle>Exam Mode • Question {idx + 1} of {ids.length}</CardTitle>
+              <CardTitle>Exam Mode • Question {idx + 1} of {order.length}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
               {q && (
@@ -116,7 +133,7 @@ export default function ReviewedExamSession() {
               )}
               <div className="flex items-center justify-between">
                 <Button variant="outline" onClick={() => navigate('/exams/reviewed')}>End Exam</Button>
-                <Button onClick={submit} disabled={!selected || loading}>{idx < ids.length - 1 ? 'Next' : 'Finish'}</Button>
+                <Button onClick={submit} disabled={!selected || loading}>{idx < order.length - 1 ? 'Next' : 'Finish'}</Button>
               </div>
             </CardContent>
           </Card>
@@ -126,7 +143,7 @@ export default function ReviewedExamSession() {
               <CardTitle>Exam Summary</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
-              <div className="text-lg font-semibold">Score: {score} / {ids.length}</div>
+              <div className="text-lg font-semibold">Score: {score} / {order.length}</div>
               <div className="grid gap-2">
                 {Object.entries(byTopic).map(([t, v]) => (
                   <div key={t} className="text-sm">{t}: {v.correct}/{v.total}</div>
@@ -162,7 +179,7 @@ export default function ReviewedExamSession() {
                 <Button variant="outline" onClick={() => setReviewMode(false)}>Summary</Button>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" onClick={() => setIdx(Math.max(0, idx-1))} disabled={idx===0}>Previous</Button>
-                  <Button onClick={() => setIdx(Math.min(ids.length-1, idx+1))} disabled={idx===ids.length-1}>Next</Button>
+                  <Button onClick={() => setIdx(Math.min(order.length-1, idx+1))} disabled={idx===order.length-1}>Next</Button>
                 </div>
               </div>
             </CardContent>
