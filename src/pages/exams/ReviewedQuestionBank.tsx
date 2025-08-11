@@ -143,6 +143,8 @@ export default function ReviewedQuestionBank() {
         } else {
           if (!cancelled) setReviewers({});
         }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
