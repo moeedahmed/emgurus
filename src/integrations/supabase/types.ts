@@ -2872,6 +2872,21 @@ export type Database = {
           view_count: number
         }[]
       }
+      list_public_reviewed_questions: {
+        Args: {
+          p_exam?: string
+          p_topic?: string
+          p_q?: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          id: string
+          stem: string
+          exam_type: string
+          reviewed_at: string
+        }[]
+      }
       list_reviewer_queue: {
         Args: { p_limit: number; p_offset: number }
         Returns: {
