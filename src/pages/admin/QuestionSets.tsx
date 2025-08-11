@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface QuestionSet {
   id: string;
@@ -33,9 +35,17 @@ export default function QuestionSetsAdmin() {
   const [tags, setTags] = useState("");
   const [currency, setCurrency] = useState<'USD'|'GBP'|'PKR'>('USD');
   const [price, setPrice] = useState<string>("0");
+  const [isFree, setIsFree] = useState<boolean>(true);
+  const [priceFilter, setPriceFilter] = useState<'all' | 'free' | 'paid'>('all');
 
   const [activeSet, setActiveSet] = useState<QuestionSet | null>(null);
   const [newQuestionId, setNewQuestionId] = useState("");
+
+  const visibleSets = useMemo(() => {
+    if (priceFilter === 'free') return sets.filter((s) => (s.price_cents ?? 0) === 0);
+    if (priceFilter === 'paid') return sets.filter((s) => (s.price_cents ?? 0) > 0);
+    return sets;
+  }, [sets, priceFilter]);
 
   useEffect(() => {
     document.title = "Question Sets | Admin | EMGurus";
@@ -68,11 +78,11 @@ export default function QuestionSetsAdmin() {
         description: description.trim() || null,
         tags: tags.split(',').map(t => t.trim()).filter(Boolean),
         currency,
-        price_cents: Math.round(parseFloat(price || '0') * 100) || 0,
+        price_cents: isFree ? 0 : Math.round(parseFloat(price || '0') * 100) || 0,
         created_by: uid,
       });
       if (error) throw error;
-      setTitle(""); setDescription(""); setTags(""); setCurrency('USD'); setPrice("0");
+      setTitle(""); setDescription(""); setTags(""); setCurrency('USD'); setPrice("0"); setIsFree(true);
       toast({ title: 'Created', description: 'Question set created.' });
       await load();
     } catch (e: any) {
@@ -128,7 +138,7 @@ export default function QuestionSetsAdmin() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
             <Select value={currency} onValueChange={(v) => setCurrency(v as any)}>
-              <SelectTrigger>
+              <SelectTrigger disabled={isFree}>
                 <SelectValue placeholder="Currency" />
               </SelectTrigger>
               <SelectContent>
@@ -137,7 +147,11 @@ export default function QuestionSetsAdmin() {
                 <SelectItem value="PKR">PKR</SelectItem>
               </SelectContent>
             </Select>
-            <Input type="number" step="0.01" min="0" placeholder="Price" value={price} onChange={(e) => setPrice(e.target.value)} />
+            <Input type="number" step="0.01" min="0" placeholder="Price" value={isFree ? "0" : price} onChange={(e) => setPrice(e.target.value)} disabled={isFree} />
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox id="free-set" checked={isFree} onCheckedChange={(v) => { const c = Boolean(v); setIsFree(c); if (c) setPrice("0"); }} />
+            <Label htmlFor="free-set">Free set</Label>
           </div>
           <Textarea placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
           <Input placeholder="Tags (comma-separated)" value={tags} onChange={(e) => setTags(e.target.value)} />
@@ -147,6 +161,14 @@ export default function QuestionSetsAdmin() {
         </Card>
 
         <Card className="p-0 overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="text-sm font-medium">Sets</div>
+            <div className="flex gap-2">
+              <Button size="sm" variant={priceFilter==='all' ? 'secondary' : 'outline'} onClick={() => setPriceFilter('all')}>All</Button>
+              <Button size="sm" variant={priceFilter==='free' ? 'secondary' : 'outline'} onClick={() => setPriceFilter('free')}>Free</Button>
+              <Button size="sm" variant={priceFilter==='paid' ? 'secondary' : 'outline'} onClick={() => setPriceFilter('paid')}>Paid</Button>
+            </div>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -158,12 +180,12 @@ export default function QuestionSetsAdmin() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sets.map((s) => (
+              {visibleSets.map((s) => (
                 <TableRow key={s.id} className={activeSet?.id === s.id ? 'bg-accent/30' : ''}>
                   <TableCell>
                     <button className="text-left hover:underline" onClick={() => setActiveSet(s)}>{s.title}</button>
                   </TableCell>
-                  <TableCell>{s.currency} {(s.price_cents / 100).toFixed(2)}</TableCell>
+                  <TableCell>{s.price_cents === 0 ? (<Badge variant="secondary">Free</Badge>) : (<span>{s.currency} {(s.price_cents / 100).toFixed(2)}</span>)}</TableCell>
                   <TableCell className="max-w-[360px] truncate" title={(s.tags || []).join(', ')}>{(s.tags || []).join(', ') || '—'}</TableCell>
                   <TableCell>
                     <Badge variant={s.status === 'published' ? 'default' : 'secondary'}>{s.status}</Badge>
@@ -177,9 +199,9 @@ export default function QuestionSetsAdmin() {
                   </TableCell>
                 </TableRow>
               ))}
-              {sets.length === 0 && (
+              {visibleSets.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-6">No sets yet</TableCell>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-6">No sets found</TableCell>
                 </TableRow>
               )}
             </TableBody>
