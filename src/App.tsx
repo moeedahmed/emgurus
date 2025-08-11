@@ -17,6 +17,7 @@ import Blogs from "./pages/Blogs";
 import BlogDetail from "./pages/BlogDetail";
 import EditorNew from "./pages/blogs/EditorNew";
 import EditorEdit from "./pages/blogs/EditorEdit";
+import BlogsDashboard from "./pages/blogs/Dashboard";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleProtectedRoute from "@/components/RoleProtectedRoute";
 import Dashboard from "./pages/Dashboard";
@@ -66,6 +67,10 @@ function LegacyBlogsDashboardRedirect() {
   if (roles.includes('admin')) return <Navigate to="/dashboard/admin#blogs-admin" replace />;
   if (roles.includes('guru')) return <Navigate to="/dashboard/guru#blogs" replace />;
   return <Navigate to="/dashboard/user" replace />;
+}
+function LegacyBlogSlugRedirect() {
+  const slug = window.location.pathname.split('/').pop() || '';
+  return <Navigate to={`/blogs/${slug}`} replace />;
 }
 const queryClient = new QueryClient();
 
@@ -119,11 +124,11 @@ const App = () => (
               <Route path="/blogs/editor/new" element={<ProtectedRoute><EditorNew /></ProtectedRoute>} />
               <Route path="/blogs/editor/:id" element={<ProtectedRoute><EditorEdit /></ProtectedRoute>} />
               <Route path="/blogs/new" element={<Navigate to="/blogs/editor/new" replace />} />
-              <Route path="/blogs/dashboard" element={<ProtectedRoute><LegacyBlogsDashboardRedirect /></ProtectedRoute>} />
+              <Route path="/blogs/dashboard" element={<ProtectedRoute><BlogsDashboard /></ProtectedRoute>} />
               <Route path="/blogs/review" element={<Navigate to="/blogs/dashboard" replace />} />
               <Route path="/blog" element={<Navigate to="/blogs" replace />} />
               <Route path="/blog/category/:tag" element={<BlogCategory />} />
-              <Route path="/blog/:slug" element={<BlogDetail />} />
+              <Route path="/blog/:slug" element={<LegacyBlogSlugRedirect />} />
               <Route path="/admin" element={<Navigate to="/dashboard/admin" replace />} />
 
               <Route
@@ -178,7 +183,7 @@ const App = () => (
 <Route path="/guru/reviewed" element={<RoleProtectedRoute roles={["guru", "admin"]}><ReviewedByMe /></RoleProtectedRoute>} />
 <Route path="/guru/availability" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruAvailability /></RoleProtectedRoute>} />
               <Route path="/admin/approve-gurus" element={<RoleProtectedRoute roles={["admin"]}><ApproveGurus /></RoleProtectedRoute>} />
-              <Route path="/admin/moderate-posts" element={<RoleProtectedRoute roles={["admin"]}><ModeratePosts /></RoleProtectedRoute>} />
+              <Route path="/admin/moderate-posts" element={<RoleProtectedRoute roles={["admin", "guru"]}><ModeratePosts /></RoleProtectedRoute>} />
               <Route path="/admin/assign-reviews" element={<RoleProtectedRoute roles={["admin"]}><AssignReviews /></RoleProtectedRoute>} />
               <Route path="/admin/marked-questions" element={<RoleProtectedRoute roles={["admin"]}><MarkedQuestionsAdmin /></RoleProtectedRoute>} />
               <Route path="/admin/question-sets" element={<RoleProtectedRoute roles={["admin"]}><QuestionSetsAdmin /></RoleProtectedRoute>} />

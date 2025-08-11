@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
+import { useRoles } from "@/hooks/useRoles";
 
 interface PostItem {
   id: string;
@@ -21,11 +23,25 @@ interface Assignment { id: string; post_id: string; reviewer_id: string; status:
 
 const ModeratePosts = () => {
   const { user } = useAuth();
+  const { roles } = useRoles();
+  const isAdmin = roles.includes("admin");
+  const isGuru = roles.includes("guru") || isAdmin;
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [reviewers, setReviewers] = useState<ReviewerProfile[]>([]);
   const [selectedReviewer, setSelectedReviewer] = useState<Record<string, string>>({});
   const [assignments, setAssignments] = useState<Record<string, Assignment[]>>({});
   const [loading, setLoading] = useState(false);
+
+  const view = (searchParams.get('view') as 'admin' | 'reviewer') || (isAdmin ? 'admin' : 'reviewer');
+  const tab = searchParams.get('tab') || (view === 'admin' ? 'unassigned' : 'pending');
+  const setTab = (t: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('view', view);
+    next.set('tab', t);
+    setSearchParams(next);
+  };
 
   useEffect(() => {
     document.title = "Moderate Blog Posts | EMGurus";
@@ -51,27 +67,58 @@ const ModeratePosts = () => {
 
   const loadPosts = async () => {
     setLoading(true);
-    const { data, error } = await (supabase as any).rpc("list_all_posts_admin", { p_status: "in_review", p_limit: 100, p_offset: 0 });
-    if (error) console.error(error);
-    const list = (data as any) || [];
-    setPosts(list);
-
-    // Load existing assignments for these posts
-    const ids = list.map((p: PostItem) => p.id);
-    if (ids.length) {
-      const { data: asg } = await supabase
-        .from("blog_review_assignments")
-        .select("id,post_id,reviewer_id,status,notes")
-        .in("post_id", ids);
-      const map: Record<string, Assignment[]> = {};
-      (asg || []).forEach((a: any) => {
-        (map[a.post_id] ||= []).push(a as Assignment);
-      });
-      setAssignments(map);
-    } else {
+    try {
+      if (view === 'admin') {
+        // Admin view: either unassigned or assigned in-review posts
+        let query = supabase
+          .from('blog_posts')
+          .select('id,title,description,author_id,created_at,status,reviewer_id')
+          .eq('status', 'in_review');
+        if (tab === 'unassigned') query = query.is('reviewer_id', null);
+        if (tab === 'assigned') query = query.not('reviewer_id', 'is', null);
+        const { data, error } = await query.order('created_at', { ascending: false });
+        if (error) throw error;
+        const list = (data as any) || [];
+        setPosts(list);
+        // Load assignments info for admin context
+        const ids = list.map((p: PostItem) => p.id);
+        if (ids.length) {
+          const { data: asg } = await supabase
+            .from('blog_review_assignments')
+            .select('id,post_id,reviewer_id,status,notes')
+            .in('post_id', ids);
+          const map: Record<string, Assignment[]> = {};
+          (asg || []).forEach((a: any) => { (map[a.post_id] ||= []).push(a as Assignment); });
+          setAssignments(map);
+        } else {
+          setAssignments({});
+        }
+      } else {
+        // Reviewer view: assigned to me (pending) or completed by me
+        if (tab === 'pending') {
+          const { data, error } = await (supabase as any).rpc('list_reviewer_queue', { p_limit: 100, p_offset: 0 });
+          if (error) throw error;
+          setPosts((data as any) || []);
+        } else {
+          if (!user) { setPosts([]); return; }
+          const { data, error } = await supabase
+            .from('blog_posts')
+            .select('id,title,description,author_id,created_at,status,reviewed_by')
+            .eq('status', 'published')
+            .eq('reviewed_by', user.id)
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          setPosts((data as any) || []);
+        }
+        setAssignments({});
+      }
+    } catch (e) {
+      console.error(e);
+      setPosts([]);
       setAssignments({});
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { loadPosts(); loadReviewers(); }, []);
@@ -116,6 +163,37 @@ const ModeratePosts = () => {
   return (
     <main className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Moderate Blog Posts</h1>
+
+      {/* Tabs / view controls */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex gap-2 flex-wrap">
+          {view === 'admin' ? (
+            <>
+              <Button variant={tab==='unassigned' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('unassigned')}>Submitted & Unassigned</Button>
+              <Button variant={tab==='assigned' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('assigned')}>Assigned</Button>
+            </>
+          ) : (
+            <>
+              <Button variant={tab==='pending' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('pending')}>Assigned to Me</Button>
+              <Button variant={tab==='completed' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('completed')}>Completed by Me</Button>
+            </>
+          )}
+        </div>
+        {isAdmin && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              next.set('view', view === 'admin' ? 'reviewer' : 'admin');
+              next.set('tab', view === 'admin' ? 'pending' : 'unassigned');
+              setSearchParams(next);
+            }}
+          >
+            Switch to {view === 'admin' ? 'Reviewer' : 'Admin'} view
+          </Button>
+        )}
+      </div>
 
       <div className="space-y-4">
         {posts.map((p) => (

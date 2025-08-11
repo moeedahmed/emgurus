@@ -62,9 +62,9 @@ const DashboardGuru = () => {
             <h2 className="text-xl font-semibold mb-2">Blogs</h2>
             <p className="text-muted-foreground mb-4">Write and review blogs.</p>
             <div className="flex gap-2 flex-wrap">
-              <Button onClick={() => navigate('/admin/moderate-posts')}>Pending Reviews</Button>
-              <Button variant="outline" onClick={() => navigate('/blogs')}>Completed Reviews</Button>
-              <Button variant="secondary" onClick={() => navigate('/blogs')}>My Blogs</Button>
+              <Button onClick={() => navigate('/admin/moderate-posts?view=reviewer&tab=pending')}>Pending Reviews</Button>
+              <Button variant="outline" onClick={() => navigate('/admin/moderate-posts?view=reviewer&tab=completed')}>Completed Reviews</Button>
+              <Button variant="secondary" onClick={() => navigate('/blogs/dashboard')}>My Blogs</Button>
             </div>
           </Card>
         </section>
