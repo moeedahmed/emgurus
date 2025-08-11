@@ -40,7 +40,7 @@ const DashboardAdmin = () => {
         </Card>
         <section id="blogs-admin-section">
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-2">Blogs (Admin)</h2>
+            <h2 className="text-xl font-semibold mb-2">Moderate Blog Posts</h2>
             <p className="text-muted-foreground mb-4">Review drafts and publish when ready.</p>
             <Button onClick={() => navigate('/admin/moderate-posts')}>Moderate</Button>
           </Card>
