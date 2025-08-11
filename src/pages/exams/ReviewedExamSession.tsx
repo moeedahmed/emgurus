@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import QuestionCard from "@/components/exams/QuestionCard";
+import { Progress } from "@/components/ui/progress";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 
 const letters = ['A','B','C','D','E'];
 
@@ -41,6 +43,10 @@ export default function ReviewedExamSession() {
   const [reviewMode, setReviewMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dispOptions, setDispOptions] = useState<OptWithIdx[]>([]);
+  const [selectionMap, setSelectionMap] = useState<Record<string, string>>({});
+  const [timeSec, setTimeSec] = useState(0);
+  const limitSec = typeof location?.state?.limitSec === 'number' ? location.state.limitSec as number : undefined;
+  const [timeUp, setTimeUp] = useState(false);
 
   useEffect(() => {
     document.title = "Exam Mode • Reviewed Bank";
@@ -69,7 +75,7 @@ export default function ReviewedExamSession() {
         .maybeSingle();
       if (error) throw error;
       setQ(data as FullQuestion);
-      setSelected("");
+      setSelected(selectionMap[id] || "");
     } finally { setLoading(false); }
   }
 
@@ -101,6 +107,11 @@ export default function ReviewedExamSession() {
     }
   }
 
+  const handleSelect = (val: string) => {
+    setSelected(val);
+    if (q) setSelectionMap((m) => ({ ...m, [q.id]: val }));
+  };
+
   const score = useMemo(() => answers.reduce((acc, a) => acc + (a.selected === a.correct ? 1 : 0), 0), [answers]);
   const byTopic = useMemo(() => {
     const map: Record<string, { total: number; correct: number }> = {};
@@ -124,35 +135,140 @@ export default function ReviewedExamSession() {
   }
 
   const finished = answers.length === order.length;
+  const answeredCount = useMemo(() => order.filter((qid) => !!selectionMap[qid]).length, [order, selectionMap]);
+
+  // Timer: count up by default; if limit provided, count down and stop at 0
+  const formatMMSS = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  };
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setTimeSec((t) => {
+        const next = t + 1;
+        if (limitSec && next >= limitSec) {
+          setTimeUp(true);
+          return limitSec;
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [limitSec]);
+
+  const timeDisplay = limitSec ? formatMMSS(Math.max(0, (limitSec - timeSec))) : formatMMSS(timeSec);
+  const showSummary = finished || timeUp;
 
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mx-auto w-full md:max-w-5xl">
         {!finished ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Exam Mode • Question {idx + 1} of {order.length}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4">
-              {q && (
-                <QuestionCard
-                  key={q.id}
-                  questionId={q.id}
-                  stem={q.stem}
-                  options={options}
-                  selectedKey={selected}
-                  onSelect={setSelected}
-                  showExplanation={false}
-                  explanation={undefined}
-                  source={`${q.exam || ''}${q.topic ? ' • ' + q.topic : ''}`}
-                />
-              )}
-              <div className="flex items-center justify-between">
-                <Button variant="outline" onClick={() => navigate('/exams/reviewed')}>End Exam</Button>
-                <Button onClick={submit} disabled={!selected || loading}>{idx < order.length - 1 ? 'Next' : 'Finish'}</Button>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="md:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Exam Mode • Question {idx + 1} of {order.length}</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4">
+                  {q && (
+                    <QuestionCard
+                      key={q.id}
+                      questionId={q.id}
+                      stem={q.stem}
+                      options={options}
+                      selectedKey={selected}
+                      onSelect={handleSelect}
+                      showExplanation={false}
+                      explanation={undefined}
+                      source={`${q.exam || ''}${q.topic ? ' • ' + q.topic : ''}`}
+                    />
+                  )}
+                  <div className="flex items-center justify-between">
+                    <Button variant="outline" onClick={() => navigate('/exams/reviewed')}>End Exam</Button>
+                    <div className="flex items-center gap-2">
+                      <div className="md:hidden">
+                        <Drawer>
+                          <DrawerTrigger asChild>
+                            <Button variant="outline" size="sm">Exam Tools</Button>
+                          </DrawerTrigger>
+                          <DrawerContent className="p-4 space-y-4">
+                            <div>
+                              <div className="text-sm font-medium mb-2">Timer</div>
+                              <div aria-live="polite" role="status" className="text-lg font-semibold">{timeDisplay}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium mb-2">Progress</div>
+                              <div className="text-sm mb-2">Question {idx + 1} of {order.length}</div>
+                              <Progress value={(answeredCount / order.length) * 100} />
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium mb-2">Question Map</div>
+                              <div className="grid grid-cols-8 gap-2">
+                                {order.map((qid, i) => {
+                                  const isCurrent = i === idx;
+                                  const hasSel = !!selectionMap[qid];
+                                  return (
+                                    <button
+                                      key={qid}
+                                      onClick={() => setIdx(i)}
+                                      aria-label={`Go to question ${i+1}`}
+                                      className={`h-8 w-8 rounded text-sm flex items-center justify-center border ${isCurrent ? 'bg-primary/10 ring-1 ring-primary' : hasSel ? 'bg-secondary' : 'bg-muted'} hover:bg-accent/10`}
+                                    >
+                                      {i+1}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </DrawerContent>
+                        </Drawer>
+                      </div>
+                      <Button onClick={submit} disabled={!selected || loading}>{idx < order.length - 1 ? 'Next' : 'Finish'}</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <aside className="hidden md:block">
+              <div className="sticky top-20 space-y-4">
+                <Card>
+                  <CardContent className="py-4">
+                    <div className="text-sm font-medium mb-1">Timer</div>
+                    <div aria-live="polite" role="status" className="text-xl font-semibold">{timeDisplay}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="py-4">
+                    <div className="text-sm font-medium mb-1">Progress</div>
+                    <div className="text-sm mb-2">Question {idx + 1} of {order.length}</div>
+                    <Progress value={(answeredCount / order.length) * 100} />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="py-4">
+                    <div className="text-sm font-medium mb-2">Question Map</div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {order.map((qid, i) => {
+                        const isCurrent = i === idx;
+                        const hasSel = !!selectionMap[qid];
+                        return (
+                          <button
+                            key={qid}
+                            onClick={() => setIdx(i)}
+                            aria-label={`Go to question ${i+1}`}
+                            className={`h-8 w-8 rounded text-sm flex items-center justify-center border ${isCurrent ? 'bg-primary/10 ring-1 ring-primary' : hasSel ? 'bg-secondary' : 'bg-muted'} hover:bg-accent/10`}
+                          >
+                            {i+1}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
+            </aside>
+          </div>
         ) : !reviewMode ? (
           <Card>
             <CardHeader>
