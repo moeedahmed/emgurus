@@ -96,12 +96,7 @@ const Header = () => {
             {/* Notifications */}
             {user && (
               <div className="mr-1">
-                {/* Lazy import to avoid SSR issues */}
-                {/* @ts-ignore */}
-                {require('@/components/notifications/NotificationsBell').default ? (
-                  // eslint-disable-next-line @typescript-eslint/no-var-requires
-                  require('@/components/notifications/NotificationsBell').default()
-                ) : null}
+                <NotificationsBell />
               </div>
             )}
             {user ? (
