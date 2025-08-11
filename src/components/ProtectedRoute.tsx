@@ -14,9 +14,14 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
       if (!user) { setChecking(false); return; }
       // Skip check on onboarding route
       if (location.pathname.startsWith('/onboarding')) { setChecking(false); return; }
-      const { data } = await supabase.from('profiles').select('full_name, country, specialty, timezone, exams').eq('user_id', user.id).maybeSingle();
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, country, specialty, timezone, exams, onboarding_required')
+        .eq('user_id', user.id)
+        .maybeSingle();
       const missing = !data?.full_name || !data?.country || !data?.specialty || !data?.timezone || !(data?.exams && (data.exams as any[]).length > 0);
-      setNeedsOnboarding(missing);
+      // Only force redirect if the flag explicitly requires onboarding
+      setNeedsOnboarding(!!data?.onboarding_required && missing);
       setChecking(false);
     })();
   }, [user, location.pathname]);

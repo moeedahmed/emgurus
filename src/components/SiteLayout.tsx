@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import AIGuru from "@/components/ai/AIGuru";
+import { Button } from "@/components/ui/button";
 
 function needsOnboarding(profile: any): boolean {
   if (!profile) return true;
@@ -88,10 +89,10 @@ const SiteLayout = () => {
             <div>
               Complete your profile to get the best experience (about 2 minutes).
             </div>
-            <div className="flex items-center gap-2">
-              <button className="underline" onClick={() => navigate('/onboarding')}>Complete now</button>
-              <button className="opacity-70 hover:opacity-100" onClick={dismissBanner}>Dismiss</button>
-            </div>
+              <div className="flex items-center gap-2">
+                <Button variant="link" className="px-0" onClick={() => navigate('/onboarding')}>Complete now</Button>
+                <Button variant="ghost" onClick={dismissBanner}>Dismiss</Button>
+              </div>
           </div>
         </div>
       )}
