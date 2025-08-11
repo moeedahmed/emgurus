@@ -233,32 +233,32 @@ export default function Profile() {
                         <span className="break-words">{profile.timezone}</span>
                       </div>
                     )}
+                    {(profile?.exams || []).length > 0 && (
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Exams</span>
+                        <div className="flex flex-wrap gap-1 justify-end max-w-[60%]">
+                          {(profile?.exams || []).map((e) => (
+                            <Badge key={e} variant="outline">{e}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {(profile?.languages || []).length > 0 && (
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Languages</span>
+                        <div className="flex flex-wrap gap-1 justify-end max-w-[60%]">
+                          {(profile?.languages || []).map((l) => (
+                            <Badge key={l} variant="outline">{l}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   {profile?.bio && (
                     <p className="text-sm text-muted-foreground break-words pt-2">{profile.bio}</p>
                   )}
                 </div>
               </div>
-              {(profile?.exams || []).length > 0 && (
-                <div>
-                  <div className="font-semibold">Exams</div>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {(profile?.exams || []).map((e) => (
-                      <Badge key={e} variant="outline">{e}</Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(profile?.languages || []).length > 0 && (
-                <div>
-                  <div className="font-semibold">Languages</div>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {(profile?.languages || []).map((l) => (
-                      <Badge key={l} variant="outline">{l}</Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
           </Card>
