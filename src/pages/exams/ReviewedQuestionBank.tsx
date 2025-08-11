@@ -52,7 +52,7 @@ export default function ReviewedQuestionBank() {
 
   useEffect(() => {
     document.title = "Reviewed Question Bank • EM Gurus";
-    const desc = "Browse guru‑reviewed EM questions with exam and search filters.";
+    const desc = "Browse guru‑reviewed EM questions with exam and search filters. Start Practice or Exam mode.";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name','description'); document.head.appendChild(meta); }
     meta.setAttribute('content', desc);
@@ -231,6 +231,10 @@ export default function ReviewedQuestionBank() {
       <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="sticky top-20 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border mb-4">
           <h1 className="text-2xl font-semibold py-2">Reviewed Question Bank</h1>
+          <div className="py-2 flex gap-2 flex-wrap">
+            <Button onClick={() => { if (items.length) navigate(`/exams/reviewed/${items[0].id}`, { state: { ids: items.map(i => i.id), index: 0 } }); }} disabled={!items.length}>Start Practice</Button>
+            <Button variant="outline" onClick={() => { if (items.length) navigate('/exams/reviewed-exam', { state: { ids: items.map(i => i.id) } }); }} disabled={!items.length}>Start Exam</Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

@@ -96,35 +96,84 @@ const ExamsAICuration = () => {
     <main className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">AI-Generated Exams Curation</h1>
 
+      {/* Generator */}
+      <section id="generator" className="mb-8">
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4">AI Question Generator</h2>
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="md:col-span-1">
+              <label className="text-sm">Exam</label>
+              <input className="mt-1 w-full rounded-md border bg-background p-2" placeholder="e.g. mrcem_sba" onChange={(e)=> (window as any)._genExam=e.target.value} />
+            </div>
+            <div className="md:col-span-1">
+              <label className="text-sm">Topic</label>
+              <input className="mt-1 w-full rounded-md border bg-background p-2" placeholder="e.g. Chest pain" onChange={(e)=> (window as any)._genTopic=e.target.value} />
+            </div>
+            <div className="md:col-span-1">
+              <label className="text-sm">Difficulty</label>
+              <input className="mt-1 w-full rounded-md border bg-background p-2" placeholder="easy | medium | hard" onChange={(e)=> (window as any)._genDiff=e.target.value} />
+            </div>
+            <div className="md:col-span-1">
+              <label className="text-sm">Count</label>
+              <input type="number" min={1} max={10} defaultValue={10} className="mt-1 w-full rounded-md border bg-background p-2" onChange={(e)=> (window as any)._genCount=Number(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex justify-end pt-4">
+            <Button onClick={async ()=>{
+              const exam = ((window as any)._genExam||'').trim();
+              const topic = ((window as any)._genTopic||'').trim();
+              const difficulty = ((window as any)._genDiff||'').trim();
+              let count = Number((window as any)._genCount||10); count = Math.max(1, Math.min(10, isNaN(count)?10:count));
+              if(!exam){ toast({ title: 'Missing exam', description: 'Please set Exam before generating.'}); return; }
+              try{
+                setLoading(true);
+                const payload = { examType: exam, topic, difficulty } as any;
+                const tasks = Array.from({length: count}).map(()=> callFunction('/generate-ai-question', payload, true));
+                await Promise.allSettled(tasks);
+                toast({ title: 'Generated', description: `Requested ${count} question(s).`});
+                const gen = await callFunction('/exams-admin-curate/generated', null, true);
+                setGenerated(gen?.data || []);
+              }catch(e:any){ toast({ title: 'Generate failed', description: e.message || 'Please try again.' , variant:'destructive'});}finally{ setLoading(false);} 
+            }} disabled={loading}>Generate</Button>
+          </div>
+        </Card>
+      </section>
+
+      {/* Unassigned list with bulk actions */}
       <section className="mb-10">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold">Generated (Unassigned)</h2>
-          <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-            <DialogTrigger asChild>
-              <Button disabled={loading || allSelectedIds.length === 0}>Assign to Guru</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Assign selected ({allSelectedIds.length})</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3 py-2">
-                <label className="text-sm">Reviewer</label>
-                <Select onValueChange={(v) => setReviewerId(v)} value={reviewerId}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a Guru" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {gurus.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <DialogFooter>
-                <Button onClick={onAssign} disabled={loading || !reviewerId}>Assign</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <div className="flex items-center gap-2">
+            <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+              <DialogTrigger asChild>
+                <Button disabled={loading || allSelectedIds.length === 0}>Assign to Guru</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Assign selected ({allSelectedIds.length})</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3 py-2">
+                  <label className="text-sm">Reviewer</label>
+                  <Select onValueChange={(v) => setReviewerId(v)} value={reviewerId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a Guru" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gurus.map((g) => (
+                        <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <DialogFooter>
+                  <Button onClick={onAssign} disabled={loading || !reviewerId}>Assign</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" disabled={loading || allSelectedIds.length===0} onClick={async()=>{
+              try{ setLoading(true); await callFunction('/exams-admin-curate/archive', { question_ids: allSelectedIds }, true); toast({ title:'Archived', description:`Moved ${allSelectedIds.length} to archive.`}); setSelected({}); const gen = await callFunction('/exams-admin-curate/generated', null, true); setGenerated(gen?.data||[]);} finally { setLoading(false);} 
+            }}>Archive</Button>
+          </div>
         </div>
         <Card className="p-0 overflow-hidden">
           <Table>

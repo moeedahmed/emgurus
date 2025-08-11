@@ -58,6 +58,7 @@ import RoleRedirector from "@/components/auth/RoleRedirector";
 import AuthLandingGuard from "@/components/auth/AuthLandingGuard";
 import MarkedQuestionsAdmin from "./pages/admin/MarkedQuestions";
 import QuestionSetsAdmin from "./pages/admin/QuestionSets";
+import ReviewedExamSession from "@/pages/exams/ReviewedExamSession";
 
 
 function LegacyBlogsDashboardRedirect() {
@@ -182,11 +183,13 @@ const App = () => (
               <Route path="/admin/marked-questions" element={<RoleProtectedRoute roles={["admin"]}><MarkedQuestionsAdmin /></RoleProtectedRoute>} />
               <Route path="/admin/question-sets" element={<RoleProtectedRoute roles={["admin"]}><QuestionSetsAdmin /></RoleProtectedRoute>} />
               <Route path="/admin/taxonomy" element={<RoleProtectedRoute roles={["admin"]}><Taxonomy /></RoleProtectedRoute>} />
+              <Route path="/admin/exams-curation" element={<RoleProtectedRoute roles={["admin"]}><ExamsAICuration /></RoleProtectedRoute>} />
               <Route path="/about" element={<About />} />
               <Route path="/coming-soon" element={<ComingSoon />} />
               <Route path="/tools/generate-exam-question" element={<GenerateExamQuestion />} />
               <Route path="/tools/my-exam-drafts" element={<MyExamDrafts />} />
               <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/exams/reviewed-exam" element={<ReviewedExamSession />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

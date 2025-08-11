@@ -12,6 +12,7 @@ const ORIGIN_ALLOWLIST = (Deno.env.get("ORIGIN_ALLOWLIST") || "").split(",").map
 const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Origin": "*",
 };
 
 function allowOrigin(origin: string | null): string | null {
@@ -220,6 +221,46 @@ Deno.serve(async (req) => {
         topic: q.topic,
       }));
       return json(200, { ok: true, data: out }, origin);
+    }
+
+    // GET /assigned
+    if (req.method === "GET" && path.endsWith("/assigned")) {
+      const { data: rows, error: rErr } = await adminClient
+        .from("exam_review_assignments")
+        .select("question_id, created_at")
+        .eq("status", "assigned")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (rErr) return json(500, { ok: false, error: "Failed to load assigned" }, origin);
+      const ids = (rows || []).map((r: any) => r.question_id);
+      if (ids.length === 0) return json(200, { ok: true, data: [] }, origin);
+      const { data: qs, error: qErr } = await adminClient
+        .from("questions")
+        .select("id, created_at, question_text, exam_type, difficulty_level, topic")
+        .in("id", ids);
+      if (qErr) return json(500, { ok: false, error: "Failed to load questions" }, origin);
+      const out = (qs || []).map((q: any) => ({
+        id: q.id,
+        created_at: q.created_at,
+        question_text: preview(q.question_text, 140),
+        exam_type: q.exam_type,
+        difficulty_level: q.difficulty_level,
+        topic: q.topic,
+      }));
+      return json(200, { ok: true, data: out }, origin);
+    }
+
+    // POST /archive
+    if (req.method === "POST" && path.endsWith("/archive")) {
+      const body = await req.json().catch(() => ({}));
+      const question_ids: string[] = Array.isArray(body?.question_ids) ? body.question_ids : [];
+      if (question_ids.length === 0) return json(400, { ok: false, error: "No question_ids provided" }, origin);
+      const { error: upErr } = await adminClient
+        .from("questions")
+        .update({ status: "archived" })
+        .in("id", question_ids);
+      if (upErr) return json(500, { ok: false, error: "Failed to archive" }, origin);
+      return json(200, { ok: true, data: { archived: question_ids.length } }, origin);
     }
 
     return json(404, { ok: false, error: "Not found" }, origin);

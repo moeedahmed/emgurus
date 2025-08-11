@@ -70,12 +70,12 @@ const DashboardGuru = () => {
         </section>
 
         <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Review Questions</h2>
+          <h2 className="text-xl font-semibold mb-2">Review Center</h2>
           <p className="text-muted-foreground mb-4">AI/peer-submitted questions assigned to you.</p>
           <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => navigate('/guru/reviews')}>Pending Reviews</Button>
-            <Button variant="outline" onClick={() => navigate('/guru/reviewed')}>Completed Reviews</Button>
-            <Button variant="secondary" onClick={() => navigate('/guru/questions')}>My Questions</Button>
+            <Button onClick={() => navigate('/guru/exams/review')}>Review pending</Button>
+            <Button variant="outline" onClick={() => navigate('/guru/reviewed')}>Review completed</Button>
+            <Button variant="secondary" onClick={() => navigate('/guru/questions')}>My questions</Button>
           </div>
         </Card>
 

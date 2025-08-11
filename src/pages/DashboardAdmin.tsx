@@ -32,9 +32,12 @@ const DashboardAdmin = () => {
           </Card>
         </section>
         <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Assign AI Question Reviews</h2>
-          <p className="text-muted-foreground mb-4">Distribute review tasks to Gurus.</p>
-          <Button onClick={() => navigate('/admin/assign-reviews')}>Assign</Button>
+          <h2 className="text-xl font-semibold mb-2">Exams</h2>
+          <p className="text-muted-foreground mb-4">Generate and assign AI questions.</p>
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={() => navigate('/admin/exams-curation#generator')}>Generator</Button>
+            <Button variant="outline" onClick={() => navigate('/admin/exams-curation#assignments')}>Assignments</Button>
+          </div>
         </Card>
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-2">Manage Categories & Tags</h2>
