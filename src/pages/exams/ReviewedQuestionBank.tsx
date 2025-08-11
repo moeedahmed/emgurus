@@ -32,8 +32,13 @@ export default function ReviewedQuestionBank() {
   const [exam, setExam] = useState<ExamCode | "">("");
   const [sloId, setSloId] = useState<string | "">("");
   const [slos, setSlos] = useState<SLO[]>([]);
-const [page, setPage] = useState(1);
-const pageSize = 10;
+  const [topic, setTopic] = useState<string | "">("");
+  const [topics, setTopics] = useState<string[]>([]);
+  const [difficulty, setDifficulty] = useState<string | "">("");
+  const [difficulties, setDifficulties] = useState<string[]>(["easy","medium","hard"]);
+  const [sloQuestionIds, setSloQuestionIds] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const [items, setItems] = useState<ReviewedRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,20 +50,61 @@ const pageSize = 10;
 
   useEffect(() => {
     document.title = "Reviewed Question Bank • EM Gurus";
-    const desc = "Browse guru‑reviewed EM questions with exam and SLO filters.";
+    const desc = "Browse guru‑reviewed EM questions with exam, curriculum, topic, and difficulty filters.";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name','description'); document.head.appendChild(meta); }
     meta.setAttribute('content', desc);
   }, []);
 
   useEffect(() => {
-    // Load SLOs once
+    // Load Curriculum (SLOs) once
     (async () => {
       const { data } = await supabase.from('curriculum_slos').select('id, code, title').order('code');
       setSlos(Array.isArray(data) ? data as SLO[] : []);
     })();
   }, []);
 
+  // Load question IDs linked to selected curriculum (SLO)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!sloId) { setSloQuestionIds([]); return; }
+      const { data, error } = await (supabase as any)
+        .from('question_slos')
+        .select('question_id')
+        .eq('slo_id', sloId);
+      if (!error && !cancelled) setSloQuestionIds((data || []).map((r: any) => r.question_id));
+    })();
+    return () => { cancelled = true; };
+  }, [sloId]);
+
+  // Derive Topics and Difficulties options based on current exam/curriculum
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // If curriculum selected but no questions map to it, clear
+        if (sloId && !sloQuestionIds.length) { setTopics([]); return; }
+        let q = (supabase as any)
+          .from('reviewed_exam_questions')
+          .select('id, topic, difficulty')
+          .eq('status', 'approved');
+        if (exam) q = q.eq('exam', exam);
+        if (sloId && sloQuestionIds.length) q = q.in('id', sloQuestionIds);
+        const { data } = await q.limit(1000);
+        const tset = new Set<string>();
+        const dset = new Set<string>();
+        (data || []).forEach((r: any) => {
+          if (r.topic) tset.add(r.topic);
+          if (r.difficulty) dset.add(r.difficulty);
+        });
+        const t = Array.from(tset).sort((a,b)=>a.localeCompare(b));
+        const d = Array.from(dset).length ? Array.from(dset) : difficulties;
+        if (!cancelled) { setTopics(t); setDifficulties(d as string[]); }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [exam, sloId, sloQuestionIds.length]);
   // Count check and log
   useEffect(() => {
     (async () => {
@@ -93,6 +139,8 @@ const pageSize = 10;
       try {
         try {
           const res = await getJson('/public-reviewed-exams');
+          // If advanced filters are set, prefer direct DB query for accuracy
+          if (sloId || topic || difficulty) { throw new Error('force-direct'); }
           let list = ((res.items || []) as any[]).map((q: any) => ({
             id: q.id,
             exam: (q.exam_type || q.exam) as ExamCode | string,
@@ -111,33 +159,41 @@ const pageSize = 10;
             setMode('function');
           }
         } catch {
-          // Fallback to direct table query as before
-          let base = (supabase as any)
-            .from('reviewed_exam_questions')
-            .select('id, exam, stem, reviewer_id, reviewed_at', { count: 'exact' })
-            .eq('status', 'approved');
-          if (exam) base = base.eq('exam', exam);
-
-          const from = (page - 1) * pageSize;
-          const to = from + pageSize - 1;
-          const { data, count, error } = await base
-            .order('reviewed_at', { ascending: false })
-            .order('id', { ascending: false })
-            .range(from, to);
-          if (error) throw error;
-          const list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
-          if (!cancelled) {
-            setItems(list);
-            setTotalCount(count ?? 0);
-            setMode('direct');
-          }
-          const ids = Array.from(new Set(list.map(d => d.reviewer_id).filter(Boolean))) as string[];
-          if (ids.length) {
-            const { data: g } = await supabase.from('gurus').select('id, name').in('id', ids);
-            const map: Record<string, string> = Object.fromEntries((g || []).map((r: any) => [r.id, r.name]));
-            if (!cancelled) setReviewers(map);
+          // Fallback to direct table query with filters
+          // If curriculum is selected but no question IDs match, short-circuit
+          if (sloId && !sloQuestionIds.length) {
+            if (!cancelled) { setItems([]); setTotalCount(0); setMode('direct'); }
           } else {
-            if (!cancelled) setReviewers({});
+            let base = (supabase as any)
+              .from('reviewed_exam_questions')
+              .select('id, exam, stem, reviewer_id, reviewed_at, topic, difficulty', { count: 'exact' })
+              .eq('status', 'approved');
+            if (exam) base = base.eq('exam', exam);
+            if (sloId && sloQuestionIds.length) base = base.in('id', sloQuestionIds);
+            if (topic) base = base.eq('topic', topic);
+            if (difficulty) base = base.eq('difficulty', difficulty);
+
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+            const { data, count, error } = await base
+              .order('reviewed_at', { ascending: false })
+              .order('id', { ascending: false })
+              .range(from, to);
+            if (error) throw error;
+            const list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
+            if (!cancelled) {
+              setItems(list);
+              setTotalCount(count ?? 0);
+              setMode('direct');
+            }
+            const ids = Array.from(new Set(list.map(d => d.reviewer_id).filter(Boolean))) as string[];
+            if (ids.length) {
+              const { data: g } = await supabase.from('gurus').select('id, name').in('id', ids);
+              const map: Record<string, string> = Object.fromEntries((g || []).map((r: any) => [r.id, r.name]));
+              if (!cancelled) setReviewers(map);
+            } else {
+              if (!cancelled) setReviewers({});
+            }
           }
         }
       } catch (e) {
@@ -148,7 +204,7 @@ const pageSize = 10;
       }
     })();
     return () => { cancelled = true; };
-  }, [exam, sloId, page]);
+  }, [exam, sloId, topic, difficulty, page]);
 
   const FiltersPanel = () => (
     <Card className="p-4 space-y-3">
@@ -165,16 +221,36 @@ const pageSize = 10;
         </Select>
       </div>
       <div className="space-y-2">
-        <div className="text-sm font-medium">SLO</div>
+        <div className="text-sm font-medium">Curriculum</div>
         <Select value={sloId || "ALL"} onValueChange={(v) => { setSloId(v === "ALL" ? "" : v); setPage(1); }}>
-          <SelectTrigger><SelectValue placeholder="SLO" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Curriculum" /></SelectTrigger>
           <SelectContent className="max-h-80">
-            <SelectItem value="ALL">All SLOs</SelectItem>
-            {slos.map((s) => (<SelectItem key={s.id} value={s.code}>{s.code} — {s.title}</SelectItem>))}
+            <SelectItem value="ALL">All curriculum</SelectItem>
+            {slos.map((s) => (<SelectItem key={s.id} value={s.id}>{s.code} — {s.title}</SelectItem>))}
           </SelectContent>
         </Select>
       </div>
-      <Button variant="outline" onClick={() => { setExam(""); setSloId(""); setPage(1); }}>Reset</Button>
+      <div className="space-y-2">
+        <div className="text-sm font-medium">Topic</div>
+        <Select value={topic || "ALL"} onValueChange={(v) => { setTopic(v === "ALL" ? "" : v); setPage(1); }}>
+          <SelectTrigger><SelectValue placeholder="Topic" /></SelectTrigger>
+          <SelectContent className="max-h-80">
+            <SelectItem value="ALL">All topics</SelectItem>
+            {topics.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <div className="text-sm font-medium">Difficulty</div>
+        <Select value={difficulty || "ALL"} onValueChange={(v) => { setDifficulty(v === "ALL" ? "" : v); setPage(1); }}>
+          <SelectTrigger><SelectValue placeholder="Difficulty" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All levels</SelectItem>
+            {difficulties.map((d) => (<SelectItem key={d} value={d}>{d.charAt(0).toUpperCase()+d.slice(1)}</SelectItem>))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Button variant="outline" onClick={() => { setExam(""); setSloId(""); setTopic(""); setDifficulty(""); setPage(1); }}>Reset</Button>
     </Card>
   );
 
@@ -224,6 +300,7 @@ const pageSize = 10;
                       )}
                       <span className="border rounded px-2 py-0.5">Exam: {(EXAM_LABELS as any)[it.exam] || String(it.exam)}</span>
                       {!!it.topic && <span className="border rounded px-2 py-0.5">Topic: {it.topic}</span>}
+                      {(it as any).difficulty && <span className="border rounded px-2 py-0.5">Difficulty: {(it as any).difficulty}</span>}
                       {it.reviewer_id && (
                         <span className="border rounded px-2 py-0.5">Reviewer: {reviewers[it.reviewer_id] || '—'}</span>
                       )}
