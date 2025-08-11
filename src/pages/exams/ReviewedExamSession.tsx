@@ -94,75 +94,81 @@ export default function ReviewedExamSession() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      {!finished ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Exam Mode • Question {idx + 1} of {ids.length}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            {q && (
-              <QuestionCard
-                stem={q.stem}
-                options={options}
-                selectedKey={selected}
-                onSelect={setSelected}
-                showExplanation={false}
-                explanation={undefined}
-                source={`${q.exam || ''}${q.topic ? ' • ' + q.topic : ''}`}
-              />
-            )}
-            <div className="flex items-center justify-between">
-              <Button variant="outline" onClick={() => navigate('/exams/reviewed')}>End Exam</Button>
-              <Button onClick={submit} disabled={!selected || loading}>{idx < ids.length - 1 ? 'Next' : 'Finish'}</Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : !reviewMode ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Exam Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="text-lg font-semibold">Score: {score} / {ids.length}</div>
-            <div className="grid gap-2">
-              {Object.entries(byTopic).map(([t, v]) => (
-                <div key={t} className="text-sm">{t}: {v.correct}/{v.total}</div>
-              ))}
-            </div>
-            <div className="flex items-center justify-end gap-2">
-              <Button variant="outline" onClick={() => navigate('/exams/reviewed')}>Back to bank</Button>
-              <Button onClick={() => setReviewMode(true)}>Review answers</Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Review Answers</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            {q && (
-              <QuestionCard
-                stem={q.stem}
-                options={options}
-                selectedKey={answers.find(a=>a.id===q.id)?.selected || ''}
-                onSelect={()=>{}}
-                showExplanation={true}
-                explanation={q.explanation || ''}
-                source={`${q.exam || ''}${q.topic ? ' • ' + q.topic : ''}`}
-                correctKey={correctKey}
-              />
-            )}
-            <div className="flex items-center justify-between">
-              <Button variant="outline" onClick={() => setReviewMode(false)}>Summary</Button>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => setIdx(Math.max(0, idx-1))} disabled={idx===0}>Previous</Button>
-                <Button onClick={() => setIdx(Math.min(ids.length-1, idx+1))} disabled={idx===ids.length-1}>Next</Button>
+      <div className="mx-auto w-full md:max-w-5xl">
+        {!finished ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Exam Mode • Question {idx + 1} of {ids.length}</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              {q && (
+                <QuestionCard
+                  key={q.id}
+                  questionId={q.id}
+                  stem={q.stem}
+                  options={options}
+                  selectedKey={selected}
+                  onSelect={setSelected}
+                  showExplanation={false}
+                  explanation={undefined}
+                  source={`${q.exam || ''}${q.topic ? ' • ' + q.topic : ''}`}
+                />
+              )}
+              <div className="flex items-center justify-between">
+                <Button variant="outline" onClick={() => navigate('/exams/reviewed')}>End Exam</Button>
+                <Button onClick={submit} disabled={!selected || loading}>{idx < ids.length - 1 ? 'Next' : 'Finish'}</Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        ) : !reviewMode ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Exam Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="text-lg font-semibold">Score: {score} / {ids.length}</div>
+              <div className="grid gap-2">
+                {Object.entries(byTopic).map(([t, v]) => (
+                  <div key={t} className="text-sm">{t}: {v.correct}/{v.total}</div>
+                ))}
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <Button variant="outline" onClick={() => navigate('/exams/reviewed')}>Back to bank</Button>
+                <Button onClick={() => setReviewMode(true)}>Review answers</Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Review Answers</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              {q && (
+                <QuestionCard
+                  key={q.id + '-review'}
+                  questionId={q.id}
+                  stem={q.stem}
+                  options={options}
+                  selectedKey={answers.find(a=>a.id===q.id)?.selected || ''}
+                  onSelect={()=>{}}
+                  showExplanation={true}
+                  explanation={q.explanation || ''}
+                  source={`${q.exam || ''}${q.topic ? ' • ' + q.topic : ''}`}
+                  correctKey={correctKey}
+                />
+              )}
+              <div className="flex items-center justify-between">
+                <Button variant="outline" onClick={() => setReviewMode(false)}>Summary</Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => setIdx(Math.max(0, idx-1))} disabled={idx===0}>Previous</Button>
+                  <Button onClick={() => setIdx(Math.min(ids.length-1, idx+1))} disabled={idx===ids.length-1}>Next</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

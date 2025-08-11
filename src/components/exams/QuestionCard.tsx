@@ -18,6 +18,7 @@ export default function QuestionCard({
   source,
   correctKey,
   lockSelection,
+  questionId,
 }: {
   stem: string;
   options: Option[];
@@ -28,6 +29,7 @@ export default function QuestionCard({
   source?: string;
   correctKey?: string;
   lockSelection?: boolean;
+  questionId?: string;
 }) {
   return (
     <div className="grid gap-4">
@@ -38,20 +40,21 @@ export default function QuestionCard({
       </Card>
 
       <div className="rounded-lg border border-border p-4">
-        <RadioGroup value={selectedKey} onValueChange={onSelect}>
+        <RadioGroup key={questionId || 'q'} value={selectedKey} onValueChange={onSelect}>
             {options.map((o) => {
               const isCorrect = !!showExplanation && !!correctKey && o.key === correctKey;
               const isWrongSel = !!showExplanation && !!correctKey && o.key === selectedKey && selectedKey !== correctKey;
+              const rowKey = `${questionId || 'q'}-${o.key}`;
               return (
                 <label
-                  key={o.key}
+                  key={rowKey}
                   className={cn(
                     "flex items-start gap-3 py-2 rounded-md px-2 transition-colors",
                     isCorrect && "bg-success/20 ring-1 ring-success/40",
                     isWrongSel && "bg-destructive/10 ring-1 ring-destructive/40"
                   )}
                 >
-                  <RadioGroupItem value={o.key} id={`opt-${o.key}`} disabled={!!lockSelection} />
+                  <RadioGroupItem value={o.key} id={`opt-${questionId || 'q'}-${o.key}`} disabled={!!lockSelection} />
                   <div className="grid gap-1">
                     <div className="font-medium">{o.key}.</div>
                     <div className="text-sm text-foreground/90">
