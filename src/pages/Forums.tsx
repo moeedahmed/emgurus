@@ -11,6 +11,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 
 const FORUMS_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/forums-api";
 
@@ -113,12 +115,74 @@ const Forums = () => {
           onClose={() => { const p = new URLSearchParams(searchParams); p.delete('new'); setSearchParams(p); }}
         />
 
-        {/* Filters */}
-        <section className="grid gap-4 md:grid-cols-3 mb-6">
+        {/* Mobile Filters Button */}
+        <div className="mb-4 lg:hidden">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline">Filters</Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80 sm:w-96">
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm text-muted-foreground">Search</label>
+                  <Input className="mt-1" placeholder="Search title or content" value={q} onChange={(e) => setQ(e.target.value)} />
+                </div>
+
+                <div>
+                  <label className="text-sm text-muted-foreground">Section</label>
+                  <Select value={section || "__all__"} onValueChange={(v) => setSection(v === "__all__" ? "" : v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All Sections" /></SelectTrigger>
+                    <SelectContent className="z-50">
+                      <SelectItem value="__all__">All Sections</SelectItem>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h3 className="text-sm font-medium">Topics</h3>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {topicsAll.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">No topics yet</span>
+                    ) : (
+                      topicsAll.map((t) => (
+                        <Badge
+                          key={t}
+                          variant={topic === t ? "secondary" : "outline"}
+                          className="text-xs cursor-pointer"
+                          onClick={() => setTopic(topic === t ? "" : t)}
+                        >
+                          #{t}
+                        </Badge>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setQ(""); setSection(""); setTopic(""); setSearchParams(new URLSearchParams(), { replace: true }); }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        {/* Desktop Filters */}
+        <section className="hidden lg:grid grid-cols-3 gap-4 mb-6">
           <Input placeholder="Search title or content" value={q} onChange={(e) => setQ(e.target.value)} />
           <Select value={section || "__all__"} onValueChange={(v) => setSection(v === "__all__" ? "" : v)}>
             <SelectTrigger><SelectValue placeholder="Section" /></SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-50">
               <SelectItem value="__all__">All Sections</SelectItem>
               {categories.map((c) => (
                 <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
@@ -128,7 +192,7 @@ const Forums = () => {
           {topicsAll.length > 0 ? (
             <Select value={topic || "__all__"} onValueChange={(v) => setTopic(v === "__all__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Topic" /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50">
                 <SelectItem value="__all__">All Topics</SelectItem>
                 {topicsAll.map((t) => (
                   <SelectItem key={t} value={t}>{t}</SelectItem>
@@ -136,7 +200,7 @@ const Forums = () => {
               </SelectContent>
             </Select>
           ) : (
-            <div className="hidden md:block" />
+            <div />
           )}
         </section>
 
@@ -251,7 +315,7 @@ function CreateThreadGlobal({ open, onClose }: { open: boolean; onClose: () => v
             <SelectTrigger aria-label="Section">
               <SelectValue placeholder="Select section" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-50">
               {categories.map((c) => (
                 <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
               ))}
