@@ -160,7 +160,7 @@ export default function Profile() {
   return (
     <main className="container mx-auto px-4 md:px-6 py-6 md:py-10 overflow-x-hidden">
       {/* Cover Banner */}
-      <section className="w-full h-40 md:h-56 relative bg-muted">
+      <section className="w-full h-28 md:h-44 relative bg-muted">
         {profile?.cover_image_url ? (
           <img
             src={profile.cover_image_url}
@@ -173,7 +173,7 @@ export default function Profile() {
         )}
       </section>
 
-      <article className="-mt-10 md:-mt-14 px-4">
+      <article className="-mt-12 md:-mt-16 px-4 md:px-6">
         <div className="grid gap-6 md:grid-cols-3">
           {/* Left column: Profile summary */}
           <Card className="p-6 md:col-span-1 shadow-md">
@@ -211,10 +211,10 @@ export default function Profile() {
 
             {/* Quick actions */}
             <div className="flex gap-3 pt-4 flex-wrap">
-              <Link to="/consultations"><Button variant="secondary">Find Gurus</Button></Link>
-              <Link to="/onboarding"><Button variant="outline">Edit Profile</Button></Link>
+              <Link to="/consultations"><Button variant="secondary" className="w-full sm:w-auto">Find Gurus</Button></Link>
+              <Link to="/onboarding"><Button variant="outline" className="w-full sm:w-auto">Edit Profile</Button></Link>
               {roles.includes('guru') ? (
-                <Link to="/guru/availability"><Button>My Availability</Button></Link>
+                <Link to="/guru/availability"><Button className="w-full sm:w-auto">My Availability</Button></Link>
               ) : (
                 <ApplyGuruButton />
               )}
