@@ -185,10 +185,6 @@ export default function Profile() {
               </Avatar>
               <div className="min-w-0 flex-1">
                 <h1 className="text-xl font-semibold break-words">{profile?.full_name || user?.email}</h1>
-                <div className="text-sm text-muted-foreground break-words">{profile?.email || user?.email}</div>
-                <div className="text-sm text-muted-foreground">
-                  {(profile?.specialty || 'Emergency Medicine')} • {(profile?.country || 'Global')} • {profile?.timezone ? `TZ: ${profile.timezone}` : null}
-                </div>
                 <div className="flex gap-1 flex-wrap pt-1">
                   {roles.map((r) => (
                     <Badge key={r} variant="secondary">{r}</Badge>
@@ -211,12 +207,38 @@ export default function Profile() {
 
             <Separator className="my-4" />
             <div className="space-y-4">
-              {profile?.bio && (
-                <div>
-                  <div className="font-semibold">About</div>
-                  <p className="text-sm text-muted-foreground break-words">{profile.bio}</p>
+              <div>
+                <div className="font-semibold">About</div>
+                <div className="mt-2 space-y-2">
+                  <div className="grid grid-cols-1 gap-2 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">Email</span>
+                      <a href={`mailto:${profile?.email || user?.email}`} className="underline break-words">{profile?.email || user?.email}</a>
+                    </div>
+                    {profile?.specialty && (
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Specialty</span>
+                        <span className="break-words">{profile.specialty}</span>
+                      </div>
+                    )}
+                    {profile?.country && (
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Country</span>
+                        <span className="break-words">{profile.country}</span>
+                      </div>
+                    )}
+                    {profile?.timezone && (
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Timezone</span>
+                        <span className="break-words">{profile.timezone}</span>
+                      </div>
+                    )}
+                  </div>
+                  {profile?.bio && (
+                    <p className="text-sm text-muted-foreground break-words pt-2">{profile.bio}</p>
+                  )}
                 </div>
-              )}
+              </div>
               {(profile?.exams || []).length > 0 && (
                 <div>
                   <div className="font-semibold">Exams</div>
@@ -243,18 +265,12 @@ export default function Profile() {
 
           {/* Right column: Tabs with role-aware sections */}
           <div className="md:col-span-2 min-w-0">
-            <Tabs defaultValue="overview" className="w-full">
-              <TabsList className={`w-full max-w-full overflow-x-auto grid ${isGuru ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="bookings">Bookings</TabsTrigger>
-                <TabsTrigger value="security">Security</TabsTrigger>
-                {isGuru && <TabsTrigger value="guru">Guru</TabsTrigger>}
-              </TabsList>
-
-              {/* OVERVIEW */}
-              <TabsContent value="overview" className="mt-4 space-y-6">
-
-              </TabsContent>
+              <Tabs defaultValue="bookings" className="w-full">
+                <TabsList className={`w-full max-w-full overflow-x-auto grid ${isGuru ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  <TabsTrigger value="bookings">Bookings</TabsTrigger>
+                  <TabsTrigger value="security">Security</TabsTrigger>
+                  {isGuru && <TabsTrigger value="guru">Guru</TabsTrigger>}
+                </TabsList>
 
               {/* BOOKINGS */}
               <TabsContent value="bookings" className="mt-4">
