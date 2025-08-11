@@ -107,7 +107,8 @@ const DashboardGuru = () => {
           </div>
           <div className="text-sm text-muted-foreground mb-4">Current rate: <span className="font-medium">Free</span> (default if not set)</div>
           <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => navigate('/guru/availability')}>Configure</Button>
+            <Button onClick={() => navigate('/guru/availability')}>Set availability</Button>
+            <Button variant="outline" onClick={() => navigate('/profile#pricing')}>Set price</Button>
           </div>
         </Card>
       </div>
