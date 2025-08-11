@@ -145,7 +145,7 @@ export default function Profile() {
   }, [profile?.full_name, user?.email]);
 
   return (
-    <main className="container mx-auto px-4 py-8">
+    <main className="container mx-auto px-4 py-8 overflow-x-hidden">
       <header className="mb-6">
         <h1 className="text-3xl font-bold">My Profile</h1>
         <p className="text-muted-foreground">Manage your account and view recent bookings.</p>
@@ -158,9 +158,9 @@ export default function Profile() {
               <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || 'Avatar'} />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <div className="text-xl font-semibold">{profile?.full_name || user?.email}</div>
+                <div className="text-xl font-semibold break-words">{profile?.full_name || user?.email}</div>
                 <div className="flex gap-1">
                   {roles.map((r) => (
                     <Badge key={r} variant="secondary">{r}</Badge>
@@ -182,7 +182,7 @@ export default function Profile() {
           </div>
 
           {profile?.bio && (
-            <p className="text-sm text-muted-foreground">{profile.bio}</p>
+            <p className="text-sm text-muted-foreground break-words">{profile.bio}</p>
           )}
 
           <div className="flex flex-wrap gap-2">
