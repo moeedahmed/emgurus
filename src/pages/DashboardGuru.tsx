@@ -57,22 +57,24 @@ const DashboardGuru = () => {
     <main className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Guru Dashboard</h1>
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Blogs</h2>
-          <p className="text-muted-foreground mb-4">Write and review blogs.</p>
-          <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => navigate('/admin/moderate-posts')}>Review Pending</Button>
-            <Button variant="outline" onClick={() => navigate('/blogs')}>Review Completed</Button>
-            <Button variant="secondary" onClick={() => navigate('/blogs')}>My Blogs</Button>
-          </div>
-        </Card>
+        <section id="blogs-section">
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-2">Blogs</h2>
+            <p className="text-muted-foreground mb-4">Write and review blogs.</p>
+            <div className="flex gap-2 flex-wrap">
+              <Button onClick={() => navigate('/admin/moderate-posts')}>Pending Reviews</Button>
+              <Button variant="outline" onClick={() => navigate('/blogs')}>Completed Reviews</Button>
+              <Button variant="secondary" onClick={() => navigate('/blogs')}>My Blogs</Button>
+            </div>
+          </Card>
+        </section>
 
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-2">Review Questions</h2>
           <p className="text-muted-foreground mb-4">AI/peer-submitted questions assigned to you.</p>
           <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => navigate('/guru/reviews')}>Review Pending</Button>
-            <Button variant="outline" onClick={() => navigate('/guru/reviewed')}>Review Completed</Button>
+            <Button onClick={() => navigate('/guru/reviews')}>Pending Reviews</Button>
+            <Button variant="outline" onClick={() => navigate('/guru/reviewed')}>Completed Reviews</Button>
             <Button variant="secondary" onClick={() => navigate('/guru/questions')}>My Questions</Button>
           </div>
         </Card>

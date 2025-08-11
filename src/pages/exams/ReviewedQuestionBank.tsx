@@ -35,8 +35,9 @@ export default function ReviewedQuestionBank() {
   const [sloId, setSloId] = useState<string | "">("");
   const [slos, setSlos] = useState<SLO[]>([]);
   const [q, setQ] = useState("");
+  const [qDebounced, setQDebounced] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 24;
 
   const [items, setItems] = useState<ReviewedRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,7 +66,11 @@ export default function ReviewedQuestionBank() {
     })();
   }, []);
 
-// (SLO-derived topic/difficulty removed for now)
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setQDebounced(q), 250);
+    return () => clearTimeout(t);
+  }, [q]);
   // Count check and log
   useEffect(() => {
     (async () => {
@@ -86,7 +91,7 @@ export default function ReviewedQuestionBank() {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const offset = (page - 1) * pageSize;
-  const visible = mode === 'function' ? items.slice(offset, offset + pageSize) : items;
+  const visible = items;
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -98,48 +103,42 @@ export default function ReviewedQuestionBank() {
     (async () => {
       setLoading(true);
       try {
-        // Try public function first with timeout; fallback to direct if it hangs
         const ctrl = new AbortController();
-        const timer = window.setTimeout(() => ctrl.abort(), 3500);
+        const timer = window.setTimeout(() => ctrl.abort(), 5000);
         try {
-          const res = await getJson('/public-reviewed-exams', { signal: ctrl.signal } as any);
-          let list = ((res.items || []) as any[]).map((row: any) => ({
+          const params = new URLSearchParams();
+          params.set('limit', String(pageSize));
+          params.set('offset', String(offset));
+          if (exam) params.set('exam', String(exam));
+          const qtext = qDebounced.trim();
+          if (qtext) params.set('q', qtext);
+          const res = await getJson(`/public-reviewed-exams?${params.toString()}`, { signal: ctrl.signal } as any);
+          const list = ((res.items || []) as any[]).map((row: any) => ({
             id: row.id,
             exam: (row.exam_type || row.exam) as ExamCode | string,
             stem: row.stem,
             reviewer_id: null,
-            reviewed_at: row.created_at || null,
-            topic: Array.isArray(row.tags) && row.tags.length ? row.tags[0] : null,
-            tags: Array.isArray(row.tags) ? row.tags : null,
+            reviewed_at: row.reviewed_at || row.created_at || null,
+            topic: (Array.isArray(row.tags) && row.tags.length ? row.tags[0] : null) as any,
+            tags: (Array.isArray(row.tags) ? row.tags : null) as any,
           })) as ReviewedRow[];
-          const qtext = q.trim();
-          if (exam) list = list.filter((r) => r.exam === exam);
-          if (qtext) list = list.filter((r) => r.stem.toLowerCase().includes(qtext.toLowerCase()));
-          if (topicFilter) list = list.filter((r) => (r.topic || '').toLowerCase() === topicFilter.toLowerCase());
-          if (difficulty) {
-            const pickDiff = (row: ReviewedRow) =>
-              ((row as any).difficulty as string | undefined) ||
-              (row.tags || []).find(t => ['easy','medium','hard'].includes(String(t).toLowerCase()));
-            list = list.filter(r => (pickDiff(r) || '').toLowerCase() === difficulty.toLowerCase());
-          }
           if (!cancelled) {
             setItems(list);
-            setTotalCount(list.length);
-            if (approvedCount === null) setApprovedCount(res.count ?? list.length);
-            setReviewers({});
+            setTotalCount(Number.isFinite(res.count) ? res.count : (page * pageSize + list.length));
             setMode('function');
+            setReviewers({});
           }
         } catch {
-          // Fallback to direct table query with filters
+          // Fallback to direct table query with filters and pagination
           let base = (supabase as any)
             .from('reviewed_exam_questions')
             .select('id, exam, stem, reviewer_id, reviewed_at, topic', { count: 'exact' })
             .eq('status', 'approved');
           if (exam) base = base.eq('exam', exam);
-          if (topicFilter) base = base.eq('topic', topicFilter);
-          if (q) base = base.ilike('stem', `%${q}%`);
+          const qtext = qDebounced.trim();
+          if (qtext) base = base.ilike('stem', `%${qtext}%`);
 
-          const from = (page - 1) * pageSize;
+          const from = offset;
           const to = from + pageSize - 1;
           const { data, count, error } = await base
             .order('reviewed_at', { ascending: false })
@@ -147,11 +146,9 @@ export default function ReviewedQuestionBank() {
             .range(from, to);
           if (error) throw error;
           let list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
-          // Difficulty might not exist as a column; filter client-side if requested
-          if (difficulty) list = list.filter(r => String((r as any).difficulty || '').toLowerCase() === difficulty.toLowerCase());
           if (!cancelled) {
             setItems(list);
-            setTotalCount(difficulty || topicFilter ? list.length : (count ?? 0));
+            setTotalCount(count ?? (page * pageSize + list.length));
             setMode('direct');
           }
           const ids = Array.from(new Set(list.map(d => d.reviewer_id).filter(Boolean))) as string[];
@@ -159,34 +156,6 @@ export default function ReviewedQuestionBank() {
             const { data: g } = await supabase.from('gurus').select('id, name').in('id', ids);
             const map: Record<string, string> = Object.fromEntries((g || []).map((r: any) => [r.id, r.name]));
             if (!cancelled) setReviewers(map);
-
-            // Try to map guru -> public profile for linking and avatar
-            const names = (g || []).map((r: any) => r.name).filter(Boolean);
-            let profs: any[] = [];
-            if (names.length) {
-              const { data: p } = await supabase
-                .from('profiles')
-                .select('user_id, full_name, avatar_url, email')
-                .in('full_name', names as any);
-              profs = p || [];
-            }
-            // Special-case: ensure Test Guru email maps
-            const { data: testGuru } = await supabase
-              .from('profiles')
-              .select('user_id, full_name, avatar_url, email')
-              .eq('email', 'guru@emgurus.com')
-              .maybeSingle();
-
-            const byName: Record<string, any> = Object.fromEntries(profs.map((p: any) => [p.full_name, p]));
-            const pmap: Record<string, { id: string; name: string; avatar_url?: string }> = {};
-            (g || []).forEach((row: any) => {
-              const nm = row.name as string;
-              const prof = byName[nm] || ((testGuru && /test\s+guru/i.test(nm)) ? testGuru : undefined);
-              if (prof) {
-                pmap[row.id] = { id: prof.user_id, name: prof.full_name || nm, avatar_url: prof.avatar_url || undefined };
-              }
-            });
-            if (!cancelled) setReviewerProfiles(pmap);
           } else {
             if (!cancelled) setReviewers({});
           }
@@ -198,7 +167,7 @@ export default function ReviewedQuestionBank() {
       }
     })();
     return () => { cancelled = true; };
-  }, [exam, sloId, q, topicFilter, difficulty, page]);
+  }, [exam, qDebounced, page, pageSize]);
 
   const FiltersPanel = () => {
     const topics = Array.from(new Set(items.map(i => i.topic).filter(Boolean))) as string[];
@@ -282,7 +251,7 @@ export default function ReviewedQuestionBank() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <Card key={i} className="h-24 animate-pulse" />
                 ))
-              ) : approvedCount === 0 ? (
+              ) : (approvedCount === 0 && page === 1) ? (
                 <Card className="p-6 text-center"><div className="text-muted-foreground">No reviewed questions yet. Ask an admin to seed EM questions.</div></Card>
               ) : visible.length ? (
                 visible.map((it, idx) => (
@@ -362,9 +331,9 @@ export default function ReviewedQuestionBank() {
             </div>
 
             <div className="flex items-center justify-center mt-4 gap-4">
-              <Button variant="outline" disabled={page===1} onClick={() => setPage(p=>Math.max(1,p-1))}>Previous</Button>
-              <div className="text-sm text-muted-foreground">Page {page} / {totalPages}</div>
-              <Button variant="outline" disabled={page>=totalPages} onClick={() => setPage(p=>Math.min(totalPages, p+1))}>Next</Button>
+              <Button variant="outline" disabled={page===1 || loading} onClick={() => setPage(p=>Math.max(1,p-1))}>Previous</Button>
+              <div className="text-sm text-muted-foreground">Page {page}{totalCount ? ` / ${Math.max(1, Math.ceil(totalCount / pageSize))}` : ''}</div>
+              <Button variant="outline" disabled={loading || (items.length < pageSize && !loading)} onClick={() => setPage(p=>p+1)}>Next</Button>
             </div>
           </section>
 

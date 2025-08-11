@@ -17,9 +17,6 @@ import Blogs from "./pages/Blogs";
 import BlogDetail from "./pages/BlogDetail";
 import EditorNew from "./pages/blogs/EditorNew";
 import EditorEdit from "./pages/blogs/EditorEdit";
-import BlogsDashboard from "./pages/blogs/Dashboard";
-import Admin from "./pages/Admin";
-// removed legacy: BlogsReview, Editor, Review
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleProtectedRoute from "@/components/RoleProtectedRoute";
 import Dashboard from "./pages/Dashboard";
@@ -126,13 +123,7 @@ const App = () => (
               <Route path="/blog" element={<Navigate to="/blogs" replace />} />
               <Route path="/blog/category/:tag" element={<BlogCategory />} />
               <Route path="/blog/:slug" element={<BlogDetail />} />
-              <Route path="/admin" element={
-                <ProtectedRoute>
-                  <RoleProtectedRoute roles={["admin"]}>
-                    <Admin />
-                  </RoleProtectedRoute>
-                </ProtectedRoute>
-              } />
+              <Route path="/admin" element={<Navigate to="/dashboard/admin" replace />} />
 
               <Route
                 path="/dashboard"

@@ -33,17 +33,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       setLoading(false);
 
-      // Defer any Supabase calls to avoid deadlocks
       if (event === 'SIGNED_IN' && session?.user?.email) {
         setTimeout(async () => {
           try {
             await supabase.functions.invoke('send-welcome-email', {
+              headers: { Authorization: `Bearer ${session!.access_token}` },
               body: {
-                user_id: session.user.id,
-                email: session.user.email,
+                user_id: session!.user.id,
+                email: session!.user.email!,
                 full_name:
-                  (session.user.user_metadata as any)?.full_name ||
-                  (session.user.user_metadata as any)?.name ||
+                  (session!.user.user_metadata as any)?.full_name ||
+                  (session!.user.user_metadata as any)?.name ||
                   undefined,
               },
             });
