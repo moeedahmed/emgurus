@@ -12,7 +12,6 @@ import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 
 const FORUMS_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/forums-api";
 
@@ -168,19 +167,6 @@ const Forums = () => {
               ))}
             </SelectContent>
           </Select>
-          
-            
-              <SelectTrigger><SelectValue placeholder="Topic" /></SelectTrigger>
-              <SelectContent className="z-50">
-                <SelectItem value="__all__">All Topics</SelectItem>
-                {topicsAll.map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <div />
-          )}
         </section>
 
         {/* Results */}
