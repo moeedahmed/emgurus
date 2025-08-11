@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Link, useSearchParams } from "react-router-dom";
 import PageHero from "@/components/PageHero";
@@ -9,35 +9,66 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const FORUMS_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/forums-api";
 
-interface Category { id: string; title: string; description: string | null; }
+interface Category { id: string; title: string; description: string | null }
+interface ThreadRow {
+  id: string;
+  category_id: string;
+  author_id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  author?: { id: string; name: string; avatar_url: string | null };
+  reply_count?: number;
+  topics?: string[]; // optional future support
+}
 
 const Forums = () => {
-  const [items, setItems] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const isNewOpen = searchParams.get('new') === '1';
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [threads, setThreads] = useState<ThreadRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters
+  const [q, setQ] = useState<string>(searchParams.get('q') || "");
+  const [section, setSection] = useState<string>(searchParams.get('section') || "");
+  const [topic, setTopic] = useState<string>(searchParams.get('topic') || "");
+
   useEffect(() => {
     document.title = "Forums | EMGurus";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name','description'); document.head.appendChild(meta); }
-    meta.setAttribute('content','Browse EMGurus forum categories: Study Tips, EM Exams, Clinical Scenarios.');
+    meta.setAttribute('content','Browse all EMGurus forum threads. Filter by section and topic.');
     let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!link) { link = document.createElement('link'); link.rel = 'canonical'; document.head.appendChild(link); }
     link.href = window.location.href;
   }, []);
 
+  // Load categories and latest threads
   useEffect(() => {
     (async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const res = await fetch(`${FORUMS_EDGE}/api/forum/categories`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load categories');
-        setItems(data.items || []);
+        const [catRes, thRes] = await Promise.all([
+          fetch(`${FORUMS_EDGE}/api/forum/categories`),
+          fetch(`${FORUMS_EDGE}/api/forum/threads`),
+        ]);
+        const cats = await catRes.json();
+        const ths = await thRes.json();
+        if (!catRes.ok) throw new Error(cats.error || 'Failed to load categories');
+        if (!thRes.ok) throw new Error(ths.error || 'Failed to load threads');
+        setCategories(cats.items || []);
+        const list: ThreadRow[] = (ths.items || []).sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+        setThreads(list);
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -46,43 +77,120 @@ const Forums = () => {
     })();
   }, []);
 
+  // Derived
+  const categoryMap = useMemo(() => Object.fromEntries(categories.map(c => [c.id, c.title])), [categories]);
+  const topicsAll = useMemo(() => Array.from(new Set(threads.flatMap(t => t.topics || []))).sort(), [threads]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    q ? params.set('q', q) : params.delete('q');
+    section ? params.set('section', section) : params.delete('section');
+    topic ? params.set('topic', topic) : params.delete('topic');
+    setSearchParams(params, { replace: true });
+  }, [q, section, topic]);
+
+  const filtered = useMemo(() => {
+    const qq = q.trim().toLowerCase();
+    return threads.filter(t =>
+      (!section || t.category_id === section) &&
+      (!topic || (t.topics || []).includes(topic)) &&
+      (!qq || t.title.toLowerCase().includes(qq) || t.content.toLowerCase().includes(qq))
+    );
+  }, [threads, q, section, topic]);
+
   return (
     <main>
       <PageHero
         title="EMGurus Forums"
-        subtitle="Discuss by topic or exam. Join the EM community."
+        subtitle="All threads. Filter by section and topic, or start a new discussion."
         align="center"
         ctas={[{ label: "Start a Thread", href: "?new=1", variant: "outline" }]}
       />
 
       <section className="container mx-auto px-4 py-8">
+        <CreateThreadGlobal
+          open={isNewOpen}
+          onClose={() => { const p = new URLSearchParams(searchParams); p.delete('new'); setSearchParams(p); }}
+        />
 
-      <CreateThreadGlobal
-        open={isNewOpen}
-        onClose={() => { const p = new URLSearchParams(searchParams); p.delete('new'); setSearchParams(p); }}
-      />
-
-      <h2 className="mt-8 mb-4 text-lg font-semibold">Sections</h2>
-      {loading ? (
-        <div className="min-h-[30vh] flex items-center justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
-        </div>
-      ) : error ? (
-        <div className="rounded-lg border bg-card p-6">{error}</div>
-      ) : (
-        <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((c) => (
-            <Link key={c.id} to={`/forums/${c.id}`} className="block group">
-              <Card className="p-6 flex flex-col border-2 transition hover:shadow-md hover:border-primary/20 rounded-xl">
-                <h2 className="text-xl font-semibold mb-1 group-hover:text-primary transition-colors">{c.title}</h2>
-                <p className="text-muted-foreground flex-1">{c.description || 'Discussion category'}</p>
-              </Card>
-            </Link>
-          ))}
+        {/* Filters */}
+        <section className="grid gap-4 md:grid-cols-3 mb-6">
+          <Input placeholder="Search title or content" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Select value={section || "__all__"} onValueChange={(v) => setSection(v === "__all__" ? "" : v)}>
+            <SelectTrigger><SelectValue placeholder="Section" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Sections</SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {topicsAll.length > 0 ? (
+            <Select value={topic || "__all__"} onValueChange={(v) => setTopic(v === "__all__" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Topic" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Topics</SelectItem>
+                {topicsAll.map((t) => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="hidden md:block" />
+          )}
         </section>
-      )}
-    </section>
-  </main>
+
+        {/* Results */}
+        {loading ? (
+          <div className="min-h-[30vh] flex items-center justify-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+          </div>
+        ) : error ? (
+          <div className="rounded-lg border bg-card p-6">{error}</div>
+        ) : filtered.length === 0 ? (
+          <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground">No threads found. Try different filters.</div>
+        ) : (
+          <section className="space-y-4">
+            {filtered.map((t) => (
+              <Link key={t.id} to={`/threads/${t.id}`} className="block group">
+                <Card className="p-5 border-2 transition hover:shadow-md hover:border-primary/20 rounded-xl">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h2 className="text-lg font-semibold group-hover:text-primary transition-colors">{t.title}</h2>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{t.content}</p>
+                      <div className="flex flex-wrap items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
+                        {/* Section tag */}
+                        <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setSection(t.category_id)}>
+                          {categoryMap[t.category_id] || 'Section'}
+                        </Badge>
+                        {/* Topic tags if available */}
+                        {(t.topics || []).slice(0, 4).map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs cursor-pointer" onClick={() => setTopic(tag)}>
+                            #{tag}
+                          </Badge>
+                        ))}
+                        {(t.topics || []).length > 4 && (
+                          <Badge variant="outline" className="text-xs">+{(t.topics || []).length - 4}</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={t.author?.avatar_url || undefined} alt={t.author?.name || 'User'} />
+                          <AvatarFallback>{(t.author?.name || 'U').slice(0,2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span>{t.author?.name || 'User'}</span>
+                        <span>• {new Date(t.created_at).toLocaleDateString()}</span>
+                        <span>• {t.reply_count || 0} replies</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </section>
+        )}
+      </section>
+    </main>
   );
 };
 
