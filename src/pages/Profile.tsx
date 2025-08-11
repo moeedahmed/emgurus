@@ -163,7 +163,7 @@ export default function Profile() {
   return (
     <main className="container mx-auto px-4 md:px-6 py-6 md:py-10 overflow-x-hidden">
       {/* Cover Banner */}
-      <section className="w-full h-28 md:h-44 relative bg-muted">
+      <section className="w-full h-16 md:h-40 relative bg-muted">
         {profile?.cover_image_url ? (
           <img
             src={profile.cover_image_url}
@@ -176,7 +176,7 @@ export default function Profile() {
         )}
       </section>
 
-      <article className="-mt-8 md:-mt-12 px-4 md:px-6">
+      <article className="mt-4 md:mt-6 px-4 md:px-6">
         <div className="grid gap-6 md:grid-cols-3">
           {/* Left column: Profile summary */}
           <Card className="p-6 md:col-span-1 shadow-md">

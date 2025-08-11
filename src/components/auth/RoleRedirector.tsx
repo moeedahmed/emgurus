@@ -13,7 +13,7 @@ const RoleRedirector = () => {
   );
   if (roles.includes("admin")) return <Navigate to="/dashboard/admin" replace />;
   if (roles.includes("guru")) return <Navigate to="/dashboard/guru" replace />;
-  return <Navigate to="/profile" replace />;
+  return <Navigate to="/dashboard/user" replace />;
 };
 
 export default RoleRedirector;
