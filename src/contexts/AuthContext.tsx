@@ -27,26 +27,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        try {
-          if (event === 'SIGNED_IN' && session?.user?.email) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only synchronous state updates here
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+
+      // Defer any Supabase calls to avoid deadlocks
+      if (event === 'SIGNED_IN' && session?.user?.email) {
+        setTimeout(async () => {
+          try {
             await supabase.functions.invoke('send-welcome-email', {
               body: {
                 user_id: session.user.id,
                 email: session.user.email,
-                full_name: (session.user.user_metadata as any)?.full_name || (session.user.user_metadata as any)?.name || undefined,
-              }
+                full_name:
+                  (session.user.user_metadata as any)?.full_name ||
+                  (session.user.user_metadata as any)?.name ||
+                  undefined,
+              },
             });
+          } catch (e) {
+            console.warn('Welcome email invoke failed', e);
           }
-        } catch (e) {
-          console.warn('Welcome email invoke failed', e);
-        }
+        }, 0);
       }
-    );
+    });
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -72,6 +78,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    // Safety: ensure local auth state is cleared immediately
+    setSession(null);
+    setUser(null);
   };
 
   const value = {

@@ -22,8 +22,8 @@ const RoleProtectedRoute: React.FC<{ roles: Array<"admin" | "guru" | "user">; ch
   }
 
   if (!isAllowed) {
-    // redirect to dashboard (or home) with return location
-    return <Navigate to="/" state={{ from: location }} replace />;
+    // If unauthenticated, send to auth; otherwise to home
+    return <Navigate to={user ? '/' : '/auth'} state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

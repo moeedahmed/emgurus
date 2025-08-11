@@ -23,6 +23,7 @@ const Dashboard = () => {
         const roles = (data || []).map((r: any) => r.role);
         if (roles.includes('admin')) return navigate('/dashboard/admin', { replace: true });
         if (roles.includes('guru')) return navigate('/dashboard/guru', { replace: true });
+        // Default to user dashboard
         return navigate('/dashboard/user', { replace: true });
       } catch (e) {
         console.error('Failed to resolve role', e);
