@@ -44,6 +44,10 @@ export default function ReviewedQuestionDetail() {
   const tickRef = useRef<number | null>(null);
   const ids: string[] = location?.state?.ids || [];
   const index: number = location?.state?.index ?? (ids.indexOf(id as string) || 0);
+  const SESSION_KEY = 'emgurus.reviewed.session';
+  const [ended, setEnded] = useState(false);
+  const [summary, setSummary] = useState<{ score: number; attempted: number; total: number; byTopic: Record<string, { total: number; correct: number }>; durationSec: number }>({ score: 0, attempted: 0, total: 0, byTopic: {}, durationSec: 0 });
+  const loggedRef = useRef(false);
 
   useEffect(() => {
     document.title = "Practice Mode • EM Gurus";

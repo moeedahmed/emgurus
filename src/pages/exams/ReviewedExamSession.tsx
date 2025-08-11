@@ -47,6 +47,7 @@ export default function ReviewedExamSession() {
   const [timeSec, setTimeSec] = useState(0);
   const limitSec = typeof location?.state?.limitSec === 'number' ? location.state.limitSec as number : undefined;
   const [timeUp, setTimeUp] = useState(false);
+  const [finalTimeSec, setFinalTimeSec] = useState<number | null>(null);
   const startedAtRef = useRef<number>(Date.now());
   const [ended, setEnded] = useState(false);
   const loggedRef = useRef(false);
@@ -148,6 +149,7 @@ export default function ReviewedExamSession() {
     return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   };
   useEffect(() => {
+    if (ended || finished || timeUp) return; // freeze timer on summary
     const id = window.setInterval(() => {
       setTimeSec((t) => {
         const next = t + 1;
@@ -159,16 +161,19 @@ export default function ReviewedExamSession() {
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [limitSec]);
+  }, [limitSec, ended, finished, timeUp]);
 
   const timeDisplay = limitSec ? formatMMSS(Math.max(0, (limitSec - timeSec))) : formatMMSS(timeSec);
   const showSummary = ended || finished || timeUp;
+  const summaryTimeDisplay = formatMMSS(finalTimeSec ?? timeSec);
 
   useEffect(() => {
     if (!showSummary || loggedRef.current) return;
+    setFinalTimeSec((prev) => (prev ?? timeSec));
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      const duration = finalTimeSec ?? timeSec;
       const payload = {
         user_id: user.id,
         mode: 'exam',
@@ -177,9 +182,9 @@ export default function ReviewedExamSession() {
         correct_count: score,
         total_attempted: answers.length,
         total_questions: order.length,
-        started_at: new Date(Date.now() - timeSec * 1000).toISOString(),
+        started_at: new Date(Date.now() - duration * 1000).toISOString(),
         finished_at: new Date().toISOString(),
-        duration_sec: timeSec,
+        duration_sec: duration,
         breakdown: byTopic,
       } as any;
       try {
@@ -199,7 +204,7 @@ export default function ReviewedExamSession() {
             <div className="md:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Exam Mode • Question {idx + 1} of {order.length}</CardTitle>
+                  <CardTitle>Exam Mode</CardTitle>
                 </CardHeader>
                 <CardContent className="grid gap-4">
                   {q && (
@@ -323,7 +328,7 @@ export default function ReviewedExamSession() {
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="text-lg font-semibold">Score: {score} / {answers.length}</div>
-              <div className="text-sm text-muted-foreground">Attempts: {answers.length} / {order.length} • Time: {timeDisplay}</div>
+              <div className="text-sm text-muted-foreground">Attempts: {answers.length} / {order.length} • Time: {summaryTimeDisplay}</div>
               <div className="grid gap-2">
                 {Object.entries(byTopic).map(([t, v]) => (
                   <div key={t} className="text-sm">{t}: {v.correct}/{v.total}</div>
