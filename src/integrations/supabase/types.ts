@@ -1771,6 +1771,7 @@ export type Database = {
           options: Json
           question: string
           status: Database["public"]["Enums"]["review_question_status"]
+          tags: string[] | null
           topic: string | null
           updated_at: string
         }
@@ -1784,6 +1785,7 @@ export type Database = {
           options: Json
           question: string
           status?: Database["public"]["Enums"]["review_question_status"]
+          tags?: string[] | null
           topic?: string | null
           updated_at?: string
         }
@@ -1797,6 +1799,7 @@ export type Database = {
           options?: Json
           question?: string
           status?: Database["public"]["Enums"]["review_question_status"]
+          tags?: string[] | null
           topic?: string | null
           updated_at?: string
         }
@@ -1930,6 +1933,7 @@ export type Database = {
           status: string
           stem: string
           subtopic: string | null
+          tags: string[] | null
           topic: string | null
           updated_at: string
         }
@@ -1947,6 +1951,7 @@ export type Database = {
           status?: string
           stem: string
           subtopic?: string | null
+          tags?: string[] | null
           topic?: string | null
           updated_at?: string
         }
@@ -1964,6 +1969,7 @@ export type Database = {
           status?: string
           stem?: string
           subtopic?: string | null
+          tags?: string[] | null
           topic?: string | null
           updated_at?: string
         }
