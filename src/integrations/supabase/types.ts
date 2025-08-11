@@ -2670,26 +2670,6 @@ export type Database = {
         Args: { p_question_id: string; p_note: string }
         Returns: undefined
       }
-      gtrgm_compress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_decompress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_in: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_options: {
-        Args: { "": unknown }
-        Returns: undefined
-      }
-      gtrgm_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
       halfvec_avg: {
         Args: { "": number[] }
         Returns: unknown
@@ -2919,18 +2899,6 @@ export type Database = {
       review_request_changes: {
         Args: { p_post_id: string; p_note: string }
         Returns: undefined
-      }
-      set_limit: {
-        Args: { "": number }
-        Returns: number
-      }
-      show_limit: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      show_trgm: {
-        Args: { "": string }
-        Returns: string[]
       }
       sparsevec_out: {
         Args: { "": unknown }
