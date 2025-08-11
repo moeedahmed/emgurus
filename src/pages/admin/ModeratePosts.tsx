@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -211,6 +212,9 @@ const ModeratePosts = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Button asChild variant="secondary">
+                  <Link to={`/blogs/editor/${p.id}`}>Edit</Link>
+                </Button>
                 <Button variant="outline" onClick={() => act(p.id, "archived")}>Reject</Button>
                 <Button onClick={() => act(p.id, "published")}>Publish</Button>
               </div>
