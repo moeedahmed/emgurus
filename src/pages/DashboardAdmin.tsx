@@ -1,16 +1,19 @@
 import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import TrustpilotAnalytics from "@/components/admin/TrustpilotAnalytics";
 const DashboardAdmin = () => {
   const navigate = useNavigate();
+  useEffect(() => { document.title = "Admin Dashboard | EMGurus"; }, []);
+  const { hash } = useLocation();
   useEffect(() => {
-    document.title = "Admin Dashboard | EMGurus";
-  }, []);
-
+    if (hash === "#blogs-admin" || hash === "#blogs-admin-section") {
+      document.getElementById("blogs-admin-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [hash]);
   useEffect(() => {
     const run = async () => {
       try {
@@ -35,11 +38,13 @@ const DashboardAdmin = () => {
           <p className="text-muted-foreground mb-4">Verify and onboard new mentors.</p>
           <Button onClick={() => navigate('/admin/approve-gurus')}>Open Approvals</Button>
         </Card>
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Moderate Blog Posts</h2>
-          <p className="text-muted-foreground mb-4">Review drafts and publish when ready.</p>
-          <Button onClick={() => navigate('/admin/moderate-posts')}>Moderate</Button>
-        </Card>
+        <section id="blogs-admin-section">
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-2">Moderate Blog Posts</h2>
+            <p className="text-muted-foreground mb-4">Review drafts and publish when ready.</p>
+            <Button onClick={() => navigate('/admin/moderate-posts')}>Moderate</Button>
+          </Card>
+        </section>
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-2">Assign AI Question Reviews</h2>
           <p className="text-muted-foreground mb-4">Distribute review tasks to Gurus.</p>

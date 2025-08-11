@@ -58,7 +58,7 @@ export default function EditorEdit() {
         .select("id, title, description, content, cover_image_url, category_id")
         .eq("id", id)
         .maybeSingle();
-      if (!post) { toast.error("Draft not found"); navigate("/blogs/dashboard"); return; }
+      if (!post) { toast.error("Draft not found"); navigate("/dashboard"); return; }
       setTitle((post as any).title || "");
       setCover((post as any).cover_image_url || "");
       setExcerpt((post as any).description || "");
@@ -84,7 +84,7 @@ export default function EditorEdit() {
       await updateDraft(id, { title, content_md: content, category_id: categoryId, tag_slugs, cover_image_url: cover || undefined, excerpt: excerpt || undefined });
       if (submit) await submitPost(id);
       toast.success(submit ? "Submitted for review" : "Draft updated");
-      navigate("/blogs/dashboard");
+      navigate("/dashboard");
     } catch (e: any) {
       toast.error(e.message || "Failed to save");
     } finally {

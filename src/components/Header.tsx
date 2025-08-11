@@ -108,7 +108,7 @@ const Header = () => {
                   <DropdownMenuItem onClick={() => navigate('/profile')}>
                     <UserIcon className="mr-2 h-4 w-4" /> My Profile
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/blogs/dashboard')}>
+                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                     <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
                   </DropdownMenuItem>
                   {false && roles.includes('guru') && (
@@ -160,7 +160,7 @@ const Header = () => {
                       <div className="rounded-md border border-border">
                         <div className="px-3 py-2 text-xs uppercase text-muted-foreground">Guru Tools</div>
                         <div className="flex flex-col space-y-2 p-2 pt-0">
-                          <Button variant="outline" className="justify-start" onClick={() => {navigate('/blogs/dashboard'); setIsMenuOpen(false);}}>Dashboard</Button>
+                          <Button variant="outline" className="justify-start" onClick={() => {navigate('/dashboard'); setIsMenuOpen(false);}}>Dashboard</Button>
                           <Button variant="outline" className="justify-start" onClick={() => {navigate('/guru/availability'); setIsMenuOpen(false);}}>My Availability</Button>
                         </div>
                       </div>

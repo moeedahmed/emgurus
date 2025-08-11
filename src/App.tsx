@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Exams from "./pages/Exams";
 import Auth from "./pages/Auth";
@@ -56,6 +56,23 @@ import GenerateExamQuestion from "@/pages/tools/GenerateExamQuestion";
 import MyExamDrafts from "@/pages/tools/MyExamDrafts";
 import ReviewedByMe from "@/pages/guru/ReviewedByMe";
 import PricingPage from "./pages/Pricing";
+import { useRoles } from "@/hooks/useRoles";
+
+function RoleRedirector() {
+  const { roles } = useRoles();
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/auth" replace />;
+  if (roles.includes('admin')) return <Navigate to="/dashboard/admin" replace />;
+  if (roles.includes('guru')) return <Navigate to="/dashboard/guru" replace />;
+  return <Navigate to="/dashboard/user" replace />;
+}
+
+function LegacyBlogsDashboardRedirect() {
+  const { roles } = useRoles();
+  if (roles.includes('admin')) return <Navigate to="/dashboard/admin#blogs-admin" replace />;
+  if (roles.includes('guru')) return <Navigate to="/dashboard/guru#blogs" replace />;
+  return <Navigate to="/dashboard/user" replace />;
+}
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -107,7 +124,7 @@ const App = () => (
               <Route path="/blogs/editor/new" element={<ProtectedRoute><EditorNew /></ProtectedRoute>} />
               <Route path="/blogs/editor/:id" element={<ProtectedRoute><EditorEdit /></ProtectedRoute>} />
               <Route path="/blogs/new" element={<Navigate to="/blogs/editor/new" replace />} />
-              <Route path="/blogs/dashboard" element={<ProtectedRoute><BlogsDashboard /></ProtectedRoute>} />
+              <Route path="/blogs/dashboard" element={<ProtectedRoute><LegacyBlogsDashboardRedirect /></ProtectedRoute>} />
               <Route path="/blogs/review" element={<Navigate to="/blogs/dashboard" replace />} />
               <Route path="/blog" element={<Navigate to="/blogs" replace />} />
               <Route path="/blog/category/:tag" element={<BlogCategory />} />
@@ -124,7 +141,7 @@ const App = () => (
                 path="/dashboard"
                 element={
                   <ProtectedRoute>
-                    <Dashboard />
+                    <RoleRedirector />
                   </ProtectedRoute>
                 }
               />
