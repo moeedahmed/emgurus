@@ -227,7 +227,7 @@ export default function Profile() {
           {/* Right column: Tabs with role-aware sections */}
           <div className="md:col-span-2">
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className={`w-full grid ${isGuru ? 'grid-cols-4' : 'grid-cols-3'}`}>
+              <TabsList className={`sticky top-2 z-10 bg-background/60 backdrop-blur border rounded-md p-1 w-full grid ${isGuru ? 'grid-cols-4' : 'grid-cols-3'}`}>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="bookings">Bookings</TabsTrigger>
                 <TabsTrigger value="security">Security</TabsTrigger>
