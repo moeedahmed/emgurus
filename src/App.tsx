@@ -33,6 +33,8 @@ import UserProgress from "./pages/user/Progress";
 import GuruQuestions from "./pages/guru/Questions";
 import GuruReviewQueue from "./pages/guru/ReviewQueue";
 import GuruAvailability from "./pages/guru/Availability";
+import ExamsAICuration from "./pages/admin/ExamsAICuration";
+import ExamsReviewQueue from "./pages/guru/ExamsReviewQueue";
 import ApproveGurus from "./pages/admin/ApproveGurus";
 import ModeratePosts from "./pages/admin/ModeratePosts";
 import AssignReviews from "./pages/admin/AssignReviews";
@@ -163,9 +165,10 @@ const App = () => (
               <Route path="/profile/:id" element={<PublicProfile />} />
               <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
               <Route path="/dashboard/user/progress" element={<UserProgress />} />
-              <Route path="/guru/questions" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruQuestions /></RoleProtectedRoute>} />
-              <Route path="/guru/reviews" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruReviewQueue /></RoleProtectedRoute>} />
-              <Route path="/guru/availability" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruAvailability /></RoleProtectedRoute>} />
+<Route path="/guru/questions" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruQuestions /></RoleProtectedRoute>} />
+<Route path="/guru/reviews" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruReviewQueue /></RoleProtectedRoute>} />
+<Route path="/guru/exams/review" element={<RoleProtectedRoute roles={["guru", "admin"]}><ExamsReviewQueue /></RoleProtectedRoute>} />
+<Route path="/guru/availability" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruAvailability /></RoleProtectedRoute>} />
               <Route path="/admin/approve-gurus" element={<RoleProtectedRoute roles={["admin"]}><ApproveGurus /></RoleProtectedRoute>} />
               <Route path="/admin/moderate-posts" element={<RoleProtectedRoute roles={["admin"]}><ModeratePosts /></RoleProtectedRoute>} />
               <Route path="/admin/assign-reviews" element={<RoleProtectedRoute roles={["admin"]}><AssignReviews /></RoleProtectedRoute>} />

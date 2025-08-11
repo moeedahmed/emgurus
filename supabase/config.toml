@@ -83,3 +83,9 @@ verify_jwt = false
 
 [functions.public-reviewed-exams]
 verify_jwt = false
+
+[functions.exams-admin-curate]
+verify_jwt = true
+
+[functions.exams-guru-review]
+verify_jwt = true

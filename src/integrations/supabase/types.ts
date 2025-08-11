@@ -1026,6 +1026,47 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_review_assignments: {
+        Row: {
+          assigned_by: string
+          created_at: string
+          id: string
+          note: string | null
+          question_id: string
+          reviewer_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          question_id: string
+          reviewer_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          question_id?: string
+          reviewer_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_review_assignments_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forum_categories: {
         Row: {
           created_at: string
@@ -2535,6 +2576,31 @@ export type Database = {
       l2_normalize: {
         Args: { "": string } | { "": unknown } | { "": unknown }
         Returns: string
+      }
+      list_all_posts_admin: {
+        Args: { p_status: string; p_limit: number; p_offset: number }
+        Returns: {
+          author_id: string
+          category_id: string | null
+          content: string | null
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          likes_count: number
+          published_at: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_id: string | null
+          slug: string | null
+          status: Database["public"]["Enums"]["blog_post_status"]
+          submitted_at: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          view_count: number
+        }[]
       }
       list_exam_reviewer_queue: {
         Args: { p_limit: number; p_offset: number }
