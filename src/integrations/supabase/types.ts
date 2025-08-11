@@ -1026,6 +1026,57 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_attempts: {
+        Row: {
+          breakdown: Json | null
+          correct_count: number
+          created_at: string
+          duration_sec: number
+          finished_at: string | null
+          id: string
+          mode: string
+          question_ids: string[]
+          source: string
+          started_at: string
+          total_attempted: number
+          total_questions: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          breakdown?: Json | null
+          correct_count?: number
+          created_at?: string
+          duration_sec?: number
+          finished_at?: string | null
+          id?: string
+          mode: string
+          question_ids: string[]
+          source?: string
+          started_at?: string
+          total_attempted?: number
+          total_questions?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          breakdown?: Json | null
+          correct_count?: number
+          created_at?: string
+          duration_sec?: number
+          finished_at?: string | null
+          id?: string
+          mode?: string
+          question_ids?: string[]
+          source?: string
+          started_at?: string
+          total_attempted?: number
+          total_questions?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exam_question_flags: {
         Row: {
           assigned_to: string | null
