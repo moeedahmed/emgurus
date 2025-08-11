@@ -1,34 +1,20 @@
-import { useEffect } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import TrustpilotAnalytics from "@/components/admin/TrustpilotAnalytics";
+const TrustpilotAnalytics = lazy(() => import("@/components/admin/TrustpilotAnalytics"));
 const DashboardAdmin = () => {
   const navigate = useNavigate();
   useEffect(() => { document.title = "Admin Dashboard | EMGurus"; }, []);
   const { hash } = useLocation();
+  const [showAnalytics, setShowAnalytics] = useState(false);
   useEffect(() => {
     if (hash === "#blogs-admin" || hash === "#blogs-admin-section") {
       document.getElementById("blogs-admin-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [hash]);
-  useEffect(() => {
-    const run = async () => {
-      try {
-        const ran = localStorage.getItem('emg_seed_users_done');
-        if (ran) return;
-        const { error } = await supabase.functions.invoke('seed-test-users');
-        if (error) throw error;
-        toast.success('Seeded test users and roles');
-        localStorage.setItem('emg_seed_users_done', '1');
-      } catch (e) {
-        console.error('Seeding failed', e);
-      }
-    };
-    run();
-  }, []);
   return (
     <main className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
@@ -114,8 +100,18 @@ const DashboardAdmin = () => {
             }
           }}>Run Now</Button>
         </Card>
-        <div className="md:col-span-2">
-          <TrustpilotAnalytics />
+        <div className="md:col-span-2 space-y-4">
+          <Card className="p-6 flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Trustpilot Analytics</h2>
+            <Button variant="outline" onClick={() => setShowAnalytics((v) => !v)}>
+              {showAnalytics ? 'Hide' : 'Load'}
+            </Button>
+          </Card>
+          {showAnalytics && (
+            <Suspense fallback={<p className="text-muted-foreground">Loading analytics…</p>}>
+              <TrustpilotAnalytics />
+            </Suspense>
+          )}
         </div>
       </div>
     </main>
