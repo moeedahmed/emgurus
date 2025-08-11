@@ -241,30 +241,6 @@ export default function Profile() {
                   )}
                 </Card>
 
-                <Card className="w-full overflow-hidden p-6 space-y-3 shadow-md">
-                  <div className="font-semibold">Recent Bookings</div>
-                  <Separator />
-                  {bookings.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No bookings yet.</div>
-                  ) : (
-                    <ul className="space-y-3">
-                      {bookings.slice(0,3).map((b) => (
-                        <li key={b.id} className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="font-medium text-sm"><Link to={`/profile/${b.guru_id}`} className="hover:underline">{guruNames[b.guru_id]?.name || 'Guru'}</Link></div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(b.start_datetime).toLocaleString()} • {b.status}
-                            </div>
-                          </div>
-                          <div className="text-sm font-medium">{b.price ? `$${b.price}` : 'Free'}</div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <div className="pt-2">
-                    <Link to="/bookings"><Button variant="link" className="px-0">View all bookings</Button></Link>
-                  </div>
-                </Card>
               </TabsContent>
 
               {/* BOOKINGS */}
