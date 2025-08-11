@@ -32,12 +32,14 @@ function getFlag(country?: string | null): string {
   return (country && map[country]) || "🌍";
 }
 
-export function GuruCard({ guru, onBook, disabled, onBadgeClick, onCardClick }: {
+export function GuruCard({ guru, onBook, disabled, onBadgeClick, onCardClick, selectedExam, selectedSpecialty }: {
   guru: Guru;
   onBook: (g: Guru) => void;
   disabled?: boolean;
   onBadgeClick?: (type: 'exam' | 'specialty', value: string) => void;
   onCardClick?: (g: Guru) => void;
+  selectedExam?: string;
+  selectedSpecialty?: string;
 }) {
   const initials = guru.full_name
     ?.split(" ")
@@ -68,8 +70,9 @@ export function GuruCard({ guru, onBook, disabled, onBadgeClick, onCardClick }: 
         <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
           {guru.specialty && (
             <Badge
-              variant="outline"
+              variant={selectedSpecialty === guru.specialty ? "secondary" : "outline"}
               className="text-xs cursor-pointer"
+              aria-pressed={selectedSpecialty === guru.specialty}
               onClick={() => onBadgeClick?.('specialty', guru.specialty!)}
             >
               {guru.specialty}
@@ -78,8 +81,9 @@ export function GuruCard({ guru, onBook, disabled, onBadgeClick, onCardClick }: 
           {guru.exams && guru.exams.slice(0, 4).map((e) => (
             <Badge
               key={e}
-              variant="secondary"
+              variant={selectedExam === e ? "secondary" : "secondary"}
               className="text-xs cursor-pointer"
+              aria-pressed={selectedExam === e}
               onClick={() => onBadgeClick?.('exam', e)}
             >
               {e}

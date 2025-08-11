@@ -207,38 +207,53 @@ const Consultations = () => {
 
       <section className="container mx-auto px-4 py-8">
 
-      <div className="mb-4">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline">Filters</Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-80 sm:w-96">
-            <div className="space-y-4">
-              <Input placeholder="Search by name or specialty" value={search} onChange={(e) => setSearch(e.target.value)} />
-              <Select value={country} onValueChange={setCountry}>
-                <SelectTrigger><SelectValue placeholder="Country" /></SelectTrigger>
-                <SelectContent className="z-50">
-                  {countries.map((c) => (<SelectItem key={c} value={c}>{c === "all" ? "All Countries" : c}</SelectItem>))}
-                </SelectContent>
-              </Select>
-              <Select value={specialty} onValueChange={setSpecialty}>
-                <SelectTrigger><SelectValue placeholder="Specialty" /></SelectTrigger>
-                <SelectContent className="z-50">
-                  {specialties.map((s) => (<SelectItem key={s} value={s}>{s === "all" ? "All Specialties" : s}</SelectItem>))}
-                </SelectContent>
-              </Select>
-              <Select value={exam} onValueChange={setExam}>
-                <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
-                <SelectContent className="z-50">
-                  {exams.map((e) => (<SelectItem key={e} value={e}>{e === "all" ? "All Exams" : e}</SelectItem>))}
-                </SelectContent>
-              </Select>
-              <Button variant="outline" onClick={() => { setSearch(""); setCountry("all"); setSpecialty("all"); setExam("all"); }}>Reset</Button>
+        <div className="mb-4 space-y-3">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline">Filters</Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80 sm:w-96">
+              <div className="space-y-4">
+                <Input placeholder="Search by name or specialty" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Select value={country} onValueChange={setCountry}>
+                  <SelectTrigger><SelectValue placeholder="Country" /></SelectTrigger>
+                  <SelectContent className="z-50">
+                    {countries.map((c) => (<SelectItem key={c} value={c}>{c === "all" ? "All Countries" : c}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={specialty} onValueChange={setSpecialty}>
+                  <SelectTrigger><SelectValue placeholder="Specialty" /></SelectTrigger>
+                  <SelectContent className="z-50">
+                    {specialties.map((s) => (<SelectItem key={s} value={s}>{s === "all" ? "All Specialties" : s}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={exam} onValueChange={setExam}>
+                  <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
+                  <SelectContent className="z-50">
+                    {exams.map((e) => (<SelectItem key={e} value={e}>{e === "all" ? "All Exams" : e}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" onClick={() => { setSearch(""); setCountry("all"); setSpecialty("all"); setExam("all"); }}>Reset</Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+          {/* Active filters row */}
+          {(country !== 'all' || specialty !== 'all' || exam !== 'all') && (
+            <div className="flex flex-wrap items-center gap-2">
+              {country !== 'all' && (
+                <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setCountry('all')}>Country: {country} ×</Button>
+              )}
+              {specialty !== 'all' && (
+                <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setSpecialty('all')}>Specialty: {specialty} ×</Button>
+              )}
+              {exam !== 'all' && (
+                <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setExam('all')}>Exam: {exam} ×</Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => { setCountry('all'); setSpecialty('all'); setExam('all'); }}>Clear all</Button>
             </div>
-          </SheetContent>
-        </Sheet>
-        <div className="text-sm text-muted-foreground mt-2">{filtered.length} mentors found</div>
-      </div>
+          )}
+          <div className="text-sm text-muted-foreground">{filtered.length} mentors found</div>
+        </div>
 
       {filtered.length === 0 ? (
         <section className="text-center text-muted-foreground py-12">

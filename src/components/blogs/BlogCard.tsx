@@ -20,9 +20,11 @@ interface BlogCardProps {
   topBadge?: { label: string } | null;
   onOpen?: () => void;
   onTagClick?: (type: 'category' | 'tag' | 'author', value: string) => void;
+  selectedCategory?: string;
+  selectedTag?: string;
 }
 
-export default function BlogCard({ post: p, topBadge, onOpen, onTagClick }: BlogCardProps) {
+export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, selectedCategory, selectedTag }: BlogCardProps) {
   const cover = p.cover_image_url || fallbackImage;
   const words = (p.excerpt || "").split(/\s+/).filter(Boolean).length;
   const readMin = Math.max(1, Math.ceil(words / 220));
@@ -65,23 +67,31 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick }: Blog
           ))}
           {p.category?.title && !/^imported$/i.test(p.category.title) && (
             <Badge
-              variant="secondary"
+              variant={selectedCategory === p.category!.title! ? "secondary" : "outline"}
               className="text-xs cursor-pointer"
+              aria-pressed={selectedCategory === p.category!.title!}
+              title={p.category!.title!}
               onClick={() => onTagClick?.('category', p.category!.title!)}
             >
               {p.category.title}
             </Badge>
           )}
-          {(p.tags || []).slice(0, 3).map((t) => (
-            <Badge
-              key={t.slug || t.title}
-              variant="outline"
-              className="text-xs cursor-pointer"
-              onClick={() => onTagClick?.('tag', t.slug || t.title)}
-            >
-              #{t.slug || t.title}
-            </Badge>
-          ))}
+          {(p.tags || []).slice(0, 3).map((t) => {
+            const label = t.slug || t.title;
+            const active = selectedTag === label;
+            return (
+              <Badge
+                key={label}
+                variant={active ? "secondary" : "outline"}
+                className="text-xs cursor-pointer"
+                aria-pressed={active}
+                title={label}
+                onClick={() => onTagClick?.('tag', label)}
+              >
+                #{label}
+              </Badge>
+            );
+          })}
         </div>
 
         <h3 className="font-semibold text-lg line-clamp-2 story-link">{p.title}</h3>

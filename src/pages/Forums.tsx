@@ -155,6 +155,19 @@ const Forums = () => {
           </Sheet>
         </div>
 
+        {/* Active filters row */}
+        {(section || topic) && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {section && (
+              <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setSection("")}>Section ×</Button>
+            )}
+            {topic && (
+              <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setTopic("")}>Topic: {topic} ×</Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => { setQ(""); setSection(""); setTopic(""); }}>Clear all</Button>
+          </div>
+        )}
+
         {/* Results */}
         {loading ? (
           <div className="min-h-[30vh] flex items-center justify-center">

@@ -30,6 +30,15 @@ export default function Blogs() {
     setSearchParams(next);
   };
 
+  const toggleParam = (k: string, v: string) => {
+    const cur = searchParams.get(k) || "";
+    setParam(k, cur === v ? "" : v);
+  };
+  const toggleParam = (k: string, v: string) => {
+    const cur = searchParams.get(k) || "";
+    setParam(k, cur === v ? "" : v);
+  };
+
   useEffect(() => {
     document.title = "Blogs | EMGurus";
     const meta = document.querySelector("meta[name='description']");
