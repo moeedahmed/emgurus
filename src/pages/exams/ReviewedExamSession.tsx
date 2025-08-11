@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +47,9 @@ export default function ReviewedExamSession() {
   const [timeSec, setTimeSec] = useState(0);
   const limitSec = typeof location?.state?.limitSec === 'number' ? location.state.limitSec as number : undefined;
   const [timeUp, setTimeUp] = useState(false);
+  const startedAtRef = useRef<number>(Date.now());
+  const [ended, setEnded] = useState(false);
+  const loggedRef = useRef(false);
 
   useEffect(() => {
     document.title = "Exam Mode • Reviewed Bank";
@@ -158,7 +161,34 @@ export default function ReviewedExamSession() {
   }, [limitSec]);
 
   const timeDisplay = limitSec ? formatMMSS(Math.max(0, (limitSec - timeSec))) : formatMMSS(timeSec);
-  const showSummary = finished || timeUp;
+  const showSummary = ended || finished || timeUp;
+
+  useEffect(() => {
+    if (!showSummary || loggedRef.current) return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const payload = {
+        user_id: user.id,
+        mode: 'exam',
+        source: 'reviewed',
+        question_ids: order,
+        correct_count: score,
+        total_attempted: answers.length,
+        total_questions: order.length,
+        started_at: new Date(Date.now() - timeSec * 1000).toISOString(),
+        finished_at: new Date().toISOString(),
+        duration_sec: timeSec,
+        breakdown: byTopic,
+      } as any;
+      try {
+        await (supabase as any).from('exam_attempts').insert(payload);
+      } catch (e) {
+        console.warn('exam_attempts insert skipped', e);
+      }
+      loggedRef.current = true;
+    })();
+  }, [showSummary]);
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -185,7 +215,7 @@ export default function ReviewedExamSession() {
                     />
                   )}
                   <div className="flex items-center justify-between">
-                    <Button variant="outline" onClick={() => navigate('/exams/reviewed')}>End Exam</Button>
+                    <Button variant="outline" onClick={() => setEnded(true)}>End Exam</Button>
                     <div className="flex items-center gap-2">
                       <div className="md:hidden">
                         <Drawer>
@@ -207,13 +237,21 @@ export default function ReviewedExamSession() {
                               <div className="grid grid-cols-8 gap-2">
                                 {order.map((qid, i) => {
                                   const isCurrent = i === idx;
-                                  const hasSel = !!selectionMap[qid];
+                                  const entry = answers.find(a => a.id === qid);
+                                  const hasSel = !!entry;
+                                  const correct = hasSel && entry!.selected === entry!.correct;
+                                  const base = "h-8 w-8 rounded text-sm flex items-center justify-center border";
+                                  const state = isCurrent
+                                    ? "bg-primary/10 ring-1 ring-primary"
+                                    : hasSel
+                                      ? (correct ? "bg-primary/20 border-primary text-primary" : "bg-destructive/10 border-destructive text-destructive")
+                                      : "bg-muted";
                                   return (
                                     <button
                                       key={qid}
                                       onClick={() => setIdx(i)}
                                       aria-label={`Go to question ${i+1}`}
-                                      className={`h-8 w-8 rounded text-sm flex items-center justify-center border ${isCurrent ? 'bg-primary/10 ring-1 ring-primary' : hasSel ? 'bg-secondary' : 'bg-muted'} hover:bg-accent/10`}
+                                      className={`${base} ${state} hover:bg-accent/10`}
                                     >
                                       {i+1}
                                     </button>
@@ -251,13 +289,21 @@ export default function ReviewedExamSession() {
                     <div className="grid grid-cols-5 gap-2">
                       {order.map((qid, i) => {
                         const isCurrent = i === idx;
-                        const hasSel = !!selectionMap[qid];
+                        const entry = answers.find(a => a.id === qid);
+                        const hasSel = !!entry;
+                        const correct = hasSel && entry!.selected === entry!.correct;
+                        const base = "h-8 w-8 rounded text-sm flex items-center justify-center border";
+                        const state = isCurrent
+                          ? "bg-primary/10 ring-1 ring-primary"
+                          : hasSel
+                            ? (correct ? "bg-primary/20 border-primary text-primary" : "bg-destructive/10 border-destructive text-destructive")
+                            : "bg-muted";
                         return (
                           <button
                             key={qid}
                             onClick={() => setIdx(i)}
                             aria-label={`Go to question ${i+1}`}
-                            className={`h-8 w-8 rounded text-sm flex items-center justify-center border ${isCurrent ? 'bg-primary/10 ring-1 ring-primary' : hasSel ? 'bg-secondary' : 'bg-muted'} hover:bg-accent/10`}
+                            className={`${base} ${state} hover:bg-accent/10`}
                           >
                             {i+1}
                           </button>
@@ -275,14 +321,15 @@ export default function ReviewedExamSession() {
               <CardTitle>Exam Summary</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
-              <div className="text-lg font-semibold">Score: {score} / {order.length}</div>
+              <div className="text-lg font-semibold">Score: {score} / {answers.length}</div>
+              <div className="text-sm text-muted-foreground">Attempts: {answers.length} / {order.length} • Time: {timeDisplay}</div>
               <div className="grid gap-2">
                 {Object.entries(byTopic).map(([t, v]) => (
                   <div key={t} className="text-sm">{t}: {v.correct}/{v.total}</div>
                 ))}
               </div>
               <div className="flex items-center justify-end gap-2">
-                <Button variant="outline" onClick={() => navigate('/exams/reviewed')}>Back to bank</Button>
+                <Button variant="outline" onClick={() => navigate('/exams')}>Back to Exams</Button>
                 <Button onClick={() => setReviewMode(true)}>Review answers</Button>
               </div>
             </CardContent>
