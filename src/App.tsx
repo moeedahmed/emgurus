@@ -59,6 +59,7 @@ import PricingPage from "./pages/Pricing";
 import { useRoles } from "@/hooks/useRoles";
 import RoleRedirector from "@/components/auth/RoleRedirector";
 import AuthLandingGuard from "@/components/auth/AuthLandingGuard";
+import MarkedQuestionsAdmin from "./pages/admin/MarkedQuestions";
 
 
 function LegacyBlogsDashboardRedirect() {
@@ -186,6 +187,7 @@ const App = () => (
               <Route path="/admin/approve-gurus" element={<RoleProtectedRoute roles={["admin"]}><ApproveGurus /></RoleProtectedRoute>} />
               <Route path="/admin/moderate-posts" element={<RoleProtectedRoute roles={["admin"]}><ModeratePosts /></RoleProtectedRoute>} />
               <Route path="/admin/assign-reviews" element={<RoleProtectedRoute roles={["admin"]}><AssignReviews /></RoleProtectedRoute>} />
+              <Route path="/admin/marked-questions" element={<RoleProtectedRoute roles={["admin"]}><MarkedQuestionsAdmin /></RoleProtectedRoute>} />
               <Route path="/admin/taxonomy" element={<RoleProtectedRoute roles={["admin"]}><Taxonomy /></RoleProtectedRoute>} />
               <Route path="/about" element={<About />} />
               <Route path="/coming-soon" element={<ComingSoon />} />

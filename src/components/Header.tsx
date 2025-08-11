@@ -12,6 +12,7 @@ import { useRoles } from "@/hooks/useRoles";
 import { CATEGORIES } from "@/lib/taxonomy";
 import { listBlogs } from "@/lib/blogsApi";
 import { supabase } from "@/integrations/supabase/client";
+import NotificationsBell from "@/components/notifications/NotificationsBell";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
@@ -92,6 +93,17 @@ const Header = () => {
 
           {/* Desktop User Menu */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Notifications */}
+            {user && (
+              <div className="mr-1">
+                {/* Lazy import to avoid SSR issues */}
+                {/* @ts-ignore */}
+                {require('@/components/notifications/NotificationsBell').default ? (
+                  // eslint-disable-next-line @typescript-eslint/no-var-requires
+                  require('@/components/notifications/NotificationsBell').default()
+                ) : null}
+              </div>
+            )}
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

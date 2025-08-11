@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle, XCircle, ArrowRight, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import MarkForReviewButton from "@/components/exams/MarkForReviewButton";
 
 interface Question {
   id: string;
@@ -165,6 +166,7 @@ const QuizInterface = ({ config, onBack }: QuizInterfaceProps) => {
             {config.examType}
           </Badge>
           <Badge variant="outline">{config.difficulty}</Badge>
+          <MarkForReviewButton currentQuestionId={currentQuestion.id} source={config.type === 'realtime' ? 'ai' : 'reviewed'} />
         </div>
       </div>
 

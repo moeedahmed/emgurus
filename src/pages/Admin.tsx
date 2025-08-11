@@ -60,7 +60,10 @@ const Admin = () => {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <Button onClick={seed}>Seed Test Users</Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => window.location.assign('/admin/marked-questions')}>Marked Questions</Button>
+            <Button onClick={seed}>Seed Test Users</Button>
+          </div>
         </div>
 
         <Card className="p-6 space-y-4">

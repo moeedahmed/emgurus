@@ -21,6 +21,8 @@ interface ExamItem {
 
 const PAGE_SIZE = 10;
 
+interface FlagItem { id: string; question_id: string; comment?: string | null; created_at: string; status: string; }
+
 const GuruReviewQueue = () => {
   const [items, setItems] = useState<ExamItem[]>([]);
   const [page, setPage] = useState(1);
@@ -34,6 +36,8 @@ const GuruReviewQueue = () => {
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [noteTargetId, setNoteTargetId] = useState<string | null>(null);
+
+  const [flags, setFlags] = useState<FlagItem[]>([]);
 
   useEffect(() => {
     document.title = "Review Queue | EMGurus";
@@ -52,7 +56,6 @@ const GuruReviewQueue = () => {
       if (error) throw error;
       const rows: ExamItem[] = data ?? [];
       setItems(rows);
-      // We don't have a total from the RPC; approximate: if fewer than page size, end reached
       setTotal(rows.length < PAGE_SIZE && page === 1 ? rows.length : null);
     } catch (e: any) {
       setError(e?.message || "Failed to load queue");
@@ -62,8 +65,26 @@ const GuruReviewQueue = () => {
     }
   }
 
+  async function loadFlags() {
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u.user?.id;
+      if (!uid) return;
+      const { data, error } = await supabase
+        .from('exam_question_flags')
+        .select('id, question_id, comment, created_at, status')
+        .eq('assigned_to', uid)
+        .in('status', ['assigned','open']);
+      if (error) throw error;
+      setFlags((data as any) || []);
+    } catch (e: any) {
+      // silent
+    }
+  }
+
   useEffect(() => {
     load();
+    loadFlags();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
@@ -147,6 +168,42 @@ const GuruReviewQueue = () => {
         </Table>
       </Card>
 
+      {/* Marked Questions Assigned Section */}
+      <h2 className="text-2xl font-semibold mt-10 mb-3">Marked Questions Assigned to You</h2>
+      <Card className="p-0 overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>When</TableHead>
+              <TableHead>Comment</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {flags.map((f) => (
+              <TableRow key={f.id}>
+                <TableCell className="whitespace-nowrap text-xs">{new Date(f.created_at).toLocaleString()}</TableCell>
+                <TableCell className="text-xs max-w-[520px] truncate" title={f.comment || ''}>{f.comment || '—'}</TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button size="sm" onClick={async () => {
+                    const { data: u } = await supabase.auth.getUser();
+                    const uid = u.user?.id;
+                    await supabase.from('exam_question_flags').update({ status: 'resolved', resolved_by: uid }).eq('id', f.id);
+                    loadFlags();
+                  }}>Approve & Resolve</Button>
+                  <Button variant="destructive" size="sm" onClick={() => { setNoteTargetId(f.id); setNoteOpen(true); }}>Remove</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {flags.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">No marked questions assigned.</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
       <div className="mt-4 flex items-center justify-between">
         <div className="text-sm text-muted-foreground">Page {page}{total !== null ? "" : ""}</div>
         <div className="space-x-2">
@@ -202,17 +259,30 @@ const GuruReviewQueue = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Request changes modal */}
+      {/* Request changes or Remove modal (reused) */}
       <Dialog open={noteOpen} onOpenChange={(o) => { setNoteOpen(o); if (!o) { setNoteText(""); setNoteTargetId(null); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Request changes</DialogTitle>
-            <DialogDescription>Add a short note explaining what to improve.</DialogDescription>
+            <DialogTitle>Provide a note</DialogTitle>
+            <DialogDescription>Add a short reason for removal or requested changes.</DialogDescription>
           </DialogHeader>
-          <Textarea value={noteText} onChange={(e) => setNoteText(e.currentTarget.value)} placeholder="Your feedback…" />
+          <Textarea value={noteText} onChange={(e) => setNoteText(e.currentTarget.value)} placeholder="Your note…" />
           <DialogFooter>
             <Button variant="outline" onClick={() => { setNoteOpen(false); setNoteText(""); setNoteTargetId(null); }}>Cancel</Button>
-            <Button onClick={requestChanges} disabled={!noteTargetId}>Send</Button>
+            <Button onClick={async () => {
+              if (!noteTargetId) return;
+              if (flags.find(f => f.id === noteTargetId)) {
+                const { data: u } = await supabase.auth.getUser();
+                const uid = u.user?.id;
+                await supabase.from('exam_question_flags').update({ status: 'removed', resolved_by: uid, resolution_note: noteText }).eq('id', noteTargetId);
+                loadFlags();
+                setNoteOpen(false);
+                setNoteText("");
+                setNoteTargetId(null);
+              } else {
+                await requestChanges();
+              }
+            }}>Submit</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
