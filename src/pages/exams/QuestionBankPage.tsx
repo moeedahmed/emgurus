@@ -54,10 +54,12 @@ export default function QuestionBankPage() {
   const [items, setItems] = useState<ReviewedQuestionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [reviewers, setReviewers] = useState<Record<string, string>>({});
+  const [totalCount, setTotalCount] = useState(0);
   const navigate = useNavigate();
 
   const pageSize = 20;
   const areas = useMemo(() => (exam ? ["All areas", ...CURRICULA[exam]] : ["All areas"]) , [exam]);
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
 
   useEffect(() => {
     document.title = "Reviewed Question Bank • EM Gurus";
@@ -76,9 +78,10 @@ export default function QuestionBankPage() {
         if (exam) q = q.eq('exam_type', EXAM_CODE_MAP[exam]);
         if (area && area !== 'All areas') q = q.eq('topic', area);
         if (search) q = q.ilike('question', `%${search}%`);
-        const { data, error } = await q;
+        const { data, count, error } = await q;
         if (error) throw error;
         const list: ReviewedQuestionRow[] = (Array.isArray(data) ? data : []).map((d) => toReviewedRow(d));
+        if (!cancelled) setTotalCount(count ?? 0);
         // Fetch reviewer names if present
         const ids = Array.from(new Set(list.map((d) => d.reviewer_id).filter(Boolean))) as string[];
         if (ids.length) {
@@ -168,8 +171,8 @@ export default function QuestionBankPage() {
 
       <div className="flex items-center justify-between mt-4">
         <Button variant="outline" disabled={page===1} onClick={() => setPage(p=>Math.max(1,p-1))}>Previous</Button>
-        <div className="text-sm text-muted-foreground">Page {page}</div>
-        <Button variant="outline" onClick={() => setPage(p=>p+1)}>Next</Button>
+        <div className="text-sm text-muted-foreground">Page {page} / {totalPages}</div>
+        <Button variant="outline" disabled={page>=totalPages} onClick={() => setPage(p=>Math.min(totalPages, p+1))}>Next</Button>
       </div>
     </div>
   );

@@ -40,6 +40,7 @@ const pageSize = 10;
   const [reviewers, setReviewers] = useState<Record<string, string>>({});
   const [approvedCount, setApprovedCount] = useState<number | null>(null);
   const [totalCount, setTotalCount] = useState(0);
+  const [mode, setMode] = useState<'function' | 'direct'>('function');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -76,7 +77,14 @@ const pageSize = 10;
     })();
   }, []);
 
-  const visible = items;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const offset = (page - 1) * pageSize;
+  const visible = mode === 'function' ? items.slice(offset, offset + pageSize) : items;
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+    if (page < 1) setPage(1);
+  }, [totalPages]);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,6 +108,7 @@ const pageSize = 10;
             setTotalCount(res.count ?? list.length);
             if (approvedCount === null) setApprovedCount(res.count ?? list.length);
             setReviewers({});
+            setMode('function');
           }
         } catch {
           // Fallback to direct table query as before
@@ -120,6 +129,7 @@ const pageSize = 10;
           if (!cancelled) {
             setItems(list);
             setTotalCount(count ?? 0);
+            setMode('direct');
           }
           const ids = Array.from(new Set(list.map(d => d.reviewer_id).filter(Boolean))) as string[];
           if (ids.length) {
@@ -227,8 +237,8 @@ const pageSize = 10;
 
             <div className="flex items-center justify-center mt-4 gap-4">
               <Button variant="outline" disabled={page===1} onClick={() => setPage(p=>Math.max(1,p-1))}>Previous</Button>
-              <div className="text-sm text-muted-foreground">Page {page}</div>
-              <Button variant="outline" onClick={() => setPage(p=>p+1)}>Next</Button>
+              <div className="text-sm text-muted-foreground">Page {page} / {totalPages}</div>
+              <Button variant="outline" disabled={page>=totalPages} onClick={() => setPage(p=>Math.min(totalPages, p+1))}>Next</Button>
             </div>
           </section>
 
