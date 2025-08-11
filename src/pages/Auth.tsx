@@ -125,13 +125,10 @@ useEffect(() => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  // Render auth UI even while checking session to avoid long blocking spinners
+  // Actions are disabled until loading completes via useAuth
+  // (We keep a subtle UX by not showing a full-screen spinner)
+
 
   return (
     <div className="min-h-screen bg-background">

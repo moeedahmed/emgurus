@@ -198,8 +198,9 @@ export default function Profile() {
             </div>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-2 flex-wrap">
             <Link to="/consultations"><Button variant="secondary">Find Gurus</Button></Link>
+            <Link to="/onboarding"><Button variant="outline">Edit Profile</Button></Link>
             {roles.includes('guru') ? (
               <Link to="/guru/availability"><Button>My Availability</Button></Link>
             ) : (

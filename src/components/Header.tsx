@@ -126,7 +126,6 @@ const Header = () => {
             ) : (
               <>
                 <Button variant="ghost" onClick={() => navigate('/auth')}>Sign In</Button>
-                <Button variant="hero" onClick={() => navigate('/exams')}>Get Started</Button>
               </>
             )}
           </div>
@@ -177,7 +176,6 @@ const Header = () => {
                 ) : (
                   <>
                     <Button variant="ghost" className="justify-start" onClick={() => {navigate('/auth'); setIsMenuOpen(false);}}>Sign In</Button>
-                    <Button variant="hero" className="justify-start" onClick={() => {navigate('/exams'); setIsMenuOpen(false);}}>Get Started</Button>
                   </>
                 )}
               </div>

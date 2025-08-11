@@ -98,94 +98,100 @@ export default function ReviewedQuestionBank() {
     (async () => {
       setLoading(true);
       try {
-        // Try public function first
-        const res = await getJson('/public-reviewed-exams');
-        let list = ((res.items || []) as any[]).map((row: any) => ({
-          id: row.id,
-          exam: (row.exam_type || row.exam) as ExamCode | string,
-          stem: row.stem,
-          reviewer_id: null,
-          reviewed_at: row.created_at || null,
-          topic: Array.isArray(row.tags) && row.tags.length ? row.tags[0] : null,
-          tags: Array.isArray(row.tags) ? row.tags : null,
-        })) as ReviewedRow[];
-        const qtext = q.trim();
-        if (exam) list = list.filter((r) => r.exam === exam);
-        if (qtext) list = list.filter((r) => r.stem.toLowerCase().includes(qtext.toLowerCase()));
-        if (topicFilter) list = list.filter((r) => (r.topic || '').toLowerCase() === topicFilter.toLowerCase());
-        if (difficulty) {
-          const pickDiff = (row: ReviewedRow) =>
-            ((row as any).difficulty as string | undefined) ||
-            (row.tags || []).find(t => ['easy','medium','hard'].includes(String(t).toLowerCase()));
-          list = list.filter(r => (pickDiff(r) || '').toLowerCase() === difficulty.toLowerCase());
-        }
-        if (!cancelled) {
-          setItems(list);
-          setTotalCount(list.length);
-          if (approvedCount === null) setApprovedCount(res.count ?? list.length);
-          setReviewers({});
-          setMode('function');
-        }
-      } catch {
-        // Fallback to direct table query with filters
-        let base = (supabase as any)
-          .from('reviewed_exam_questions')
-          .select('id, exam, stem, reviewer_id, reviewed_at, topic', { count: 'exact' })
-          .eq('status', 'approved');
-        if (exam) base = base.eq('exam', exam);
-        if (topicFilter) base = base.eq('topic', topicFilter);
-        if (q) base = base.ilike('stem', `%${q}%`);
+        // Try public function first with timeout; fallback to direct if it hangs
+        const ctrl = new AbortController();
+        const timer = window.setTimeout(() => ctrl.abort(), 3500);
+        try {
+          const res = await getJson('/public-reviewed-exams', { signal: ctrl.signal } as any);
+          let list = ((res.items || []) as any[]).map((row: any) => ({
+            id: row.id,
+            exam: (row.exam_type || row.exam) as ExamCode | string,
+            stem: row.stem,
+            reviewer_id: null,
+            reviewed_at: row.created_at || null,
+            topic: Array.isArray(row.tags) && row.tags.length ? row.tags[0] : null,
+            tags: Array.isArray(row.tags) ? row.tags : null,
+          })) as ReviewedRow[];
+          const qtext = q.trim();
+          if (exam) list = list.filter((r) => r.exam === exam);
+          if (qtext) list = list.filter((r) => r.stem.toLowerCase().includes(qtext.toLowerCase()));
+          if (topicFilter) list = list.filter((r) => (r.topic || '').toLowerCase() === topicFilter.toLowerCase());
+          if (difficulty) {
+            const pickDiff = (row: ReviewedRow) =>
+              ((row as any).difficulty as string | undefined) ||
+              (row.tags || []).find(t => ['easy','medium','hard'].includes(String(t).toLowerCase()));
+            list = list.filter(r => (pickDiff(r) || '').toLowerCase() === difficulty.toLowerCase());
+          }
+          if (!cancelled) {
+            setItems(list);
+            setTotalCount(list.length);
+            if (approvedCount === null) setApprovedCount(res.count ?? list.length);
+            setReviewers({});
+            setMode('function');
+          }
+        } catch {
+          // Fallback to direct table query with filters
+          let base = (supabase as any)
+            .from('reviewed_exam_questions')
+            .select('id, exam, stem, reviewer_id, reviewed_at, topic', { count: 'exact' })
+            .eq('status', 'approved');
+          if (exam) base = base.eq('exam', exam);
+          if (topicFilter) base = base.eq('topic', topicFilter);
+          if (q) base = base.ilike('stem', `%${q}%`);
 
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize - 1;
-        const { data, count, error } = await base
-          .order('reviewed_at', { ascending: false })
-          .order('id', { ascending: false })
-          .range(from, to);
-        if (error) throw error;
-        let list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
-        // Difficulty might not exist as a column; filter client-side if requested
-        if (difficulty) list = list.filter(r => String((r as any).difficulty || '').toLowerCase() === difficulty.toLowerCase());
-        if (!cancelled) {
-          setItems(list);
-          setTotalCount(difficulty || topicFilter ? list.length : (count ?? 0));
-          setMode('direct');
-        }
-        const ids = Array.from(new Set(list.map(d => d.reviewer_id).filter(Boolean))) as string[];
-        if (ids.length) {
-          const { data: g } = await supabase.from('gurus').select('id, name').in('id', ids);
-          const map: Record<string, string> = Object.fromEntries((g || []).map((r: any) => [r.id, r.name]));
-          if (!cancelled) setReviewers(map);
+          const from = (page - 1) * pageSize;
+          const to = from + pageSize - 1;
+          const { data, count, error } = await base
+            .order('reviewed_at', { ascending: false })
+            .order('id', { ascending: false })
+            .range(from, to);
+          if (error) throw error;
+          let list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
+          // Difficulty might not exist as a column; filter client-side if requested
+          if (difficulty) list = list.filter(r => String((r as any).difficulty || '').toLowerCase() === difficulty.toLowerCase());
+          if (!cancelled) {
+            setItems(list);
+            setTotalCount(difficulty || topicFilter ? list.length : (count ?? 0));
+            setMode('direct');
+          }
+          const ids = Array.from(new Set(list.map(d => d.reviewer_id).filter(Boolean))) as string[];
+          if (ids.length) {
+            const { data: g } = await supabase.from('gurus').select('id, name').in('id', ids);
+            const map: Record<string, string> = Object.fromEntries((g || []).map((r: any) => [r.id, r.name]));
+            if (!cancelled) setReviewers(map);
 
-          // Try to map guru -> public profile for linking and avatar
-          const names = (g || []).map((r: any) => r.name).filter(Boolean);
-          let profs: any[] = [];
-          if (names.length) {
-            const { data: p } = await supabase
+            // Try to map guru -> public profile for linking and avatar
+            const names = (g || []).map((r: any) => r.name).filter(Boolean);
+            let profs: any[] = [];
+            if (names.length) {
+              const { data: p } = await supabase
+                .from('profiles')
+                .select('user_id, full_name, avatar_url, email')
+                .in('full_name', names as any);
+              profs = p || [];
+            }
+            // Special-case: ensure Test Guru email maps
+            const { data: testGuru } = await supabase
               .from('profiles')
               .select('user_id, full_name, avatar_url, email')
-              .in('full_name', names as any);
-            profs = p || [];
-          }
-          // Special-case: ensure Test Guru email maps
-          const { data: testGuru } = await supabase
-            .from('profiles')
-            .select('user_id, full_name, avatar_url, email')
-            .eq('email', 'guru@emgurus.com')
-            .maybeSingle();
+              .eq('email', 'guru@emgurus.com')
+              .maybeSingle();
 
-          const byName: Record<string, any> = Object.fromEntries(profs.map((p: any) => [p.full_name, p]));
-          const pmap: Record<string, { id: string; name: string; avatar_url?: string }> = {};
-          (g || []).forEach((row: any) => {
-            const nm = row.name as string;
-            const prof = byName[nm] || ((testGuru && /test\s+guru/i.test(nm)) ? testGuru : undefined);
-            if (prof) {
-              pmap[row.id] = { id: prof.user_id, name: prof.full_name || nm, avatar_url: prof.avatar_url || undefined };
-            }
-          });
-          if (!cancelled) setReviewerProfiles(pmap);
-        } else {
-          if (!cancelled) setReviewers({});
+            const byName: Record<string, any> = Object.fromEntries(profs.map((p: any) => [p.full_name, p]));
+            const pmap: Record<string, { id: string; name: string; avatar_url?: string }> = {};
+            (g || []).forEach((row: any) => {
+              const nm = row.name as string;
+              const prof = byName[nm] || ((testGuru && /test\s+guru/i.test(nm)) ? testGuru : undefined);
+              if (prof) {
+                pmap[row.id] = { id: prof.user_id, name: prof.full_name || nm, avatar_url: prof.avatar_url || undefined };
+              }
+            });
+            if (!cancelled) setReviewerProfiles(pmap);
+          } else {
+            if (!cancelled) setReviewers({});
+          }
+        } finally {
+          window.clearTimeout(timer);
         }
       } finally {
         if (!cancelled) setLoading(false);

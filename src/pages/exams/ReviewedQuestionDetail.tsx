@@ -387,7 +387,7 @@ export default function ReviewedQuestionDetail() {
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Flagged</CardTitle>
+                  <CardTitle className="text-base">Marked for Review</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-sm">{isFlagged ? 'Yes' : 'No'}</div>
