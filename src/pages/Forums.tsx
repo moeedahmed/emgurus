@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import ForumsFilterPanel from "@/components/forums/ForumsFilterPanel";
 
 const FORUMS_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/forums-api";
 
@@ -114,8 +115,8 @@ const Forums = () => {
           onClose={() => { const p = new URLSearchParams(searchParams); p.delete('new'); setSearchParams(p); }}
         />
 
-        {/* Filters Button (All viewports) */}
-        <div className="mb-4">
+        {/* Filters Button (mobile only) */}
+        <div className="mb-4 lg:hidden">
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline">Filters</Button>
@@ -139,7 +140,6 @@ const Forums = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
 
                 <div className="pt-2">
                   <Button
