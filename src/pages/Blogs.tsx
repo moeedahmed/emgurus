@@ -198,20 +198,6 @@ export default function Blogs() {
                 </SheetContent>
               </Sheet>
             </div>
-            {/* Sort chips */}
-            <div className="flex flex-wrap gap-2">
-              {[{k:'newest',l:'Newest'},{k:'liked',l:'Most Liked'},{k:'discussed',l:'Most Discussed'},{k:'editors',l:"Editor’s Picks"},{k:'featured',l:'Featured'}].map(s => (
-                <Button
-                  key={s.k}
-                  size="sm"
-                  variant={sort === s.k ? 'secondary' : 'outline'}
-                  aria-pressed={sort === s.k}
-                  onClick={() => setParam('sort', sort === s.k ? 'newest' : s.k)}
-                >
-                  {s.l}
-                </Button>
-              ))}
-            </div>
             {/* Active filters row */}
             {(category || tag || author) && (
               <div className="flex flex-wrap items-center gap-2">

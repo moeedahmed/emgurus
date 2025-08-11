@@ -54,8 +54,7 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, select
           {topBadge?.label && (
             <Badge
               variant="secondary"
-              className="text-xs cursor-pointer"
-              onClick={() => onTagClick?.('tag', 'most-liked')}
+  className="text-xs"
             >
               {topBadge.label}
             </Badge>
