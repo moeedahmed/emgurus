@@ -121,7 +121,7 @@ const ModeratePosts = () => {
     }
   };
 
-  useEffect(() => { loadPosts(); loadReviewers(); }, []);
+  useEffect(() => { loadPosts(); if (isAdmin) loadReviewers(); }, [view, tab, user?.id, isAdmin]);
 
   const assign = async (postId: string) => {
     const reviewerId = selectedReviewer[postId];
@@ -216,19 +216,21 @@ const ModeratePosts = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Select value={selectedReviewer[p.id] || ""} onValueChange={(v) => setSelectedReviewer(prev => ({ ...prev, [p.id]: v }))}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Assign a reviewer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {reviewers.map(r => (
-                    <SelectItem key={r.user_id} value={r.user_id}>{r.full_name || r.email || r.user_id}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button variant="secondary" onClick={() => assign(p.id)} disabled={!selectedReviewer[p.id]}>Assign</Button>
-            </div>
+            {isAdmin && view === 'admin' && (
+              <div className="flex items-center gap-3">
+                <Select value={selectedReviewer[p.id] || ""} onValueChange={(v) => setSelectedReviewer(prev => ({ ...prev, [p.id]: v }))}>
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="Assign a reviewer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {reviewers.map(r => (
+                      <SelectItem key={r.user_id} value={r.user_id}>{r.full_name || r.email || r.user_id}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="secondary" onClick={() => assign(p.id)} disabled={!selectedReviewer[p.id]}>Assign</Button>
+              </div>
+            )}
           </Card>
         ))}
 
