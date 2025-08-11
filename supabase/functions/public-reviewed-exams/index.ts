@@ -63,6 +63,30 @@ serve(async (req) => {
     let items: any[] = [];
     let count: number | undefined = undefined;
 
+    // Try RPC first (if present); fallback to direct SELECT
+    try {
+      const { data: rData, error: rErr } = await admin.rpc('list_public_reviewed_questions', {
+        p_exam: exam || null,
+        p_topic: topic || null,
+        p_q: q || null,
+        p_limit: limit,
+        p_offset: offset,
+      });
+      if (!rErr && Array.isArray(rData)) {
+        items = (rData || []).map((r: any) => ({
+          id: r.id,
+          stem: r.stem,
+          exam_type: r.exam_type || r.exam,
+          reviewed_at: r.reviewed_at,
+        }));
+        // Count omitted for RPC path to keep response light
+        return new Response(JSON.stringify({ ok: true, items, count }), {
+          status: 200,
+          headers: { ...cors.headers, "Content-Type": "application/json" },
+        });
+      }
+    } catch {}
+
     // Build primary query
     let primary = admin
       .from("reviewed_exam_questions")
