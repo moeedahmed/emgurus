@@ -8,16 +8,16 @@ const AuthLandingGuard = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN") {
-        // Only push to dashboard if not already on a protected page to avoid loops
-        const path = location.pathname;
-        const isProtected = /^(\/dashboard|\/profile|\/bookings|\/guru|\/admin)/.test(path);
-        if (!isProtected) navigate("/dashboard", { replace: true });
+        // Only redirect away from the auth page to prevent navigation races
+        if (location.pathname === "/auth") {
+          navigate("/dashboard", { replace: true });
+        }
       }
     });
-    return () => { sub.subscription.unsubscribe(); };
-  }, [navigate]);
+    return () => { subscription.unsubscribe(); };
+  }, [navigate, location.pathname]);
 
   return null;
 };

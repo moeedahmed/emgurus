@@ -43,33 +43,14 @@ const Auth = () => {
     routeAfterLogin();
   }, [user, navigate]);
 
-// One-time: seed test users via Edge Function (admin-only)
-useEffect(() => {
-  if (!user || !isAdmin) return;
-  const already = localStorage.getItem('seed_users_done');
-  if (already) return;
-  supabase.functions.invoke('seed-test-users')
-    .then(({ error }) => {
-      if (error) {
-        console.error('Seeding failed', error);
-        toast.error("Failed to seed test users");
-      } else {
-        toast.success("Test users seeded: admin, guru, user");
-        localStorage.setItem('seed_users_done', '1');
-      }
-    })
-    .catch((e) => {
-      console.error('Seed invoke error', e);
-      toast.error("Failed to seed test users");
-    });
-}, [user, isAdmin]);
+// Removed test user seeding to avoid unnecessary load during auth flows
 
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
-      toast.success("Signing in with Google...");
+      toast.success("Redirecting to Google...");
     } catch (error) {
-      toast.error("Failed to sign in with Google");
+      toast.error("Google sign-in failed");
       console.error("Auth error:", error);
     }
   };

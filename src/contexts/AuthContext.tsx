@@ -69,18 +69,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: redirectUrl
+        redirectTo: redirectUrl,
+        queryParams: { prompt: 'select_account' }
       }
     });
     if (error) throw error;
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    // Safety: ensure local auth state is cleared immediately
-    setSession(null);
-    setUser(null);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (e) {
+      console.warn('Sign out failed, clearing local state anyway', e);
+    } finally {
+      // Ensure local state is always cleared to avoid being stuck
+      setSession(null);
+      setUser(null);
+    }
   };
 
   const value = {
