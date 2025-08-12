@@ -15,7 +15,7 @@ import { useGuruMetrics } from "@/hooks/metrics/useGuruMetrics";
 import { supabase } from "@/integrations/supabase/client";
 import Pricing from "@/pages/guru/Pricing";
 import ForumsModeration from "@/pages/ForumsModeration";
-import { Button } from "@/components/ui/button";
+
 import { useAuth } from "@/contexts/AuthContext";
 
 function ReviewerAssigned() { useEffect(() => { const p = new URLSearchParams(window.location.search); p.set('view','reviewer'); p.set('tab','pending'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts embedded />; }
@@ -97,22 +97,6 @@ export default function DashboardGuru() {
     );
   };
 
-  const ExamShortcutsBar: React.FC = () => {
-    const goto = (tab: string) => {
-      const p = new URLSearchParams(window.location.search);
-      p.set('tab', tab);
-      history.replaceState(null, '', `${location.pathname}?${p.toString()}#exams`);
-      // Nudge WorkspaceLayout to pick up changes if already on #exams
-      window.dispatchEvent(new HashChangeEvent('hashchange'));
-    };
-    return (
-      <div className="px-4 py-3 border-b flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" onClick={() => goto('assigned')}>Assigned</Button>
-        <Button size="sm" variant="outline" onClick={() => goto('approved')}>Approved</Button>
-        <Button size="sm" variant="outline" onClick={() => goto('submitted')}>Submitted</Button>
-      </div>
-    );
-  };
 
 
   const sections: WorkspaceSection[] = [
@@ -131,10 +115,10 @@ export default function DashboardGuru() {
       title: "Exams",
       icon: GraduationCap,
       tabs: [
-        { id: "assigned", title: "Assigned", render: <div className="p-0"><ExamShortcutsBar /><GuruReviewQueue /></div> },
-        { id: "approved", title: "Approved", render: <div className="p-0"><ExamShortcutsBar /><ReviewedByMe /></div> },
-        { id: "rejected", title: "Rejected", render: <div className="p-0"><ExamShortcutsBar /><RejectedByMe /></div> },
-        { id: "submitted", title: "Submitted", render: <div className="p-0"><ExamShortcutsBar /><MyExamDrafts /></div> },
+        { id: "assigned", title: "Assigned", render: <div className="p-0"><GuruReviewQueue /></div> },
+        { id: "approved", title: "Approved", render: <div className="p-0"><ReviewedByMe /></div> },
+        { id: "rejected", title: "Rejected", render: <div className="p-0"><RejectedByMe /></div> },
+        { id: "submitted", title: "Submitted", render: <div className="p-0"><MyExamDrafts /></div> },
       ],
     },
     {

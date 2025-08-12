@@ -184,38 +184,43 @@ const ModeratePosts: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
 
   return (
     <main className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Moderate Blog Posts</h1>
+      {!embedded && (
+        <>
+          <h1 className="text-3xl font-bold mb-6">Moderate Blog Posts</h1>
 
-      {/* Tabs / view controls */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex gap-2 flex-wrap">
-          {view === 'admin' ? (
-            <>
-              <Button variant={tab==='unassigned' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('unassigned')}>Submitted</Button>
-              <Button variant={tab==='assigned' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('assigned')}>Assigned</Button>
-            </>
-          ) : (
-            <>
-              <Button variant={tab==='pending' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('pending')}>Assigned</Button>
-              <Button variant={tab==='completed' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('completed')}>Approved</Button>
-            </>
-          )}
-        </div>
-        {isAdmin && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              const next = new URLSearchParams(searchParams);
-              next.set('view', view === 'admin' ? 'reviewer' : 'admin');
-              next.set('tab', view === 'admin' ? 'pending' : 'unassigned');
-              setSearchParams(next);
-            }}
-          >
-            Switch to {view === 'admin' ? 'Reviewer' : 'Admin'} view
-          </Button>
-        )}
-      </div>
+          {/* Tabs / view controls */}
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex gap-2 flex-wrap">
+              {view === 'admin' ? (
+                <>
+                  <Button variant={tab==='unassigned' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('unassigned')}>Submitted</Button>
+                  <Button variant={tab==='assigned' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('assigned')}>Assigned</Button>
+                </>
+              ) : (
+                <>
+                  <Button variant={tab==='pending' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('pending')}>Assigned</Button>
+                  <Button variant={tab==='completed' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('completed')}>Approved</Button>
+                </>
+              )}
+            </div>
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const next = new URLSearchParams(searchParams);
+                  next.set('view', view === 'admin' ? 'reviewer' : 'admin');
+                  next.set('tab', view === 'admin' ? 'pending' : 'unassigned');
+                  setSearchParams(next);
+                }}
+              >
+                Switch to {view === 'admin' ? 'Reviewer' : 'Admin'} view
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+
 
       <div className="space-y-4">
         {posts.map((p) => (
