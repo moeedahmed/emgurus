@@ -54,9 +54,9 @@ const SiteLayout = () => {
   useEffect(() => {
     if (!user || loading) return;
     const path = location.pathname;
-    const onOnboarding = path.startsWith('/onboarding') || path.startsWith('/auth');
-    if (shouldForceOnboarding && !onOnboarding) {
-      navigate('/onboarding', { replace: true });
+    const onProfile = path.startsWith('/profile') || path.startsWith('/auth');
+    if (shouldForceOnboarding && !onProfile) {
+      navigate('/profile', { replace: true });
     }
   }, [user, loading, shouldForceOnboarding, location.pathname, navigate]);
 
@@ -90,7 +90,7 @@ const SiteLayout = () => {
               Complete your profile to get the best experience (about 2 minutes).
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" onClick={() => navigate('/onboarding')}>Complete now</Button>
+              <Button size="sm" onClick={() => navigate('/profile')}>Complete now</Button>
               <Button variant="ghost" size="sm" onClick={dismissBanner}>Dismiss</Button>
             </div>
           </div>

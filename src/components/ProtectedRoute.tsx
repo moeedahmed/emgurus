@@ -12,8 +12,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   useEffect(() => {
     (async () => {
       if (!user) { setChecking(false); return; }
-      // Skip check on onboarding route
-      if (location.pathname.startsWith('/onboarding')) { setChecking(false); return; }
+      // Skip check on profile route to avoid redirect loop
+      if (location.pathname.startsWith('/profile')) { setChecking(false); return; }
       const { data } = await supabase
         .from('profiles')
         .select('full_name, country, specialty, timezone, exams, onboarding_required')
@@ -39,7 +39,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 
   if (needsOnboarding) {
-    return <Navigate to="/onboarding" state={{ from: location }} replace />;
+    return <Navigate to="/profile" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

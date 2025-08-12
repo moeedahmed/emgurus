@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import TagInput from "@/components/forms/TagInput";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,6 +60,20 @@ export default function Profile() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [hourly, setHourly] = useState<number | "">("");
   const [bookingCounts, setBookingCounts] = useState<{ total: number; upcoming: number }>({ total: 0, upcoming: 0 });
+  const [activeTab, setActiveTab] = useState<string>('bookings');
+  // Inline edit form state
+  const [fullName, setFullName] = useState('');
+  const [country, setCountry] = useState('');
+  const [tz, setTz] = useState('');
+  const [primarySpecialty, setPrimarySpecialty] = useState('');
+  const [examInterests, setExamInterests] = useState<string[]>([]);
+  const [languages, setLanguages] = useState<string[]>([]);
+  const [bio, setBio] = useState('');
+  const [positionText, setPositionText] = useState('');
+  const [hospitalText, setHospitalText] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [twitterUrl, setTwitterUrl] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
 
   useEffect(() => {
     document.title = "My Profile | EMGurus";
@@ -80,6 +96,24 @@ export default function Profile() {
       const row = prof as any;
       setProfile(row ? ({ ...row, interests: row?.interests ?? row?.exam_interests ?? null }) : null);
       setHourly(row?.price_per_30min ? Number(row.price_per_30min) : "");
+
+      // Initialize edit form state
+      setFullName(row?.full_name || '');
+      setCountry(row?.country || '');
+      setTz(row?.timezone || '');
+      setPrimarySpecialty(row?.primary_specialty || row?.specialty || '');
+      setExamInterests((row?.exam_interests || row?.exams || []) as string[]);
+      setLanguages((row?.languages || []) as string[]);
+      setBio(row?.bio || '');
+      setPositionText(row?.position || '');
+      setHospitalText(row?.hospital || '');
+      setLinkedinUrl(row?.linkedin || '');
+      setTwitterUrl(row?.twitter || '');
+      setWebsiteUrl(row?.website || '');
+
+      // Auto-focus Profile tab if mandatory fields are missing
+      const missing = !row?.full_name || !row?.country || !(row?.primary_specialty || row?.specialty) || !row?.timezone || !((row?.exam_interests || row?.exams || []).length) || !((row?.languages || []).length);
+      if (missing) setActiveTab('profile');
 
       const { data: r } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
       setRoles((r || []).map(x => x.role as string));
@@ -204,9 +238,8 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Actions (profile only) */}
             <div className="flex gap-3 pt-2 flex-wrap">
-              <Link to="/onboarding"><Button variant="outline" className="w-full sm:w-auto">Edit Profile</Button></Link>
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setActiveTab('profile')}>Edit Profile</Button>
             </div>
 
             <Separator className="my-4" />
@@ -291,15 +324,103 @@ export default function Profile() {
 
           {/* Right column: Tabs with role-aware sections */}
           <div className="md:col-span-2 min-w-0">
-              <Tabs defaultValue="bookings" className="w-full">
-                <TabsList className={`w-full max-w-full overflow-x-auto grid ${isGuru ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className={`w-full max-w-full overflow-x-auto grid ${isGuru ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                  <TabsTrigger value="profile">Profile</TabsTrigger>
                   <TabsTrigger value="bookings">Bookings</TabsTrigger>
                   <TabsTrigger value="security">Security</TabsTrigger>
                   {isGuru && <TabsTrigger value="guru">Consultation</TabsTrigger>}
                 </TabsList>
 
-              {/* BOOKINGS */}
-              <TabsContent value="bookings" className="mt-4">
+                {/* PROFILE EDIT */}
+                <TabsContent value="profile" className="mt-4">
+                  <Card className="w-full overflow-hidden p-6 shadow-md space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid gap-1">
+                        <Label>Full name</Label>
+                        <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label>Primary specialty</Label>
+                        <TagInput value={primarySpecialty ? [primarySpecialty] : []} onChange={(vals) => setPrimarySpecialty(vals[0] || '')} suggestions={[]} maxTags={1} placeholder="Type specialty" />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label>Country</Label>
+                        <TagInput value={country ? [country] : []} onChange={(vals) => setCountry(vals[0] || '')} suggestions={[]} maxTags={1} placeholder="Type country" />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label>Timezone</Label>
+                        <TagInput value={tz ? [tz] : []} onChange={(vals) => setTz(vals[0] || '')} suggestions={[]} maxTags={1} placeholder="Type timezone (e.g., Europe/London)" />
+                      </div>
+                      <div className="grid gap-1 md:col-span-2">
+                        <Label>Exam interests</Label>
+                        <TagInput value={examInterests} onChange={setExamInterests} suggestions={[]} placeholder="Type exams and press Enter" />
+                      </div>
+                      <div className="grid gap-1 md:col-span-2">
+                        <Label>Languages</Label>
+                        <TagInput value={languages} onChange={setLanguages} suggestions={[]} placeholder="Type languages and press Enter" />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label>Position</Label>
+                        <Input value={positionText} onChange={(e) => setPositionText(e.target.value)} placeholder="e.g., Senior Registrar" />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label>Hospital/Employer</Label>
+                        <Input value={hospitalText} onChange={(e) => setHospitalText(e.target.value)} placeholder="e.g., City Hospital" />
+                      </div>
+                      <div className="grid gap-1 md:col-span-2">
+                        <Label>Bio</Label>
+                        <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={4} />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label>LinkedIn</Label>
+                        <Input value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="https://linkedin.com/in/..." />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label>Twitter/X</Label>
+                        <Input value={twitterUrl} onChange={(e) => setTwitterUrl(e.target.value)} placeholder="https://twitter.com/..." />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label>Website</Label>
+                        <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://..." />
+                      </div>
+                    </div>
+                    <div className="pt-2">
+                      <Button onClick={async () => {
+                        if (!user) return;
+                        try {
+                          const payload: any = {
+                            full_name: fullName,
+                            country,
+                            timezone: tz,
+                            primary_specialty: primarySpecialty,
+                            specialty: primarySpecialty,
+                            exam_interests: examInterests,
+                            exams: examInterests,
+                            languages,
+                            bio,
+                            position: positionText,
+                            hospital: hospitalText,
+                            linkedin: linkedinUrl || null,
+                            twitter: twitterUrl || null,
+                            website: websiteUrl || null,
+                            onboarding_required: false,
+                          };
+                          const { error } = await supabase.from('profiles').update(payload).eq('user_id', user.id);
+                          if (error) { toast({ title: 'Could not save', description: error.message }); return; }
+                          setProfile(p => p ? ({ ...p, ...payload }) : p);
+                          toast({ title: 'Profile updated' });
+                          setActiveTab('bookings');
+                        } catch (e: any) {
+                          toast({ title: 'Save failed', description: e.message });
+                        }
+                      }}>Save changes</Button>
+                    </div>
+                  </Card>
+                </TabsContent>
+
+                {/* BOOKINGS */}
+                <TabsContent value="bookings" className="mt-4">
                 <Card className="w-full overflow-hidden p-6 shadow-md mb-4">
                   <div className="grid grid-cols-2 gap-3">
                     <KpiCard title="Total bookings" value={String(bookingCounts.total)} />
