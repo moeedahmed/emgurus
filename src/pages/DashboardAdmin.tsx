@@ -10,11 +10,18 @@ import { useAdminMetrics } from "@/hooks/metrics/useAdminMetrics";
 import ModeratePosts from "@/pages/admin/ModeratePosts";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { publishPost } from "@/lib/blogsApi";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-
+import Taxonomy from "@/pages/admin/Taxonomy";
+import { useToast } from "@/hooks/use-toast";
+import { callFunction } from "@/lib/functionsUrl";
+import Taxonomy from "@/pages/admin/Taxonomy";
+import { useToast } from "@/hooks/use-toast";
+import { callFunction } from "@/lib/functionsUrl";
 const AdminAnalyticsPanel: React.FC = () => {
   const { kpis, submissionsSeries, isLoading } = useAdminMetrics();
   return (
