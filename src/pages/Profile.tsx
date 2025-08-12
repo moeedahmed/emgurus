@@ -65,6 +65,11 @@ const [uploadingAvatar, setUploadingAvatar] = useState(false);
 // Security
 const [pwd, setPwd] = useState("");
 const [pwd2, setPwd2] = useState("");
+// Phone verification
+const [phoneInput, setPhoneInput] = useState("");
+const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+const [phoneOtpCode, setPhoneOtpCode] = useState("");
+const [phoneVerified, setPhoneVerified] = useState(false);
 
   // Social connect helpers
   const onConnect = async (provider: "linkedin_oidc" | "twitter" | "github" | "facebook") => {

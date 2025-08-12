@@ -24,9 +24,9 @@ const Auth = () => {
   const [phone, setPhone] = useState("");
   const [phoneSent, setPhoneSent] = useState(false);
   const [phoneCode, setPhoneCode] = useState("");
-  const [emailOtp, setEmailOtp] = useState("");
-  const [emailOtpSent, setEmailOtpSent] = useState(false);
-  const [emailCode, setEmailCode] = useState("");
+  // Inline email OTP for Signup
+  const [signupOtpSent, setSignupOtpSent] = useState(false);
+  const [signupOtpCode, setSignupOtpCode] = useState("");
 
   useEffect(() => {
     document.title = "Sign in | EMGurus";
@@ -70,16 +70,17 @@ useEffect(() => {
   const handleEmailSignUp = async () => {
     try {
       setSubmitting(true);
-      const { error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signInWithOtp({
         email,
-        password,
         options: {
+          shouldCreateUser: true,
           data: { full_name: fullName },
           emailRedirectTo: emailRedirect,
         },
       });
       if (error) throw error;
-      toast.success("Check your email to confirm your account");
+      setSignupOtpSent(true);
+      toast.success("Verification code sent to your email");
     } catch (e: any) {
       toast.error(e?.message || "Sign up failed");
     } finally {
@@ -87,6 +88,24 @@ useEffect(() => {
     }
   };
 
+  const handleVerifySignupOtp = async () => {
+    try {
+      setSubmitting(true);
+      const { error } = await supabase.auth.verifyOtp({ email, token: signupOtpCode, type: 'email' });
+      if (error) throw error;
+      // If user provided a password, set it now that we have a session
+      if (password && password.length >= 8) {
+        const { error: pwErr } = await supabase.auth.updateUser({ password });
+        if (pwErr) throw pwErr;
+      }
+      toast.success('Account verified');
+      navigate('/profile');
+    } catch (e: any) {
+      toast.error(e?.message || 'Verification failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
   const handleResetPassword = async () => {
     try {
       setSubmitting(true);
@@ -120,34 +139,6 @@ useEffect(() => {
     try {
       setSubmitting(true);
       const { data, error } = await supabase.auth.verifyOtp({ phone, token: phoneCode, type: 'sms' });
-      if (error) throw error;
-      toast.success('Signed in');
-      navigate('/dashboard');
-    } catch (e: any) {
-      toast.error(e?.message || 'Verification failed');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const sendEmailOtp = async () => {
-    try {
-      setSubmitting(true);
-      const { error } = await supabase.auth.signInWithOtp({ email: emailOtp, options: { emailRedirectTo: emailRedirect } });
-      if (error) throw error;
-      setEmailOtpSent(true);
-      toast.success('Code sent to email');
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to send code');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const verifyEmailOtp = async () => {
-    try {
-      setSubmitting(true);
-      const { error } = await supabase.auth.verifyOtp({ email: emailOtp, token: emailCode, type: 'email' });
       if (error) throw error;
       toast.success('Signed in');
       navigate('/dashboard');
@@ -208,12 +199,10 @@ useEffect(() => {
             </Button>
 
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="w-full grid grid-cols-5">
+              <TabsList className="w-full grid grid-cols-3">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
                 <TabsTrigger value="reset">Reset</TabsTrigger>
-                <TabsTrigger value="phone">Phone OTP</TabsTrigger>
-                <TabsTrigger value="email-otp">Email OTP</TabsTrigger>
               </TabsList>
               <TabsContent value="signin">
                 <div className="space-y-4 pt-4">
@@ -243,13 +232,29 @@ useEffect(() => {
                   <div className="space-y-2">
                     <Label htmlFor="password2">Password</Label>
                     <Input id="password2" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a password" />
+                    <p className="text-xs text-muted-foreground">Password is set after verifying your email.</p>
                   </div>
-                  <Button className="w-full" onClick={handleEmailSignUp} disabled={submitting}>
-                    {submitting ? 'Creating account...' : 'Create Account'}
-                  </Button>
-                  <p className="text-xs text-muted-foreground text-center">
-                    We'll send a confirmation link to verify your email
-                  </p>
+
+                  {!signupOtpSent ? (
+                    <Button className="w-full" onClick={handleEmailSignUp} disabled={submitting || !email || !fullName}>
+                      {submitting ? 'Sending code…' : 'Send verification code'}
+                    </Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="signupCode">Enter email code</Label>
+                        <Input id="signupCode" value={signupOtpCode} onChange={(e) => setSignupOtpCode(e.target.value)} placeholder="6-digit code" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button className="flex-1" onClick={handleVerifySignupOtp} disabled={submitting || signupOtpCode.length < 4}>
+                          {submitting ? 'Verifying…' : 'Verify & Create Account'}
+                        </Button>
+                        <Button variant="outline" onClick={handleEmailSignUp} disabled={submitting}>Resend</Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted-foreground text-center">We use an email OTP to confirm your account.</p>
                 </div>
               </TabsContent>
               <TabsContent value="reset">
@@ -264,61 +269,6 @@ useEffect(() => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="phone">
-                <div className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone number</Label>
-                    <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g., +447700900123" />
-                  </div>
-                  {!phoneSent ? (
-                    <Button className="w-full" onClick={sendPhoneOtp} disabled={submitting || !phone}>
-                      {submitting ? 'Sending code…' : 'Send code'}
-                    </Button>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="phoneCode">Enter code</Label>
-                        <Input id="phoneCode" value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} placeholder="6-digit code" />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button className="flex-1" onClick={verifyPhoneOtp} disabled={submitting || phoneCode.length < 4}>
-                          {submitting ? 'Verifying…' : 'Verify & Sign in'}
-                        </Button>
-                        <Button variant="outline" onClick={sendPhoneOtp} disabled={submitting}>Resend</Button>
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-xs text-muted-foreground">SMS delivery requires provider setup in Supabase.</p>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="email-otp">
-                <div className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="emailOtp">Email</Label>
-                    <Input id="emailOtp" type="email" value={emailOtp} onChange={(e) => setEmailOtp(e.target.value)} placeholder="you@example.com" />
-                  </div>
-                  {!emailOtpSent ? (
-                    <Button className="w-full" onClick={sendEmailOtp} disabled={submitting || !emailOtp}>
-                      {submitting ? 'Sending code…' : 'Send code'}
-                    </Button>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="emailCode">Enter code</Label>
-                        <Input id="emailCode" value={emailCode} onChange={(e) => setEmailCode(e.target.value)} placeholder="6-digit code" />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button className="flex-1" onClick={verifyEmailOtp} disabled={submitting || emailCode.length < 4}>
-                          {submitting ? 'Verifying…' : 'Verify & Sign in'}
-                        </Button>
-                        <Button variant="outline" onClick={sendEmailOtp} disabled={submitting}>Resend</Button>
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-xs text-muted-foreground">We also send a magic link as fallback; check your inbox/spam.</p>
-                </div>
-              </TabsContent>
             </Tabs>
 
             <div className="text-center text-sm text-muted-foreground">
