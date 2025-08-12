@@ -204,13 +204,19 @@ const handleToggleTag = (tag: string) => {
   };
 
   const handleReset = () => {
+    if (!q) return;
     setSelectedKey("");
     setShowExplanation(false);
     setNotes("");
     setIssueTypes([]);
-    setTimeSpent(0);
-    try { localStorage.removeItem('emgurus.reviewed.session'); } catch {}
-    toast({ title: 'Practice reset', description: 'Your selections were cleared.' });
+    // Only clear the current question from session storage
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      const store = raw ? JSON.parse(raw) : {};
+      if (q.id && store[q.id]) { delete store[q.id]; }
+      localStorage.setItem(SESSION_KEY, JSON.stringify(store));
+    } catch {}
+    toast({ title: 'Question reset', description: 'Your selection for this question was cleared.' });
   };
 
   const endPractice = () => {
@@ -378,31 +384,7 @@ const goNext = async () => {
                     </CardContent>
                   </Card>
 
-                  <Card>
-                   <CardHeader>
-                     <CardTitle className="text-base">Feedback</CardTitle>
-                   </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {FEEDBACK_TAGS.map(tag => (
-                          <Button
-                            key={tag}
-                            variant={issueTypes.includes(tag) ? 'secondary' : 'outline'}
-                            size="sm"
-                            aria-pressed={issueTypes.includes(tag)}
-                            onClick={() => handleToggleTag(tag)}
-                          >
-                            {tag}
-                          </Button>
-                        ))}
-                      </div>
-                      <Label htmlFor="notes-m" className="text-sm">Describe (optional)</Label>
-                      <Textarea id="notes-m" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add a short note…" className="mt-1" />
-                      <div className="mt-3 flex items-center gap-2">
-                        <Button size="sm" onClick={() => sendFeedback()}>Send</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {/* Feedback moved below the question for better mobile UX */}
                 </div>
               </DrawerContent>
             </Drawer>
@@ -427,22 +409,51 @@ const goNext = async () => {
                   lockSelection={showExplanation}
                 />
 
+                {/* Feedback below the question for both mobile and desktop */}
+                {showExplanation && (
+                  <Card className="mt-4">
+                    <CardHeader>
+                      <CardTitle className="text-base">Feedback</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {FEEDBACK_TAGS.map(tag => (
+                          <Button
+                            key={tag}
+                            variant={issueTypes.includes(tag) ? 'default' : 'outline'}
+                            size="sm"
+                            aria-pressed={issueTypes.includes(tag)}
+                            onClick={() => handleToggleTag(tag)}
+                          >
+                            {tag}
+                          </Button>
+                        ))}
+                      </div>
+                      <Label htmlFor="notes-main" className="text-sm">Describe (optional)</Label>
+                      <Textarea id="notes-main" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add a short note…" className="mt-1" />
+                      <div className="mt-3 flex items-center gap-2">
+                        <Button size="sm" onClick={() => sendFeedback()}>Send</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <Button variant="outline" onClick={goPrev} disabled={!ids.length || index===0 || (needsFeedback && !feedbackGiven)}>Previous</Button>
-                    <Button variant="outline" onClick={goNext} disabled={!ids.length || index===ids.length-1 || (needsFeedback && !feedbackGiven)}>Next</Button>
-                  </div>
-                  <Button variant="outline" onClick={endPractice} disabled={needsFeedback && !feedbackGiven}>End Practice</Button>
-                </div>
-
-                {showExplanation && !isMember && needsFeedback && (
-                  <div className="mt-4 rounded-md border p-3 flex items-center justify-between">
-                    <div className="text-sm">How was this question?</div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => { setFeedbackGiven(true); setNeedsFeedback(false); try { const used = Number(localStorage.getItem('free_reviewed_used')||'0'); localStorage.setItem('free_reviewed_used', String(used + 1)); } catch {} }}>Looks good</Button>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" onClick={goNext} disabled={!ids.length || index===ids.length-1 || (needsFeedback && !feedbackGiven)}>Next</Button>
+                      {(!isMember && needsFeedback && !feedbackGiven) && (
+                        <span id="practice-feedback-live" className="text-xs text-muted-foreground">Please select a feedback tag to unlock Next. Feedback on each question is mandatory for free users.</span>
+                      )}
                     </div>
                   </div>
-                )}
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={handleReset}>Reset</Button>
+                    <Button variant="outline" onClick={endPractice} disabled={needsFeedback && !feedbackGiven}>End Practice</Button>
+                  </div>
+                </div>
+              </CardContent>
 
                 <div className="mt-6 flex flex-wrap gap-2">
                   {q.exam && <Badge variant="secondary">{q.exam}</Badge>}
@@ -480,32 +491,7 @@ const goNext = async () => {
                   <div aria-live="polite" role="status" className="text-lg font-semibold">{formatMMSS(timeSpent)}</div>
                 </CardContent>
               </Card>
-              <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Feedback</CardTitle>
-                  </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {FEEDBACK_TAGS.map(tag => (
-                      <Button
-                        key={tag}
-                        variant={issueTypes.includes(tag) ? 'secondary' : 'outline'}
-                        size="sm"
-                        aria-pressed={issueTypes.includes(tag)}
-                        onClick={() => handleToggleTag(tag)}
-                      >
-                        {tag}
-                      </Button>
-                    ))}
-                  </div>
-                  <Label htmlFor="notes" className="text-sm">Notes (optional)</Label>
-                  <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add a short note…" className="mt-1" />
-                  <div className="mt-3 flex items-center gap-2">
-                    <Button size="sm" onClick={() => sendFeedback()}>Send feedback</Button>
-                    <Button size="sm" variant="outline" onClick={handleReset}>Reset Session</Button>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Feedback moved below the question; sidebar version removed */}
             </div>
           </aside>
         </div>

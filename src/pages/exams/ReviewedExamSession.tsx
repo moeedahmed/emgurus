@@ -287,7 +287,7 @@ export default function ReviewedExamSession() {
                                   const state = isCurrent
                                     ? "bg-primary/10 ring-1 ring-primary"
                                     : hasSel
-                                      ? (correct ? "bg-primary/20 border-primary text-primary" : "bg-destructive/10 border-destructive text-destructive")
+                                      ? (correct ? "bg-success/20 border-success text-success" : "bg-destructive/10 border-destructive text-destructive")
                                       : "bg-muted";
                                   return (
                                     <button
@@ -339,7 +339,7 @@ export default function ReviewedExamSession() {
                         const state = isCurrent
                           ? "bg-primary/10 ring-1 ring-primary"
                           : hasSel
-                            ? (correct ? "bg-primary/20 border-primary text-primary" : "bg-destructive/10 border-destructive text-destructive")
+                            ? (correct ? "bg-success/20 border-success text-success" : "bg-destructive/10 border-destructive text-destructive")
                             : "bg-muted";
                         return (
                           <button

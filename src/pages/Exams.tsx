@@ -55,6 +55,11 @@ const maxAi = isPaid ? 100 : 10;
 // Practice topic availability
 const [pAreasAvail, setPAreasAvail] = useState<string[]>(["All areas"]);
 const [pHasAny, setPHasAny] = useState<boolean>(false);
+// Exam topic availability (mirrors practice)
+const [eAreasAvail, setEAreasAvail] = useState<string[]>(["All areas"]);
+const [eHasAny, setEHasAny] = useState<boolean>(false);
+// Available exams that actually have reviewed questions
+const [availExams, setAvailExams] = useState<ExamName[]>(EXAMS);
 // Exam time selection
 const [eTime, setETime] = useState<string>("untimed");
 
@@ -75,6 +80,23 @@ const [eTime, setETime] = useState<string>("untimed");
         const tier = String((prof as any)?.subscription_tier || 'free').toLowerCase();
         setIsPaid(tier.includes('exams') || tier.includes('premium'));
       } catch { setIsPaid(false); }
+    })();
+  }, []);
+
+  // Load available exams based on reviewed bank
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await (supabase as any)
+          .from('reviewed_exam_questions')
+          .select('exam')
+          .eq('status', 'approved')
+          .not('exam', 'is', null)
+          .limit(2000);
+        const codes = Array.from(new Set((Array.isArray(data) ? data : []).map((r: any) => r.exam).filter(Boolean)));
+        const names = (EXAMS as ExamName[]).filter((name) => codes.includes((EXAM_CODE_MAP_LANDING as any)[name] || (name as any)));
+        setAvailExams(names.length ? names : EXAMS);
+      } catch { setAvailExams(EXAMS); }
     })();
   }, []);
 
@@ -102,6 +124,31 @@ const [eTime, setETime] = useState<string>("untimed");
       }
     })();
   }, [practiceOpen, pExam]);
+
+  // Load available topics for Exam based on reviewed bank
+  useEffect(() => {
+    (async () => {
+      if (!examOpen || !eExam) { setEAreasAvail(["All areas"]); setEHasAny(false); return; }
+      try {
+        const examCode = (EXAM_CODE_MAP_LANDING as any)[eExam] || eExam;
+        const { data } = await (supabase as any)
+          .from('reviewed_exam_questions')
+          .select('topic')
+          .eq('status', 'approved')
+          .eq('exam', examCode)
+          .not('topic', 'is', null)
+          .order('topic', { ascending: true })
+          .limit(1000);
+        const topics = Array.from(new Set((Array.isArray(data) ? data : []).map((r: any) => r.topic).filter(Boolean)));
+        const allowed = CURRICULA[eExam] ? topics.filter(t => (CURRICULA as any)[eExam].includes(t)) : topics;
+        setEAreasAvail(['All areas', ...allowed]);
+        setEHasAny(((data || []).length) > 0);
+      } catch {
+        setEAreasAvail(['All areas']);
+        setEHasAny(false);
+      }
+    })();
+  }, [examOpen, eExam]);
 
   useEffect(() => {
     if (!pAreasAvail.includes(pTopic)) setPTopic('All areas');
@@ -163,7 +210,7 @@ const [eTime, setETime] = useState<string>("untimed");
   };
 
   const pAreas = pAreasAvail;
-  const eAreas = eExam ? ["All areas", ...CURRICULA[eExam]] : ["All areas"];
+  const eAreas = eAreasAvail;
 
   return (
     <main>
@@ -267,7 +314,7 @@ const [eTime, setETime] = useState<string>("untimed");
                       <Select value={pExam || undefined as any} onValueChange={(v) => setPExam(v as ExamName)}>
                         <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
                         <SelectContent className="z-50">
-                          {EXAMS.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
+                          {availExams.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -309,13 +356,13 @@ const [eTime, setETime] = useState<string>("untimed");
                   <DialogHeader>
                     <DialogTitle>Start Exam</DialogTitle>
                   </DialogHeader>
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <div className="md:col-span-1">
                       <Label>Exam</Label>
                       <Select value={eExam || undefined as any} onValueChange={(v) => setEExam(v as ExamName)}>
                         <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
                         <SelectContent className="z-50">
-                          {EXAMS.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
+                          {availExams.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -329,7 +376,7 @@ const [eTime, setETime] = useState<string>("untimed");
                       </Select>
                     </div>
                     <div className="md:col-span-1">
-                      <Label>Questions</Label>
+                      <Label>Number</Label>
                       <Input type="number" min={5} max={maxExam} value={eCount} onChange={(e)=> {
                         const v = Number(e.target.value || 25);
                         setECount(Math.max(5, Math.min(maxExam, v)));
@@ -347,7 +394,7 @@ const [eTime, setETime] = useState<string>("untimed");
                     </div>
                     <div className="md:col-span-3 flex items-center justify-end gap-2 pt-2">
                       <Button variant="outline" onClick={() => setExamOpen(false)}>Cancel</Button>
-                      <Button onClick={startExam} disabled={!eExam}>Start</Button>
+                      <Button onClick={startExam} disabled={!eExam || !eHasAny}>Start</Button>
                     </div>
                   </div>
                 </DialogContent>
