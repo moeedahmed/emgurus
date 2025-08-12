@@ -13,7 +13,7 @@ import PageHero from "@/components/PageHero";
 import { CATEGORIES, sanitizeCategory } from "@/lib/taxonomy";
 import { Chip } from "@/components/ui/chip";
 
-export default function Blogs() {
+export default function Blogs({ embedded = false }: { embedded?: boolean } = {}) {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -169,12 +169,14 @@ export default function Blogs() {
 
   return (
     <main>
-      <PageHero
-        title="EMGurus Blogs"
-        subtitle="Evidence-based articles, exam guidance, and clinical pearls."
-        align="center"
-        ctas={[{ label: "Write Blog", href: "/blogs/editor/new", variant: "default" }]}
-      />
+      {!embedded && (
+        <PageHero
+          title="EMGurus Blogs"
+          subtitle="Evidence-based articles, exam guidance, and clinical pearls."
+          align="center"
+          ctas={[{ label: "Write Blog", href: "/blogs/editor/new", variant: "default" }]}
+        />
+      )}
       <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left filters panel - sticky and independently scrollable */}

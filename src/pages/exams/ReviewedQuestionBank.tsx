@@ -9,6 +9,7 @@ import { formatDistanceToNow } from "date-fns";
 import { getJson } from "@/lib/functionsClient";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type ExamCode = "MRCEM_Primary" | "MRCEM_SBA" | "FRCEM_SBA";
@@ -30,7 +31,7 @@ interface ReviewedRow {
 
 interface SLO { id: string; code: string; title: string }
 
-export default function ReviewedQuestionBank() {
+export default function ReviewedQuestionBank({ embedded = false }: { embedded?: boolean } = {}) {
   const [exam, setExam] = useState<ExamCode | "">("");
   const [sloId, setSloId] = useState<string | "">("");
   const [slos, setSlos] = useState<SLO[]>([]);
@@ -245,9 +246,11 @@ export default function ReviewedQuestionBank() {
   return (
     <main>
       <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="sticky top-20 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border mb-4">
-          <h1 className="text-2xl font-semibold py-2">Question Bank</h1>
-        </div>
+        {!embedded && (
+          <div className="sticky top-20 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border mb-4">
+            <h1 className="text-2xl font-semibold py-2">Question Bank</h1>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <section className="lg:col-span-8">
@@ -312,30 +315,39 @@ export default function ReviewedQuestionBank() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge
-                          variant="secondary"
-                          className="text-xs cursor-pointer"
-                          onClick={(e) => { e.stopPropagation(); setExam((it.exam as ExamCode) || ""); setPage(1); }}
+                        <Chip
+                          name="rqb_exam_chip"
+                          value={String(it.exam)}
+                          selected={exam === it.exam}
+                          variant={exam === it.exam ? 'solid' : 'outline'}
+                          size="sm"
+                          onSelect={() => { setExam((it.exam as ExamCode) || ""); setPage(1); }}
                         >
                           {(EXAM_LABELS as any)[it.exam] || String(it.exam)}
-                        </Badge>
+                        </Chip>
                         {!!it.topic && (
-                          <Badge
-                            variant="secondary"
-                            className="text-xs cursor-pointer"
-                            onClick={(e) => { e.stopPropagation(); setTopicFilter(it.topic!); setPage(1); }}
+                          <Chip
+                            name="rqb_topic_chip"
+                            value={it.topic}
+                            selected={topicFilter === it.topic}
+                            variant={topicFilter === it.topic ? 'solid' : 'outline'}
+                            size="sm"
+                            onSelect={() => { setTopicFilter(it.topic!); setPage(1); }}
                           >
                             {it.topic}
-                          </Badge>
+                          </Chip>
                         )}
                         {((it as any).difficulty || (it as any).level) && (
-                          <Badge
-                            variant="secondary"
-                            className="text-xs cursor-pointer"
-                            onClick={(e) => { e.stopPropagation(); setDifficulty(String((it as any).difficulty || (it as any).level)); setPage(1); }}
+                          <Chip
+                            name="rqb_difficulty_chip"
+                            value={String((it as any).difficulty || (it as any).level)}
+                            selected={difficulty === String((it as any).difficulty || (it as any).level)}
+                            variant={difficulty === String((it as any).difficulty || (it as any).level) ? 'solid' : 'outline'}
+                            size="sm"
+                            onSelect={() => { setDifficulty(String((it as any).difficulty || (it as any).level)); setPage(1); }}
                           >
                             {(it as any).difficulty || (it as any).level}
-                          </Badge>
+                          </Chip>
                         )}
                       </div>
                     </CardContent>

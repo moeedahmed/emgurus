@@ -30,7 +30,7 @@ interface ThreadRow {
   topics?: string[]; // optional future support
 }
 
-const Forums = () => {
+const Forums = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const isNewOpen = searchParams.get('new') === '1';
 
@@ -102,12 +102,14 @@ const Forums = () => {
 
   return (
     <main>
-      <PageHero
-        title="EMGurus Forums"
-        subtitle="All threads. Filter by section, or start a new discussion."
-        align="center"
-        ctas={[{ label: "Start a Thread", href: "?new=1", variant: "outline" }]}
-      />
+      {!embedded && (
+        <PageHero
+          title="EMGurus Forums"
+          subtitle="All threads. Filter by section, or start a new discussion."
+          align="center"
+          ctas={[{ label: "Start a Thread", href: "?new=1", variant: "outline" }]}
+        />
+      )}
 
       <section className="container mx-auto px-4 py-8">
         <CreateThreadGlobal

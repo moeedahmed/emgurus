@@ -8,7 +8,7 @@ import PageHero from "@/components/PageHero";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ConsultationsFilterPanel from "@/components/consultations/ConsultationsFilterPanel";
 
-const Consultations = () => {
+const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState<string>("all");
   const [exam, setExam] = useState<string>("all");
@@ -196,12 +196,14 @@ const Consultations = () => {
 
   return (
     <main>
-      <PageHero
-        title="EMGurus Consultations"
-        subtitle="Filter by specialty, country, or exam to find the right mentor."
-        align="center"
-        ctas={[{ label: "Consultation monthly membership", href: "/pricing", variant: "outline" }]}
-      />
+      {!embedded && (
+        <PageHero
+          title="EMGurus Consultations"
+          subtitle="Filter by specialty, country, or exam to find the right mentor."
+          align="center"
+          ctas={[{ label: "Consultation monthly membership", href: "/pricing", variant: "outline" }]}
+        />
+      )}
 
       <section className="container mx-auto px-4 py-8">
         <div className="lg:grid lg:grid-cols-[280px_1fr] gap-6">
