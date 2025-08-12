@@ -109,7 +109,7 @@ export default function DashboardGuru() {
       <div className="px-4 py-3 border-b flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => goto('assigned')}>Assigned</Button>
         <Button size="sm" variant="outline" onClick={() => goto('approved')}>Approved</Button>
-        <Button size="sm" variant="outline" onClick={() => goto('my-questions')}>My Questions</Button>
+        <Button size="sm" variant="outline" onClick={() => goto('submitted')}>Submitted</Button>
       </div>
     );
   };
@@ -134,7 +134,7 @@ export default function DashboardGuru() {
         { id: "assigned", title: "Assigned", render: <div className="p-0"><ExamShortcutsBar /><GuruReviewQueue /></div> },
         { id: "approved", title: "Approved", render: <div className="p-0"><ExamShortcutsBar /><ReviewedByMe /></div> },
         { id: "rejected", title: "Rejected", render: <div className="p-0"><ExamShortcutsBar /><RejectedByMe /></div> },
-        { id: "my-questions", title: "My Questions", render: <div className="p-0"><ExamShortcutsBar /><MyExamDrafts /></div> },
+        { id: "submitted", title: "Submitted", render: <div className="p-0"><ExamShortcutsBar /><MyExamDrafts /></div> },
       ],
     },
     {
