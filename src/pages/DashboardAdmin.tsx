@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
-import { BookOpen, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings } from "lucide-react";
+import { BookOpen, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings, Stethoscope } from "lucide-react";
 import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
 import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
 import ForumsModeration from "@/pages/ForumsModeration";
@@ -22,6 +22,12 @@ import { callFunction } from "@/lib/functionsUrl";
 import ExamsAICuration from "@/pages/admin/ExamsAICuration";
 import SubmitQuestion from "@/pages/tools/SubmitQuestion";
 import QuestionSetsAdmin from "@/pages/admin/QuestionSets";
+import AdminConsultsOverview from "@/components/dashboard/consultations/AdminConsultsOverview";
+import AdminConsultsBookings from "@/components/dashboard/consultations/AdminConsultsBookings";
+import AdminConsultsGurus from "@/components/dashboard/consultations/AdminConsultsGurus";
+import AdminConsultsPolicies from "@/components/dashboard/consultations/AdminConsultsPolicies";
+import AdminConsultsNotifications from "@/components/dashboard/consultations/AdminConsultsNotifications";
+import AdminConsultsSettings from "@/components/dashboard/consultations/AdminConsultsSettings";
 
 // -------- Analytics panel
 const AdminAnalyticsPanel: React.FC = () => {
@@ -713,11 +719,24 @@ export default function DashboardAdmin() {
       ],
     },
     {
+      id: "consultations",
+      title: "Consultations",
+      icon: Stethoscope,
+      tabs: [
+        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Platform-level consultations health.</div><AdminConsultsOverview /></div> },
+        { id: "bookings", title: "Bookings", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">All bookings with admin actions.</div><AdminConsultsBookings /></div> },
+        { id: "gurus", title: "Gurus", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Manage gurus for consultations.</div><AdminConsultsGurus /></div> },
+        { id: "policies", title: "Policies", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Guidelines & messaging shown to users and gurus.</div><AdminConsultsPolicies /></div> },
+        { id: "notifications", title: "Notifications", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Templates and toggles.</div><AdminConsultsNotifications /></div> },
+        { id: "settings", title: "Settings", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Platform rules.</div><AdminConsultsSettings /></div> },
+      ],
+    },
+    {
       id: "forums",
       title: "Forums",
       icon: MessageSquare,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Forum moderation at a glance.</div> },
+        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Forum moderation at a glance.</div></div> },
         { id: "moderation", title: "Moderation Queue", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Threads and replies requiring action.</div><ForumsModeration /></div> },
       ],
     },
