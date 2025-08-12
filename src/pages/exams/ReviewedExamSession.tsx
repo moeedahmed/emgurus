@@ -51,6 +51,8 @@ export default function ReviewedExamSession() {
   const startedAtRef = useRef<number>(Date.now());
   const [ended, setEnded] = useState(false);
   const loggedRef = useRef(false);
+  const [isMember, setIsMember] = useState<boolean>(true);
+  const [paywalled, setPaywalled] = useState<boolean>(false);
 
   useEffect(() => {
     document.title = "Exam Mode • Reviewed Bank";
@@ -58,7 +60,6 @@ export default function ReviewedExamSession() {
 
   useEffect(() => {
     if (!ids.length) return;
-    // Initialize a fresh random order for this session
     setOrder(shuffle(ids));
     setIdx(0);
   }, [ids.join(',')]);
@@ -66,22 +67,35 @@ export default function ReviewedExamSession() {
   useEffect(() => {
     if (!order.length) return;
     void load(order[idx]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx, order.join(',')]);
 
-  async function load(id: string) {
-    try {
-      setLoading(true);
-      const { data, error } = await (supabase as any)
-        .from('reviewed_exam_questions')
-        .select('id, stem, options, correct_index, explanation, exam, topic')
-        .eq('id', id)
-        .maybeSingle();
-      if (error) throw error;
-      setQ(data as FullQuestion);
-      setSelected(selectionMap[id] || "");
-    } finally { setLoading(false); }
-  }
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const uid = user?.id;
+        if (!uid) {
+          // Guest: simple localStorage cap
+          const used = Number(localStorage.getItem('free_reviewed_used') || '0');
+          if (used >= 10) setPaywalled(true);
+          setIsMember(false);
+          return;
+        }
+        const { data: prof } = await supabase.from('profiles').select('subscription_tier').eq('user_id', uid).maybeSingle();
+        const tier = (prof as any)?.subscription_tier || 'free';
+        const member = String(tier).toLowerCase() !== 'free';
+        setIsMember(member);
+        if (!member) {
+          const { count } = await (supabase as any)
+            .from('exam_attempts')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', uid)
+            .eq('source', 'reviewed');
+          if ((count ?? 0) >= 100) setPaywalled(true);
+        }
+      } catch {}
+    })();
+  }, []);
 
   useEffect(() => {
     if (!q) { setDispOptions([]); return; }
@@ -198,7 +212,16 @@ export default function ReviewedExamSession() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="mx-auto w-full md:max-w-5xl">
+      {paywalled ? (
+        <Card>
+          <CardHeader><CardTitle>Upgrade to continue</CardTitle></CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div className="text-sm">You've reached the free reviewed-questions limit.</div>
+            <a href="/pricing"><Button>Exam Membership</Button></a>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="mx-auto w-full md:max-w-5xl">
         {!showSummary ? (
           <div className="grid gap-6 md:grid-cols-3">
             <div className="md:col-span-2">

@@ -48,9 +48,40 @@ export default function ReviewedQuestionDetail() {
   const [ended, setEnded] = useState(false);
   const [summary, setSummary] = useState<{ score: number; attempted: number; total: number; byTopic: Record<string, { total: number; correct: number }>; durationSec: number; questionIds: string[] }>({ score: 0, attempted: 0, total: 0, byTopic: {}, durationSec: 0, questionIds: [] });
   const loggedRef = useRef(false);
+  const [isMember, setIsMember] = useState<boolean>(true);
+  const [paywalled, setPaywalled] = useState<boolean>(false);
+  const [needsFeedback, setNeedsFeedback] = useState<boolean>(false);
+  const [feedbackGiven, setFeedbackGiven] = useState<boolean>(false);
 
   useEffect(() => {
     document.title = "Practice Mode • EM Gurus";
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { user: u } } = await supabase.auth.getUser();
+        const uid = u?.id;
+        if (!uid) {
+          setIsMember(false);
+          const used = Number(localStorage.getItem('free_reviewed_used') || '0');
+          if (used >= 10) setPaywalled(true);
+          return;
+        }
+        const { data: prof } = await supabase.from('profiles').select('subscription_tier').eq('user_id', uid).maybeSingle();
+        const tier = (prof as any)?.subscription_tier || 'free';
+        const member = String(tier).toLowerCase() !== 'free';
+        setIsMember(member);
+        if (!member) {
+          const { count } = await (supabase as any)
+            .from('exam_attempts')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', uid)
+            .eq('source', 'reviewed');
+          if ((count ?? 0) >= 100) setPaywalled(true);
+        }
+      } catch {}
+    })();
   }, []);
 
   useEffect(() => {
@@ -121,7 +152,7 @@ export default function ReviewedQuestionDetail() {
     if (showExplanation || !q) return;
     setSelectedKey(k);
     setShowExplanation(true);
-    // Save attempt to session store for summary
+    if (!isMember) { setNeedsFeedback(true); setFeedbackGiven(false); }
     try {
       const raw = localStorage.getItem(SESSION_KEY);
       const store = raw ? JSON.parse(raw) : {};
@@ -132,7 +163,6 @@ export default function ReviewedQuestionDetail() {
       };
       localStorage.setItem(SESSION_KEY, JSON.stringify(store));
     } catch {}
-    // Announce feedback via live region
     setTimeout(() => { (document.getElementById('practice-feedback-live') as HTMLElement | null)?.focus?.(); }, 0);
   };
 
@@ -140,14 +170,14 @@ export default function ReviewedQuestionDetail() {
     setIssueTypes((prev) => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   };
 
-  const sendFeedback = async () => {
+  const sendFeedback = async (customComment?: string) => {
     if (!q) return;
     if (!user) {
       toast({ title: 'Sign in required', description: 'Please sign in to send feedback.', variant: 'destructive' });
       return;
     }
     try {
-      const comment = (issueTypes.length ? `[${issueTypes.join(', ')}] ` : '') + (notes || '');
+      const comment = customComment ?? ((issueTypes.length ? `[${issueTypes.join(', ')}] ` : '') + (notes || ''));
       await supabase.from('exam_question_flags').insert({
         question_id: q.id,
         question_source: `${q.exam || 'Reviewed'}${q.topic ? ' • ' + q.topic : ''}`,
@@ -157,6 +187,13 @@ export default function ReviewedQuestionDetail() {
       toast({ title: 'Thanks—your feedback was sent' });
       setIssueTypes([]);
       setNotes('');
+      setFeedbackGiven(true);
+      setNeedsFeedback(false);
+      try {
+        if (!user) return;
+        const used = Number(localStorage.getItem('free_reviewed_used') || '0');
+        localStorage.setItem('free_reviewed_used', String(used + 1));
+      } catch {}
     } catch (e: any) {
       toast({ title: 'Failed to send feedback', description: e.message, variant: 'destructive' });
     }
@@ -268,10 +305,20 @@ export default function ReviewedQuestionDetail() {
   }, [selectedKey, showExplanation, ids, index]);
 
   return (
-    <div className="container mx-auto px-4 py-6">
+     <div className="container mx-auto px-4 py-6">
       <Button variant="outline" onClick={() => navigate('/exams')}>Back to exams</Button>
 
-      {ended ? (
+      {paywalled ? (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>Upgrade to continue</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div className="text-sm">You've reached the free reviewed-questions limit.</div>
+            <a href="/pricing"><Button>Exam Membership</Button></a>
+          </CardContent>
+        </Card>
+      ) : ended ? (
         <Card className="mt-4">
           <CardHeader>
             <CardTitle>Practice Summary</CardTitle>
@@ -321,9 +368,9 @@ export default function ReviewedQuestionDetail() {
                   </Card>
 
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Feedback</CardTitle>
-                    </CardHeader>
+                   <CardHeader>
+                     <CardTitle className="text-base">Notes & Flag</CardTitle>
+                   </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2 mb-3">
                         {FEEDBACK_TAGS.map(tag => (
@@ -341,7 +388,7 @@ export default function ReviewedQuestionDetail() {
                       <Label htmlFor="notes-m" className="text-sm">Notes (optional)</Label>
                       <Textarea id="notes-m" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add a short note…" className="mt-1" />
                       <div className="mt-3 flex items-center gap-2">
-                        <Button size="sm" onClick={sendFeedback}>Send feedback</Button>
+                        <Button size="sm" onClick={() => sendFeedback()}>Send feedback</Button>
                         <Button size="sm" variant="outline" onClick={handleReset}>Reset Session</Button>
                       </div>
                     </CardContent>
@@ -370,15 +417,23 @@ export default function ReviewedQuestionDetail() {
                   lockSelection={showExplanation}
                 />
 
-
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <Button variant="outline" onClick={goPrev} disabled={!ids.length || index===0}>Previous</Button>
-                    <Button variant="outline" onClick={goNext} disabled={!ids.length || index===ids.length-1}>Next</Button>
+                    <Button variant="outline" onClick={goPrev} disabled={!ids.length || index===0 || (needsFeedback && !feedbackGiven)}>Previous</Button>
+                    <Button variant="outline" onClick={goNext} disabled={!ids.length || index===ids.length-1 || (needsFeedback && !feedbackGiven)}>Next</Button>
                   </div>
-                  <Button variant="outline" onClick={endPractice}>End Practice</Button>
+                  <Button variant="outline" onClick={endPractice} disabled={needsFeedback && !feedbackGiven}>End Practice</Button>
                 </div>
 
+                {showExplanation && !isMember && needsFeedback && (
+                  <div className="mt-4 rounded-md border p-3 flex items-center justify-between">
+                    <div className="text-sm">How was this question?</div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => { setFeedbackGiven(true); setNeedsFeedback(false); try { const used = Number(localStorage.getItem('free_reviewed_used')||'0'); localStorage.setItem('free_reviewed_used', String(used + 1)); } catch {} }}>Looks good</Button>
+                      <Button size="sm" onClick={() => sendFeedback('Needs improvement')}>Needs improvement</Button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mt-6 flex flex-wrap gap-2">
                   {q.exam && <Badge variant="secondary">{q.exam}</Badge>}
@@ -417,9 +472,9 @@ export default function ReviewedQuestionDetail() {
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Feedback</CardTitle>
-                </CardHeader>
+                  <CardHeader>
+                    <CardTitle className="text-base">Notes & Flag</CardTitle>
+                  </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {FEEDBACK_TAGS.map(tag => (
@@ -437,7 +492,7 @@ export default function ReviewedQuestionDetail() {
                   <Label htmlFor="notes" className="text-sm">Notes (optional)</Label>
                   <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add a short note…" className="mt-1" />
                   <div className="mt-3 flex items-center gap-2">
-                    <Button size="sm" onClick={sendFeedback}>Send feedback</Button>
+                    <Button size="sm" onClick={() => sendFeedback()}>Send feedback</Button>
                     <Button size="sm" variant="outline" onClick={handleReset}>Reset Session</Button>
                   </div>
                 </CardContent>
@@ -448,6 +503,7 @@ export default function ReviewedQuestionDetail() {
       ) : (
         <div className="text-center text-muted-foreground py-10">Question not found.</div>
       )}
+
     </div>
   );
 }
