@@ -23,9 +23,10 @@ interface BlogCardProps {
   onTagClick?: (type: 'category' | 'tag' | 'author', value: string) => void;
   selectedCategory?: string;
   selectedTag?: string;
+  selectedSort?: string;
 }
 
-export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, selectedCategory, selectedTag }: BlogCardProps) {
+export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, selectedCategory, selectedTag, selectedSort }: BlogCardProps) {
   const cover = p.cover_image_url || fallbackImage;
   const words = (p.excerpt || "").split(/\s+/).filter(Boolean).length;
   const readMin = Math.max(1, Math.ceil(words / 220));
@@ -53,12 +54,16 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, select
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
           {topBadge?.label && (
-            <Badge
-              variant="secondary"
-  className="text-xs"
+            <Chip
+              name="blogs_top_chip"
+              value="most-liked"
+              selected={selectedSort === 'liked'}
+              variant={selectedSort === 'liked' ? 'solid' : 'outline'}
+              size="sm"
+              onSelect={() => onTagClick?.('tag', 'most-liked')}
             >
               {topBadge.label}
-            </Badge>
+            </Chip>
           )}
           {badges.map((b) => (
             <Badge key={b} variant="outline" className="text-xs">

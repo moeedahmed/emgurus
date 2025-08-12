@@ -262,6 +262,7 @@ export default function Blogs() {
                   topBadge={topByCat.has(p.id) ? { label: 'Most Liked' } : null}
                   selectedCategory={category}
                   selectedTag={tag}
+                  selectedSort={sort}
                   onTagClick={(type, value) => {
                     if (type === 'category') toggleParam('category', value);
                     if (type === 'tag') {
