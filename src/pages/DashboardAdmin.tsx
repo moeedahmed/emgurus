@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Taxonomy from "@/pages/admin/Taxonomy";
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
@@ -270,10 +270,10 @@ const DraftsPanel: React.FC = () => {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <div className="font-semibold">Drafts (Unassigned)</div>
-        <div className="flex items-center gap-2">
+        <div className="font-semibold">Drafts</div>
+        <div className="flex flex-wrap items-center gap-2 justify-end md:justify-start">
           <Select value={reviewerId} onValueChange={setReviewerId}>
-            <SelectTrigger className="w-56"><SelectValue placeholder="Select Guru" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-56 md:w-64"><SelectValue placeholder="Select Guru" /></SelectTrigger>
             <SelectContent>
               {gurus.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
             </SelectContent>
@@ -377,7 +377,7 @@ const AssignedPanel: React.FC = () => {
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
                     <Select value={reassigning[q.id] || ''} onValueChange={(v) => setReassigning(s => ({ ...s, [q.id]: v }))}>
-                      <SelectTrigger className="w-56"><SelectValue placeholder="Select Guru" /></SelectTrigger>
+                      <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Select Guru" /></SelectTrigger>
                       <SelectContent>
                         {gurus.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
                       </SelectContent>
@@ -505,13 +505,13 @@ const RejectedPanel: React.FC = () => {
 
 const MarkedPanel: React.FC = () => {
   const { toast } = useToast();
-  const [flags, setFlags] = useState<Array<{ id: string; created_at: string; question_source: string; comment?: string | null; status: string; assigned_to?: string | null }>>([]);
+  const [flags, setFlags] = useState<Array<{ id: string; question_id: string; created_at: string; question_source: string; comment?: string | null; status: string; assigned_to?: string | null }>>([]);
   const [gurus, setGurus] = useState<GuruOption[]>([]);
   const [assigning, setAssigning] = useState<Record<string, string>>({});
 
   const load = async () => {
     try {
-      const { data, error } = await supabase.from('exam_question_flags').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('exam_question_flags').select('id, created_at, question_id, question_source, comment, status, assigned_to').order('created_at', { ascending: false });
       if (error) throw error;
       setFlags((data as any) || []);
       const g = await callFunction('/exams-admin-curate/gurus', null, true);
@@ -549,7 +549,45 @@ const MarkedPanel: React.FC = () => {
         <div className="font-semibold">Marked by Learners</div>
         <Button size="sm" variant="outline" onClick={load}>Refresh</Button>
       </div>
-      <Card className="p-0 overflow-hidden">
+
+      {/* Mobile list */}
+      <div className="md:hidden grid gap-3">
+        {flags.map(f => (
+          <Card key={f.id} className="p-4 space-y-3">
+            <div className="text-sm text-muted-foreground">{new Date(f.created_at).toLocaleString()}</div>
+            <div className="text-sm"><span className="font-medium">Source: </span>{f.question_source}</div>
+            {f.comment && <div className="text-sm break-words"><span className="font-medium">Comment: </span>{f.comment}</div>}
+            <div className="text-sm"><span className="font-medium">Status: </span>{f.status}</div>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Select value={assigning[f.id] || f.assigned_to || ''} onValueChange={(v) => setAssigning(s => ({ ...s, [f.id]: v }))}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={f.assigned_to ? 'Assigned' : 'Select guru'} /></SelectTrigger>
+                <SelectContent>
+                  {gurus.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={() => assign(f.id)} disabled={!assigning[f.id]}>Assign</Button>
+              <Button size="sm" variant="secondary" onClick={async () => {
+                try {
+                  const { data: { user } } = await supabase.auth.getUser();
+                  const reviewer_id = user?.id;
+                  if (!reviewer_id || !f.question_id) return toast({ title: 'Sign in required', variant: 'destructive' });
+                  await callFunction('/exams-admin-curate/assign', { question_ids: [f.question_id], reviewer_id }, true);
+                  window.location.href = `/guru/exams/review?open=${f.question_id}`;
+                } catch (e: any) {
+                  toast({ title: 'Failed to open for review', description: e.message, variant: 'destructive' });
+                }
+              }}>Review</Button>
+              <Button variant="outline" size="sm" onClick={() => archive(f.id)}>Archive</Button>
+            </div>
+          </Card>
+        ))}
+        {flags.length === 0 && (
+          <Card className="p-6 text-sm text-muted-foreground">No marked questions</Card>
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <Card className="p-0 overflow-hidden hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -578,6 +616,17 @@ const MarkedPanel: React.FC = () => {
                 </TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button size="sm" onClick={() => assign(f.id)} disabled={!assigning[f.id]}>Assign</Button>
+                  <Button size="sm" variant="secondary" onClick={async () => {
+                    try {
+                      const { data: { user } } = await supabase.auth.getUser();
+                      const reviewer_id = user?.id;
+                      if (!reviewer_id || !f.question_id) return toast({ title: 'Sign in required', variant: 'destructive' });
+                      await callFunction('/exams-admin-curate/assign', { question_ids: [f.question_id], reviewer_id }, true);
+                      window.location.href = `/guru/exams/review?open=${f.question_id}`;
+                    } catch (e: any) {
+                      toast({ title: 'Failed to open for review', description: e.message, variant: 'destructive' });
+                    }
+                  }}>Review</Button>
                   <Button variant="outline" size="sm" onClick={() => archive(f.id)}>Archive</Button>
                 </TableCell>
               </TableRow>
