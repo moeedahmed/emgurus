@@ -1640,8 +1640,10 @@ export type Database = {
           instagram: string | null
           languages: string[] | null
           linkedin: string | null
+          notification_settings: Json | null
           onboarding_progress: Json
           onboarding_required: boolean
+          phone: string | null
           position: string | null
           price_per_30min: number | null
           primary_specialty: string | null
@@ -1679,8 +1681,10 @@ export type Database = {
           instagram?: string | null
           languages?: string[] | null
           linkedin?: string | null
+          notification_settings?: Json | null
           onboarding_progress?: Json
           onboarding_required?: boolean
+          phone?: string | null
           position?: string | null
           price_per_30min?: number | null
           primary_specialty?: string | null
@@ -1718,8 +1722,10 @@ export type Database = {
           instagram?: string | null
           languages?: string[] | null
           linkedin?: string | null
+          notification_settings?: Json | null
           onboarding_progress?: Json
           onboarding_required?: boolean
+          phone?: string | null
           position?: string | null
           price_per_30min?: number | null
           primary_specialty?: string | null
