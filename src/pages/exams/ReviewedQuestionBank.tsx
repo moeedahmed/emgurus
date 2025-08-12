@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { getJson } from "@/lib/functionsClient";
 import { Input } from "@/components/ui/input";
@@ -170,21 +170,6 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
     return () => { cancelled = true; };
   }, [exam, qDebounced, page, pageSize]);
 
-  const startedRef = useRef(false);
-  const [searchParams] = useSearchParams();
-
-  useEffect(() => {
-    const mode = searchParams.get('mode');
-    if (!mode || startedRef.current) return;
-    if (!loading && items.length) {
-      startedRef.current = true;
-      if (mode === 'practice') {
-        navigate(`/exams/reviewed/${items[0].id}`, { state: { ids: items.map(i => i.id), index: 0 } });
-      } else if (mode === 'exam') {
-        navigate('/exams/reviewed-exam', { state: { ids: items.map(i => i.id) } });
-      }
-    }
-  }, [loading, items, searchParams]);
 
   const FiltersPanel = () => {
     const topics = Array.from(new Set(items.map(i => i.topic).filter(Boolean))) as string[];

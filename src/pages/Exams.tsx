@@ -18,7 +18,7 @@ export default function Exams() {
     <main>
       <PageHero title="EMGurus Exam Practice" subtitle="Targeted MCQs for MRCEM Primary, MRCEM SBA, and FRCEM. Learn smarter, score higher." align="center" ctas={[{ label: "Exam Membership", href: "/pricing", variant: "outline" }]} />
       <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="mx-auto max-w-5xl grid items-stretch gap-6 md:grid-cols-2">
+        <div className="mx-auto max-w-5xl grid items-stretch gap-6 md:grid-cols-3">
           <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
               <h3 className="text-xl font-semibold mb-2">Realtime AI Questions</h3>
@@ -29,8 +29,24 @@ export default function Exams() {
               </ul>
             </div>
             <div className="pt-6">
-              <Button size="lg" onClick={() => navigate('/exams/ai-practice')} aria-label="Start AI Practice">
-                Start AI Practice
+              <Button size="lg" onClick={() => navigate('/exams/ai-practice')} aria-label="Practice Mode">
+                Practice Mode
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Exam Mode</h3>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Timed session from reviewed bank</li>
+                <li>• Randomized options with summary</li>
+                <li>• Track performance by topic</li>
+              </ul>
+            </div>
+            <div className="pt-6">
+              <Button size="lg" onClick={() => navigate('/exams/reviewed-exam')} aria-label="Exam Mode">
+                Exam Mode
               </Button>
             </div>
           </Card>
@@ -41,14 +57,13 @@ export default function Exams() {
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Reviewed by Gurus</li>
                 <li>• Filter by exam and topic</li>
-                <li>• Track your progress</li>
+                <li>• Browse stems quickly</li>
               </ul>
             </div>
             <div className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <Button onClick={() => navigate('/exams/reviewed?mode=practice')} aria-label="Practice mode">Practice mode</Button>
-                <Button onClick={() => navigate('/exams/reviewed?mode=exam')} aria-label="Exam mode">Exam mode</Button>
-              </div>
+              <Button size="lg" onClick={() => navigate('/exams/reviewed')} aria-label="Browse Question Bank">
+                Browse Question Bank
+              </Button>
             </div>
           </Card>
         </div>
