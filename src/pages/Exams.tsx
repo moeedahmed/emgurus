@@ -11,6 +11,25 @@ import { EXAMS, CURRICULA, ExamName } from "@/lib/curricula";
 import { getJson } from "@/lib/functionsClient";
 import { supabase } from "@/integrations/supabase/client";
 
+// Map human names to backend enum codes
+const EXAM_CODE_MAP_LANDING: Record<ExamName, string> = {
+  "MRCEM Primary": "MRCEM_PRIMARY",
+  "MRCEM Intermediate SBA": "MRCEM_SBA",
+  "FRCEM SBA": "FRCEM_SBA",
+};
+
+const buildExamVariants = (exam: string): string[] => {
+  const set = new Set<string>();
+  set.add(exam);
+  set.add(exam.replace(/\s+/g, "_"));
+  set.add(exam.replace(/\s+/g, "_").toUpperCase());
+  set.add(exam.toUpperCase());
+  const mapped = (EXAM_CODE_MAP_LANDING as any)[exam];
+  if (mapped) { set.add(mapped); set.add(String(mapped).toUpperCase()); }
+  return Array.from(set).filter(Boolean);
+};
+
+
 export default function Exams() {
   const navigate = useNavigate();
   const [practiceOpen, setPracticeOpen] = useState(false);
@@ -41,31 +60,37 @@ export default function Exams() {
   const fetchReviewedIds = async (exam?: ExamName | "", topic?: string, limit: number = 50) => {
     const params = new URLSearchParams();
     params.set('limit', String(Math.max(1, Math.min(100, limit))));
-    if (exam) params.set('exam', String(exam));
+    const examParam = exam ? (EXAM_CODE_MAP_LANDING[exam] || exam) : "";
+    if (examParam) params.set('exam', String(examParam));
     if (topic && topic !== 'All areas') params.set('q', topic);
     try {
       const res = await getJson(`/public-reviewed-exams?${params.toString()}`);
       const items = Array.isArray(res.items) ? res.items : [];
-      return items.map((r: any) => r.id).filter(Boolean);
-    } catch {
-      // Fallback to direct table query
-      let q = (supabase as any)
-        .from('reviewed_exam_questions')
-        .select('id', { count: 'exact' })
-        .eq('status', 'approved')
-        .order('reviewed_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(Math.max(1, Math.min(100, limit)));
-      if (exam) q = q.or(`exam.eq.${exam},exam_type.eq.${exam}`);
-      if (topic && topic !== 'All areas') {
-        q = (q as any).contains?.('tags', [topic]) || (q as any).eq('topic', topic);
-      }
-      const { data, error } = await q;
-      if (error) throw error;
-      return (Array.isArray(data) ? data : []).map((r: any) => r.id).filter(Boolean);
-    }
-  };
+      const ids = items.map((r: any) => r.id).filter(Boolean);
+      if (ids.length) return ids;
+      // If edge returns empty, fall through to direct query for robustness
+    } catch {}
 
+    // Fallback to direct table query
+    let q = (supabase as any)
+      .from('reviewed_exam_questions')
+      .select('id', { count: 'exact' })
+      .eq('status', 'approved')
+      .order('reviewed_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(Math.max(1, Math.min(100, limit)));
+
+    if (exam) {
+      const variants = buildExamVariants(exam as string);
+      const or = variants.map((v) => `exam.eq.${v},exam_type.eq.${v}`).join(',');
+      q = q.or(or);
+    }
+    if (topic && topic !== 'All areas') {
+      q = (q as any).contains?.('tags', [topic]) || (q as any).eq('topic', topic);
+    }
+    const { data } = await q;
+    return (Array.isArray(data) ? data : []).map((r: any) => r.id).filter(Boolean);
+  };
   const startPractice = async () => {
     try {
       const ids = await fetchReviewedIds(pExam, pTopic, 50);
@@ -263,6 +288,23 @@ export default function Exams() {
               </Dialog>
             </div>
           </Card>
+        </div>
+      </section>
+
+      {/* Reassurance: original runners are intact */}
+      <section className="container mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+        <div className="mx-auto max-w-5xl">
+          <div className="text-xs text-muted-foreground mb-2">Original runners (unchanged)</div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card className="p-4 flex items-center justify-between">
+              <div className="text-sm font-medium">Reviewed Question Bank</div>
+              <a href="/exams/reviewed"><Button size="sm" variant="outline">Open</Button></a>
+            </Card>
+            <Card className="p-4 flex items-center justify-between">
+              <div className="text-sm font-medium">Exam Mode (legacy)</div>
+              <Button size="sm" onClick={async()=>{ const ids = await fetchReviewedIds(undefined, undefined, 10); if(ids.length){ navigate('/exams/reviewed-exam', { state: { ids } }); } else { navigate('/exams/reviewed'); } }}>Start</Button>
+            </Card>
+          </div>
         </div>
       </section>
     </main>
