@@ -34,13 +34,13 @@ export default function QuestionCard({
   return (
     <div className="grid gap-4">
       <Card>
-        <CardContent className="prose prose-sm dark:prose-invert max-w-none py-4">
+        <CardContent className="prose prose-sm dark:prose-invert max-w-none py-4 break-words overflow-x-hidden">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{stem}</ReactMarkdown>
         </CardContent>
       </Card>
 
-      <div className="rounded-lg border border-border p-4">
-        <RadioGroup key={questionId || 'q'} value={selectedKey} onValueChange={onSelect}>
+      <div className="rounded-lg border border-border p-4 w-full">
+        <RadioGroup key={questionId || 'q'} value={selectedKey} onValueChange={onSelect} className="w-full">
             {options.map((o) => {
               const isCorrect = !!showExplanation && !!correctKey && o.key === correctKey;
               const isWrongSel = !!showExplanation && !!correctKey && o.key === selectedKey && selectedKey !== correctKey;
@@ -49,15 +49,15 @@ export default function QuestionCard({
                 <label
                   key={rowKey}
                   className={cn(
-                    "flex items-start gap-3 py-2 rounded-md px-2 transition-colors",
+                    "flex items-start gap-3 py-2 rounded-md px-2 transition-colors w-full",
                     isCorrect && "bg-success/20 ring-1 ring-success/40",
                     isWrongSel && "bg-destructive/10 ring-1 ring-destructive/40"
                   )}
                 >
                   <RadioGroupItem value={o.key} id={`opt-${questionId || 'q'}-${o.key}`} disabled={!!lockSelection} />
-                  <div className="grid gap-1">
-                    <div className="font-medium">{o.key}.</div>
-                    <div className="text-sm text-foreground/90">
+                  <div className="grid gap-1 min-w-0">
+                    <div className="font-medium shrink-0">{o.key}.</div>
+                    <div className="text-sm text-foreground/90 break-words overflow-x-hidden">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{o.text}</ReactMarkdown>
                     </div>
                   </div>
@@ -71,7 +71,7 @@ export default function QuestionCard({
         <Card>
           <CardContent className="py-4">
             <div id="explanation-heading" tabIndex={-1} className="font-semibold mb-2 outline-none">Explanation</div>
-            <div className="prose prose-sm dark:prose-invert max-w-none">
+            <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-hidden">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanation || "No explanation provided."}</ReactMarkdown>
             </div>
             {source && (

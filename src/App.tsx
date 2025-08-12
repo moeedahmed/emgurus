@@ -206,7 +206,6 @@ const App = () => (
               <Route path="/tools/my-exam-drafts" element={<MyExamDrafts />} />
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="/exams/exam" element={<ReviewedExamSession />} />
-              <Route path="/exams/reviewed-exam" element={<ReviewedExamSession />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
