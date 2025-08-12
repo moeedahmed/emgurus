@@ -54,7 +54,7 @@ export default function WorkspaceLayout({
             <SidebarGroup>
               <SidebarGroupLabel className="text-sm font-semibold">{title}</SidebarGroupLabel>
               <SidebarGroupContent>
-                <nav className="flex flex-col gap-1 p-1">
+                <nav className="flex-1 overflow-y-auto flex flex-col gap-1 p-1">
                   {sections.map((s) => {
                     const Icon = s.icon as any;
                     const active = s.id === sectionId;
