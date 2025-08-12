@@ -10,6 +10,7 @@ import { BookingModal } from "@/components/consultations/BookingModal";
 import type { Guru } from "@/components/consultations/GuruCard";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
+import { Linkedin, Twitter } from "lucide-react";
 
 interface ProfileRow {
   user_id: string;
@@ -175,16 +176,17 @@ export default function PublicProfile() {
             )}
 
             {/* Socials are always public if present */}
-            {(profile.linkedin || profile.twitter || profile.website) && (
+            {(profile.linkedin || profile.twitter) && (
               <div className="flex gap-3 pt-3 text-sm">
                 {profile.linkedin && (
-                  <a href={profile.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="underline">LinkedIn</a>
+                  <a href={profile.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn" className="inline-flex items-center">
+                    <Linkedin className="h-4 w-4" />
+                  </a>
                 )}
                 {profile.twitter && (
-                  <a href={profile.twitter} target="_blank" rel="noreferrer" aria-label="X (Twitter)" className="underline">X</a>
-                )}
-                {profile.website && (
-                  <a href={profile.website} target="_blank" rel="noreferrer" aria-label="Website" className="underline">Website</a>
+                  <a href={profile.twitter} target="_blank" rel="noreferrer" aria-label="X (Twitter)" title="X (Twitter)" className="inline-flex items-center">
+                    <Twitter className="h-4 w-4" />
+                  </a>
                 )}
               </div>
             )}

@@ -15,6 +15,7 @@ import { Link } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import KpiCard from "@/components/dashboard/KpiCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Linkedin, Twitter } from "lucide-react";
 const SUPABASE_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/consultations-api";
 interface ProfileRow {
   user_id: string;
@@ -73,7 +74,38 @@ export default function Profile() {
   const [hospitalText, setHospitalText] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [twitterUrl, setTwitterUrl] = useState('');
-  const [websiteUrl, setWebsiteUrl] = useState('');
+
+  // Social connect helpers
+  const onConnect = async (provider: 'linkedin_oidc' | 'twitter') => {
+    const redirectUrl = `${window.location.origin}/profile`;
+    const { error } = await supabase.auth.signInWithOAuth({ provider: provider as any, options: { redirectTo: redirectUrl } as any });
+    if (error) toast({ title: `Could not start ${provider} connect` });
+  };
+
+  useEffect(() => {
+    (async () => {
+      if (!user) return;
+      const { data: authUserRes } = await supabase.auth.getUser();
+      const identities = (authUserRes.user as any)?.identities || [];
+      let updates: any = {};
+      for (const ident of identities) {
+        const provider = (ident as any).provider as string;
+        const idata = (ident as any).identity_data || {};
+        if (provider === 'linkedin_oidc') {
+          const url = idata.url || idata.profile || null;
+          if (url && !linkedinUrl) { updates.linkedin = url; setLinkedinUrl(url); }
+        }
+        if (provider === 'twitter') {
+          const url = idata.url || (idata.username ? `https://twitter.com/${idata.username}` : null);
+          if (url && !twitterUrl) { updates.twitter = url; setTwitterUrl(url); }
+        }
+      }
+      if (Object.keys(updates).length) {
+        await supabase.from('profiles').update(updates).eq('user_id', user.id);
+        setProfile(p => p ? ({ ...p, ...updates }) : p);
+      }
+    })();
+  }, [user?.id, linkedinUrl, twitterUrl]);
 
   useEffect(() => {
     document.title = "My Profile | EMGurus";
@@ -109,7 +141,7 @@ export default function Profile() {
       setHospitalText(row?.hospital || '');
       setLinkedinUrl(row?.linkedin || '');
       setTwitterUrl(row?.twitter || '');
-      setWebsiteUrl(row?.website || '');
+      
 
       // Auto-focus Profile tab if mandatory fields are missing
       const missing = !row?.full_name || !row?.country || !(row?.primary_specialty || row?.specialty) || !row?.timezone || !((row?.exam_interests || row?.exams || []).length) || !((row?.languages || []).length);
@@ -228,19 +260,23 @@ export default function Profile() {
                     <Badge key={r} variant="secondary">{r}</Badge>
                   ))}
                 </div>
-                {(profile?.linkedin || profile?.twitter || profile?.website) && (
+                {(profile?.linkedin || profile?.twitter) && (
                   <div className="flex gap-3 text-sm pt-2">
-                    {profile?.linkedin && (<a href={profile.linkedin} target="_blank" rel="noreferrer" className="underline">LinkedIn</a>)}
-                    {profile?.twitter && (<a href={profile.twitter} target="_blank" rel="noreferrer" className="underline">X (Twitter)</a>)}
-                    {profile?.website && (<a href={profile.website} target="_blank" rel="noreferrer" className="underline">Website</a>)}
+                    {profile?.linkedin && (
+                      <a href={profile.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" title="LinkedIn" className="inline-flex items-center">
+                        <Linkedin className="h-4 w-4" />
+                      </a>
+                    )}
+                    {profile?.twitter && (
+                      <a href={profile.twitter} target="_blank" rel="noreferrer" aria-label="X (Twitter)" title="X (Twitter)" className="inline-flex items-center">
+                        <Twitter className="h-4 w-4" />
+                      </a>
+                    )}
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="flex gap-3 pt-2 flex-wrap">
-              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setActiveTab('profile')}>Edit Profile</Button>
-            </div>
 
             <Separator className="my-4" />
             <div className="space-y-4">
@@ -372,17 +408,18 @@ export default function Profile() {
                         <Label>Bio</Label>
                         <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={4} />
                       </div>
-                      <div className="grid gap-1">
-                        <Label>LinkedIn</Label>
-                        <Input value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="https://linkedin.com/in/..." />
+                      <div className="grid gap-1 md:col-span-2">
+                        <Label>Social accounts</Label>
+                        <div className="flex gap-3 flex-wrap">
+                          <Button variant="outline" onClick={() => onConnect('linkedin_oidc')} disabled={!!linkedinUrl} className="inline-flex items-center gap-2">
+                            <Linkedin className="h-4 w-4" /> {linkedinUrl ? 'LinkedIn connected' : 'Connect LinkedIn'}
+                          </Button>
+                          <Button variant="outline" onClick={() => onConnect('twitter')} disabled={!!twitterUrl} className="inline-flex items-center gap-2">
+                            <Twitter className="h-4 w-4" /> {twitterUrl ? 'X connected' : 'Connect X'}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Connected accounts appear as icons on your public profile.</p>
                       </div>
-                      <div className="grid gap-1">
-                        <Label>Twitter/X</Label>
-                        <Input value={twitterUrl} onChange={(e) => setTwitterUrl(e.target.value)} placeholder="https://twitter.com/..." />
-                      </div>
-                      <div className="grid gap-1">
-                        <Label>Website</Label>
-                        <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://..." />
                       </div>
                     </div>
                     <div className="pt-2">
@@ -403,7 +440,6 @@ export default function Profile() {
                             hospital: hospitalText,
                             linkedin: linkedinUrl || null,
                             twitter: twitterUrl || null,
-                            website: websiteUrl || null,
                             onboarding_required: false,
                           };
                           const { error } = await supabase.from('profiles').update(payload).eq('user_id', user.id);
@@ -490,9 +526,6 @@ export default function Profile() {
                     <Card id="pricing" className="w-full overflow-hidden p-6 space-y-4 shadow-md">
                       <div className="flex items-center justify-between">
                         <div className="font-semibold">Pricing</div>
-                        {profile?.price_per_30min ? (
-                          <div className="text-sm text-muted-foreground">Stored as ${'{'}profile.price_per_30min{'}'} / 30 min</div>
-                        ) : null}
                       </div>
                       <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full max-w-md">
                         <Label htmlFor="hourly" className="sm:w-44">Price per 30 min (USD)</Label>
