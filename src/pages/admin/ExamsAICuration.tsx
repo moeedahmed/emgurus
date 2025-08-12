@@ -142,7 +142,7 @@ const ExamsAICuration = () => {
       {/* Unassigned list with bulk actions */}
       <section className="mb-10">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-semibold">Generated (Unassigned)</h2>
+          <h2 className="text-xl font-semibold">Generated</h2>
           <div className="flex items-center gap-2">
             <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
               <DialogTrigger asChild>
@@ -196,7 +196,7 @@ const ExamsAICuration = () => {
                     <input type="checkbox" checked={!!selected[q.id]} onChange={() => toggleOne(q.id)} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm">{new Date(q.created_at).toLocaleString()}</TableCell>
-                  <TableCell className="text-sm">{q.question_text}</TableCell>
+                  <TableCell className="text-sm"><a className="underline" href={`/guru/exams/review?open=${q.id}`}>{q.question_text}</a></TableCell>
                   <TableCell className="text-sm">{q.exam_type || '-'}</TableCell>
                   <TableCell className="text-sm">{q.difficulty_level || '-'}</TableCell>
                   <TableCell className="text-sm">{q.topic || '-'}</TableCell>

@@ -20,6 +20,8 @@ import Taxonomy from "@/pages/admin/Taxonomy";
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
 import ExamsAICuration from "@/pages/admin/ExamsAICuration";
+import SubmitQuestion from "@/pages/tools/SubmitQuestion";
+import QuestionSetsAdmin from "@/pages/admin/QuestionSets";
 
 // -------- Analytics panel
 const AdminAnalyticsPanel: React.FC = () => {
@@ -662,23 +664,31 @@ export default function DashboardAdmin() {
       ],
     },
     {
-      id: "exams_bank",
-      title: "Exams — Question Bank",
+      id: "exams",
+      title: "Exams",
       icon: GraduationCap,
       tabs: [
         {
-          id: "stored",
-          title: "Stored Questions",
+          id: "questions",
+          title: "Questions",
           render: (
             <div className="p-0">
-              <AdminExamShortcutsBar />
               <ReviewedQuestionBank embedded />
             </div>
           ),
         },
         {
-          id: "exams-db",
-          title: "Exams Database",
+          id: "sets",
+          title: "Sets",
+          render: (
+            <div className="p-0">
+              <QuestionSetsAdmin />
+            </div>
+          ),
+        },
+        {
+          id: "database",
+          title: "Database",
           render: (
             <div className="p-4 space-y-4">
               <Card className="p-6">
@@ -688,38 +698,21 @@ export default function DashboardAdmin() {
             </div>
           ),
         },
+        { id: "submit", title: "Submit", render: <div className="p-0"><SubmitQuestion /></div> },
         {
           id: "generate",
           title: "Generate",
           render: (
             <div className="p-0">
-              <AdminExamShortcutsBar />
-              {/* Reuse full curation page for generator + quick assignment */}
               <ExamsAICuration />
             </div>
           ),
         },
-      ],
-    },
-    {
-      id: "exams_flow",
-      title: "Exams — Flow",
-      icon: GraduationCap,
-      tabs: [
         { id: "drafts", title: "Drafts", render: <DraftsPanel /> },
         { id: "assigned", title: "Assigned", render: <AssignedPanel /> },
         { id: "approved", title: "Approved", render: <ApprovedPanel /> },
         { id: "rejected", title: "Rejected", render: <RejectedPanel /> },
         { id: "marked", title: "Marked", render: <MarkedPanel /> },
-        {
-          id: "published",
-          title: "Published",
-          render: (
-            <div className="p-0">
-              <ReviewedQuestionBank embedded />
-            </div>
-          ),
-        },
       ],
     },
     {

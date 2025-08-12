@@ -52,7 +52,7 @@ export function WorkspaceLayoutInner({
   return (
     
       <div className="min-h-screen flex w-full">
-        <Sidebar className={cn("border-r", collapsed ? "w-14" : "w-60")} collapsible="icon">
+        <Sidebar className={cn("border-r z-20", collapsed ? "w-14" : "w-60")} collapsible="icon">
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel className="sticky top-0 z-10 bg-sidebar text-sm font-semibold">{title}</SidebarGroupLabel>
@@ -61,19 +61,55 @@ export function WorkspaceLayoutInner({
                   {sections.map((s) => {
                     const Icon = s.icon as any;
                     const active = s.id === sectionId;
+                    const search = new URLSearchParams(window.location.search);
+                    const currentTab = search.get('tab') || (s.tabs[0]?.id || '');
+
+                    const go = (sid: string, tid?: string) => {
+                      const sp = new URLSearchParams(window.location.search);
+                      if (tid) sp.set('tab', tid); else sp.delete('tab');
+                      history.replaceState(null, '', `${location.pathname}#${sid}?${sp.toString()}${location.hash.includes('#') ? '' : ''}`);
+                      // Also update hash if switching sections
+                      if (sid !== sectionId) {
+                        window.location.hash = `#${sid}`;
+                      }
+                    };
+
                     return (
-                      <a
-                        key={s.id}
-                        href={`#${s.id}`}
-                        className={cn(
-                          "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                          active ? "bg-muted text-primary" : "hover:bg-muted/50"
+                      <div key={s.id} className="flex flex-col">
+                        <a
+                          href={`#${s.id}`}
+                          onClick={(e) => { e.preventDefault(); go(s.id, currentTab); }}
+                          className={cn(
+                            "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                            active ? "bg-muted text-primary" : "hover:bg-muted/50"
+                          )}
+                          aria-current={active ? "page" : undefined}
+                        >
+                          {Icon && <Icon className="h-4 w-4" />}
+                          {!collapsed && <span>{s.title}</span>}
+                        </a>
+                        {/* sub-tabs */}
+                        {active && !collapsed && (
+                          <div className="ml-6 mt-1 mb-2 flex flex-col">
+                            {s.tabs.map((t) => {
+                              const isActiveTab = currentTab === t.id;
+                              return (
+                                <button
+                                  key={t.id}
+                                  onClick={() => go(s.id, t.id)}
+                                  className={cn(
+                                    "text-left text-xs rounded-md px-2 py-1 transition-colors",
+                                    isActiveTab ? "bg-muted font-medium" : "hover:bg-muted/50"
+                                  )}
+                                  aria-current={isActiveTab ? "true" : undefined}
+                                >
+                                  {t.title}
+                                </button>
+                              );
+                            })}
+                          </div>
                         )}
-                        aria-current={active ? "page" : undefined}
-                      >
-                        {Icon && <Icon className="h-4 w-4" />}
-                        {!collapsed && <span>{s.title}</span>}
-                      </a>
+                      </div>
                     );
                   })}
                 </nav>

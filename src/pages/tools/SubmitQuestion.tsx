@@ -17,17 +17,18 @@ export default function SubmitQuestion() {
   const [saving, setSaving] = useState(false);
   const [question, setQuestion] = useState({
     question_text: "",
-    option_a: "",
-    option_b: "",
-    option_c: "",
-    option_d: "",
-    correct_answer: "A" as "A"|"B"|"C"|"D",
-    explanation: "",
+    options: [
+      { key: "A", text: "", explanation: "" },
+      { key: "B", text: "", explanation: "" },
+      { key: "C", text: "", explanation: "" },
+      { key: "D", text: "", explanation: "" },
+      { key: "E", text: "", explanation: "" },
+    ],
+    correct_answer: "A" as "A"|"B"|"C"|"D"|"E",
     exam_type: "",
     difficulty_level: "",
     topic: "",
     subtopic: "",
-    keywords: [] as string[],
   });
 
   useEffect(() => {
@@ -43,18 +44,15 @@ export default function SubmitQuestion() {
         const { data, error } = await supabase.from('questions').select('*').eq('id', id).maybeSingle();
         if (error) throw error;
         if (data) setQuestion({
-          question_text: data.question_text || "",
-          option_a: data.option_a || "",
-          option_b: data.option_b || "",
-          option_c: data.option_c || "",
-          option_d: data.option_d || "",
-          correct_answer: (data.correct_answer || 'A') as any,
-          explanation: data.explanation || "",
+          question_text: data.stem || data.question_text || "",
+          options: Array.isArray(data.choices) ?
+            ["A","B","C","D","E"].map((k, i) => ({ key: k as any, text: (data.choices[i]?.text ?? data.choices[i] ?? "") as string, explanation: (data.choices[i]?.explanation ?? "") as string }))
+            : ["A","B","C","D","E"].map((k)=>({ key: k as any, text: "", explanation: "" })),
+          correct_answer: ((["A","B","C","D","E"][Number(data.correct_index ?? 0)] || 'A')) as any,
           exam_type: data.exam_type || "",
-          difficulty_level: data.difficulty_level || "",
+          difficulty_level: (data.difficulty_level || "") as any,
           topic: data.topic || "",
           subtopic: data.subtopic || "",
-          keywords: Array.isArray(data.keywords) ? data.keywords : [],
         });
       } catch (e: any) {
         toast({ title: 'Failed to load question', description: e.message, variant: 'destructive' });
@@ -64,22 +62,43 @@ export default function SubmitQuestion() {
 
   const onChange = (patch: Partial<typeof question>) => setQuestion((q) => ({ ...q, ...patch }));
 
-  const save = async (status: 'draft' | 'pending') => {
+  const save = async () => {
     try {
       setSaving(true);
+      const choiceTexts = question.options.map(o => o.text);
+      const correctIndex = ["A","B","C","D","E"].indexOf(question.correct_answer);
+      const explanation = question.options[correctIndex]?.explanation || "";
       if (id) {
-        const { error } = await supabase.from('questions').update({ ...question, status }).eq('id', id);
+        const { error } = await supabase
+          .from('exam_questions')
+          .update({ stem: question.question_text, choices: choiceTexts, correct_index: correctIndex, explanation, exam_type: question.exam_type, topic: question.topic, subtopic: question.subtopic })
+          .eq('id', id);
         if (error) throw error;
         toast({ title: 'Saved', description: 'Question updated.' });
       } else {
-        const { data, error } = await supabase.from('questions').insert({ ...question, status }).select('id').maybeSingle();
+        const { data, error } = await supabase.rpc('create_exam_draft', { p_stem: question.question_text, p_choices: choiceTexts, p_correct_index: correctIndex, p_explanation: explanation, p_tags: [], p_exam_type: (question.exam_type || 'OTHER') as any });
         if (error) throw error;
-        toast({ title: 'Submitted', description: status === 'pending' ? 'Sent for review.' : 'Saved as draft.' });
-        if (data?.id) navigate(`/tools/submit-question/${data.id}`);
+        toast({ title: 'Saved', description: 'Draft created.' });
+        const newId = Array.isArray(data) && data.length ? (data[0] as any).id : undefined;
+        if (newId) navigate(`/tools/submit-question/${newId}`);
       }
     } catch (e: any) {
       toast({ title: 'Failed', description: e.message, variant: 'destructive' });
     } finally { setSaving(false); }
+  };
+
+  const review = async () => {
+    try {
+      await save();
+      const targetId = id || (new URL(location.href).pathname.split('/').pop() || undefined);
+      if (targetId) {
+        const { error } = await supabase.rpc('submit_exam_for_review', { p_question_id: targetId });
+        if (error) throw error;
+        toast({ title: 'Submitted for review' });
+      }
+    } catch (e:any) {
+      toast({ title: 'Failed', description: e.message, variant: 'destructive' });
+    }
   };
 
   const difficulties = useMemo(() => ['easy','medium','hard'], []);
@@ -93,27 +112,27 @@ export default function SubmitQuestion() {
 
       <Card className="p-4 space-y-4">
         <div>
-          <label className="text-sm font-medium">Question (stem)</label>
+          <label className="text-sm font-medium">Question Stem</label>
           <Textarea rows={6} value={question.question_text} onChange={(e) => onChange({ question_text: e.target.value })} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium">Option A</label>
-            <Input value={question.option_a} onChange={(e) => onChange({ option_a: e.target.value })} />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Option B</label>
-            <Input value={question.option_b} onChange={(e) => onChange({ option_b: e.target.value })} />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Option C</label>
-            <Input value={question.option_c} onChange={(e) => onChange({ option_c: e.target.value })} />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Option D</label>
-            <Input value={question.option_d} onChange={(e) => onChange({ option_d: e.target.value })} />
-          </div>
+          {question.options.map((opt, idx) => (
+            <div key={opt.key} className="space-y-2">
+              <div>
+                <label className="text-sm font-medium">Option {opt.key}</label>
+                <Input value={opt.text} onChange={(e) => {
+                  const txt = e.target.value; setQuestion(q => { const next = { ...q, options: q.options.map((o,i)=> i===idx? { ...o, text: txt } : o) }; return next; });
+                }} />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Explanation {opt.key}</label>
+                <Textarea rows={3} value={opt.explanation} onChange={(e) => {
+                  const val = e.target.value; setQuestion(q => { const next = { ...q, options: q.options.map((o,i)=> i===idx? { ...o, explanation: val } : o) }; return next; });
+                }} />
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -122,7 +141,7 @@ export default function SubmitQuestion() {
             <Select value={question.correct_answer} onValueChange={(v) => onChange({ correct_answer: v as any })}>
               <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
               <SelectContent>
-                {(['A','B','C','D'] as const).map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+                {(["A","B","C","D","E"] as const).map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -152,19 +171,11 @@ export default function SubmitQuestion() {
           </div>
         </div>
 
-        <div>
-          <label className="text-sm font-medium">Tags</label>
-          <TagInput value={question.keywords} onChange={(tags) => onChange({ keywords: tags })} placeholder="Add tags and hit Enter" />
-        </div>
 
-        <div>
-          <label className="text-sm font-medium">Explanation</label>
-          <Textarea rows={4} value={question.explanation} onChange={(e) => onChange({ explanation: e.target.value })} />
-        </div>
 
         <div className="flex flex-wrap gap-2 pt-2">
-          <Button disabled={saving} variant="outline" onClick={() => save('draft')}>Save Draft</Button>
-          <Button disabled={saving} onClick={() => save('pending')}>{id ? 'Save & Resubmit' : 'Submit for Review'}</Button>
+          <Button disabled={saving} variant="outline" onClick={save}>Save</Button>
+          <Button disabled={saving} onClick={review}>Review</Button>
         </div>
       </Card>
 

@@ -119,7 +119,7 @@ export default function DashboardGuru() {
         { id: "assigned", title: "Assigned", render: <div className="p-0"><GuruReviewQueue /></div> },
         { id: "approved", title: "Approved", render: <div className="p-0"><ReviewedByMe /></div> },
         { id: "rejected", title: "Rejected", render: <div className="p-0"><RejectedByMe /></div> },
-        { id: "create", title: "Create", render: <div className="p-0"><SubmitQuestion /></div> },
+        { id: "submit", title: "Submit", render: <div className="p-0"><SubmitQuestion /></div> },
         { id: "submitted", title: "Submitted", render: <div className="p-0"><MyExamDrafts /></div> },
       ],
     },
