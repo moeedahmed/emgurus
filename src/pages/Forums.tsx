@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ForumsFilterPanel from "@/components/forums/ForumsFilterPanel";
@@ -165,12 +165,18 @@ const Forums = () => {
             {(section || topic) && (
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 {section && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setSection("")}>{categoryMap[section] || 'Section'} ×</Button>
+                  <Chip name="forums_active_section" value={section} selected variant="solid" size="sm" onSelect={() => setSection("")}>
+                    {categoryMap[section] || 'Section'} ×
+                  </Chip>
                 )}
                 {topic && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setTopic("")}>{topic} ×</Button>
+                  <Chip name="forums_active_topic" value={topic} selected variant="solid" size="sm" onSelect={() => setTopic("")}>
+                    {topic} ×
+                  </Chip>
                 )}
-                <Button size="sm" variant="ghost" onClick={() => { setQ(""); setSection(""); setTopic(""); }}>Clear all</Button>
+                <Chip name="forums_clear" value="clear" variant="ghost" size="sm" onSelect={() => { setQ(""); setSection(""); setTopic(""); }}>
+                  Clear all
+                </Chip>
               </div>
             )}
 
@@ -193,18 +199,33 @@ const Forums = () => {
                           <h2 className="text-lg font-semibold group-hover:text-primary transition-colors">{t.title}</h2>
                           <p className="text-sm text-muted-foreground line-clamp-2">{t.content}</p>
                           <div className="flex flex-wrap items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
-                            {/* Section tag */}
-                            <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setSection(t.category_id)}>
+                            {/* Section chip */}
+                            <Chip
+                              name="forums_section_chip"
+                              value={t.category_id}
+                              selected={section === t.category_id}
+                              variant={section === t.category_id ? "solid" : "outline"}
+                              size="sm"
+                              onSelect={() => setSection(t.category_id)}
+                            >
                               {categoryMap[t.category_id] || 'Section'}
-                            </Badge>
-                            {/* Topic tags if available */}
+                            </Chip>
+                            {/* Topic chips if available */}
                             {(t.topics || []).slice(0, 4).map((tag) => (
-                              <Badge key={tag} variant="outline" className="text-xs cursor-pointer" onClick={() => setTopic(tag)}>
+                              <Chip
+                                key={tag}
+                                name="forums_topic_chip"
+                                value={tag}
+                                selected={topic === tag}
+                                variant={topic === tag ? "solid" : "outline"}
+                                size="sm"
+                                onSelect={() => setTopic(tag)}
+                              >
                                 #{tag}
-                              </Badge>
+                              </Chip>
                             ))}
                             {(t.topics || []).length > 4 && (
-                              <Badge variant="outline" className="text-xs">+{(t.topics || []).length - 4}</Badge>
+                              <span className="text-xs text-muted-foreground">+{(t.topics || []).length - 4}</span>
                             )}
                           </div>
                           <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
