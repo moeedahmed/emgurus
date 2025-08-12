@@ -45,43 +45,7 @@ const ExamsAICuration = () => {
     })();
   }, []);
 
-  const allSelectedIds = useMemo(() => Object.keys(selected).filter(id => selected[id]), [selected]);
-  const toggleOne = (id: string) => setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
-  const toggleAll = () => {
-    const flag = generated.length > 0 && allSelectedIds.length !== generated.length;
-    const next: Record<string, boolean> = {};
-    generated.forEach((q) => { next[q.id] = flag; });
-    setSelected(next);
-  };
 
-  const onAssign = async () => {
-    if (!reviewerId) {
-      toast({ title: "Pick a Guru", description: "Select a reviewer before assigning.", variant: "destructive" });
-      return;
-    }
-    if (allSelectedIds.length === 0) {
-      toast({ title: "No selection", description: "Choose at least one question.", variant: "destructive" });
-      return;
-    }
-    try {
-      setLoading(true);
-      await callFunction("/exams-admin-curate/assign", { question_ids: allSelectedIds, reviewer_id: reviewerId }, true);
-      toast({ title: "Assigned", description: `Assigned ${allSelectedIds.length} question(s).` });
-      setAssignOpen(false);
-      setSelected({});
-      // refresh generated + approved
-      const [gen, app] = await Promise.all([
-        callFunction("/exams-admin-curate/generated", null, true),
-        callFunction("/exams-admin-curate/approved", null, true),
-      ]);
-      setGenerated(gen?.data || []);
-      setApproved(app?.data || []);
-    } catch (e: any) {
-      toast({ title: "Assign failed", description: e.message || "Please try again." , variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -175,28 +139,6 @@ const ExamsAICuration = () => {
 
       {/* Outcomes (optional) */}
       <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Curation Outcomes</h2>
-          <Button variant="outline" size="sm" onClick={async () => {
-            try {
-              setLoading(true);
-              const [app, rej] = await Promise.all([
-                callFunction("/exams-admin-curate/approved", null, true),
-                callFunction("/exams-admin-curate/rejected", null, true)
-              ]);
-              setApproved(app?.data || []);
-              setRejected(rej?.data || []);
-            } finally { setLoading(false); }
-          }}>Refresh</Button>
-        </div>
-        <Tabs defaultValue="approved">
-          <TabsList>
-            <TabsTrigger value="approved">Approved</TabsTrigger>
-            <TabsTrigger value="rejected">Rejected (Archive)</TabsTrigger>
-          </TabsList>
-          <TabsContent value="approved">
-            <Card className="p-0 overflow-hidden">
-              <Table>...
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Curation Outcomes</h2>
           <Button variant="outline" size="sm" onClick={async () => {
