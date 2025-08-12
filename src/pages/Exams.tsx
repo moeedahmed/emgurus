@@ -3,7 +3,7 @@ import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -237,6 +237,7 @@ const [eTime, setETime] = useState<string>("untimed");
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>AI Practice (Beta)</DialogTitle>
+                    <DialogDescription className="sr-only">Choose exam, number of questions and curriculum to start AI practice.</DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 md:grid-cols-3">
                     <div>
@@ -307,6 +308,7 @@ const [eTime, setETime] = useState<string>("untimed");
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Start Practice</DialogTitle>
+                    <DialogDescription className="sr-only">Select an exam and topic to start practice mode.</DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -355,6 +357,7 @@ const [eTime, setETime] = useState<string>("untimed");
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Start Exam</DialogTitle>
+                    <DialogDescription className="sr-only">Select exam and topic, then set number and time to begin a timed exam.</DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="md:col-span-1">
