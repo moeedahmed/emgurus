@@ -280,7 +280,43 @@ const handleToggleTag = (tag: string) => {
         duration_sec: summary.durationSec,
         breakdown: summary.byTopic,
       } as any;
-      try { await (supabase as any).from('exam_attempts').insert(payload); } catch (e) { console.warn('exam_attempts insert skipped', e); }
+      try {
+        const { data: attemptIns, error: attErr } = await (supabase as any)
+          .from('exam_attempts')
+          .insert(payload)
+          .select('id')
+          .single();
+        if (!attErr && attemptIns?.id) {
+          // Build items from localStorage + fetch correct answers
+          const qids = summary.questionIds;
+          let store: any = {};
+          try { store = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); } catch {}
+          const { data: rows } = await (supabase as any)
+            .from('reviewed_exam_questions')
+            .select('id, correct_index, topic')
+            .in('id', qids);
+          const map: Record<string, any> = Object.fromEntries(((rows as any[]) || []).map(r => [r.id, r]));
+          const items = qids.map((qid, idx) => {
+            const sel = store?.[qid]?.last_selected || null;
+            if (!sel) return null;
+            const ci = map[qid]?.correct_index ?? 0;
+            const ck = letters[ci] || 'A';
+            const t = store?.[qid]?.topic || map[qid]?.topic || null;
+            return {
+              attempt_id: attemptIns.id,
+              user_id: user.id,
+              question_id: qid,
+              selected_key: sel,
+              correct_key: ck,
+              topic: t,
+              position: idx + 1,
+            } as any;
+          }).filter(Boolean);
+          if (items.length) {
+            try { await (supabase as any).from('exam_attempt_items').insert(items as any); } catch (e) { console.warn('exam_attempt_items insert skipped', e); }
+          }
+        }
+      } catch (e) { console.warn('exam_attempts insert skipped', e); }
       loggedRef.current = true;
     })();
   }, [ended, summary]);

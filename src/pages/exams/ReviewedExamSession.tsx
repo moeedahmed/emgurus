@@ -216,7 +216,23 @@ export default function ReviewedExamSession() {
         breakdown: byTopic,
       } as any;
       try {
-        await (supabase as any).from('exam_attempts').insert(payload);
+        const { data: attemptIns, error: attErr } = await (supabase as any)
+          .from('exam_attempts')
+          .insert(payload)
+          .select('id')
+          .single();
+        if (!attErr && attemptIns?.id) {
+          const items = answers.map((a, i) => ({
+            attempt_id: attemptIns.id,
+            user_id: user.id,
+            question_id: a.id,
+            selected_key: a.selected,
+            correct_key: a.correct,
+            topic: a.topic || null,
+            position: i + 1,
+          }));
+          try { await (supabase as any).from('exam_attempt_items').insert(items as any); } catch (e) { console.warn('exam_attempt_items insert skipped', e); }
+        }
       } catch (e) {
         console.warn('exam_attempts insert skipped', e);
       }

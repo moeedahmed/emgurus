@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
 import { BookOpen, Stethoscope, GraduationCap, BarChart3 } from "lucide-react";
-import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
-import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
 import Bookings from "@/pages/Bookings";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +9,10 @@ import KpiCard from "@/components/dashboard/KpiCard";
 import TrendCard from "@/components/dashboard/TrendCard";
 import { useUserMetrics } from "@/hooks/metrics/useUserMetrics";
 import { submitPost } from "@/lib/blogsApi";
+import ExamsOverview from "@/components/dashboard/exams/ExamsOverview";
+import ExamsAttempts from "@/components/dashboard/exams/ExamsAttempts";
+import ExamsProgressMatrix from "@/components/dashboard/exams/ExamsProgressMatrix";
+import ExamsFeedbackList from "@/components/dashboard/exams/ExamsFeedbackList";
 
 export default function DashboardUser() {
   useEffect(() => { document.title = "Learner Workspace | EMGurus"; }, []);
@@ -142,8 +144,10 @@ export default function DashboardUser() {
       title: "Exams",
       icon: GraduationCap,
       tabs: [
-        { id: "question-bank", title: "Question Bank", render: <div className="p-0"><ReviewedQuestionBank embedded /></div> },
-        { id: "ai-practice", title: "AI Practice", render: <div className="p-0"><AiPracticeConfig /></div> },
+        { id: "overview", title: "Overview", render: <div className="p-0"><ExamsOverview /></div> },
+        { id: "attempts", title: "Attempts", render: <div className="p-0"><ExamsAttempts /></div> },
+        { id: "progress", title: "Progress", render: <div className="p-0"><ExamsProgressMatrix /></div> },
+        { id: "feedback", title: "Feedback", render: <div className="p-0"><ExamsFeedbackList /></div> },
       ],
     },
     {

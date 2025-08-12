@@ -1062,6 +1062,50 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_attempt_items: {
+        Row: {
+          attempt_id: string
+          correct_key: string | null
+          created_at: string
+          id: string
+          position: number | null
+          question_id: string
+          selected_key: string | null
+          topic: string | null
+          user_id: string
+        }
+        Insert: {
+          attempt_id: string
+          correct_key?: string | null
+          created_at?: string
+          id?: string
+          position?: number | null
+          question_id: string
+          selected_key?: string | null
+          topic?: string | null
+          user_id: string
+        }
+        Update: {
+          attempt_id?: string
+          correct_key?: string | null
+          created_at?: string
+          id?: string
+          position?: number | null
+          question_id?: string
+          selected_key?: string | null
+          topic?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_attempt_items_attempt_fk"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "exam_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_attempts: {
         Row: {
           breakdown: Json | null
