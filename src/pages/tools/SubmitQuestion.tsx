@@ -41,18 +41,18 @@ export default function SubmitQuestion() {
     if (!id) return;
     (async () => {
       try {
-        const { data, error } = await supabase.from('questions').select('*').eq('id', id).maybeSingle();
+        const { data, error } = await supabase.from('exam_questions').select('*').eq('id', id).maybeSingle();
         if (error) throw error;
         if (data) setQuestion({
-          question_text: data.stem || data.question_text || "",
-          options: Array.isArray(data.choices) ?
-            ["A","B","C","D","E"].map((k, i) => ({ key: k as any, text: (data.choices[i]?.text ?? data.choices[i] ?? "") as string, explanation: (data.choices[i]?.explanation ?? "") as string }))
+          question_text: (data as any).stem || (data as any).question_text || "",
+          options: Array.isArray((data as any).choices) ?
+            ["A","B","C","D","E"].map((k, i) => ({ key: k as any, text: (((data as any).choices[i]?.text ?? (data as any).choices[i] ?? "") as string), explanation: (((data as any).choices[i]?.explanation ?? "") as string) }))
             : ["A","B","C","D","E"].map((k)=>({ key: k as any, text: "", explanation: "" })),
-          correct_answer: ((["A","B","C","D","E"][Number(data.correct_index ?? 0)] || 'A')) as any,
-          exam_type: data.exam_type || "",
-          difficulty_level: (data.difficulty_level || "") as any,
-          topic: data.topic || "",
-          subtopic: data.subtopic || "",
+          correct_answer: ((["A","B","C","D","E"][Number((data as any).correct_index ?? 0)] || 'A')) as any,
+          exam_type: (data as any).exam_type || "",
+          difficulty_level: (((data as any).difficulty_level || "") as any),
+          topic: (data as any).topic || "",
+          subtopic: (data as any).subtopic || "",
         });
       } catch (e: any) {
         toast({ title: 'Failed to load question', description: e.message, variant: 'destructive' });
@@ -71,7 +71,7 @@ export default function SubmitQuestion() {
       if (id) {
         const { error } = await supabase
           .from('exam_questions')
-          .update({ stem: question.question_text, choices: choiceTexts, correct_index: correctIndex, explanation, exam_type: question.exam_type, topic: question.topic, subtopic: question.subtopic })
+          .update({ stem: question.question_text, choices: choiceTexts, correct_index: correctIndex as any, explanation, exam_type: (question.exam_type || 'OTHER') as any, topic: question.topic, subtopic: question.subtopic } as any)
           .eq('id', id);
         if (error) throw error;
         toast({ title: 'Saved', description: 'Question updated.' });
@@ -103,11 +103,34 @@ export default function SubmitQuestion() {
 
   const difficulties = useMemo(() => ['easy','medium','hard'], []);
 
+  const [examOptions, setExamOptions] = useState<string[]>([]);
+  const [topicOptions, setTopicOptions] = useState<string[]>([]);
+  const [subtopicOptions, setSubtopicOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [cm, eq] = await Promise.all([
+          supabase.from('curriculum_map').select('exam_type'),
+          supabase.from('exam_questions').select('topic, subtopic').limit(500),
+        ]);
+        const examTypes = Array.from(new Set(((cm.data as any[]) || []).map((r: any) => r.exam_type).filter(Boolean)));
+        const topics = Array.from(new Set(((eq.data as any[]) || []).map((r: any) => r.topic).filter(Boolean)));
+        const subs = Array.from(new Set(((eq.data as any[]) || []).map((r: any) => r.subtopic).filter(Boolean)));
+        setExamOptions(examTypes);
+        setTopicOptions(topics);
+        setSubtopicOptions(subs);
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
+
   return (
     <main className="container mx-auto px-4 py-6">
       <header className="mb-4">
         <h1 className="text-2xl font-semibold">{id ? 'Edit Question' : 'Submit Question'}</h1>
-        <p className="text-sm text-muted-foreground">Provide a clear stem, 4 answers (A–D), explanation, and tags.</p>
+        <p className="text-sm text-muted-foreground">Provide a clear stem, 5 answers (A–E), with per‑option explanations.</p>
       </header>
 
       <Card className="p-4 space-y-4">
@@ -147,7 +170,13 @@ export default function SubmitQuestion() {
           </div>
           <div>
             <label className="text-sm font-medium">Exam Type</label>
-            <Input value={question.exam_type} onChange={(e) => onChange({ exam_type: e.target.value })} placeholder="e.g. mrcem primary" />
+            <TagInput
+              value={question.exam_type ? [question.exam_type] : []}
+              onChange={(tags) => onChange({ exam_type: (tags[0] || '') })}
+              suggestions={examOptions}
+              maxTags={1}
+              placeholder="Select exam type"
+            />
           </div>
           <div>
             <label className="text-sm font-medium">Difficulty</label>
@@ -163,11 +192,23 @@ export default function SubmitQuestion() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium">Topic</label>
-            <Input value={question.topic} onChange={(e) => onChange({ topic: e.target.value })} />
+            <TagInput
+              value={question.topic ? [question.topic] : []}
+              onChange={(tags) => onChange({ topic: (tags[0] || '') })}
+              suggestions={topicOptions}
+              maxTags={1}
+              placeholder="Select topic"
+            />
           </div>
           <div>
             <label className="text-sm font-medium">Subtopic</label>
-            <Input value={question.subtopic} onChange={(e) => onChange({ subtopic: e.target.value })} />
+            <TagInput
+              value={question.subtopic ? [question.subtopic] : []}
+              onChange={(tags) => onChange({ subtopic: (tags[0] || '') })}
+              suggestions={subtopicOptions}
+              maxTags={1}
+              placeholder="Select subtopic"
+            />
           </div>
         </div>
 

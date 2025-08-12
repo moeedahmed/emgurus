@@ -134,11 +134,13 @@ export function WorkspaceLayoutInner({
               value={undefined /* uncontrolled per remount */}
             >
               <div className="flex items-center justify-between mb-3">
-                <TabsList>
-                  {current.tabs.map((t) => (
-                    <TabsTrigger key={t.id} value={t.id}>{t.title}</TabsTrigger>
-                  ))}
-                </TabsList>
+                <div className="relative -mx-2 w-full overflow-x-auto">
+                  <TabsList className="min-w-max px-2">
+                    {current.tabs.map((t) => (
+                      <TabsTrigger key={t.id} value={t.id}>{t.title}</TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
               </div>
 
               {current.tabs.map((t) => (
