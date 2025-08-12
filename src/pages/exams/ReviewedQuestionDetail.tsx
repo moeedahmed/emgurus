@@ -12,7 +12,7 @@ import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 const letters = ['A','B','C','D','E'];
-const FEEDBACK_TAGS = ["Wrong answer","Ambiguous","Outdated","Typo"] as const;
+const FEEDBACK_TAGS = ["Looks good","Wrong answer","Ambiguous","Outdated","Typo"] as const;
 
 type SessionRow = {
   id: string;
@@ -166,8 +166,12 @@ export default function ReviewedQuestionDetail() {
     setTimeout(() => { (document.getElementById('practice-feedback-live') as HTMLElement | null)?.focus?.(); }, 0);
   };
 
-  const handleToggleTag = (tag: string) => {
-    setIssueTypes((prev) => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+const handleToggleTag = (tag: string) => {
+    setIssueTypes((prev) => {
+      const next = prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag];
+      if (!isMember && needsFeedback) setFeedbackGiven(next.length > 0);
+      return next;
+    });
   };
 
   const sendFeedback = async (customComment?: string) => {
@@ -281,8 +285,15 @@ export default function ReviewedQuestionDetail() {
     const prevIdx = Math.max(0, index - 1);
     navigate(`/exams/reviewed/${ids[prevIdx]}`, { state: { ids, index: prevIdx } });
   };
-  const goNext = () => {
+const goNext = async () => {
     if (!ids.length) return;
+    if (!isMember && needsFeedback && !feedbackGiven) {
+      if (issueTypes.length > 0) {
+        await sendFeedback();
+      } else {
+        return; // block next until feedback is selected
+      }
+    }
     const nextIdx = Math.min(ids.length - 1, index + 1);
     navigate(`/exams/reviewed/${ids[nextIdx]}`, { state: { ids, index: nextIdx } });
   };
