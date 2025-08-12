@@ -14,7 +14,7 @@ import { useRoles } from "@/hooks/useRoles";
 
 // Map human names to backend enum codes
 const EXAM_CODE_MAP_LANDING: Record<ExamName, string> = {
-  "MRCEM Primary": "MRCEM_PRIMARY",
+  "MRCEM Primary": "MRCEM_Primary",
   "MRCEM Intermediate SBA": "MRCEM_SBA",
   "FRCEM SBA": "FRCEM_SBA",
 };
@@ -98,12 +98,11 @@ const maxAi = isPaid ? 100 : 10;
       .limit(Math.max(1, Math.min(100, limit)));
 
     if (exam) {
-      const variants = buildExamVariants(exam as string);
-      const or = variants.map((v) => `exam.eq.${v},exam_type.eq.${v}`).join(',');
-      q = q.or(or);
+      const examCode = EXAM_CODE_MAP_LANDING[exam as ExamName] || exam;
+      q = q.eq('exam', examCode);
     }
     if (topic && topic !== 'All areas') {
-      q = (q as any).contains?.('tags', [topic]) || (q as any).eq('topic', topic);
+      q = q.eq('topic', topic);
     }
     const { data } = await q;
     return (Array.isArray(data) ? data : []).map((r: any) => r.id).filter(Boolean);
@@ -120,9 +119,9 @@ const maxAi = isPaid ? 100 : 10;
 
   const startExam = async () => {
     try {
-      const ids = await fetchReviewedIds(eExam, eTopic, Math.max(5, Math.min(100, eCount)));
+      const ids = await fetchReviewedIds(eExam, eTopic, Math.max(5, Math.min(maxExam, eCount)));
       if (!ids.length) { setExamOpen(false); return; }
-      const limitSec = eTimed ? Math.round(Math.max(1, Math.min(300, eCount)) * 90) : undefined; // ~90s per Q
+      const limitSec = eTimed ? Math.round(Math.max(1, Math.min(maxExam, eCount)) * 90) : undefined; // ~90s per Q
       navigate('/exams/reviewed-exam', { state: { ids, limitSec } });
     } finally {
       setExamOpen(false);
@@ -134,6 +133,8 @@ const maxAi = isPaid ? 100 : 10;
 
   return (
     <main>
+      {/* Canonical tag for SEO */}
+      <link rel="canonical" href={typeof window !== 'undefined' ? window.location.origin + '/exams' : '/exams'} />
       <PageHero title="EMGurus Exam Practice" subtitle="Targeted MCQs for MRCEM Primary, MRCEM SBA, and FRCEM. Learn smarter, score higher." align="center" ctas={[{ label: "Exam Membership", href: "/pricing", variant: "outline" }]} />
       <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mx-auto max-w-5xl grid items-stretch gap-6 md:grid-cols-3">
@@ -171,7 +172,7 @@ const maxAi = isPaid ? 100 : 10;
                       <Select value={String(aiCount)} onValueChange={(v)=> setAiCount(Number(v))}>
                         <SelectTrigger className="mt-1"><SelectValue placeholder="10" /></SelectTrigger>
                         <SelectContent className="z-50">
-                          {[10,25,50].map(c => (<SelectItem key={c} value={String(c)}>{c}</SelectItem>))}
+                          {(isPaid ? [10,25,50,100] : [10,25,50]).map(c => (<SelectItem key={c} value={String(c)}>{c}</SelectItem>))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -193,7 +194,8 @@ const maxAi = isPaid ? 100 : 10;
                           const sessionId = (res as any)?.data?.session?.id;
                           if(sessionId){
                             const params = new URLSearchParams();
-                            params.set('count', String(aiCount));
+                            const count = Math.min(maxAi, aiCount);
+                            params.set('count', String(count));
                             if (aiArea && aiArea !== 'All areas') params.set('slo', aiArea);
                             navigate(`/exams/ai-practice/session/${sessionId}?${params.toString()}`);
                           }
@@ -294,7 +296,10 @@ const maxAi = isPaid ? 100 : 10;
                     </div>
                     <div className="md:col-span-1">
                       <Label>Questions</Label>
-                      <Input type="number" min={5} max={100} value={eCount} onChange={(e)=> setECount(Number(e.target.value || 25))} className="mt-1" />
+                      <Input type="number" min={5} max={maxExam} value={eCount} onChange={(e)=> {
+                        const v = Number(e.target.value || 25);
+                        setECount(Math.max(5, Math.min(maxExam, v)));
+                      }} className="mt-1" />
                     </div>
                     <div className="md:col-span-3 flex items-center justify-end gap-2 pt-2">
                       <Button variant="outline" onClick={() => setExamOpen(false)}>Cancel</Button>
@@ -308,22 +313,24 @@ const maxAi = isPaid ? 100 : 10;
         </div>
       </section>
 
-      {/* Reassurance: original runners are intact */}
-      <section className="container mx-auto px-4 sm:px-6 lg:px-8 pb-10">
-        <div className="mx-auto max-w-5xl">
-          <div className="text-xs text-muted-foreground mb-2">Original runners (unchanged)</div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="p-4 flex items-center justify-between">
-              <div className="text-sm font-medium">Reviewed Question Bank</div>
-              <a href="/exams/reviewed"><Button size="sm" variant="outline">Open</Button></a>
-            </Card>
-            <Card className="p-4 flex items-center justify-between">
-              <div className="text-sm font-medium">Exam Mode (legacy)</div>
-              <Button size="sm" onClick={async()=>{ const ids = await fetchReviewedIds(undefined, undefined, 10); if(ids.length){ navigate('/exams/reviewed-exam', { state: { ids } }); } else { navigate('/exams/reviewed'); } }}>Start</Button>
-            </Card>
+      {/* Reassurance: original runners are intact (admins/gurus only) */}
+      {(isAdmin || isGuru) && (
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+          <div className="mx-auto max-w-5xl">
+            <div className="text-xs text-muted-foreground mb-2">Original runners (admin/guru)</div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="p-4 flex items-center justify-between">
+                <div className="text-sm font-medium">Reviewed Question Bank</div>
+                <a href="/exams/reviewed"><Button size="sm" variant="outline">Open</Button></a>
+              </Card>
+              <Card className="p-4 flex items-center justify-between">
+                <div className="text-sm font-medium">Exam Mode (legacy)</div>
+                <Button size="sm" onClick={async()=>{ const ids = await fetchReviewedIds(undefined, undefined, 10); if(ids.length){ navigate('/exams/reviewed-exam', { state: { ids } }); } else { navigate('/exams/reviewed'); } }}>Start</Button>
+              </Card>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </main>
   );
 }

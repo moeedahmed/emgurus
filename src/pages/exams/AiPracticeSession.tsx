@@ -25,7 +25,7 @@ export default function AiPracticeSession() {
 
   const total = useMemo(() => {
     const n = Number(search.get("count") || 10);
-    return Math.max(1, Math.min(50, isNaN(n) ? 10 : n));
+    return Math.max(1, Math.min(100, isNaN(n) ? 10 : n));
   }, [search]);
   const topic = search.get("slo");
 
