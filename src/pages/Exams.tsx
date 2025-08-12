@@ -115,7 +115,7 @@ export default function Exams() {
                       <Label>Exam</Label>
                       <Select value={pExam || undefined as any} onValueChange={(v) => setPExam(v as ExamName)}>
                         <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-50">
                           {EXAMS.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
                         </SelectContent>
                       </Select>
@@ -124,7 +124,7 @@ export default function Exams() {
                       <Label>Topic</Label>
                       <Select value={pTopic} onValueChange={setPTopic} disabled={!pExam}>
                         <SelectTrigger className="mt-1"><SelectValue placeholder="All areas" /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-50">
                           {pAreas.map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                         </SelectContent>
                       </Select>
@@ -163,7 +163,7 @@ export default function Exams() {
                       <Label>Exam</Label>
                       <Select value={eExam || undefined as any} onValueChange={(v) => setEExam(v as ExamName)}>
                         <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-50">
                           {EXAMS.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
                         </SelectContent>
                       </Select>
@@ -172,7 +172,7 @@ export default function Exams() {
                       <Label>Topic</Label>
                       <Select value={eTopic} onValueChange={setETopic} disabled={!eExam}>
                         <SelectTrigger className="mt-1"><SelectValue placeholder="All areas" /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-50">
                           {eAreas.map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                         </SelectContent>
                       </Select>
