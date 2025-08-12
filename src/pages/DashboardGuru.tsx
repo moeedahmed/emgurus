@@ -106,9 +106,10 @@ export default function DashboardGuru() {
       title: "Blogs",
       icon: BookOpen,
       tabs: [
-        { id: "assigned", title: "Assigned", render: <div className="p-4"><ReviewerAssigned /></div> },
-        { id: "approved", title: "Approved", render: <div className="p-4"><ReviewerApprovedPanel /></div> },
-        { id: "rejected", title: "Rejected", render: <div className="p-4"><ReviewerRejectedPanel /></div> },
+        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Your review activity at a glance.</div> },
+        { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts awaiting your review.</div><ReviewerAssigned /></div> },
+        { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Items you approved.</div><ReviewerApprovedPanel /></div> },
+        { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Items you requested changes for.</div><ReviewerRejectedPanel /></div> },
       ],
     },
     {
@@ -116,11 +117,12 @@ export default function DashboardGuru() {
       title: "Exams",
       icon: GraduationCap,
       tabs: [
-        { id: "assigned", title: "Assigned", render: <div className="p-0"><GuruReviewQueue /></div> },
-        { id: "approved", title: "Approved", render: <div className="p-0"><ReviewedByMe /></div> },
-        { id: "rejected", title: "Rejected", render: <div className="p-0"><RejectedByMe /></div> },
-        { id: "submit", title: "Submit", render: <div className="p-0"><SubmitQuestion /></div> },
-        { id: "submitted", title: "Submitted", render: <div className="p-0"><MyExamDrafts /></div> },
+        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Your exam review workflow at a glance.</div> },
+        { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Questions awaiting your review.</div><GuruReviewQueue /></div> },
+        { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Questions you approved.</div><ReviewedByMe /></div> },
+        { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Questions you rejected or requested changes for.</div><RejectedByMe /></div> },
+        { id: "submit", title: "Submit", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Submit new questions for review.</div><SubmitQuestion /></div> },
+        { id: "submitted", title: "Submitted", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your submitted drafts.</div><MyExamDrafts /></div> },
       ],
     },
     {
@@ -128,9 +130,10 @@ export default function DashboardGuru() {
       title: "Consultations",
       icon: Stethoscope,
       tabs: [
-        { id: "availability", title: "Availability", render: <div className="p-0"><Availability /></div> },
-        { id: "pricing", title: "Pricing", render: <div className="p-4"><Pricing /></div> },
-        { id: "bookings", title: "My Bookings", render: <div className="p-4"><Bookings /></div> },
+        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Your consultation tools at a glance.</div> },
+        { id: "availability", title: "Availability", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Manage when learners can book you.</div><Availability /></div> },
+        { id: "pricing", title: "Pricing", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Set your rates and durations.</div><Pricing /></div> },
+        { id: "bookings", title: "Bookings", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your upcoming and past consultations.</div><Bookings /></div> },
       ],
     },
     {
@@ -138,7 +141,8 @@ export default function DashboardGuru() {
       title: "Forums",
       icon: MessageSquare,
       tabs: [
-        { id: "moderation", title: "Moderation Queue", render: <div className="p-4"><ForumsModeration /></div> },
+        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Forum moderation at a glance.</div> },
+        { id: "moderation", title: "Moderation Queue", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Threads and replies requiring action.</div><ForumsModeration /></div> },
       ],
     },
     {

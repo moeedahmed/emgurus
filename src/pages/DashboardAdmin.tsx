@@ -646,12 +646,13 @@ export default function DashboardAdmin() {
       title: "Blogs",
       icon: BookOpen,
       tabs: [
-        { id: "submitted", title: "Submitted", render: <div className="p-4"><AdminSubmitted /></div> },
-        { id: "assigned", title: "Assigned", render: <div className="p-4"><AdminAssigned /></div> },
-        { id: "reviewed", title: "Reviewed", render: <div className="p-4"><AdminReviewed /></div> },
-        { id: "published", title: "Published", render: <div className="p-4"><AdminPublished /></div> },
-        { id: "rejected", title: "Rejected", render: <div className="p-4"><AdminRejected /></div> },
-        { id: "archived", title: "Archived", render: <div className="p-4"><AdminArchived /></div> },
+        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Blog moderation and publishing at a glance.</div> },
+        { id: "submitted", title: "Submitted", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts awaiting triage.</div><AdminSubmitted /></div> },
+        { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts assigned to reviewers.</div><AdminAssigned /></div> },
+        { id: "reviewed", title: "Reviewed", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Guru‑approved items ready to publish.</div><AdminReviewed /></div> },
+        { id: "published", title: "Published", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts that are live.</div><AdminPublished /></div> },
+        { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts where changes were requested.</div><AdminRejected /></div> },
+        { id: "archived", title: "Archived", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts archived from review.</div><AdminArchived /></div> },
       ],
     },
     {
@@ -659,11 +660,13 @@ export default function DashboardAdmin() {
       title: "Exams",
       icon: GraduationCap,
       tabs: [
+        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Question bank curation at a glance.</div> },
         {
           id: "questions",
           title: "Questions",
           render: (
             <div className="p-0">
+              <div className="p-4 text-sm text-muted-foreground">Reviewed bank and filters.</div>
               <ReviewedQuestionBank embedded />
             </div>
           ),
@@ -673,6 +676,7 @@ export default function DashboardAdmin() {
           title: "Sets",
           render: (
             <div className="p-0">
+              <div className="p-4 text-sm text-muted-foreground">Create and manage question sets.</div>
               <QuestionSetsAdmin />
             </div>
           ),
@@ -682,28 +686,30 @@ export default function DashboardAdmin() {
           title: "Database",
           render: (
             <div className="p-4 space-y-4">
+              <div className="text-sm text-muted-foreground">Manage exam metadata, SLOs, and taxonomy.</div>
               <Card className="p-6">
-                <div className="text-sm text-muted-foreground mb-3">Manage exam metadata, SLOs, and taxonomy.</div>
+                <div className="text-sm text-muted-foreground mb-3">Open the taxonomy manager to edit mappings.</div>
                 <Button asChild><a href="/admin/taxonomy">Open Taxonomy Manager</a></Button>
               </Card>
             </div>
           ),
         },
-        { id: "submit", title: "Submit", render: <div className="p-0"><SubmitQuestion /></div> },
+        { id: "submit", title: "Submit", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Submit new questions for review.</div><SubmitQuestion /></div> },
         {
           id: "generate",
           title: "Generate",
           render: (
             <div className="p-0">
+              <div className="p-4 text-sm text-muted-foreground">AI generation and assignment.</div>
               <ExamsAICuration />
             </div>
           ),
         },
-        { id: "generated", title: "Generated", render: <DraftsPanel /> },
-        { id: "assigned", title: "Assigned", render: <AssignedPanel /> },
-        { id: "approved", title: "Approved", render: <ApprovedPanel /> },
-        { id: "rejected", title: "Rejected", render: <RejectedPanel /> },
-        { id: "marked", title: "Marked", render: <MarkedPanel /> },
+        { id: "generated", title: "Generated", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Freshly generated drafts.</div><DraftsPanel /></div> },
+        { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Assigned to reviewers.</div><AssignedPanel /></div> },
+        { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Approved and ready to publish.</div><ApprovedPanel /></div> },
+        { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Rejected or needs changes.</div><RejectedPanel /></div> },
+        { id: "marked", title: "Marked", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Learner‑flagged questions.</div><MarkedPanel /></div> },
       ],
     },
     {
@@ -711,7 +717,8 @@ export default function DashboardAdmin() {
       title: "Forums",
       icon: MessageSquare,
       tabs: [
-        { id: "moderation", title: "Moderation Queue", render: <div className="p-4"><ForumsModeration /></div> },
+        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Forum moderation at a glance.</div> },
+        { id: "moderation", title: "Moderation Queue", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Threads and replies requiring action.</div><ForumsModeration /></div> },
       ],
     },
     {
