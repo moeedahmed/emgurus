@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { EXAMS, CURRICULA, ExamName } from "@/lib/curricula";
 import { getJson } from "@/lib/functionsClient";
 import { supabase } from "@/integrations/supabase/client";
+import { useRoles } from "@/hooks/useRoles";
 
 // Map human names to backend enum codes
 const EXAM_CODE_MAP_LANDING: Record<ExamName, string> = {
@@ -44,9 +45,13 @@ export default function Exams() {
   const [eCount, setECount] = useState<number>(25);
   const [eTimed, setETimed] = useState<boolean>(true);
 
-  const [aiExam, setAiExam] = useState<ExamName | "">("");
-  const [aiCount, setAiCount] = useState<number>(10);
-  const [aiArea, setAiArea] = useState<string>("All areas");
+const [aiExam, setAiExam] = useState<ExamName | "">("");
+const [aiCount, setAiCount] = useState<number>(10);
+const [aiArea, setAiArea] = useState<string>("All areas");
+const { isAdmin, isGuru } = useRoles();
+const [isPaid, setIsPaid] = useState(false);
+const maxExam = isPaid ? 100 : 25;
+const maxAi = isPaid ? 100 : 10;
 
   useEffect(() => {
     document.title = "EMGurus Exam Practice • EM Gurus";
@@ -54,6 +59,18 @@ export default function Exams() {
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name','description'); document.head.appendChild(meta); }
     meta.setAttribute('content', desc);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setIsPaid(false); return; }
+        const { data: prof } = await supabase.from('profiles').select('subscription_tier').eq('user_id', user.id).maybeSingle();
+        const tier = String((prof as any)?.subscription_tier || 'free').toLowerCase();
+        setIsPaid(tier.includes('exams') || tier.includes('premium'));
+      } catch { setIsPaid(false); }
+    })();
   }, []);
 
   // Fetch reviewed question IDs via Edge Function, with direct-table fallback
