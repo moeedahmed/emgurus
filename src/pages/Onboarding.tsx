@@ -10,12 +10,14 @@ import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ExperienceSelect } from "@/components/forms/ExperienceSelect";
+import TagInput from "@/components/forms/TagInput";
 
 const countries = ["United Kingdom","United States","United Arab Emirates","India","Pakistan","Canada","Australia"];
 const specialties = ["Emergency Medicine","Internal Medicine","Surgery","Pediatrics","Radiology"];
-const examOptions = ["MRCEM (UK)","FRCEM (UK)","FCPS (Pakistan)","MRCS (EM)","FCEM (India)","ABEM (US)","FACEM (Australia)","PLAB","USMLE","Other"];
+const seededExamTags = ["MRCEM (UK)","FRCEM (UK)","FCPS (Pakistan)","MRCS (EM)","FCEM (India)","ABEM (US)","FACEM (Australia)","PLAB","USMLE"];
 const timezones = ["UTC","Europe/London","America/New_York","Asia/Dubai","Asia/Kolkata","Asia/Karachi","Australia/Sydney"];
-const languageOptions = ["English","Arabic","Hindi","Urdu","French","Spanish","Other"];
+const seededLanguageTags = ["English","Arabic","Hindi","Urdu","French","Spanish"];
+
 
 export default function Onboarding() {
   const { user } = useAuth();
@@ -37,15 +39,19 @@ export default function Onboarding() {
   const [position, setPosition] = useState("");
   const [hospital, setHospital] = useState("");
 
-  // Step 3
-  const [bio, setBio] = useState("");
-  const [showProfilePublic, setShowProfilePublic] = useState(true);
-  const [showSocialsPublic, setShowSocialsPublic] = useState(true);
-  const [linkedinUrl, setLinkedinUrl] = useState("");
-  const [twitterUrl, setTwitterUrl] = useState("");
+// Suggestions for tag inputs
+const [examSuggestions, setExamSuggestions] = useState<string[]>(seededExamTags);
+const [languageSuggestions, setLanguageSuggestions] = useState<string[]>(seededLanguageTags);
 
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
+// Step 3
+const [bio, setBio] = useState("");
+const [showProfilePublic, setShowProfilePublic] = useState(true);
+const [showSocialsPublic, setShowSocialsPublic] = useState(true);
+const [linkedinUrl, setLinkedinUrl] = useState("");
+const [twitterUrl, setTwitterUrl] = useState("");
+
+const [saving, setSaving] = useState(false);
+const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     document.title = "Complete your profile | EM Gurus";
@@ -116,7 +122,6 @@ export default function Onboarding() {
     })();
   }, [user?.id]);
 
-  // Autosave draft (kept for resilience)
   useEffect(() => {
     if (!user || loading) return;
     const timer = setTimeout(async () => {
@@ -126,10 +131,8 @@ export default function Onboarding() {
         country,
         tz,
         languages,
-        otherLanguage,
         primarySpecialty,
         examInterests,
-        otherExam,
         years,
         position,
         hospital,
@@ -142,7 +145,7 @@ export default function Onboarding() {
       await supabase.from('profiles').update({ onboarding_progress: draft }).eq('user_id', user.id);
     }, 600);
     return () => clearTimeout(timer);
-  }, [user?.id, loading, fullName, avatarUrl, country, tz, languages, otherLanguage, primarySpecialty, examInterests, otherExam, years, position, hospital, bio, showProfilePublic, showSocialsPublic, linkedinUrl, twitterUrl]);
+  }, [user?.id, loading, fullName, avatarUrl, country, tz, languages, primarySpecialty, examInterests, years, position, hospital, bio, showProfilePublic, showSocialsPublic, linkedinUrl, twitterUrl]);
 
   const toggleChip = (arr: string[], setArr: (v: string[]) => void, val: string) => {
     setArr(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
@@ -264,19 +267,12 @@ export default function Onboarding() {
           </div>
           <div className="grid gap-1">
             <Label>Exam interests *</Label>
-            <div className="flex flex-wrap gap-2">
-              {examOptions.map(e => (
-                <Badge key={e} variant={examInterests.includes(e) ? 'default' : 'outline'} className="cursor-pointer" onClick={() => toggleChip(examInterests, setExamInterests, e)}>
-                  {e}
-                </Badge>
-              ))}
-            </div>
-            {examInterests.includes('Other') && (
-              <div className="grid gap-1 pt-2">
-                <Label>Other exam</Label>
-                <Input value={otherExam} onChange={(e) => setOtherExam(e.target.value)} placeholder="Enter other exam" />
-              </div>
-            )}
+            <TagInput
+              value={examInterests}
+              onChange={setExamInterests}
+              suggestions={examSuggestions}
+              placeholder="Type exam tags (e.g., MRCEM, USMLE) and press Enter"
+            />
           </div>
           <div className="grid gap-1">
             <Label>Languages *</Label>

@@ -75,7 +75,7 @@ export default function Profile() {
         .eq('user_id', user.id)
         .maybeSingle();
       setProfile(prof as any);
-      setHourly(prof?.price_per_30min ? Number(prof.price_per_30min) * 2 : "");
+      setHourly(prof?.price_per_30min ? Number(prof.price_per_30min) : "");
 
       const { data: r } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
       setRoles((r || []).map(x => x.role as string));
