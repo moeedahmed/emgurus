@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { BookingModal } from "@/components/consultations/BookingModal";
 import type { Guru } from "@/components/consultations/GuruCard";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ProfileRow {
   user_id: string;
@@ -31,6 +33,7 @@ export default function PublicProfile() {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     let mounted = true;
@@ -91,24 +94,32 @@ export default function PublicProfile() {
   }
 
   const initials = (profile.full_name || 'GU').split(' ').map(s => s[0]).slice(0,2).join('').toUpperCase();
+  const hasCover = !!(profile as any).cover_image_url && String((profile as any).cover_image_url).trim() !== "";
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast({ title: "Link copied", description: "Profile URL copied to clipboard." });
+    } catch {
+      toast({ title: "Copy failed", description: "Couldn't copy it automatically. Please copy the URL manually.", variant: "destructive" });
+    }
+  };
 
   return (
     <main className="container mx-auto px-0 md:px-4 py-0 md:py-8">
       {/* Cover Banner */}
-      <section className="w-full h-40 md:h-56 relative bg-muted">
-        {(profile as any).cover_image_url ? (
+      {hasCover && (
+        <section className="w-full h-40 md:h-56 relative">
           <img
             src={(profile as any).cover_image_url as any}
-            alt={`${profile.full_name || 'Profile'} cover`}
+            alt={`${profile.full_name || 'Profile'} cover image`}
             className="w-full h-full object-cover"
             loading="lazy"
           />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-r from-primary/20 to-primary/5" />
-        )}
-      </section>
+        </section>
+      )}
 
-      <article className="-mt-10 md:-mt-14 px-4">
+
+      <article className={cn("px-4", hasCover ? "-mt-10 md:-mt-14" : "mt-6 md:mt-10")}>
         <div className="grid gap-6 md:grid-cols-3">
           <Card className="p-6 md:col-span-2">
             <header className="flex items-center gap-4">
@@ -126,9 +137,29 @@ export default function PublicProfile() {
               </div>
             </header>
 
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <div className="text-xs text-muted-foreground">Specialty</div>
+                <div className="text-sm font-medium">{(profile as any).primary_specialty || profile.specialty || '—'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Country</div>
+                <div className="text-sm font-medium">{profile.country || '—'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Timezone</div>
+                <div className="text-sm font-medium">{profile.timezone || '—'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Languages</div>
+                <div className="text-sm font-medium">{(profile.languages || []).join(', ') || '—'}</div>
+              </div>
+            </div>
+
             {profile.bio && (
               <p className="text-sm text-muted-foreground mt-3">{profile.bio}</p>
             )}
+
 
             {(profile.exams || []).length > 0 && (
               <div className="flex flex-wrap gap-2 mt-3">
@@ -163,10 +194,14 @@ export default function PublicProfile() {
 
             <div className="flex items-center justify-between pt-4">
               <div className="text-lg font-medium">{profile.price_per_30min ? `$${profile.price_per_30min} / 30 min` : 'Free'}</div>
-              {guru && (
-                <Button onClick={() => setOpen(true)}>Book Now</Button>
-              )}
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={handleShare} aria-label="Share profile">Share profile</Button>
+                {guru && (
+                  <Button onClick={() => setOpen(true)} aria-label="Book consultation with guru">Book Now</Button>
+                )}
+              </div>
             </div>
+
           </Card>
 
           <Card className="p-6 space-y-3">
