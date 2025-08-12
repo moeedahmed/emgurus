@@ -49,7 +49,7 @@ export default function WorkspaceLayout({
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <Sidebar className="border-r">
+        <Sidebar className="border-r" collapsible="icon">
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel className="sticky top-0 z-10 bg-sidebar text-sm font-semibold">{title}</SidebarGroupLabel>
@@ -69,7 +69,7 @@ export default function WorkspaceLayout({
                         aria-current={active ? "page" : undefined}
                       >
                         {Icon && <Icon className="h-4 w-4" />}
-                        <span>{s.title}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{s.title}</span>
                       </a>
                     );
                   })}
