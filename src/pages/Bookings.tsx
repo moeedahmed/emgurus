@@ -56,21 +56,20 @@ export default function Bookings() {
 
   const formatDate = (s: string) => new Date(s).toLocaleString();
 
-  const title = useMemo(() => "My Bookings — Past", []);
+  const title = useMemo(() => "Bookings", []);
 
   return (
     <main className="container mx-auto px-4 py-8">
       <header className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold">{title}</h1>
-          <p className="text-muted-foreground">Review your previous sessions and details.</p>
+          <p className="text-muted-foreground">Your upcoming and past consultations.</p>
         </div>
-        <Link to="/profile"><Button variant="secondary">Back to Profile</Button></Link>
       </header>
 
       {past.length === 0 ? (
         <section className="text-center text-muted-foreground py-16">
-          You have no past bookings yet.
+          You have no bookings yet.
         </section>
       ) : (
         <section className="space-y-4">

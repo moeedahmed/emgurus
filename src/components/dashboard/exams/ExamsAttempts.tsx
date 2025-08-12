@@ -88,6 +88,10 @@ export default function ExamsAttempts() {
 
   return (
     <div className="p-4 grid gap-4">
+      <div>
+        <h3 className="text-lg font-semibold">Attempts</h3>
+        <p className="text-sm text-muted-foreground">All your practice and exam sessions.</p>
+      </div>
       <div className="flex items-center gap-2">
         <Button size="sm" variant={mode==='practice'? 'default':'outline'} onClick={()=>setMode('practice')}>Practice Sessions</Button>
         <Button size="sm" variant={mode==='exam'? 'default':'outline'} onClick={()=>setMode('exam')}>Exam Sessions</Button>

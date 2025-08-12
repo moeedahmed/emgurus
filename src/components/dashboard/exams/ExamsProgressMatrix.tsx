@@ -54,6 +54,10 @@ export default function ExamsProgressMatrix() {
 
   return (
     <div className="p-4 grid gap-4">
+      <div>
+        <h3 className="text-lg font-semibold">Progress</h3>
+        <p className="text-sm text-muted-foreground">Accuracy by topic and curriculum coverage.</p>
+      </div>
       <div className="grid gap-4 md:grid-cols-3">
         <div>
           <div className="text-sm font-medium mb-1">Exam</div>

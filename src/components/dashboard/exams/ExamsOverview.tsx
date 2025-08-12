@@ -103,12 +103,9 @@ export default function ExamsOverview() {
 
   return (
     <div className="p-4 grid gap-4">
-      <div className="flex items-center justify-between">
+      <div>
         <h3 className="text-lg font-semibold">Overview</h3>
-        <div className="flex gap-2">
-          <Button variant={range===30?"default":"outline"} size="sm" onClick={()=>setRange(30)}>30d</Button>
-          <Button variant={range===90?"default":"outline"} size="sm" onClick={()=>setRange(90)}>90d</Button>
-        </div>
+        <p className="text-sm text-muted-foreground">Your exam practice at a glance.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-4">
         <KpiCard title="Total sessions" value={totals.totalSessions} isLoading={loading} />
@@ -117,6 +114,13 @@ export default function ExamsOverview() {
         <KpiCard title="Time spent" value={`${Math.round(totals.timeSpent/60)} min`} isLoading={loading} />
       </div>
       <div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm font-medium">Sessions</div>
+          <div className="flex gap-2">
+            <Button variant={range===30?"default":"outline"} size="sm" onClick={()=>setRange(30)}>30d</Button>
+            <Button variant={range===90?"default":"outline"} size="sm" onClick={()=>setRange(90)}>90d</Button>
+          </div>
+        </div>
         <TrendCard title={`Sessions (${range}d)`} series={series} rangeLabel={`Last ${range} days`} isLoading={loading} />
         {!attempts.length && (
           <div className="text-sm text-muted-foreground mt-2">No data yet. <a className="underline" href="/exams">Go to Exams</a></div>

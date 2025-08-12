@@ -24,6 +24,7 @@ export default function ExamsFeedbackList() {
 
   return (
     <div className="p-4">
+      <div className="mb-2 text-sm text-muted-foreground">Question feedback you’ve sent.</div>
       <TableCard
         title="My Feedback"
         columns={[

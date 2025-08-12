@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
-import { BookOpen, Stethoscope, GraduationCap, BarChart3 } from "lucide-react";
+import { BookOpen, Stethoscope, GraduationCap, MessagesSquare } from "lucide-react";
 import Bookings from "@/pages/Bookings";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,11 @@ import ExamsOverview from "@/components/dashboard/exams/ExamsOverview";
 import ExamsAttempts from "@/components/dashboard/exams/ExamsAttempts";
 import ExamsProgressMatrix from "@/components/dashboard/exams/ExamsProgressMatrix";
 import ExamsFeedbackList from "@/components/dashboard/exams/ExamsFeedbackList";
+import BlogsOverview from "@/components/dashboard/blogs/BlogsOverview";
+import ConsultationsOverview from "@/components/dashboard/consultations/ConsultationsOverview";
+import ForumsOverview from "@/components/dashboard/forums/ForumsOverview";
+import ForumsQuestions from "@/components/dashboard/forums/ForumsQuestions";
+import ForumsAnswers from "@/components/dashboard/forums/ForumsAnswers";
 
 export default function DashboardUser() {
   useEffect(() => { document.title = "Learner Workspace | EMGurus"; }, []);
@@ -52,6 +57,12 @@ export default function DashboardUser() {
 
     return (
       <div className="p-4">
+        <div className="mb-2 text-sm text-muted-foreground">
+          {status === 'draft' && 'Private posts you’re still working on.'}
+          {status === 'in_review' && 'Posts awaiting review by the team.'}
+          {status === 'published' && 'Your posts that are live on EMGurus.'}
+          {status === 'rejected' && 'Changes requested. Edit and resubmit when ready.'}
+        </div>
         <TableCard
           title={status === 'draft' ? 'Drafts' : status === 'in_review' ? 'Submitted' : status === 'published' ? 'Published' : 'Rejected'}
           columns={
@@ -133,6 +144,7 @@ export default function DashboardUser() {
       title: "Blogs",
       icon: BookOpen,
       tabs: [
+        { id: "overview", title: "Overview", render: <div className="p-0"><BlogsOverview /></div> },
         { id: "drafts", title: "Drafts", render: <MyPostsPanel status="draft" /> },
         { id: "submitted", title: "Submitted", render: <MyPostsPanel status="in_review" /> },
         { id: "published", title: "Published", render: <MyPostsPanel status="published" /> },
@@ -155,15 +167,18 @@ export default function DashboardUser() {
       title: "Consultations",
       icon: Stethoscope,
       tabs: [
-        { id: "bookings", title: "My Bookings", render: <div className="p-4"><Bookings /></div> },
+        { id: "overview", title: "Overview", render: <div className="p-0"><ConsultationsOverview /></div> },
+        { id: "bookings", title: "Bookings", render: <div className="p-4"><Bookings /></div> },
       ],
     },
     {
-      id: "analytics",
-      title: "Analytics",
-      icon: BarChart3,
+      id: "forums",
+      title: "Forums",
+      icon: MessagesSquare,
       tabs: [
-        { id: "overview", title: "Overview", render: <AnalyticsPanel /> },
+        { id: "overview", title: "Overview", render: <div className="p-0"><ForumsOverview /></div> },
+        { id: "questions", title: "Questions", render: <div className="p-0"><ForumsQuestions /></div> },
+        { id: "answers", title: "Answers", render: <div className="p-0"><ForumsAnswers /></div> },
       ],
     },
   ];
