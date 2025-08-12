@@ -90,7 +90,7 @@ export default function WorkspaceLayout({
           </header>
 
           <div className="container mx-auto px-4 py-6">
-            <Tabs defaultValue={current.tabs[0]?.id} value={undefined /* uncontrolled per remount */}>
+            <Tabs key={sectionId} defaultValue={current.tabs[0]?.id} value={undefined /* uncontrolled per remount */}>
               <div className="flex items-center justify-between mb-3">
                 <TabsList>
                   {current.tabs.map((t) => (

@@ -19,7 +19,7 @@ export default function DashboardGuru() {
     {
       id: "blogs",
       title: "Blogs",
-      icon: BookOpenCheck,
+      icon: BookOpen,
       tabs: [
         { id: "pending", title: "Review Pending", render: <div className="p-4"><ReviewerPending /></div> },
         { id: "completed", title: "Review Completed", render: <div className="p-4"><ReviewerCompleted /></div> },

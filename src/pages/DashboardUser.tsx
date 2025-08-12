@@ -15,7 +15,7 @@ export default function DashboardUser() {
     {
       id: "blogs",
       title: "Blogs",
-      icon: BookOpenText,
+      icon: BookOpen,
       tabs: [
         { id: "browse", title: "Browse", render: <div className="p-0"><Blogs embedded /></div> },
       ],
