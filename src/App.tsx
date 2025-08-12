@@ -169,15 +169,17 @@ const App = () => (
                 }
               />
 
-              <Route path="/consultations" element={<Consultations />} />
-              <Route path="/forums" element={<Forums />} />
-              <Route path="/forums/:category_id" element={<ForumCategory />} />
-              <Route path="/threads/:thread_id" element={<ThreadView />} />
-              
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/profile/:id" element={<PublicProfile />} />
-              <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
-              <Route path="/dashboard/user/progress" element={<UserProgress />} />
+               <Route path="/consultations" element={<Consultations />} />
+               <Route path="/forums" element={<Forums />} />
+               <Route path="/forums/:category_id" element={<ForumCategory />} />
+               <Route path="/threads/:thread_id" element={<ThreadView />} />
+               
+               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+               <Route path="/profile/:id" element={<PublicProfile />} />
+               <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+               <Route path="/settings/notifications" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+               <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
+               <Route path="/dashboard/user/progress" element={<UserProgress />} />
 <Route path="/guru/questions" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruQuestions /></RoleProtectedRoute>} />
 <Route path="/guru/reviews" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruReviewQueue /></RoleProtectedRoute>} />
 <Route path="/guru/exams/review" element={<RoleProtectedRoute roles={["guru", "admin"]}><ExamsReviewQueue /></RoleProtectedRoute>} />
