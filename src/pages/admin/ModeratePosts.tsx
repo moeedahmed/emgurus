@@ -23,7 +23,7 @@ interface PostItem {
 interface ReviewerProfile { user_id: string; full_name: string | null; email: string | null; }
 interface Assignment { id: string; post_id: string; reviewer_id: string; status: string; notes: string | null; }
 
-const ModeratePosts: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
+const ModeratePosts: React.FC<{ embedded?: boolean; forceView?: 'admin'|'reviewer'; forceTab?: 'unassigned'|'assigned'|'pending'|'completed'; }> = ({ embedded, forceView, forceTab }) => {
   const { user } = useAuth();
   const { roles } = useRoles();
   const isAdmin = roles.includes("admin");
@@ -70,14 +70,14 @@ const ModeratePosts: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const loadPosts = async () => {
     setLoading(true);
     try {
-      if (view === 'admin') {
+      if ((forceView ?? view) === 'admin') {
         // Admin view: either unassigned or assigned in-review posts
         let query = supabase
           .from('blog_posts')
           .select('id,title,description,author_id,created_at,status,reviewer_id')
           .eq('status', 'in_review');
-        if (tab === 'unassigned') query = query.is('reviewer_id', null);
-        if (tab === 'assigned') query = query.not('reviewer_id', 'is', null);
+        if ((forceTab ?? tab) === 'unassigned') query = query.is('reviewer_id', null);
+        if ((forceTab ?? tab) === 'assigned') query = query.not('reviewer_id', 'is', null);
         const { data, error } = await query.order('created_at', { ascending: false });
         if (error) throw error;
         const list = (data as any) || [];
@@ -137,7 +137,7 @@ const ModeratePosts: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
     }
   };
 
-  useEffect(() => { loadPosts(); if (isAdmin) loadReviewers(); }, [view, tab, user?.id, isAdmin]);
+  useEffect(() => { loadPosts(); if (isAdmin) loadReviewers(); }, [view, tab, user?.id, isAdmin, forceView, forceTab]);
 
   const assign = async (postId: string) => {
     const reviewerId = selectedReviewer[postId];
@@ -183,8 +183,8 @@ const ModeratePosts: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const empty = !loading && posts.length === 0;
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      {!embedded && (
+    <main className="container mx-auto px-4 py-6 md:py-8">
+      {!(embedded || forceView || forceTab) && (
         <>
           <h1 className="text-3xl font-bold mb-6">Moderate Blog Posts</h1>
 

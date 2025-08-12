@@ -47,7 +47,11 @@ const AdminExamShortcutsBar: React.FC = () => (
 
 // -------- Blogs tab components
 const AdminSubmitted: React.FC = () => {
-  return <ModeratePosts />;
+  return <ModeratePosts forceView="admin" forceTab="unassigned" />;
+};
+
+const AdminAssigned: React.FC = () => {
+  return <ModeratePosts forceView="admin" forceTab="assigned" />;
 };
 
 const AdminReviewed: React.FC = () => {
@@ -600,6 +604,7 @@ export default function DashboardAdmin() {
       icon: BookOpen,
       tabs: [
         { id: "submitted", title: "Submitted", render: <div className="p-4"><AdminSubmitted /></div> },
+        { id: "assigned", title: "Assigned", render: <div className="p-4"><AdminAssigned /></div> },
         { id: "reviewed", title: "Reviewed", render: <div className="p-4"><AdminReviewed /></div> },
         { id: "published", title: "Published", render: <div className="p-4"><AdminPublished /></div> },
         { id: "rejected", title: "Rejected", render: <div className="p-4"><AdminRejected /></div> },
