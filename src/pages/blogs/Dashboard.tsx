@@ -23,7 +23,7 @@ export default function BlogsDashboard() {
   const navigate = useNavigate();
   const { roles, primaryRole } = useRoles();
 
-  const [status, setStatus] = useState<"draft" | "in_review" | "published">("draft");
+  const [status, setStatus] = useState<"draft" | "submitted" | "in_review" | "published">("draft");
   const [myPosts, setMyPosts] = useState<PostRow[]>([]);
   const [reviewQueue, setReviewQueue] = useState<PostRow[]>([]);
   const isGuruOrAdmin = roles.includes("guru") || roles.includes("admin");
@@ -40,12 +40,22 @@ export default function BlogsDashboard() {
   useEffect(() => {
     if (!user) return;
     const loadMine = async () => {
-      const { data, error } = await supabase
+      const base = supabase
         .from("blog_posts")
-        .select("id, title, slug, status, author_id, created_at")
+        .select("id, title, slug, status, author_id, created_at, reviewer_id")
         .eq("author_id", user.id)
-        .eq("status", status)
         .order("created_at", { ascending: false });
+
+      let query = base as any;
+      if (status === "draft" || status === "published") {
+        query = query.eq("status", status);
+      } else if (status === "submitted") {
+        query = query.eq("status", "in_review").is("reviewer_id", null);
+      } else if (status === "in_review") {
+        query = query.eq("status", "in_review").not("reviewer_id", "is", null);
+      }
+
+      const { data, error } = await query;
       if (!error) setMyPosts((data as any) || []);
     };
     loadMine();
@@ -124,6 +134,7 @@ export default function BlogsDashboard() {
               <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="submitted">Submitted</SelectItem>
                 <SelectItem value="in_review">In Review</SelectItem>
                 <SelectItem value="published">Published</SelectItem>
               </SelectContent>
