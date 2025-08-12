@@ -59,7 +59,7 @@ const [pHasAny, setPHasAny] = useState<boolean>(false);
 const [eAreasAvail, setEAreasAvail] = useState<string[]>(["All areas"]);
 const [eHasAny, setEHasAny] = useState<boolean>(false);
 // Available exams that actually have reviewed questions
-const [availExams, setAvailExams] = useState<ExamName[]>(EXAMS);
+const [availExams, setAvailExams] = useState<ExamName[]>([...EXAMS] as ExamName[]);
 // Exam time selection
 const [eTime, setETime] = useState<string>("untimed");
 
@@ -94,9 +94,9 @@ const [eTime, setETime] = useState<string>("untimed");
           .not('exam', 'is', null)
           .limit(2000);
         const codes = Array.from(new Set((Array.isArray(data) ? data : []).map((r: any) => r.exam).filter(Boolean)));
-        const names = (EXAMS as ExamName[]).filter((name) => codes.includes((EXAM_CODE_MAP_LANDING as any)[name] || (name as any)));
-        setAvailExams(names.length ? names : EXAMS);
-      } catch { setAvailExams(EXAMS); }
+        const names = [...EXAMS].filter((name) => codes.includes((EXAM_CODE_MAP_LANDING as any)[name] || (name as any)));
+        setAvailExams(names.length ? names : [...EXAMS]);
+      } catch { setAvailExams([...EXAMS]); }
     })();
   }, []);
 
@@ -192,7 +192,7 @@ const [eTime, setETime] = useState<string>("untimed");
     try {
       const ids = await fetchReviewedIds(pExam, pTopic, 50);
       if (!ids.length) { setPracticeOpen(false); return; }
-      navigate(`/exams/reviewed/${ids[0]}`, { state: { ids, index: 0 } });
+      navigate(`/exams/practice/${ids[0]}`, { state: { ids, index: 0 } });
     } finally {
       setPracticeOpen(false);
     }
@@ -203,7 +203,7 @@ const [eTime, setETime] = useState<string>("untimed");
       const ids = await fetchReviewedIds(eExam, eTopic, Math.max(5, Math.min(maxExam, eCount)));
       if (!ids.length) { setExamOpen(false); return; }
       const limitSec = eTime !== 'untimed' ? Number(eTime) * 60 : undefined;
-      navigate('/exams/reviewed-exam', { state: { ids, limitSec } });
+      navigate('/exams/exam', { state: { ids, limitSec } });
     } finally {
       setExamOpen(false);
     }
@@ -407,24 +407,6 @@ const [eTime, setETime] = useState<string>("untimed");
         </div>
       </section>
 
-      {/* Reassurance: original runners are intact (admins/gurus only) */}
-      {(isAdmin || isGuru) && (
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 pb-10">
-          <div className="mx-auto max-w-5xl">
-            <div className="text-xs text-muted-foreground mb-2">Original runners (admin/guru)</div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="p-4 flex items-center justify-between">
-                <div className="text-sm font-medium">Reviewed Question Bank</div>
-                <a href="/exams/reviewed"><Button size="sm" variant="outline">Open</Button></a>
-              </Card>
-              <Card className="p-4 flex items-center justify-between">
-                <div className="text-sm font-medium">Exam Mode (legacy)</div>
-                <Button size="sm" onClick={async()=>{ const ids = await fetchReviewedIds(undefined, undefined, 10); if(ids.length){ navigate('/exams/reviewed-exam', { state: { ids } }); } else { navigate('/exams/reviewed'); } }}>Start</Button>
-              </Card>
-            </div>
-          </div>
-        </section>
-      )}
     </main>
   );
 }

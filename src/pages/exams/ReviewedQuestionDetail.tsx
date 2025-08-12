@@ -289,7 +289,7 @@ const handleToggleTag = (tag: string) => {
   const goPrev = () => {
     if (!ids.length) return;
     const prevIdx = Math.max(0, index - 1);
-    navigate(`/exams/reviewed/${ids[prevIdx]}`, { state: { ids, index: prevIdx } });
+    navigate(`/exams/practice/${ids[prevIdx]}`, { state: { ids, index: prevIdx } });
   };
 const goNext = async () => {
     if (!ids.length) return;
@@ -300,8 +300,8 @@ const goNext = async () => {
         return; // block next until feedback is selected
       }
     }
-    const nextIdx = Math.min(ids.length - 1, index + 1);
-    navigate(`/exams/reviewed/${ids[nextIdx]}`, { state: { ids, index: nextIdx } });
+  const nextIdx = Math.min(ids.length - 1, index + 1);
+    navigate(`/exams/practice/${ids[nextIdx]}`, { state: { ids, index: nextIdx } });
   };
 
   // Keyboard shortcuts
@@ -455,6 +455,7 @@ const goNext = async () => {
                 </div>
               </CardContent>
 
+              <CardContent>
                 <div className="mt-6 flex flex-wrap gap-2">
                   {q.exam && <Badge variant="secondary">{q.exam}</Badge>}
                   {q.topic && <Badge variant="secondary">{q.topic}</Badge>}

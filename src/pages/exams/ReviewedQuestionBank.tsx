@@ -263,7 +263,7 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
                     key={it.id}
                     className="hover:bg-accent/30 cursor-pointer"
                     role="button"
-                    onClick={() => navigate(`/exams/reviewed/${it.id}`, { state: { ids: visible.map(v => v.id), index: idx } })}
+                    onClick={() => navigate(`/exams/question/${it.id}`)}
                   >
                     <CardHeader>
                       <CardTitle className="text-base">

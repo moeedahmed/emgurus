@@ -99,16 +99,21 @@ const App = () => (
                  </ErrorBoundary>
                } />
                <Route path="/exams/reviewed" element={
-                 <ErrorBoundary>
-                   {/* Reviewed Question Bank (EM only) */}
-                   <ReviewedQuestionBank />
-                 </ErrorBoundary>
-               } />
-               <Route path="/exams/reviewed/:id" element={
-                 <ErrorBoundary>
-                   <ReviewedQuestionDetail />
-                 </ErrorBoundary>
-               } />
+                  <ErrorBoundary>
+                    {/* Reviewed Question Bank (EM only) */}
+                    <ReviewedQuestionBank />
+                  </ErrorBoundary>
+                } />
+                <Route path="/exams/reviewed/:id" element={
+                  <ErrorBoundary>
+                    <QuestionDetail />
+                  </ErrorBoundary>
+                } />
+                <Route path="/exams/practice/:id" element={
+                  <ErrorBoundary>
+                    <ReviewedQuestionDetail />
+                  </ErrorBoundary>
+                } />
                <Route path="/exams/question-bank" element={
                  <ErrorBoundary>
                    <QuestionBankPage />
@@ -200,6 +205,7 @@ const App = () => (
               <Route path="/tools/generate-exam-question" element={<GenerateExamQuestion />} />
               <Route path="/tools/my-exam-drafts" element={<MyExamDrafts />} />
               <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/exams/exam" element={<ReviewedExamSession />} />
               <Route path="/exams/reviewed-exam" element={<ReviewedExamSession />} />
             </Route>
 
