@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
-import { BookOpen, Stethoscope, GraduationCap, BarChart3, MessageSquare } from "lucide-react";
+import { BookOpen, Stethoscope, GraduationCap, MessageSquare } from "lucide-react";
 import ReviewedByMe from "@/pages/guru/ReviewedByMe";
 import GuruReviewQueue from "@/pages/guru/ReviewQueue";
 import MyExamDrafts from "@/pages/tools/MyExamDrafts";
@@ -13,9 +13,6 @@ import KpiCard from "@/components/dashboard/KpiCard";
 import TrendCard from "@/components/dashboard/TrendCard";
 import { useGuruMetrics } from "@/hooks/metrics/useGuruMetrics";
 import { supabase } from "@/integrations/supabase/client";
-import Pricing from "@/pages/guru/Pricing";
-import ForumsModeration from "@/pages/ForumsModeration";
-import SubmitQuestion from "@/pages/tools/SubmitQuestion";
 
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -79,6 +76,54 @@ function ReviewerRejectedPanel() {
   );
 }
 
+function MyBlogsPanel() {
+  const { user } = useAuth();
+  const [rows, setRows] = useState<any[]>([]);
+  useEffect(() => {
+    (async () => {
+      if (!user) { setRows([]); return; }
+      const { data } = await supabase
+        .from('blog_posts')
+        .select('id, title, slug, status, created_at')
+        .eq('author_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      setRows((data as any) || []);
+    })();
+  }, [user?.id]);
+  return (
+    <div className="p-4">
+      <TableCard
+        title="My Blogs"
+        columns={[
+          { key: 'title', header: 'Title', render: (r: any) => r.title || '-' },
+          { key: 'status', header: 'Status', render: (r: any) => r.status || '-' },
+          { key: 'created_at', header: 'Created', render: (r: any) => new Date(r.created_at).toLocaleString() },
+          { key: 'link', header: 'Link', render: (r: any) => (r.slug ? <a className="underline" href={`/blogs/${r.slug}`}>Open</a> : '-') },
+        ]}
+        rows={rows}
+        emptyText="No posts yet."
+      />
+    </div>
+  );
+}
+
+function MyThreadsPanel() {
+  // Minimal placeholder to avoid heavy queries; can be enhanced later
+  return (
+    <div className="p-4">
+      <TableCard
+        title="My Threads"
+        columns={[
+          { key: 'title', header: 'Title' },
+          { key: 'activity', header: 'Last activity' },
+        ]}
+        rows={[]}
+        emptyText="No threads yet."
+      />
+    </div>
+  );
+}
 
 export default function DashboardGuru() {
   useEffect(() => { document.title = "Guru Workspace | EMGurus"; }, []);
@@ -106,10 +151,11 @@ export default function DashboardGuru() {
       title: "Blogs",
       icon: BookOpen,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Your review activity at a glance.</div> },
-        { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts awaiting your review.</div><ReviewerAssigned /></div> },
-        { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Items you approved.</div><ReviewerApprovedPanel /></div> },
-        { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Items you requested changes for.</div><ReviewerRejectedPanel /></div> },
+        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your recent reviews and publishing impact.</div><AnalyticsPanel /></div> },
+        { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blogs waiting for your review.</div><ReviewerAssigned /></div> },
+        { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blogs you approved.</div><ReviewerApprovedPanel /></div> },
+        { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blogs you rejected with notes.</div><ReviewerRejectedPanel /></div> },
+        { id: "my", title: "My Blogs", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Drafts and posts you authored.</div><MyBlogsPanel /></div> },
       ],
     },
     {
@@ -117,12 +163,11 @@ export default function DashboardGuru() {
       title: "Exams",
       icon: GraduationCap,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Your exam review workflow at a glance.</div> },
-        { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Questions awaiting your review.</div><GuruReviewQueue /></div> },
-        { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Questions you approved.</div><ReviewedByMe /></div> },
-        { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Questions you rejected or requested changes for.</div><RejectedByMe /></div> },
-        { id: "submit", title: "Submit", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Submit new questions for review.</div><SubmitQuestion /></div> },
-        { id: "submitted", title: "Submitted", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your submitted drafts.</div><MyExamDrafts /></div> },
+        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your exam reviews and contribution.</div><AnalyticsPanel /></div> },
+        { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Questions assigned to you.</div><GuruReviewQueue /></div> },
+        { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your completed approvals.</div><ReviewedByMe /></div> },
+        { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Items you sent back with notes.</div><RejectedByMe /></div> },
+        { id: "my", title: "My Questions", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Questions you drafted.</div><MyExamDrafts /></div> },
       ],
     },
     {
@@ -130,10 +175,9 @@ export default function DashboardGuru() {
       title: "Consultations",
       icon: Stethoscope,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Your consultation tools at a glance.</div> },
-        { id: "availability", title: "Availability", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Manage when learners can book you.</div><Availability /></div> },
-        { id: "pricing", title: "Pricing", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Set your rates and durations.</div><Pricing /></div> },
-        { id: "bookings", title: "Bookings", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your upcoming and past consultations.</div><Bookings /></div> },
+        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your booking stats at a glance.</div><AnalyticsPanel /></div> },
+        { id: "availability", title: "Availability", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Manage your slots and rates.</div><Availability /></div> },
+        { id: "bookings", title: "Bookings", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Upcoming and past sessions.</div><Bookings /></div> },
       ],
     },
     {
@@ -141,16 +185,8 @@ export default function DashboardGuru() {
       title: "Forums",
       icon: MessageSquare,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Forum moderation at a glance.</div> },
-        { id: "moderation", title: "Moderation Queue", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Threads and replies requiring action.</div><ForumsModeration /></div> },
-      ],
-    },
-    {
-      id: "analytics",
-      title: "Analytics",
-      icon: BarChart3,
-      tabs: [
-        { id: "overview", title: "Overview", render: <AnalyticsPanel /> },
+        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your forum activity.</div><AnalyticsPanel /></div> },
+        { id: "my", title: "My Threads", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Threads you started.</div><MyThreadsPanel /></div> },
       ],
     },
   ];
