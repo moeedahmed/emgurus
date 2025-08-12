@@ -52,6 +52,11 @@ const { isAdmin, isGuru } = useRoles();
 const [isPaid, setIsPaid] = useState(false);
 const maxExam = isPaid ? 100 : 25;
 const maxAi = isPaid ? 100 : 10;
+// Practice topic availability
+const [pAreasAvail, setPAreasAvail] = useState<string[]>(["All areas"]);
+const [pHasAny, setPHasAny] = useState<boolean>(false);
+// Exam time selection
+const [eTime, setETime] = useState<string>("untimed");
 
   useEffect(() => {
     document.title = "EMGurus Exam Practice • EM Gurus";
@@ -72,6 +77,35 @@ const maxAi = isPaid ? 100 : 10;
       } catch { setIsPaid(false); }
     })();
   }, []);
+
+  // Load available topics for Practice based on reviewed bank
+  useEffect(() => {
+    (async () => {
+      if (!practiceOpen || !pExam) { setPAreasAvail(["All areas"]); setPHasAny(false); return; }
+      try {
+        const examCode = (EXAM_CODE_MAP_LANDING as any)[pExam] || pExam;
+        const { data } = await (supabase as any)
+          .from('reviewed_exam_questions')
+          .select('topic')
+          .eq('status', 'approved')
+          .eq('exam', examCode)
+          .not('topic', 'is', null)
+          .order('topic', { ascending: true })
+          .limit(1000);
+        const topics = Array.from(new Set((Array.isArray(data) ? data : []).map((r: any) => r.topic).filter(Boolean)));
+        const allowed = CURRICULA[pExam] ? topics.filter(t => (CURRICULA as any)[pExam].includes(t)) : topics;
+        setPAreasAvail(['All areas', ...allowed]);
+        setPHasAny(((data || []).length) > 0);
+      } catch {
+        setPAreasAvail(['All areas']);
+        setPHasAny(false);
+      }
+    })();
+  }, [practiceOpen, pExam]);
+
+  useEffect(() => {
+    if (!pAreasAvail.includes(pTopic)) setPTopic('All areas');
+  }, [pAreasAvail]);
 
   // Fetch reviewed question IDs via Edge Function, with direct-table fallback
   const fetchReviewedIds = async (exam?: ExamName | "", topic?: string, limit: number = 50) => {
@@ -121,14 +155,14 @@ const maxAi = isPaid ? 100 : 10;
     try {
       const ids = await fetchReviewedIds(eExam, eTopic, Math.max(5, Math.min(maxExam, eCount)));
       if (!ids.length) { setExamOpen(false); return; }
-      const limitSec = eTimed ? Math.round(Math.max(1, Math.min(maxExam, eCount)) * 90) : undefined; // ~90s per Q
+      const limitSec = eTime !== 'untimed' ? Number(eTime) * 60 : undefined;
       navigate('/exams/reviewed-exam', { state: { ids, limitSec } });
     } finally {
       setExamOpen(false);
     }
   };
 
-  const pAreas = pExam ? ["All areas", ...CURRICULA[pExam]] : ["All areas"];
+  const pAreas = pAreasAvail;
   const eAreas = eExam ? ["All areas", ...CURRICULA[eExam]] : ["All areas"];
 
   return (
@@ -248,7 +282,7 @@ const maxAi = isPaid ? 100 : 10;
                     </div>
                     <div className="md:col-span-2 flex items-center justify-end gap-2 pt-2">
                       <Button variant="outline" onClick={() => setPracticeOpen(false)}>Cancel</Button>
-                      <Button onClick={startPractice} disabled={!pExam}>Start</Button>
+                      <Button onClick={startPractice} disabled={!pExam || !pHasAny}>Start</Button>
                     </div>
                   </div>
                 </DialogContent>
@@ -300,6 +334,16 @@ const maxAi = isPaid ? 100 : 10;
                         const v = Number(e.target.value || 25);
                         setECount(Math.max(5, Math.min(maxExam, v)));
                       }} className="mt-1" />
+                    </div>
+                    <div className="md:col-span-1">
+                      <Label>Time</Label>
+                      <Select value={eTime} onValueChange={setETime}>
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="Untimed" /></SelectTrigger>
+                        <SelectContent className="z-50">
+                          <SelectItem value="untimed">Untimed</SelectItem>
+                          {[30,45,60,90,120].map(m => (<SelectItem key={m} value={String(m)}>{m} min</SelectItem>))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="md:col-span-3 flex items-center justify-end gap-2 pt-2">
                       <Button variant="outline" onClick={() => setExamOpen(false)}>Cancel</Button>

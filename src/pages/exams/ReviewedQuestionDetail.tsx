@@ -380,7 +380,7 @@ const goNext = async () => {
 
                   <Card>
                    <CardHeader>
-                     <CardTitle className="text-base">Notes & Flag</CardTitle>
+                     <CardTitle className="text-base">Feedback</CardTitle>
                    </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2 mb-3">
@@ -396,11 +396,10 @@ const goNext = async () => {
                           </Button>
                         ))}
                       </div>
-                      <Label htmlFor="notes-m" className="text-sm">Notes (optional)</Label>
+                      <Label htmlFor="notes-m" className="text-sm">Describe (optional)</Label>
                       <Textarea id="notes-m" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add a short note…" className="mt-1" />
                       <div className="mt-3 flex items-center gap-2">
-                        <Button size="sm" onClick={() => sendFeedback()}>Send feedback</Button>
-                        <Button size="sm" variant="outline" onClick={handleReset}>Reset Session</Button>
+                        <Button size="sm" onClick={() => sendFeedback()}>Send</Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -441,7 +440,6 @@ const goNext = async () => {
                     <div className="text-sm">How was this question?</div>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => { setFeedbackGiven(true); setNeedsFeedback(false); try { const used = Number(localStorage.getItem('free_reviewed_used')||'0'); localStorage.setItem('free_reviewed_used', String(used + 1)); } catch {} }}>Looks good</Button>
-                      <Button size="sm" onClick={() => sendFeedback('Needs improvement')}>Needs improvement</Button>
                     </div>
                   </div>
                 )}
@@ -484,7 +482,7 @@ const goNext = async () => {
               </Card>
               <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Notes & Flag</CardTitle>
+                    <CardTitle className="text-base">Feedback</CardTitle>
                   </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2 mb-3">
