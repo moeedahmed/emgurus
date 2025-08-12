@@ -2,6 +2,7 @@ import AuthorChip from "@/components/blogs/AuthorChip";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
 import fallbackImage from "@/assets/medical-blog.jpg";
 
 interface BlogCardProps {
@@ -65,30 +66,32 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, select
             </Badge>
           ))}
           {p.category?.title && !/^imported$/i.test(p.category.title) && (
-            <Badge
-              variant={selectedCategory === p.category!.title! ? "secondary" : "outline"}
-              className="text-xs cursor-pointer"
-              aria-pressed={selectedCategory === p.category!.title!}
-              title={p.category!.title!}
-              onClick={() => onTagClick?.('category', p.category!.title!)}
+            <Chip
+              name="blogs_category_chip"
+              value={p.category!.title!}
+              selected={selectedCategory === p.category!.title!}
+              variant={selectedCategory === p.category!.title! ? "solid" : "outline"}
+              size="sm"
+              onSelect={() => onTagClick?.('category', p.category!.title!)}
             >
               {p.category.title}
-            </Badge>
+            </Chip>
           )}
           {(p.tags || []).slice(0, 3).map((t) => {
             const label = t.slug || t.title;
             const active = selectedTag === label;
             return (
-              <Badge
+              <Chip
                 key={label}
-                variant={active ? "secondary" : "outline"}
-                className="text-xs cursor-pointer"
-                aria-pressed={active}
-                title={label}
-                onClick={() => onTagClick?.('tag', label)}
+                name="blogs_tag_chip"
+                value={label}
+                selected={active}
+                variant={active ? "solid" : "outline"}
+                size="sm"
+                onSelect={() => onTagClick?.('tag', label)}
               >
                 #{label}
-              </Badge>
+              </Chip>
             );
           })}
         </div>

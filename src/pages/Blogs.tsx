@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PageHero from "@/components/PageHero";
 import { CATEGORIES, sanitizeCategory } from "@/lib/taxonomy";
+import { Chip } from "@/components/ui/chip";
 
 export default function Blogs() {
   const [items, setItems] = useState<any[]>([]);
@@ -221,22 +222,26 @@ export default function Blogs() {
               {(category || tag || author || sort !== 'newest') && (
                 <div className="flex flex-wrap items-center gap-2">
                   {category && (
-                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('category','')}>{category} ×</Button>
+                    <Chip name="blogs_active_category" value={category} selected variant="solid" size="sm" onSelect={() => setParam('category','')}>
+                      {category} ×
+                    </Chip>
                   )}
                   {tag && (
-                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('tag','')}>{tag} ×</Button>
+                    <Chip name="blogs_active_tag" value={tag} selected variant="solid" size="sm" onSelect={() => setParam('tag','')}>
+                      {tag} ×
+                    </Chip>
                   )}
                   {author && (
-                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('author','')}>
+                    <Chip name="blogs_active_author" value={author} selected variant="solid" size="sm" onSelect={() => setParam('author','')}>
                       {(authors.find(a => a.id === author)?.name) || 'Author'} ×
-                    </Button>
+                    </Chip>
                   )}
                   {sort !== 'newest' && (
-                    <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setParam('sort','newest')}>
+                    <Chip name="blogs_active_sort" value={sort} selected variant="solid" size="sm" onSelect={() => setParam('sort','newest')}>
                       {sort === 'liked' ? 'Most Liked' : sort === 'discussed' ? 'Most Discussed' : sort === 'editors' ? "Editor's Picks" : sort === 'featured' ? 'Featured' : 'Newest'} ×
-                    </Button>
+                    </Chip>
                   )}
-                  <Button size="sm" variant="ghost" onClick={() => setSearchParams(new URLSearchParams())}>Clear all</Button>
+                  <Chip name="blogs_clear" value="clear" variant="ghost" size="sm" onSelect={() => setSearchParams(new URLSearchParams())}>Clear all</Chip>
                 </div>
               )}
             </div>
