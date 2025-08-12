@@ -28,6 +28,7 @@ import AdminConsultsGurus from "@/components/dashboard/consultations/AdminConsul
 import AdminConsultsPolicies from "@/components/dashboard/consultations/AdminConsultsPolicies";
 import AdminConsultsNotifications from "@/components/dashboard/consultations/AdminConsultsNotifications";
 import AdminConsultsSettings from "@/components/dashboard/consultations/AdminConsultsSettings";
+import ApproveGurus from "@/pages/admin/ApproveGurus";
 
 // -------- Analytics panel
 const AdminAnalyticsPanel: React.FC = () => {
@@ -746,7 +747,12 @@ export default function DashboardAdmin() {
       icon: BarChart3,
       tabs: [ { id: "overview", title: "Overview", render: <AdminAnalyticsPanel /> } ],
     },
-    { id: "users", title: "Users", icon: UsersRound, tabs: [ { id: "m", title: "Manage", render: <div className="p-4 text-sm text-muted-foreground">User management shortcuts coming soon.</div> } ] },
+    { id: "users", title: "Users", icon: UsersRound, tabs: [ 
+      { id: "manage", title: "Manage", render: <div className="p-4 text-sm text-muted-foreground">User management shortcuts coming soon.</div> },
+      { id: "guru-approvals-pending", title: "Guru Approvals — Pending", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Users requesting Guru status.</div><ApproveGurus embedded status="pending" /></div> },
+      { id: "guru-approvals-approved", title: "Guru Approvals — Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Requests you approved.</div><ApproveGurus embedded status="approved" /></div> },
+      { id: "guru-approvals-rejected", title: "Guru Approvals — Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Requests you rejected (with reason).</div><ApproveGurus embedded status="rejected" /></div> },
+    ] },
     { id: "settings", title: "Settings", icon: Settings, tabs: [ { id: "prefs", title: "Preferences", render: <div className="p-4 text-sm text-muted-foreground">Workspace settings.</div> } ] },
   ];
 
