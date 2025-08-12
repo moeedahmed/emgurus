@@ -152,6 +152,20 @@
 
 ---
 
+## Workspace & Chips (design notes)
+- Left‑panel workspace
+  - Dashboards at `/dashboard/{user|guru|admin}` use a persistent left sidebar with sections (Blogs, Exams, Consultations, Forums…).
+  - Each section renders sub‑tabs on the right. Sections are addressable via URL hash (e.g., `#blogs`).
+  - Embedded mode: when reusing full pages inside the workspace, pass `embedded` to hide big heroes and tighten padding.
+- Chip atom
+  - Component: `src/components/ui/chip.tsx`.
+  - Props: `{ name, value, selected?, onSelect?, variant?: 'solid'|'outline'|'ghost', size?: 'sm'|'md' }` (+ `as`, `href`, icons).
+  - A11y: `role="button"`, `aria-pressed`, Space/Enter toggles, focus-visible ring.
+  - Usage now: Blog cards (category/tags, Most Liked) and Reviewed Question Bank (exam/topic/difficulty).
+  - Extend gradually; avoid ad‑hoc clickable badges.
+
+---
+
 ## MVP Acceptance (what “working” means)
 - AI Practice: generate session, show MCQs+answers+explanations.
 - Reviewed Bank: list loads (filters work), detail shows reviewer name & date.
@@ -162,4 +176,4 @@
 ---
 
 ## Ownership / Contacts
-- Product owner: Moeed (GitHub: `mo
+- Product owner: Moeed (GitHub: `mo`)

@@ -37,9 +37,9 @@ export default function Exams() {
 
           <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
-              <h3 className="text-xl font-semibold mb-2">Gurus Reviewed Questions</h3>
+              <h3 className="text-xl font-semibold mb-2">Question Bank</h3>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Human‑reviewed MCQs</li>
+                <li>• Reviewed by Gurus</li>
                 <li>• Filter by exam and topic</li>
                 <li>• Track your progress</li>
               </ul>

@@ -1,129 +1,81 @@
-import { useEffect, useState, lazy, Suspense } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-const TrustpilotAnalytics = lazy(() => import("@/components/admin/TrustpilotAnalytics"));
-const DashboardAdmin = () => {
-  const navigate = useNavigate();
-  useEffect(() => { document.title = "Admin Dashboard | EMGurus"; }, []);
-  const { hash } = useLocation();
-  const [showAnalytics, setShowAnalytics] = useState(false);
-  useEffect(() => {
-    if (hash === "#blogs-admin" || hash === "#blogs-admin-section") {
-      document.getElementById("blogs-admin-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [hash]);
-  return (
-    <main className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Approve Gurus</h2>
-          <p className="text-muted-foreground mb-4">Verify and onboard new mentors.</p>
-          <Button onClick={() => navigate('/admin/approve-gurus')}>Open Approvals</Button>
-        </Card>
-        <section id="blogs-admin-section">
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-2">Blogs (Admin)</h2>
-            <p className="text-muted-foreground mb-4">Review drafts and publish when ready.</p>
-            <Button onClick={() => navigate('/admin/moderate-posts')}>Moderate</Button>
-          </Card>
-        </section>
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Exams</h2>
-          <p className="text-muted-foreground mb-4">Generate and assign AI questions.</p>
-          <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => navigate('/admin/exams-curation#generator')}>Generator</Button>
-            <Button variant="outline" onClick={() => navigate('/admin/exams-curation#assignments')}>Assignments</Button>
-          </div>
-        </Card>
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Question Bank Overview</h2>
-          <p className="text-muted-foreground mb-4">Browse and filter the reviewed question bank.</p>
-          <Button onClick={() => navigate('/exams/reviewed')}>Open Question Bank</Button>
-        </Card>
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Import EMGurus Content</h2>
-          <p className="text-muted-foreground mb-4">Fetch and publish from emgurus.com (admin/guru only).</p>
-          <Button onClick={async () => {
-            try {
-              const { data, error } = await supabase.functions.invoke('import-emgurus', { body: { url: 'https://emgurus.com', limit: 30 } });
-              if (error) throw error;
-              toast.success(`Imported ${data?.imported || 0} articles`);
-            } catch (e) {
-              console.error(e);
-              toast.error('Import failed. Ensure you are admin/guru and FIRECRAWL_API_KEY is set.');
-            }
-          }}>Run Import</Button>
-        </Card>
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Add Sample Blog Posts</h2>
-          <p className="text-muted-foreground mb-4">Create a few published examples to preview the blog.</p>
-          <Button onClick={async () => {
-            try {
-              const titles = [
-                'Managing Sepsis in the ED: A Practical Guide',
-                'Airway Pearls: Intubation Tips for Difficult Cases',
-                'ECG Mastery: Recognizing STEMI Mimics'
-              ];
-              const now = new Date().toISOString();
-              const { data: userData } = await supabase.auth.getUser();
-              const authorId = userData.user?.id as string;
-              const rows = titles.map((t) => ({
-                title: t,
-                description: 'Sample article for preview of EMGurus blog layout.',
-                cover_image_url: null,
-                content: `<p>This is a <strong>sample article</strong> to demonstrate how content appears on EMGurus. Replace with real content via the importer.</p><p>Posted on ${now}</p>`,
-                status: 'published' as const,
-                slug: t.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-'),
-                author_id: authorId,
-              }));
-              const { error } = await supabase.from('blog_posts').insert(rows);
-              if (error) throw error;
-              toast.success('Sample posts added');
-            } catch (e) {
-              console.error(e);
-              toast.error('Failed to add sample posts');
-            }
-          }}>Add Samples</Button>
-        </Card>
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Send Review Invites</h2>
-          <p className="text-muted-foreground mb-4">Send post-onboarding (5 days) Trustpilot invitations.</p>
-          <Button onClick={async () => {
-            try {
-              const { data, error } = await supabase.functions.invoke('send-review-invites');
-              if (error) throw error;
-              toast.success(`Invites sent: ${data?.sent ?? 0}`);
-            } catch (e) {
-              console.error(e);
-              toast.error('Failed to send invites');
-            }
-          }}>Run Now</Button>
-        </Card>
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-2">Track Progress</h2>
-          <p className="text-muted-foreground mb-4">Review your exam attempts and strengths.</p>
-          <Button variant="secondary" onClick={() => navigate('/dashboard/user/progress')}>Open Progress</Button>
-        </Card>
-        <div className="md:col-span-2 space-y-4">
-          <Card className="p-6 flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Trustpilot Analytics</h2>
-            <Button variant="outline" onClick={() => setShowAnalytics((v) => !v)}>
-              {showAnalytics ? 'Hide' : 'Load'}
-            </Button>
-          </Card>
-          {showAnalytics && (
-            <Suspense fallback={<p className="text-muted-foreground">Loading analytics…</p>}>
-              <TrustpilotAnalytics />
-            </Suspense>
-          )}
-        </div>
-      </div>
-    </main>
-  );
-};
+import React, { useEffect } from "react";
+import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
+import { BookOpen, ClipboardList, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings } from "lucide-react";
+import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
+import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
+import Forums from "@/pages/Forums";
+import Blogs from "@/pages/Blogs";
+import ModeratePosts from "@/pages/admin/ModeratePosts";
+import AssignReviews from "@/pages/admin/AssignReviews";
 
-export default DashboardAdmin;
+function AdminUnassigned() { useEffect(() => { const p = new URLSearchParams(location.search); p.set('view','admin'); p.set('tab','unassigned'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts />; }
+function AdminAssigned() { useEffect(() => { const p = new URLSearchParams(location.search); p.set('view','admin'); p.set('tab','assigned'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts />; }
+
+// Minimal Completed list for admin using existing table
+import { supabase } from "@/integrations/supabase/client";
+function AdminCompleted() {
+  const [items, setItems] = React.useState<any[]>([]);
+  useEffect(() => { (async () => {
+    const { data } = await supabase.from('blog_posts').select('id,title,slug,published_at').eq('status','published').order('published_at',{ascending:false}).limit(50);
+    setItems((data as any) || []);
+  })(); }, []);
+  return (
+    <div className="p-4 space-y-2">
+      {items.map((p:any) => (
+        <div key={p.id} className="flex items-center justify-between rounded border p-3">
+          <div>
+            <div className="font-medium">{p.title}</div>
+            <div className="text-xs text-muted-foreground">{p.slug}</div>
+          </div>
+          {p.slug && <a className="text-sm underline" href={`/blogs/${p.slug}`}>View</a>}
+        </div>
+      ))}
+      {items.length===0 && <div className="text-sm text-muted-foreground">No published posts yet.</div>}
+    </div>
+  );
+}
+
+export default function DashboardAdmin() {
+  useEffect(() => { document.title = "Admin Workspace | EMGurus"; }, []);
+
+  const sections: WorkspaceSection[] = [
+    {
+      id: "blogs",
+      title: "Blogs",
+      icon: BookOpen,
+      tabs: [
+        { id: "submitted", title: "Submitted/Unassigned", render: <div className="p-4"><AdminUnassigned /></div> },
+        { id: "assigned", title: "Assigned", render: <div className="p-4"><AdminAssigned /></div> },
+        { id: "completed", title: "Completed", render: <div className="p-4"><AdminCompleted /></div> },
+        { id: "assign", title: "Assign Reviews", render: <div className="p-4"><AssignReviews /></div> },
+      ],
+    },
+    {
+      id: "exams",
+      title: "Exams",
+      icon: GraduationCap,
+      tabs: [
+        { id: "question-bank", title: "Question Bank", render: <div className="p-0"><ReviewedQuestionBank embedded /></div> },
+        { id: "ai-practice", title: "AI Practice", render: <div className="p-0"><AiPracticeConfig /></div> },
+      ],
+    },
+    {
+      id: "forums",
+      title: "Forums",
+      icon: MessageSquare,
+      tabs: [
+        { id: "all", title: "All Threads", render: <div className="p-0"><Forums embedded /></div> },
+      ],
+    },
+    {
+      id: "analytics",
+      title: "Analytics",
+      icon: BarChart3,
+      tabs: [ { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Analytics module coming soon.</div> } ],
+    },
+    { id: "users", title: "Users", icon: UsersRound, tabs: [ { id: "m", title: "Manage", render: <div className="p-4 text-sm text-muted-foreground">User management shortcuts coming soon.</div> } ] },
+    { id: "settings", title: "Settings", icon: Settings, tabs: [ { id: "prefs", title: "Preferences", render: <div className="p-4 text-sm text-muted-foreground">Workspace settings.</div> } ] },
+  ];
+
+  return <WorkspaceLayout title="Admin Workspace" sections={sections} defaultSectionId="blogs" />;
+}
