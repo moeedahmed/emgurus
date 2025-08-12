@@ -15,6 +15,7 @@ import { useGuruMetrics } from "@/hooks/metrics/useGuruMetrics";
 import { supabase } from "@/integrations/supabase/client";
 import Pricing from "@/pages/guru/Pricing";
 import ForumsModeration from "@/pages/ForumsModeration";
+import SubmitQuestion from "@/pages/tools/SubmitQuestion";
 
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -118,6 +119,7 @@ export default function DashboardGuru() {
         { id: "assigned", title: "Assigned", render: <div className="p-0"><GuruReviewQueue /></div> },
         { id: "approved", title: "Approved", render: <div className="p-0"><ReviewedByMe /></div> },
         { id: "rejected", title: "Rejected", render: <div className="p-0"><RejectedByMe /></div> },
+        { id: "create", title: "Create", render: <div className="p-0"><SubmitQuestion /></div> },
         { id: "submitted", title: "Submitted", render: <div className="p-0"><MyExamDrafts /></div> },
       ],
     },

@@ -39,6 +39,7 @@ const AdminAnalyticsPanel: React.FC = () => {
 
 const AdminExamShortcutsBar: React.FC = () => (
   <div className="px-4 py-3 border-b flex flex-wrap gap-2">
+    <Button asChild size="sm" variant="outline"><a href="/tools/submit-question">Submit Question</a></Button>
     <Button asChild size="sm" variant="outline"><a href="/admin/exams-curation">AI Curation & Assign</a></Button>
     <Button asChild size="sm" variant="outline"><a href="/admin/question-sets">Question Sets</a></Button>
     <Button asChild size="sm" variant="outline"><a href="/admin/marked-questions">Marked Questions</a></Button>

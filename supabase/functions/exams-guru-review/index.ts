@@ -16,8 +16,11 @@ const corsHeaders = {
 
 function allowOrigin(origin: string | null): string | null {
   if (!origin) return "*"; // allow server-to-server
+  const host = origin.toLowerCase();
+  // Allow Lovable preview/staging domains for development convenience
+  if (host.endsWith('.lovableproject.com') || host.endsWith('.lovable.app')) return origin;
   if (ORIGIN_ALLOWLIST.length === 0) return "*"; // fallback dev
-  const ok = ORIGIN_ALLOWLIST.some(o => o === "*" || o.toLowerCase() === origin.toLowerCase());
+  const ok = ORIGIN_ALLOWLIST.some(o => o === "*" || o.toLowerCase() === host);
   return ok ? origin : null;
 }
 

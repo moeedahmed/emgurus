@@ -228,7 +228,7 @@ const ModeratePosts: React.FC<{ embedded?: boolean; forceView?: 'admin'|'reviewe
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
                 <div className="font-semibold">{p.title}</div>
-                <div className="text-sm text-muted-foreground line-clamp-2">{p.description}</div>
+                <div className="text-sm text-muted-foreground line-clamp-2 break-words">{p.description}</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {(assignments[p.id] || []).map((a) => (
                     <Badge key={a.id} variant={a.status === "pending" ? "secondary" : "default"}>

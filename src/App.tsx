@@ -61,6 +61,7 @@ import AuthLandingGuard from "@/components/auth/AuthLandingGuard";
 import MarkedQuestionsAdmin from "./pages/admin/MarkedQuestions";
 import QuestionSetsAdmin from "./pages/admin/QuestionSets";
 import ReviewedExamSession from "@/pages/exams/ReviewedExamSession";
+import SubmitQuestion from "@/pages/tools/SubmitQuestion";
 
 
 function LegacyBlogsDashboardRedirect() {
@@ -181,8 +182,10 @@ const App = () => (
                <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
                <Route path="/dashboard/user/progress" element={<UserProgress />} />
 <Route path="/guru/questions" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruQuestions /></RoleProtectedRoute>} />
-<Route path="/guru/reviews" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruReviewQueue /></RoleProtectedRoute>} />
-<Route path="/guru/exams/review" element={<RoleProtectedRoute roles={["guru", "admin"]}><ExamsReviewQueue /></RoleProtectedRoute>} />
+            <Route path="/guru/reviews" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruReviewQueue /></RoleProtectedRoute>} />
+            <Route path="/guru/exams/review" element={<RoleProtectedRoute roles={["guru", "admin"]}><ExamsReviewQueue /></RoleProtectedRoute>} />
+            <Route path="/tools/submit-question" element={<RoleProtectedRoute roles={["guru", "admin"]}><SubmitQuestion /></RoleProtectedRoute>} />
+            <Route path="/tools/submit-question/:id" element={<RoleProtectedRoute roles={["guru", "admin"]}><SubmitQuestion /></RoleProtectedRoute>} />
 <Route path="/guru/reviewed" element={<RoleProtectedRoute roles={["guru", "admin"]}><ReviewedByMe /></RoleProtectedRoute>} />
 <Route path="/guru/availability" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruAvailability /></RoleProtectedRoute>} />
               <Route path="/admin/approve-gurus" element={<RoleProtectedRoute roles={["admin"]}><ApproveGurus /></RoleProtectedRoute>} />
