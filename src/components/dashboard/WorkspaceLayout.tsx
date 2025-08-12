@@ -14,7 +14,7 @@ export type WorkspaceSection = {
   }>;
 };
 
-export default function WorkspaceLayout({
+export function WorkspaceLayoutInner({
   title,
   sections,
   defaultSectionId,
@@ -50,7 +50,7 @@ export default function WorkspaceLayout({
   const collapsed = state === 'collapsed';
 
   return (
-    <SidebarProvider>
+    
       <div className="min-h-screen flex w-full">
         <Sidebar className={cn("border-r", collapsed ? "w-14" : "w-60")} collapsible="icon">
           <SidebarContent>
@@ -113,6 +113,18 @@ export default function WorkspaceLayout({
           </div>
         </SidebarInset>
       </div>
+    
+  );
+}
+
+export default function WorkspaceLayout(props: {
+  title: string;
+  sections: WorkspaceSection[];
+  defaultSectionId?: string;
+}) {
+  return (
+    <SidebarProvider>
+      <WorkspaceLayoutInner {...props} />
     </SidebarProvider>
   );
 }
