@@ -1557,9 +1557,12 @@ export type Database = {
           email: string | null
           exam_interests: string[]
           exams: string[] | null
+          facebook: string | null
           full_name: string | null
+          github: string | null
           hospital: string | null
           id: string
+          instagram: string | null
           languages: string[] | null
           linkedin: string | null
           onboarding_progress: Json
@@ -1580,6 +1583,7 @@ export type Database = {
           user_id: string
           website: string | null
           years_experience: number | null
+          youtube: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -1592,9 +1596,12 @@ export type Database = {
           email?: string | null
           exam_interests?: string[]
           exams?: string[] | null
+          facebook?: string | null
           full_name?: string | null
+          github?: string | null
           hospital?: string | null
           id?: string
+          instagram?: string | null
           languages?: string[] | null
           linkedin?: string | null
           onboarding_progress?: Json
@@ -1615,6 +1622,7 @@ export type Database = {
           user_id: string
           website?: string | null
           years_experience?: number | null
+          youtube?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -1627,9 +1635,12 @@ export type Database = {
           email?: string | null
           exam_interests?: string[]
           exams?: string[] | null
+          facebook?: string | null
           full_name?: string | null
+          github?: string | null
           hospital?: string | null
           id?: string
+          instagram?: string | null
           languages?: string[] | null
           linkedin?: string | null
           onboarding_progress?: Json
@@ -1650,6 +1661,7 @@ export type Database = {
           user_id?: string
           website?: string | null
           years_experience?: number | null
+          youtube?: string | null
         }
         Relationships: []
       }

@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import TagInput from "@/components/forms/TagInput";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Linkedin, Twitter } from "lucide-react";
+import { Linkedin, Twitter, Github, Facebook, Instagram, Youtube } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +27,10 @@ interface ProfileRow {
   bio: string | null;
   linkedin: string | null;
   twitter: string | null;
+  github?: string | null;
+  facebook?: string | null;
+  instagram?: string | null;
+  youtube?: string | null;
   price_per_30min: number | null;
   position?: string | null;
   hospital?: string | null;
@@ -51,12 +55,19 @@ export default function Profile() {
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [twitterUrl, setTwitterUrl] = useState("");
 
-  // Security
-  const [pwd, setPwd] = useState("");
-  const [pwd2, setPwd2] = useState("");
+const [githubUrl, setGithubUrl] = useState("");
+const [facebookUrl, setFacebookUrl] = useState("");
+const [instagramUrl, setInstagramUrl] = useState("");
+const [youtubeUrl, setYoutubeUrl] = useState("");
+const [avatarInput, setAvatarInput] = useState("");
+const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+// Security
+const [pwd, setPwd] = useState("");
+const [pwd2, setPwd2] = useState("");
 
   // Social connect helpers
-  const onConnect = async (provider: "linkedin_oidc" | "twitter") => {
+  const onConnect = async (provider: "linkedin_oidc" | "twitter" | "github" | "facebook") => {
     const redirectUrl = `${window.location.origin}/profile`;
     const { error } = await supabase.auth.signInWithOAuth({ provider: provider as any, options: { redirectTo: redirectUrl } as any });
     if (error) toast({ title: `Could not start ${provider} connect` });
@@ -78,7 +89,7 @@ export default function Profile() {
     (async () => {
       const { data: prof } = await supabase
         .from('profiles')
-        .select('user_id, full_name, email, timezone, country, specialty, primary_specialty, avatar_url, cover_image_url, exams, exam_interests, languages, bio, linkedin, twitter, price_per_30min, position, hospital, onboarding_progress')
+        .select('user_id, full_name, email, timezone, country, specialty, primary_specialty, avatar_url, cover_image_url, exams, exam_interests, languages, bio, linkedin, twitter, github, facebook, instagram, youtube, price_per_30min, position, hospital, onboarding_progress')
         .eq('user_id', user.id)
         .maybeSingle();
       const row = prof as any;
@@ -96,6 +107,11 @@ export default function Profile() {
       setHospitalText(row?.hospital || '');
       setLinkedinUrl(row?.linkedin || '');
       setTwitterUrl(row?.twitter || '');
+      setGithubUrl(row?.github || '');
+      setFacebookUrl(row?.facebook || '');
+      setInstagramUrl(row?.instagram || '');
+      setYoutubeUrl(row?.youtube || '');
+      setAvatarInput(row?.avatar_url || '');
 
       // Focus Profile tab if mandatory fields missing
       const missing = !row?.full_name || !row?.country || !(row?.primary_specialty || row?.specialty) || !row?.timezone || !((row?.exam_interests || row?.exams || []).length) || !((row?.languages || []).length);
@@ -172,6 +188,39 @@ export default function Profile() {
     setPwd(""); setPwd2("");
   };
 
+  const handleAvatarFile = async (file: File) => {
+    if (!user) return;
+    try {
+      setUploadingAvatar(true);
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      const url = data.publicUrl;
+      await supabase.from('profiles').update({ avatar_url: url }).eq('user_id', user.id);
+      setAvatarInput(url);
+      setProfile(p => p ? ({ ...p, avatar_url: url }) : p);
+      toast({ title: 'Avatar updated' });
+    } catch (e: any) {
+      toast({ title: 'Upload failed', description: e.message });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const applyAvatarUrl = async () => {
+    if (!user) return;
+    try {
+      if (!avatarInput) { toast({ title: 'Enter an image URL' }); return; }
+      await supabase.from('profiles').update({ avatar_url: avatarInput }).eq('user_id', user.id);
+      setProfile(p => p ? ({ ...p, avatar_url: avatarInput }) : p);
+      toast({ title: 'Avatar updated' });
+    } catch (e: any) {
+      toast({ title: 'Save failed', description: e.message });
+    }
+  };
+
   return (
     <main className="container mx-auto px-4 md:px-6 py-6 md:py-10">
       <article className="max-w-4xl mx-auto">
@@ -185,6 +234,19 @@ export default function Profile() {
           <TabsContent value="profile" className="mt-4">
             <Card className="w-full overflow-hidden p-6 shadow-md space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-2 md:col-span-2">
+                  <Label>Profile picture</Label>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {(avatarInput || profile?.avatar_url) ? (
+                      <img src={(avatarInput || (profile?.avatar_url as string))} alt="Avatar preview" className="h-16 w-16 rounded-full object-cover" />
+                    ) : null}
+                    <Input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarFile(f); }} disabled={uploadingAvatar} />
+                    <div className="flex gap-2 w-full md:w-auto">
+                      <Input placeholder="Avatar image URL" value={avatarInput} onChange={(e) => setAvatarInput(e.target.value)} />
+                      <Button type="button" onClick={applyAvatarUrl} disabled={!avatarInput}>Apply</Button>
+                    </div>
+                  </div>
+                </div>
                 <div className="grid gap-1">
                   <Label>Full name</Label>
                   <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
@@ -230,8 +292,24 @@ export default function Profile() {
                     <Button variant="outline" onClick={() => onConnect('twitter')} disabled={!!twitterUrl} className="inline-flex items-center gap-2">
                       <Twitter className="h-4 w-4" /> {twitterUrl ? 'X connected' : 'Connect X'}
                     </Button>
+                    <Button variant="outline" onClick={() => onConnect('github')} disabled={!!githubUrl} className="inline-flex items-center gap-2">
+                      <Github className="h-4 w-4" /> {githubUrl ? 'GitHub connected' : 'Connect GitHub'}
+                    </Button>
+                    <Button variant="outline" onClick={() => onConnect('facebook')} disabled={!!facebookUrl} className="inline-flex items-center gap-2">
+                      <Facebook className="h-4 w-4" /> {facebookUrl ? 'Facebook connected' : 'Connect Facebook'}
+                    </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">Connected accounts appear as icons on your public profile.</p>
+                  <div className="grid gap-3 md:grid-cols-2 w-full mt-2">
+                    <div className="grid gap-1">
+                      <Label htmlFor="instagram">Instagram URL</Label>
+                      <Input id="instagram" placeholder="https://instagram.com/yourhandle" value={instagramUrl} onChange={(e) => setInstagramUrl(e.target.value)} />
+                    </div>
+                    <div className="grid gap-1">
+                      <Label htmlFor="youtube">YouTube URL</Label>
+                      <Input id="youtube" placeholder="https://youtube.com/@yourchannel" value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Connect accounts (preferred). For platforms without login, you can add links.</p>
                 </div>
               </div>
               <div className="pt-2">
