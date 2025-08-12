@@ -97,6 +97,20 @@ export default function ReviewedExamSession() {
     })();
   }, []);
 
+  async function load(id: string) {
+    try {
+      setLoading(true);
+      const { data, error } = await (supabase as any)
+        .from('reviewed_exam_questions')
+        .select('id, stem, options, correct_index, explanation, exam, topic')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      setQ(data as FullQuestion);
+      setSelected(selectionMap[id] || "");
+    } finally { setLoading(false); }
+  }
+
   useEffect(() => {
     if (!q) { setDispOptions([]); return; }
     const arr = (q.options || []).map((t, i) => ({ text: t, origIndex: i }));
@@ -394,6 +408,7 @@ export default function ReviewedExamSession() {
           </Card>
         )}
       </div>
+      )}
     </div>
   );
 }
