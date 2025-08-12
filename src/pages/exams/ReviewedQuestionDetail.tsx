@@ -41,6 +41,7 @@ export default function ReviewedQuestionDetail() {
   const [timeSpent, setTimeSpent] = useState(0);
   const [notes, setNotes] = useState("");
   const [issueTypes, setIssueTypes] = useState<string[]>([]);
+  const [showMeta, setShowMeta] = useState(false);
   const tickRef = useRef<number | null>(null);
   const ids: string[] = location?.state?.ids || [];
   const index: number = location?.state?.index ?? (ids.indexOf(id as string) || 0);
@@ -360,6 +361,13 @@ const goNext = async () => {
   return (
      <div className="container mx-auto px-4 py-6">
       <Button variant="outline" onClick={() => navigate('/exams')}>Back to exams</Button>
+      {/* Mobile progress at top */}
+      <div className="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border mt-2">
+        <div className="px-1 py-2">
+          <div className="text-xs text-muted-foreground mb-1">Question {ids.length ? index + 1 : 1}{ids.length ? ` of ${ids.length}` : ''}</div>
+          <Progress value={ids.length ? ((index+1)/ids.length)*100 : 100} />
+        </div>
+      </div>
 
       {paywalled ? (
         <Card className="mt-4">
@@ -394,37 +402,6 @@ const goNext = async () => {
         <div className="h-40 rounded-xl border animate-pulse bg-muted/40 mt-4" />
       ) : q ? (
         <div className="mt-4 grid gap-6 md:grid-cols-3">
-          <div className="md:hidden">
-            <Drawer>
-              <DrawerTrigger asChild>
-                <Button variant="outline" size="sm">Practice Tools</Button>
-              </DrawerTrigger>
-              <DrawerContent>
-                <div className="p-4 space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Progress</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-sm mb-2">Question {ids.length ? index + 1 : 1}{ids.length ? ` of ${ids.length}` : ''}</div>
-                      <Progress value={ids.length ? ((index+1)/ids.length)*100 : 100} />
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Timer</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div aria-live="polite" role="status" className="text-sm font-medium">{formatMMSS(timeSpent)}</div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Feedback moved below the question for better mobile UX */}
-                </div>
-              </DrawerContent>
-            </Drawer>
-          </div>
 
           {/* Left/main */}
           <div className="md:col-span-2">
@@ -492,17 +469,26 @@ const goNext = async () => {
               </CardContent>
 
               <CardContent>
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {q.exam && <Badge variant="secondary">{q.exam}</Badge>}
-                  {q.topic && <Badge variant="secondary">{q.topic}</Badge>}
-                  {q.subtopic && <Badge variant="outline">{q.subtopic}</Badge>}
-                  {q.difficulty && <Badge variant="outline">{q.difficulty}</Badge>}
-                  {q.reviewed_at && <Badge variant="outline">Reviewed {new Date(q.reviewed_at).toLocaleDateString()}</Badge>}
-                  <a href={q.reviewer_id ? `/profile/${q.reviewer_id}` : undefined} className="no-underline">
-                    <Badge variant="secondary">Reviewer: {reviewerName || '—'}</Badge>
-                  </a>
+                <div className="mt-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowMeta(v => !v)}>
+                    {showMeta ? 'Hide details' : 'Show details'}
+                  </Button>
                 </div>
-                {q.source && <div className="mt-2 text-sm text-muted-foreground">Source: {q.source}</div>}
+                {showMeta && (
+                  <>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {q.exam && <Badge variant="secondary">{q.exam}</Badge>}
+                      {q.topic && <Badge variant="secondary">{q.topic}</Badge>}
+                      {q.subtopic && <Badge variant="outline">{q.subtopic}</Badge>}
+                      {q.difficulty && <Badge variant="outline">{q.difficulty}</Badge>}
+                      {q.reviewed_at && <Badge variant="outline">Reviewed {new Date(q.reviewed_at).toLocaleDateString()}</Badge>}
+                      <a href={q.reviewer_id ? `/profile/${q.reviewer_id}` : undefined} className="no-underline">
+                        <Badge variant="secondary">Reviewer: {reviewerName || '—'}</Badge>
+                      </a>
+                    </div>
+                    {q.source && <div className="mt-2 text-sm text-muted-foreground">Source: {q.source}</div>}
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -518,14 +504,6 @@ const goNext = async () => {
                   <div className="text-sm mb-2">Question {ids.length ? index + 1 : 1}{ids.length ? ` of ${ids.length}` : ''}</div>
                   <Progress value={ids.length ? ((index+1)/ids.length)*100 : 100} />
                   <div className="text-xs text-muted-foreground mt-1">{answeredCount} / {totalQuestions} answered</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Timer</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div aria-live="polite" role="status" className="text-lg font-semibold">{formatMMSS(timeSpent)}</div>
                 </CardContent>
               </Card>
               {/* Feedback moved below the question; sidebar version removed */}

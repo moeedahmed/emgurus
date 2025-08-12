@@ -61,7 +61,7 @@ const [eHasAny, setEHasAny] = useState<boolean>(false);
 // Available exams that actually have reviewed questions
 const [availExams, setAvailExams] = useState<ExamName[]>([...EXAMS] as ExamName[]);
 // Exam time selection
-const [eTime, setETime] = useState<string>("untimed");
+const [eTime, setETime] = useState<string>("60");
 
 // Prefill from query params (practice only)
 useEffect(() => {
@@ -230,7 +230,7 @@ useEffect(() => {
     try {
       const ids = await fetchReviewedIds(eExam, eTopic, Math.max(5, Math.min(maxExam, eCount)));
       if (!ids.length) { setExamOpen(false); return; }
-      const limitSec = eTime !== 'untimed' ? Number(eTime) * 60 : undefined;
+      const limitSec = Number(eTime) * 60;
       navigate('/exams/exam', { state: { ids, limitSec } });
     } finally {
       setExamOpen(false);
@@ -416,9 +416,8 @@ useEffect(() => {
                     <div className="md:col-span-1">
                       <Label>Time</Label>
                       <Select value={eTime} onValueChange={setETime}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder="Untimed" /></SelectTrigger>
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select time" /></SelectTrigger>
                         <SelectContent className="z-50">
-                          <SelectItem value="untimed">Untimed</SelectItem>
                           {[30,45,60,90,120].map(m => (<SelectItem key={m} value={String(m)}>{m} min</SelectItem>))}
                         </SelectContent>
                       </Select>
