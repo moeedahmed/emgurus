@@ -12,16 +12,16 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { publishPost } from "@/lib/blogsApi";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import Taxonomy from "@/pages/admin/Taxonomy";
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
-import Taxonomy from "@/pages/admin/Taxonomy";
-import { useToast } from "@/hooks/use-toast";
-import { callFunction } from "@/lib/functionsUrl";
+import ExamsAICuration from "@/pages/admin/ExamsAICuration";
+
+// -------- Analytics panel
 const AdminAnalyticsPanel: React.FC = () => {
   const { kpis, submissionsSeries, isLoading } = useAdminMetrics();
   return (
@@ -45,22 +45,19 @@ const AdminExamShortcutsBar: React.FC = () => (
   </div>
 );
 
-// Admin ▸ Blogs tab components (reusing existing flows)
+// -------- Blogs tab components
 const AdminSubmitted: React.FC = () => {
-  // Default admin view in ModeratePosts shows 'Submitted (Unassigned)'
   return <ModeratePosts />;
 };
 
 const AdminReviewed: React.FC = () => {
   const [posts, setPosts] = useState<Array<{ id: string; title: string; description: string | null; created_at: string }>>([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
       try {
-        // Pull in_review posts and filter to those with an approve log (Guru approved)
         const { data: list } = await supabase
           .from('blog_posts')
           .select('id,title,description,created_at')
@@ -90,7 +87,6 @@ const AdminReviewed: React.FC = () => {
       const { error } = await supabase.rpc('review_approve_publish', { p_post_id: postId });
       if (error) throw error as any;
       toast.success('Post published');
-      // Refresh list
       const { data: list } = await supabase
         .from('blog_posts')
         .select('id,title,description,created_at')
@@ -175,7 +171,6 @@ const AdminRejected: React.FC = () => {
     (async () => {
       setLoading(true);
       try {
-        // Map "Rejected" to archived per spec
         const { data: posts } = await supabase
           .from('blog_posts')
           .select('id,title')
@@ -216,8 +211,383 @@ const AdminRejected: React.FC = () => {
 };
 
 const AdminArchived: React.FC = () => {
-  // Same source as Rejected for now (archived = rejected mapping)
   return <AdminRejected />;
+};
+
+// -------- Exams Flow small panels (reuse existing endpoints)
+interface LiteQuestion { id: string; created_at: string; question_text?: string; exam_type?: string | null; difficulty_level?: string | null; topic?: string | null; stem?: string }
+interface GuruOption { id: string; label: string }
+
+const DraftsPanel: React.FC = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [rows, setRows] = useState<LiteQuestion[]>([]);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [gurus, setGurus] = useState<GuruOption[]>([]);
+  const [reviewerId, setReviewerId] = useState<string | undefined>();
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [gen, g] = await Promise.all([
+        callFunction('/exams-admin-curate/generated', null, true),
+        callFunction('/exams-admin-curate/gurus', null, true),
+      ]);
+      setRows(gen?.data || []);
+      setGurus((g?.data || []) as GuruOption[]);
+    } catch (e: any) {
+      toast({ title: 'Load failed', description: e.message || 'Please try again', variant: 'destructive' });
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const allSelectedIds = Object.keys(selected).filter(id => selected[id]);
+  const toggleOne = (id: string) => setSelected((p) => ({ ...p, [id]: !p[id] }));
+  const toggleAll = () => {
+    const next: Record<string, boolean> = {};
+    const flag = rows.length > 0 && allSelectedIds.length !== rows.length;
+    rows.forEach(q => { next[q.id] = flag; });
+    setSelected(next);
+  };
+
+  const assign = async () => {
+    if (!reviewerId || allSelectedIds.length === 0) return;
+    try {
+      setLoading(true);
+      await callFunction('/exams-admin-curate/assign', { question_ids: allSelectedIds, reviewer_id: reviewerId }, true);
+      toast({ title: 'Assigned', description: `Assigned ${allSelectedIds.length} question(s).` });
+      setSelected({});
+      await load();
+    } catch (e: any) {
+      toast({ title: 'Assign failed', description: e.message || 'Please try again', variant: 'destructive' });
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="font-semibold">Drafts (Unassigned)</div>
+        <div className="flex items-center gap-2">
+          <Select value={reviewerId} onValueChange={setReviewerId}>
+            <SelectTrigger className="w-56"><SelectValue placeholder="Select Guru" /></SelectTrigger>
+            <SelectContent>
+              {gurus.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={assign} disabled={loading || !reviewerId || allSelectedIds.length===0}>Assign</Button>
+          <Button size="sm" variant="outline" onClick={load} disabled={loading}>Refresh</Button>
+        </div>
+      </div>
+      <Card className="p-0 overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10"><input type="checkbox" onChange={toggleAll} checked={rows.length>0 && allSelectedIds.length===rows.length} /></TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Question</TableHead>
+              <TableHead>Exam</TableHead>
+              <TableHead>Difficulty</TableHead>
+              <TableHead>Topic</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((q) => (
+              <TableRow key={q.id}>
+                <TableCell><input type="checkbox" checked={!!selected[q.id]} onChange={() => toggleOne(q.id)} /></TableCell>
+                <TableCell className="whitespace-nowrap text-xs">{new Date(q.created_at).toLocaleString()}</TableCell>
+                <TableCell className="text-xs">{q.question_text || q.stem}</TableCell>
+                <TableCell className="text-xs">{q.exam_type || '-'}</TableCell>
+                <TableCell className="text-xs">{q.difficulty_level || '-'}</TableCell>
+                <TableCell className="text-xs">{q.topic || '-'}</TableCell>
+              </TableRow>
+            ))}
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-6">No drafts</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
+  );
+};
+
+const AssignedPanel: React.FC = () => {
+  const { toast } = useToast();
+  const [rows, setRows] = useState<Array<LiteQuestion & { reviewer?: string }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [gurus, setGurus] = useState<GuruOption[]>([]);
+  const [reassigning, setReassigning] = useState<Record<string, string>>({});
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [assigned, g] = await Promise.all([
+        callFunction('/exams-admin-curate/assigned', null, true),
+        callFunction('/exams-admin-curate/gurus', null, true),
+      ]);
+      setRows((assigned?.data || []) as any);
+      setGurus((g?.data || []) as GuruOption[]);
+    } catch (e: any) {
+      toast({ title: 'Load failed', description: e.message || 'Please try again', variant: 'destructive' });
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const reassign = async (id: string) => {
+    const reviewer_id = reassigning[id];
+    if (!reviewer_id) return;
+    try {
+      setLoading(true);
+      await callFunction('/exams-admin-curate/assign', { question_ids: [id], reviewer_id }, true);
+      toast({ title: 'Reassigned', description: 'Question reassigned.' });
+      await load();
+    } catch (e: any) {
+      toast({ title: 'Reassign failed', description: e.message || 'Please try again', variant: 'destructive' });
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="font-semibold">Assigned</div>
+        <Button size="sm" variant="outline" onClick={load} disabled={loading}>Refresh</Button>
+      </div>
+      <Card className="p-0 overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Created</TableHead>
+              <TableHead>Question</TableHead>
+              <TableHead>Guru</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map(q => (
+              <TableRow key={q.id}>
+                <TableCell className="whitespace-nowrap text-xs">{new Date(q.created_at!).toLocaleString()}</TableCell>
+                <TableCell className="text-xs">{q.question_text || q.stem}</TableCell>
+                <TableCell className="text-xs">{(q as any).reviewer || '—'}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <Select value={reassigning[q.id] || ''} onValueChange={(v) => setReassigning(s => ({ ...s, [q.id]: v }))}>
+                      <SelectTrigger className="w-56"><SelectValue placeholder="Select Guru" /></SelectTrigger>
+                      <SelectContent>
+                        {gurus.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" onClick={() => reassign(q.id)} disabled={!reassigning[q.id]}>Reassign</Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-6">No assigned items</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
+  );
+};
+
+const ApprovedPanel: React.FC = () => {
+  const { toast } = useToast();
+  const [rows, setRows] = useState<LiteQuestion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const load = async () => {
+    setLoading(true);
+    try {
+      const app = await callFunction('/exams-admin-curate/approved', null, true);
+      setRows(app?.data || []);
+    } catch (e: any) { toast({ title: 'Load failed', description: e.message, variant: 'destructive' }); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const publish = async (id: string) => {
+    try {
+      await callFunction('/review-exams-api', { action: 'admin_publish', payload: { question_id: id } }, true);
+      toast({ title: 'Published', description: 'Question is now live.' });
+      await load();
+    } catch (e: any) {
+      toast({ title: 'Publish failed', description: e.message || 'Please try again', variant: 'destructive' });
+    }
+  };
+
+  return (
+    <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="font-semibold">Approved</div>
+        <Button size="sm" variant="outline" onClick={load} disabled={loading}>Refresh</Button>
+      </div>
+      <Card className="p-0 overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Created</TableHead>
+              <TableHead>Question</TableHead>
+              <TableHead>Exam</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map(q => (
+              <TableRow key={q.id}>
+                <TableCell className="whitespace-nowrap text-xs">{new Date(q.created_at).toLocaleString()}</TableCell>
+                <TableCell className="text-xs">{q.question_text || q.stem}</TableCell>
+                <TableCell className="text-xs">{q.exam_type || '-'}</TableCell>
+                <TableCell className="text-xs">
+                  <Button size="sm" onClick={() => publish(q.id)}>Publish</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-6">No approved items</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
+  );
+};
+
+const RejectedPanel: React.FC = () => {
+  const { toast } = useToast();
+  const [rows, setRows] = useState<LiteQuestion[]>([]);
+  const load = async () => {
+    try {
+      const rej = await callFunction('/exams-admin-curate/rejected', null, true);
+      setRows(rej?.data || []);
+    } catch (e: any) { toast({ title: 'Load failed', description: e.message, variant: 'destructive' }); }
+  };
+  useEffect(() => { load(); }, []);
+  return (
+    <div className="p-4">
+      <Card className="p-0 overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Created</TableHead>
+              <TableHead>Question</TableHead>
+              <TableHead>Exam</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map(q => (
+              <TableRow key={q.id}>
+                <TableCell className="whitespace-nowrap text-xs">{new Date(q.created_at).toLocaleString()}</TableCell>
+                <TableCell className="text-xs">{q.question_text || q.stem}</TableCell>
+                <TableCell className="text-xs">{q.exam_type || '-'}</TableCell>
+              </TableRow>
+            ))}
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center text-muted-foreground py-6">No rejected items</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
+  );
+};
+
+const MarkedPanel: React.FC = () => {
+  const { toast } = useToast();
+  const [flags, setFlags] = useState<Array<{ id: string; created_at: string; question_source: string; comment?: string | null; status: string; assigned_to?: string | null }>>([]);
+  const [gurus, setGurus] = useState<GuruOption[]>([]);
+  const [assigning, setAssigning] = useState<Record<string, string>>({});
+
+  const load = async () => {
+    try {
+      const { data, error } = await supabase.from('exam_question_flags').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      setFlags((data as any) || []);
+      const g = await callFunction('/exams-admin-curate/gurus', null, true);
+      setGurus((g?.data || []) as GuruOption[]);
+    } catch (e: any) {
+      toast({ title: 'Failed to load', description: e.message, variant: 'destructive' });
+    }
+  };
+  useEffect(() => { load(); }, []);
+
+  const assign = async (flagId: string) => {
+    const guruId = assigning[flagId];
+    if (!guruId) return;
+    try {
+      await supabase.from('exam_question_flags').update({ assigned_to: guruId, status: 'assigned' }).eq('id', flagId);
+      toast({ title: 'Assigned', description: 'Flag assigned to guru.' });
+      await load();
+    } catch (e: any) {
+      toast({ title: 'Assignment failed', description: e.message, variant: 'destructive' });
+    }
+  };
+  const archive = async (flagId: string) => {
+    try {
+      await supabase.from('exam_question_flags').update({ status: 'archived' }).eq('id', flagId);
+      toast({ title: 'Archived', description: 'Flag archived.' });
+      await load();
+    } catch (e: any) {
+      toast({ title: 'Archive failed', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  return (
+    <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="font-semibold">Marked by Learners</div>
+        <Button size="sm" variant="outline" onClick={load}>Refresh</Button>
+      </div>
+      <Card className="p-0 overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>When</TableHead>
+              <TableHead>Source</TableHead>
+              <TableHead>Comment</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Assign</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {flags.map(f => (
+              <TableRow key={f.id}>
+                <TableCell className="whitespace-nowrap text-xs">{new Date(f.created_at).toLocaleString()}</TableCell>
+                <TableCell className="text-xs">{f.question_source}</TableCell>
+                <TableCell className="text-xs max-w-[360px] truncate" title={f.comment || ''}>{f.comment || '—'}</TableCell>
+                <TableCell className="text-xs">{f.status}</TableCell>
+                <TableCell>
+                  <Select value={assigning[f.id] || f.assigned_to || ''} onValueChange={(v) => setAssigning(s => ({ ...s, [f.id]: v }))}>
+                    <SelectTrigger className="w-48"><SelectValue placeholder={f.assigned_to ? 'Assigned' : 'Select guru'} /></SelectTrigger>
+                    <SelectContent>
+                      {gurus.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button size="sm" onClick={() => assign(f.id)} disabled={!assigning[f.id]}>Assign</Button>
+                  <Button variant="outline" size="sm" onClick={() => archive(f.id)}>Archive</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {flags.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-6">No marked questions</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
+  );
 };
 
 export default function DashboardAdmin() {
@@ -237,12 +607,64 @@ export default function DashboardAdmin() {
       ],
     },
     {
-      id: "exams",
-      title: "Exams",
+      id: "exams_bank",
+      title: "Exams — Question Bank",
       icon: GraduationCap,
       tabs: [
-        { id: "question-bank", title: "Question Bank", render: <div className="p-0"><AdminExamShortcutsBar /><ReviewedQuestionBank embedded /></div> },
-        { id: "ai-practice", title: "AI Practice", render: <div className="p-0"><AdminExamShortcutsBar /><AiPracticeConfig /></div> },
+        {
+          id: "stored",
+          title: "Stored Questions",
+          render: (
+            <div className="p-0">
+              <AdminExamShortcutsBar />
+              <ReviewedQuestionBank embedded />
+            </div>
+          ),
+        },
+        {
+          id: "exams-db",
+          title: "Exams Database",
+          render: (
+            <div className="p-4 space-y-4">
+              <Card className="p-6">
+                <div className="text-sm text-muted-foreground mb-3">Manage exam metadata, SLOs, and taxonomy.</div>
+                <Button asChild><a href="/admin/taxonomy">Open Taxonomy Manager</a></Button>
+              </Card>
+            </div>
+          ),
+        },
+        {
+          id: "generate",
+          title: "Generate",
+          render: (
+            <div className="p-0">
+              <AdminExamShortcutsBar />
+              {/* Reuse full curation page for generator + quick assignment */}
+              <ExamsAICuration />
+            </div>
+          ),
+        },
+      ],
+    },
+    {
+      id: "exams_flow",
+      title: "Exams — Flow",
+      icon: GraduationCap,
+      tabs: [
+        { id: "drafts", title: "Drafts", render: <DraftsPanel /> },
+        { id: "assigned", title: "Assigned", render: <AssignedPanel /> },
+        { id: "approved", title: "Approved", render: <ApprovedPanel /> },
+        { id: "rejected", title: "Rejected", render: <RejectedPanel /> },
+        { id: "marked", title: "Marked", render: <MarkedPanel /> },
+        {
+          id: "published",
+          title: "Published",
+          render: (
+            <div className="p-0">
+              <ReviewedQuestionBank embedded />
+            </div>
+          ),
+        },
       ],
     },
     {
