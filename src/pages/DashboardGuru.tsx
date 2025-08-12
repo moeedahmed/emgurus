@@ -16,10 +16,10 @@ const DashboardGuru = () => {
   const [checkingAvail, setCheckingAvail] = useState(true);
 
   useEffect(() => {
-    document.title = "Guru Dashboard | EMGurus";
+    document.title = "Consultation Dashboard | EMGurus";
     // SEO
     const meta = document.querySelector("meta[name='description']");
-    if (meta) meta.setAttribute("content", "Guru tools: review blogs, review exam questions, and manage availability.");
+    if (meta) meta.setAttribute("content", "Consultation tools: review blogs, review exam questions, and manage availability.");
     let link = document.querySelector("link[rel='canonical']") as HTMLLinkElement | null;
     if (!link) { link = document.createElement('link'); link.rel = 'canonical'; document.head.appendChild(link); }
     link.href = `${window.location.origin}/dashboard/guru`;
@@ -55,7 +55,7 @@ const DashboardGuru = () => {
 
   return (
     <main className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Guru Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-6">Consultation Dashboard</h1>
       <div className="grid gap-6 md:grid-cols-2">
         <section id="blogs-section">
           <Card className="p-6">

@@ -38,7 +38,7 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
 
   useEffect(() => {
     const term = q.trim();
-    if (!open || term.length < 2) { setBlogs([]); setQuestions([]); setGurus([]); setForums([]); return; }
+    if (!open || term.length < 2) { setBlogs([]); setQuestions([]); setGurus([]); setForums([]); setInterestDocs([]); return; }
     let cancelled = false;
     const run = async () => {
       setLoading(true);
@@ -87,6 +87,8 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
           .slice(0, 10)
           .map((t: any) => ({ id: t.id, title: t.title, content: t.content }));
         setForums(forumItems);
+        const intItems: InterestItem[] = ((((interestsRes as any)?.data) || []) as any[]).map((d: any) => ({ id: String(d.id ?? d.slug_url ?? d.url ?? d.title ?? Math.random()), title: d.title, slug_url: d.slug_url, url: d.url, tags: d.tags || [] }));
+        setInterestDocs(intItems);
       } finally {
         if (!cancelled) setLoading(false);
       }

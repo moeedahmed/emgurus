@@ -280,7 +280,7 @@ export default function Profile() {
                 <TabsList className={`w-full max-w-full overflow-x-auto grid ${isGuru ? 'grid-cols-3' : 'grid-cols-2'}`}>
                   <TabsTrigger value="bookings">Bookings</TabsTrigger>
                   <TabsTrigger value="security">Security</TabsTrigger>
-                  {isGuru && <TabsTrigger value="guru">Guru</TabsTrigger>}
+                  {isGuru && <TabsTrigger value="guru">Consultation</TabsTrigger>}
                 </TabsList>
 
               {/* BOOKINGS */}
