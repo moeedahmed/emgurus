@@ -36,15 +36,22 @@ async function resolveEmailsFromUserIds(userIds: string[]): Promise<string[]> {
   if (!userIds?.length) return [];
   const { data, error } = await supabaseAdmin
     .from("profiles")
-    .select("email, user_id")
+    .select("email, user_id, notification_settings")
     .in("user_id", userIds);
   if (error) {
     console.warn("resolveEmailsFromUserIds error", error);
     return [];
   }
-  return (data || [])
-    .map((r: any) => (r?.email || "").trim())
-    .filter((e) => !!e);
+  const emails: string[] = [];
+  for (const r of (data as any[]) || []) {
+    const email = (r?.email || "").trim();
+    if (!email) continue;
+    const prefs = (r?.notification_settings as any) || null;
+    const emailEnabled = prefs?.channels?.email;
+    if (emailEnabled === false) continue; // respect user preference; default is ON
+    emails.push(email);
+  }
+  return emails;
 }
 
 async function resolveUserIdsByRole(role: "admin" | "guru" | "user"): Promise<string[]> {
@@ -79,7 +86,7 @@ async function insertInApp(items: InAppItem[]) {
 
 async function sendEmailIfConfigured(toEmails: string[], subject: string, html: string) {
   if (!toEmails?.length) return;
-  const footer = `<hr/><p style="font-size:12px;color:#666">Manage your notifications: <a href="${SUPABASE_URL?.replace(":8080", "")?.replace("https://", "https://")}/settings/notifications">/settings/notifications</a></p>`;
+  const footer = `<hr/><p style="font-size:12px;color:#666">Manage your notifications: <a href="/settings/notifications">/settings/notifications</a></p>`;
   const mergedHtml = `${html}${footer}`;
   if (!resend) {
     console.warn("Resend not configured; skipping email", { subject, toEmails });

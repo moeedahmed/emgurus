@@ -40,6 +40,7 @@ import Taxonomy from "./pages/admin/Taxonomy";
 import Profile from "./pages/Profile";
 import PublicProfile from "./pages/PublicProfile";
 import Bookings from "./pages/Bookings";
+import SettingsPage from "./pages/Settings";
 
 import ForumCategory from "./pages/ForumCategory";
 import ComingSoon from "./pages/ComingSoon";
