@@ -77,8 +77,9 @@ export default function Profile() {
         .select('user_id, full_name, email, timezone, country, specialty, avatar_url, cover_image_url, exams, exam_interests, languages, bio, linkedin, twitter, website, price_per_30min, position, hospital')
         .eq('user_id', user.id)
         .maybeSingle();
-      setProfile(prof as any);
-      setHourly(prof?.price_per_30min ? Number(prof.price_per_30min) : "");
+      const row = prof as any;
+      setProfile(row ? ({ ...row, interests: row?.interests ?? row?.exam_interests ?? null }) : null);
+      setHourly(row?.price_per_30min ? Number(row.price_per_30min) : "");
 
       const { data: r } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
       setRoles((r || []).map(x => x.role as string));
@@ -222,6 +223,18 @@ export default function Profile() {
                       <div className="flex justify-between gap-3">
                         <span className="text-muted-foreground">Specialty</span>
                         <span className="break-words">{profile.specialty}</span>
+                      </div>
+                    )}
+                    {profile?.position && (
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Position</span>
+                        <span className="break-words">{profile.position}</span>
+                      </div>
+                    )}
+                    {profile?.hospital && (
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Hospital/Employer</span>
+                        <span className="break-words">{profile.hospital}</span>
                       </div>
                     )}
                     {profile?.country && (

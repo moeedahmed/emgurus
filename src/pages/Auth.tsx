@@ -20,6 +20,13 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // OTP states
+  const [phone, setPhone] = useState("");
+  const [phoneSent, setPhoneSent] = useState(false);
+  const [phoneCode, setPhoneCode] = useState("");
+  const [emailOtp, setEmailOtp] = useState("");
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailCode, setEmailCode] = useState("");
 
   useEffect(() => {
     document.title = "Sign in | EMGurus";
@@ -95,6 +102,62 @@ useEffect(() => {
     }
   };
 
+  const sendPhoneOtp = async () => {
+    try {
+      setSubmitting(true);
+      const { error } = await supabase.auth.signInWithOtp({ phone });
+      if (error) throw error;
+      setPhoneSent(true);
+      toast.success('Code sent via SMS');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to send code');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const verifyPhoneOtp = async () => {
+    try {
+      setSubmitting(true);
+      const { data, error } = await supabase.auth.verifyOtp({ phone, token: phoneCode, type: 'sms' });
+      if (error) throw error;
+      toast.success('Signed in');
+      navigate('/dashboard');
+    } catch (e: any) {
+      toast.error(e?.message || 'Verification failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const sendEmailOtp = async () => {
+    try {
+      setSubmitting(true);
+      const { error } = await supabase.auth.signInWithOtp({ email: emailOtp, options: { emailRedirectTo: emailRedirect } });
+      if (error) throw error;
+      setEmailOtpSent(true);
+      toast.success('Code sent to email');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to send code');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const verifyEmailOtp = async () => {
+    try {
+      setSubmitting(true);
+      const { error } = await supabase.auth.verifyOtp({ email: emailOtp, token: emailCode, type: 'email' });
+      if (error) throw error;
+      toast.success('Signed in');
+      navigate('/dashboard');
+    } catch (e: any) {
+      toast.error(e?.message || 'Verification failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Render auth UI even while checking session to avoid long blocking spinners
   // Actions are disabled until loading completes via useAuth
   // (We keep a subtle UX by not showing a full-screen spinner)
@@ -145,10 +208,12 @@ useEffect(() => {
             </Button>
 
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="w-full grid grid-cols-3">
+              <TabsList className="w-full grid grid-cols-5">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
                 <TabsTrigger value="reset">Reset</TabsTrigger>
+                <TabsTrigger value="phone">Phone OTP</TabsTrigger>
+                <TabsTrigger value="email-otp">Email OTP</TabsTrigger>
               </TabsList>
               <TabsContent value="signin">
                 <div className="space-y-4 pt-4">
@@ -196,6 +261,62 @@ useEffect(() => {
                   <Button className="w-full" onClick={handleResetPassword} disabled={submitting}>
                     {submitting ? 'Sending reset...' : 'Send reset link'}
                   </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="phone">
+                <div className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone number</Label>
+                    <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g., +447700900123" />
+                  </div>
+                  {!phoneSent ? (
+                    <Button className="w-full" onClick={sendPhoneOtp} disabled={submitting || !phone}>
+                      {submitting ? 'Sending code…' : 'Send code'}
+                    </Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="phoneCode">Enter code</Label>
+                        <Input id="phoneCode" value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} placeholder="6-digit code" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button className="flex-1" onClick={verifyPhoneOtp} disabled={submitting || phoneCode.length < 4}>
+                          {submitting ? 'Verifying…' : 'Verify & Sign in'}
+                        </Button>
+                        <Button variant="outline" onClick={sendPhoneOtp} disabled={submitting}>Resend</Button>
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">SMS delivery requires provider setup in Supabase.</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="email-otp">
+                <div className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="emailOtp">Email</Label>
+                    <Input id="emailOtp" type="email" value={emailOtp} onChange={(e) => setEmailOtp(e.target.value)} placeholder="you@example.com" />
+                  </div>
+                  {!emailOtpSent ? (
+                    <Button className="w-full" onClick={sendEmailOtp} disabled={submitting || !emailOtp}>
+                      {submitting ? 'Sending code…' : 'Send code'}
+                    </Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="emailCode">Enter code</Label>
+                        <Input id="emailCode" value={emailCode} onChange={(e) => setEmailCode(e.target.value)} placeholder="6-digit code" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button className="flex-1" onClick={verifyEmailOtp} disabled={submitting || emailCode.length < 4}>
+                          {submitting ? 'Verifying…' : 'Verify & Sign in'}
+                        </Button>
+                        <Button variant="outline" onClick={sendEmailOtp} disabled={submitting}>Resend</Button>
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">We also send a magic link as fallback; check your inbox/spam.</p>
                 </div>
               </TabsContent>
             </Tabs>

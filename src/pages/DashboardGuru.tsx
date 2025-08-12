@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,16 @@ const DashboardGuru = () => {
   const [newWeekly, setNewWeekly] = useState<{ dow: number; start: string; end: string }>({ dow: 1, start: "10:00", end: "14:00" });
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const SUPABASE_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/consultations-api";
+
+  const weeklyByDay = useMemo(() => {
+    const by: Record<number, Array<{ id?: string; day_of_week?: number | null; start_time: string; end_time: string }>> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+    for (const w of weekly) {
+      if (w.day_of_week !== null && w.day_of_week !== undefined) {
+        by[w.day_of_week] = [...(by[w.day_of_week] || []), w];
+      }
+    }
+    return by;
+  }, [weekly]);
 
   useEffect(() => {
     document.title = "Consultation Dashboard | EMGurus";
@@ -211,9 +221,101 @@ const DashboardGuru = () => {
             Status: <span className="font-medium">{!hasSlots ? 'Hidden from Consultations' : 'Visible in Consultations'}</span>
           </div>
           <div className="text-sm text-muted-foreground mb-4">Current rate: <span className="font-medium">Free</span> (default if not set)</div>
-          <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => navigate('/guru/availability')}>Set availability</Button>
-            <Button variant="outline" onClick={() => navigate('/profile#pricing')}>Set price</Button>
+          <div className="flex gap-2 flex-wrap mb-4">
+            <Button onClick={() => navigate('/guru/availability')}>Open full page</Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">Weekly recurring</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Weekly recurring availability</DialogTitle>
+                </DialogHeader>
+                <div className="text-sm text-muted-foreground mb-3">Timezone: {timezone || 'Loading…'}</div>
+                <div className="space-y-3 max-h-[60vh] overflow-auto pr-1">
+                  {Object.entries(weeklyByDay).map(([d, slots]) => (
+                    <div key={d} className="border rounded-md p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">{dayNames[Number(d)]}</div>
+                        <div className="text-xs text-muted-foreground">{(slots as any[]).length} range{(slots as any[]).length===1?'':'s'}</div>
+                      </div>
+                      {(slots as any[]).length === 0 ? (
+                        <div className="text-sm text-muted-foreground mt-1">No ranges</div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {(slots as any[]).map((s: any) => (
+                            <div key={s.id} className="flex items-center gap-2 rounded bg-muted px-2 py-1 text-sm">
+                              <span>{s.start_time.slice(0,5)}–{s.end_time.slice(0,5)}</span>
+                              <Button size="sm" variant="ghost" onClick={() => deleteAvail(s.id)}>Remove</Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <Separator className="my-3" />
+                <div className="grid gap-2 md:grid-cols-4 items-end">
+                  <div>
+                    <Label>Day</Label>
+                    <select className="w-full rounded-md border bg-background p-2" value={newWeekly.dow} onChange={(e) => setNewWeekly({ ...newWeekly, dow: Number(e.target.value) })}>
+                      {dayNames.map((n, i) => (<option key={i} value={i}>{n}</option>))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Start</Label>
+                    <Input type="time" value={newWeekly.start} onChange={(e) => setNewWeekly({ ...newWeekly, start: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>End</Label>
+                    <Input type="time" value={newWeekly.end} onChange={(e) => setNewWeekly({ ...newWeekly, end: e.target.value })} />
+                  </div>
+                  <Button onClick={addWeekly}>Add weekly</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Separator className="my-4" />
+          <div>
+            <div className="font-semibold mb-2">Custom availability / time off</div>
+            <div className="grid gap-2 md:grid-cols-5 items-end">
+              <div className="md:col-span-2">
+                <Label>Date</Label>
+                <Input type="date" value={newException.date} onChange={(e) => setNewException({ ...newException, date: e.target.value })} />
+              </div>
+              <div>
+                <Label>Start</Label>
+                <Input type="time" value={newException.start} onChange={(e) => setNewException({ ...newException, start: e.target.value })} />
+              </div>
+              <div>
+                <Label>End</Label>
+                <Input type="time" value={newException.end} onChange={(e) => setNewException({ ...newException, end: e.target.value })} />
+              </div>
+              <div>
+                <Label>Status</Label>
+                <select className="w-full rounded-md border bg-background p-2" value={newException.available ? 'available' : 'blocked'} onChange={(e) => setNewException({ ...newException, available: e.target.value === 'available' })}>
+                  <option value="available">Available</option>
+                  <option value="blocked">Blocked</option>
+                </select>
+              </div>
+              <Button className="md:col-span-5" onClick={addException}>Add</Button>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {exceptions.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No upcoming custom entries</div>
+              ) : (
+                exceptions.map((e) => (
+                  <div key={e.id} className="flex items-center justify-between rounded border p-2">
+                    <div className="text-sm">
+                      <span className="font-medium">{e.date}</span> • {e.start_time.slice(0,5)}–{e.end_time.slice(0,5)} • {e.is_available ? 'Available' : 'Blocked'}
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => deleteAvail(e.id)}>Remove</Button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </Card>
 
