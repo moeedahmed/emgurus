@@ -24,6 +24,7 @@ interface ProfileRow {
   avatar_url: string | null;
   cover_image_url: string | null;
   exams: string[] | null;
+  interests: string[] | null;
   languages: string[] | null;
   bio: string | null;
   linkedin: string | null;
@@ -249,6 +250,16 @@ export default function Profile() {
                         <div className="flex flex-wrap gap-1 justify-end max-w-[60%]">
                           {(profile?.languages || []).map((l) => (
                             <Badge key={l} variant="outline">{l}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {(profile?.interests || []).length > 0 && (
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Interests</span>
+                        <div className="flex flex-wrap gap-1 justify-end max-w-[60%]">
+                          {(profile?.interests || []).map((t) => (
+                            <Badge key={t} variant="outline">{t}</Badge>
                           ))}
                         </div>
                       </div>

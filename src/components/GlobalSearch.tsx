@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getJson } from "@/lib/functionsClient";
 import { useNavigate } from "react-router-dom";
-import { Search as SearchIcon, BookOpen, FileQuestion, Users, MessageSquare } from "lucide-react";
+import { Search as SearchIcon, BookOpen, FileQuestion, Users, MessageSquare, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface GlobalSearchProps {
@@ -20,6 +20,8 @@ type GuruItem = { id: string; full_name: string; specialty?: string | null };
 
 type ForumItem = { id: string; title: string; content?: string | null };
 
+type InterestItem = { id: string; title: string | null; slug_url?: string | null; url?: string | null; tags?: string[] | null };
+
 export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,10 +29,11 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
   const [questions, setQuestions] = useState<ReviewedItem[]>([]);
   const [gurus, setGurus] = useState<GuruItem[]>([]);
   const [forums, setForums] = useState<ForumItem[]>([]);
+  const [interestDocs, setInterestDocs] = useState<InterestItem[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!open) { setQ(""); setBlogs([]); setQuestions([]); setGurus([]); setForums([]); }
+    if (!open) { setQ(""); setBlogs([]); setQuestions([]); setGurus([]); setForums([]); setInterestDocs([]); }
   }, [open]);
 
   useEffect(() => {
@@ -41,7 +44,7 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
       setLoading(true);
       try {
         const FORUMS_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/forums-api";
-        const [blogsData, reviewedData, gurusRes, forumsRes] = await Promise.all([
+        const [blogsData, reviewedData, gurusRes, forumsRes, interestsRes] = await Promise.all([
           // Blogs: query directly with RLS (published)
           supabase
             .from("blog_posts")
@@ -62,6 +65,13 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
           getJson(`/consultations-api/api/gurus?q=${encodeURIComponent(term)}`).catch(() => ({ items: [] })),
           // Forums: fetch threads and filter client-side
           fetch(`${FORUMS_EDGE}/api/forum/threads`).then(r => r.json()).catch(() => ({ items: [] })),
+          // Interests: search our content index by tags or title
+          supabase
+            .from("ai_content_index")
+            .select("id, title, slug_url, url, tags")
+            .eq("published", true)
+            .or(`title.ilike.%${term}%`)
+            .limit(10)
         ]);
         if (cancelled) return;
         const blogItems: BlogItem[] = ((blogsData as any)?.data || []).map((b: any) => ({ id: b.id, title: b.title, slug: b.slug, excerpt: b.description || null }));
@@ -85,7 +95,7 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
     return () => { cancelled = true; clearTimeout(t); };
   }, [q, open]);
 
-  const hasResults = useMemo(() => blogs.length + questions.length + gurus.length + forums.length > 0, [blogs, questions, gurus, forums]);
+  const hasResults = useMemo(() => blogs.length + questions.length + gurus.length + forums.length + interestDocs.length > 0, [blogs, questions, gurus, forums, interestDocs]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
