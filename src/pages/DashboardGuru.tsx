@@ -22,6 +22,7 @@ const DashboardGuru = () => {
   const [newException, setNewException] = useState<{ date: string; start: string; end: string; available: boolean }>({ date: "", start: "10:00", end: "12:00", available: true });
   const [weekly, setWeekly] = useState<Array<{ id?: string; day_of_week?: number | null; start_time: string; end_time: string }>>([]);
   const [newWeekly, setNewWeekly] = useState<{ dow: number; start: string; end: string }>({ dow: 1, start: "10:00", end: "14:00" });
+  const [price, setPrice] = useState<number | "">("");
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const SUPABASE_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/consultations-api";
 
@@ -78,9 +79,9 @@ const DashboardGuru = () => {
     (async () => {
       try {
         if (!user) return;
-        const { data: prof } = await supabase.from('profiles').select('timezone').eq('user_id', user.id).maybeSingle();
+        const { data: prof } = await supabase.from('profiles').select('timezone, price_per_30min').eq('user_id', user.id).maybeSingle();
         setTimezone(prof?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
-
+        setPrice((prof as any)?.price_per_30min ?? "");
         // Weekly defaults
         const { data: weeklyRows } = await supabase
           .from('consult_availability')
@@ -220,7 +221,22 @@ const DashboardGuru = () => {
           <div className="text-sm text-muted-foreground mb-2">
             Status: <span className="font-medium">{!hasSlots ? 'Hidden from Consultations' : 'Visible in Consultations'}</span>
           </div>
-          <div className="text-sm text-muted-foreground mb-4">Current rate: <span className="font-medium">Free</span> (default if not set)</div>
+          <div className="text-sm text-muted-foreground mb-2">
+            Current rate: <span className="font-medium">{price !== '' ? `$${price} / 30 min` : 'Free'}</span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3 items-end mb-4">
+            <div className="sm:col-span-2">
+              <Label htmlFor="price30">Price per 30 min (USD)</Label>
+              <Input id="price30" type="number" min={0} step={1} value={price} onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))} />
+            </div>
+            <Button onClick={async () => {
+              if (price === '' || Number(price) < 0) { toast({ title: 'Enter a valid price per 30 min' }); return; }
+              const per30 = Math.round(Number(price) * 100) / 100;
+              const { error } = await supabase.from('profiles').update({ price_per_30min: per30 }).eq('user_id', user!.id);
+              if (error) { toast({ title: 'Could not save', description: error.message }); }
+              else { toast({ title: 'Pricing updated' }); setPrice(per30); }
+            }}>Save</Button>
+          </div>
           <div className="flex gap-2 flex-wrap mb-4">
             <Button onClick={() => navigate('/guru/availability')}>Open full page</Button>
             <Dialog>
