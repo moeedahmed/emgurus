@@ -140,7 +140,7 @@ export default function ExamsOverview() {
               <Badge key={w.topic} variant="outline">{w.topic} • {w.acc}% ({w.total} Qs)</Badge>
             ))}
           </div>
-          <div className="mt-2 text-sm"><a className="underline" href="/exams">Practice these topics</a></div>
+          <div className="mt-2 text-sm"><a className="underline" href={`/exams?mode=practice${weakTopics[0] ? `&topic=${encodeURIComponent(weakTopics[0].topic)}` : ''}`}>Practice these topics</a></div>
         </div>
       )}
     </div>

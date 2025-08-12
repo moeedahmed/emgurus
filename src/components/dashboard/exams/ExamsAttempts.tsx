@@ -16,6 +16,25 @@ export default function ExamsAttempts() {
   const [items, setItems] = useState<any[]>([]);
   const [questions, setQuestions] = useState<any[]>([]);
 
+  const practiceLink = (() => {
+    if (!active) return '/exams';
+    const firstExam = questions?.[0]?.exam as string | undefined;
+    // pick weakest topic from breakdown if available
+    let topic: string | undefined;
+    try {
+      const b = active?.breakdown || {};
+      const entries = Object.entries(b) as any[];
+      if (entries.length) {
+        entries.sort((a: any, b: any) => (a[1].correct/(a[1].total||1)) - (b[1].correct/(b[1].total||1)));
+        topic = entries[0]?.[0];
+      }
+    } catch {}
+    const params = new URLSearchParams();
+    params.set('mode', 'practice');
+    if (firstExam) params.set('exam', String(firstExam));
+    if (topic) params.set('topic', topic);
+    return `/exams?${params.toString()}`;
+  })();
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -96,7 +115,7 @@ export default function ExamsAttempts() {
             </div>
           )}
           <div className="flex items-center justify-end gap-2">
-            <a href="/exams" className="underline text-sm">Re-practice similar set</a>
+            <a href={practiceLink} className="underline text-sm">Re-practice similar set</a>
           </div>
         </DialogContent>
       </Dialog>

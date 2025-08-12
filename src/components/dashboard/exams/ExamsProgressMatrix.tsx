@@ -89,7 +89,7 @@ export default function ExamsProgressMatrix() {
         emptyText="No practice yet."
       />
 
-      <div className="text-sm"><a className="underline" href="/exams">Do 20 Easy Respiratory Qs</a></div>
+      <div className="text-sm"><a className="underline" href={`/exams?mode=practice${exam ? `&exam=${encodeURIComponent(exam)}` : ''}${topics[0] ? `&topic=${encodeURIComponent(topics[0].topic)}` : ''}`}>Do 20 Easy Respiratory Qs</a></div>
     </div>
   );
 }

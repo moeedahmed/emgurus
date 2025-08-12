@@ -63,6 +63,34 @@ const [availExams, setAvailExams] = useState<ExamName[]>([...EXAMS] as ExamName[
 // Exam time selection
 const [eTime, setETime] = useState<string>("untimed");
 
+// Prefill from query params (practice only)
+useEffect(() => {
+  try {
+    const sp = new URLSearchParams(window.location.search);
+    const mode = sp.get('mode');
+    const qpExam = sp.get('exam');
+    const qpTopic = sp.get('topic');
+    // reverse map for codes
+    const CODE_TO_NAME: Record<string, ExamName> = {
+      MRCEM_Primary: 'MRCEM Primary',
+      MRCEM_SBA: 'MRCEM Intermediate SBA',
+      FRCEM_SBA: 'FRCEM SBA',
+    };
+    const normalizeExam = (val?: string | null): ExamName | "" => {
+      if (!val) return "";
+      const decoded = decodeURIComponent(val);
+      if ((EXAMS as readonly ExamName[]).includes(decoded as ExamName)) return decoded as ExamName;
+      const byCode = CODE_TO_NAME[decoded];
+      return byCode || "";
+    };
+    if (mode === 'practice') {
+      const name = normalizeExam(qpExam);
+      if (name) setPExam(name);
+      if (qpTopic) setPTopic(decodeURIComponent(qpTopic));
+    }
+  } catch {}
+}, []);
+
   useEffect(() => {
     document.title = "EMGurus Exam Practice • EM Gurus";
     const desc = "Targeted MCQs for MRCEM Primary, MRCEM SBA, and FRCEM. Learn smarter, score higher.";
