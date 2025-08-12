@@ -131,9 +131,6 @@ export default function PublicProfile() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-2xl font-semibold">{profile.full_name}</h1>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {(profile.specialty || 'Emergency Medicine')} • {(profile.country || 'Global')} • {(profile.timezone || 'UTC')}
-                </div>
               </div>
             </header>
 
