@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -25,27 +23,20 @@ const ExamsAICuration = () => {
   const [generated, setGenerated] = useState<LiteQuestion[]>([]);
   const [approved, setApproved] = useState<LiteQuestion[]>([]);
   const [rejected, setRejected] = useState<LiteQuestion[]>([]);
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [gurus, setGurus] = useState<GuruOption[]>([]);
-  const [assignOpen, setAssignOpen] = useState(false);
-  const [reviewerId, setReviewerId] = useState<string | undefined>();
 
   useEffect(() => {
     document.title = "AI Curation | Admin | EMGurus";
-    // initial load
     (async () => {
       setLoading(true);
       try {
-        const [gen, app, rej, g] = await Promise.all([
+        const [gen, app, rej] = await Promise.all([
           callFunction("/exams-admin-curate/generated", null, true),
           callFunction("/exams-admin-curate/approved", null, true),
           callFunction("/exams-admin-curate/rejected", null, true),
-          callFunction("/exams-admin-curate/gurus", null, true),
         ]);
         setGenerated(gen?.data || []);
         setApproved(app?.data || []);
         setRejected(rej?.data || []);
-        setGurus((g?.data || []) as GuruOption[]);
       } catch (e: any) {
         toast({ title: "Load failed", description: e.message || "Could not load data", variant: "destructive" });
       } finally {
@@ -139,72 +130,42 @@ const ExamsAICuration = () => {
         </Card>
       </section>
 
-      {/* Unassigned list with bulk actions */}
+      {/* Generated */}
       <section className="mb-10">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold">Generated</h2>
-          <div className="flex items-center gap-2">
-            <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-              <DialogTrigger asChild>
-                <Button disabled={loading || allSelectedIds.length === 0}>Assign to Guru</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Assign selected ({allSelectedIds.length})</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3 py-2">
-                  <label className="text-sm">Reviewer</label>
-                  <Select onValueChange={(v) => setReviewerId(v)} value={reviewerId}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a Guru" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {gurus.map((g) => (
-                        <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <DialogFooter>
-                  <Button onClick={onAssign} disabled={loading || !reviewerId}>Assign</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Button variant="outline" disabled={loading || allSelectedIds.length===0} onClick={async()=>{
-              try{ setLoading(true); await callFunction('/exams-admin-curate/archive', { question_ids: allSelectedIds }, true); toast({ title:'Archived', description:`Moved ${allSelectedIds.length} to archive.`}); setSelected({}); const gen = await callFunction('/exams-admin-curate/generated', null, true); setGenerated(gen?.data||[]);} finally { setLoading(false);} 
-            }}>Archive</Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={async ()=>{ setLoading(true); try{ const gen = await callFunction('/exams-admin-curate/generated', null, true); setGenerated(gen?.data||[]);} finally { setLoading(false);} }}>Refresh</Button>
         </div>
         <Card className="p-0 overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-10">
-                  <input type="checkbox" onChange={toggleAll} checked={generated.length>0 && allSelectedIds.length===generated.length} />
-                </TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Question</TableHead>
                 <TableHead>Exam</TableHead>
                 <TableHead>Difficulty</TableHead>
                 <TableHead>Topic</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {generated.map((q) => (
                 <TableRow key={q.id}>
-                  <TableCell>
-                    <input type="checkbox" checked={!!selected[q.id]} onChange={() => toggleOne(q.id)} />
-                  </TableCell>
                   <TableCell className="whitespace-nowrap text-sm">{new Date(q.created_at).toLocaleString()}</TableCell>
-                  <TableCell className="text-sm"><a className="underline" href={`/guru/exams/review?open=${q.id}`}>{q.question_text}</a></TableCell>
+                  <TableCell className="text-sm">{q.question_text}</TableCell>
                   <TableCell className="text-sm">{q.exam_type || '-'}</TableCell>
                   <TableCell className="text-sm">{q.difficulty_level || '-'}</TableCell>
                   <TableCell className="text-sm">{q.topic || '-'}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button size="sm" variant="secondary" asChild><a href={`/guru/exams/review?open=${q.id}`}>Open</a></Button>
+                    <Button size="sm" onClick={async()=>{ try{ setLoading(true); await callFunction('/exams-admin-curate/save', { question_ids: [q.id] }, true); const gen = await callFunction('/exams-admin-curate/generated', null, true); setGenerated(gen?.data||[]); toast({ title: 'Saved as draft' }); } finally { setLoading(false);} }}>Save</Button>
+                    <Button size="sm" variant="outline" onClick={async()=>{ try{ setLoading(true); await callFunction('/exams-admin-curate/archive', { question_ids: [q.id] }, true); const gen = await callFunction('/exams-admin-curate/generated', null, true); setGenerated(gen?.data||[]); toast({ title: 'Archived' }); } finally { setLoading(false);} }}>Archive</Button>
+                  </TableCell>
                 </TableRow>
               ))}
               {generated.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-6">No unassigned items</TableCell>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-6">No generated items</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -212,7 +173,30 @@ const ExamsAICuration = () => {
         </Card>
       </section>
 
+      {/* Outcomes (optional) */}
       <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Curation Outcomes</h2>
+          <Button variant="outline" size="sm" onClick={async () => {
+            try {
+              setLoading(true);
+              const [app, rej] = await Promise.all([
+                callFunction("/exams-admin-curate/approved", null, true),
+                callFunction("/exams-admin-curate/rejected", null, true)
+              ]);
+              setApproved(app?.data || []);
+              setRejected(rej?.data || []);
+            } finally { setLoading(false); }
+          }}>Refresh</Button>
+        </div>
+        <Tabs defaultValue="approved">
+          <TabsList>
+            <TabsTrigger value="approved">Approved</TabsTrigger>
+            <TabsTrigger value="rejected">Rejected (Archive)</TabsTrigger>
+          </TabsList>
+          <TabsContent value="approved">
+            <Card className="p-0 overflow-hidden">
+              <Table>...
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Curation Outcomes</h2>
           <Button variant="outline" size="sm" onClick={async () => {

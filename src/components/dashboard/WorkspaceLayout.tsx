@@ -46,13 +46,13 @@ export function WorkspaceLayoutInner({
 
   const current = sections.find(s => s.id === sectionId) || sections[0];
 
-  const { state } = useSidebar();
+  const { state, setOpen, isMobile } = useSidebar();
   const collapsed = state === 'collapsed';
 
   return (
     
       <div className="min-h-screen flex w-full">
-        <Sidebar className={cn("border-r z-20", collapsed ? "w-14" : "w-60")} collapsible="icon">
+        <Sidebar className={cn("border-r z-20")} collapsible="icon">
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel className="sticky top-0 z-10 bg-sidebar text-sm font-semibold">{title}</SidebarGroupLabel>

@@ -266,6 +266,19 @@ Deno.serve(async (req) => {
       return json(200, { ok: true, data: { archived: question_ids.length } }, origin);
     }
 
+    // POST /save - mark generated items as draft and hide from generated list
+    if (req.method === "POST" && path.endsWith("/save")) {
+      const body = await req.json().catch(() => ({}));
+      const question_ids: string[] = Array.isArray(body?.question_ids) ? body.question_ids : [];
+      if (question_ids.length === 0) return json(400, { ok: false, error: "No question_ids provided" }, origin);
+      const { error: upErr } = await adminClient
+        .from("questions")
+        .update({ status: "draft", is_ai_generated: false })
+        .in("id", question_ids);
+      if (upErr) return json(500, { ok: false, error: "Failed to save" }, origin);
+      return json(200, { ok: true, data: { saved: question_ids.length } }, origin);
+    }
+
     return json(404, { ok: false, error: "Not found" }, origin);
   } catch (e) {
     console.error("exams-admin-curate error", (e as Error).message);

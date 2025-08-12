@@ -273,44 +273,35 @@ const DraftsPanel: React.FC = () => {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <div className="font-semibold">Drafts</div>
-        <div className="flex flex-wrap items-center gap-2 justify-end md:justify-start">
-          <Select value={reviewerId} onValueChange={setReviewerId}>
-            <SelectTrigger className="w-full sm:w-56 md:w-64"><SelectValue placeholder="Select Guru" /></SelectTrigger>
-            <SelectContent>
-              {gurus.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Button size="sm" onClick={assign} disabled={loading || !reviewerId || allSelectedIds.length===0}>Assign</Button>
-          <Button size="sm" variant="outline" onClick={load} disabled={loading}>Refresh</Button>
-        </div>
+        <div className="font-semibold">Generated</div>
+        <Button size="sm" variant="outline" onClick={load} disabled={loading}>Refresh</Button>
       </div>
       <Card className="p-0 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10"><input type="checkbox" onChange={toggleAll} checked={rows.length>0 && allSelectedIds.length===rows.length} /></TableHead>
               <TableHead>Created</TableHead>
               <TableHead>Question</TableHead>
               <TableHead>Exam</TableHead>
-              <TableHead>Difficulty</TableHead>
-              <TableHead>Topic</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((q) => (
               <TableRow key={q.id}>
-                <TableCell><input type="checkbox" checked={!!selected[q.id]} onChange={() => toggleOne(q.id)} /></TableCell>
                 <TableCell className="whitespace-nowrap text-xs">{new Date(q.created_at).toLocaleString()}</TableCell>
                 <TableCell className="text-xs">{q.question_text || q.stem}</TableCell>
                 <TableCell className="text-xs">{q.exam_type || '-'}</TableCell>
-                <TableCell className="text-xs">{q.difficulty_level || '-'}</TableCell>
-                <TableCell className="text-xs">{q.topic || '-'}</TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button size="sm" variant="secondary" asChild><a href={`/guru/exams/review?open=${q.id}`}>Open</a></Button>
+                  <Button size="sm" onClick={async()=>{ try{ setLoading(true); await callFunction('/exams-admin-curate/save', { question_ids: [q.id] }, true); await load(); toast({ title: 'Saved as draft' }); } finally { setLoading(false);} }}>Save</Button>
+                  <Button size="sm" variant="outline" onClick={async()=>{ try{ setLoading(true); await callFunction('/exams-admin-curate/archive', { question_ids: [q.id] }, true); await load(); toast({ title: 'Archived' }); } finally { setLoading(false);} }}>Archive</Button>
+                </TableCell>
               </TableRow>
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-6">No drafts</TableCell>
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-6">No generated items</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -708,7 +699,7 @@ export default function DashboardAdmin() {
             </div>
           ),
         },
-        { id: "drafts", title: "Drafts", render: <DraftsPanel /> },
+        { id: "generated", title: "Generated", render: <DraftsPanel /> },
         { id: "assigned", title: "Assigned", render: <AssignedPanel /> },
         { id: "approved", title: "Approved", render: <ApprovedPanel /> },
         { id: "rejected", title: "Rejected", render: <RejectedPanel /> },
