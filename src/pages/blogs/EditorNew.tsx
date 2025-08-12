@@ -93,6 +93,14 @@ export default function EditorNew() {
             <div className="space-y-2">
               <Input id="cover" value={cover} onChange={(e) => setCover(e.target.value)} placeholder="https://..." />
               <Input type="file" accept="image/*" onChange={(e) => onCoverFileChange(e.target.files?.[0])} />
+              {cover && (
+                <img
+                  src={cover}
+                  alt="Blog cover preview"
+                  className="mt-2 w-full max-h-64 object-cover rounded-md border"
+                  loading="lazy"
+                />
+              )}
             </div>
           </div>
           <div className="space-y-2">

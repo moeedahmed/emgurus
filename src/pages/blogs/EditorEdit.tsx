@@ -124,6 +124,14 @@ export default function EditorEdit() {
                   setLoading(false);
                 }
               }} />
+              {cover && (
+                <img
+                  src={cover}
+                  alt="Blog cover preview"
+                  className="mt-2 w-full max-h-64 object-cover rounded-md border"
+                  loading="lazy"
+                />
+              )}
             </div>
           </div>
           <div className="space-y-2">
