@@ -3,8 +3,10 @@ import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/Worksp
 import { BookOpen, ClipboardList, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings } from "lucide-react";
 import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
 import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
-import Forums from "@/pages/Forums";
-import Blogs from "@/pages/Blogs";
+import ForumsModeration from "@/pages/ForumsModeration";
+import KpiCard from "@/components/dashboard/KpiCard";
+import TrendCard from "@/components/dashboard/TrendCard";
+import { useAdminMetrics } from "@/hooks/metrics/useAdminMetrics";
 import ModeratePosts from "@/pages/admin/ModeratePosts";
 import AssignReviews from "@/pages/admin/AssignReviews";
 
@@ -35,6 +37,21 @@ function AdminCompleted() {
   );
 }
 
+const AdminAnalyticsPanel: React.FC = () => {
+  const { kpis, submissionsSeries, isLoading } = useAdminMetrics();
+  return (
+    <div className="p-4 grid gap-4 md:grid-cols-4">
+      <KpiCard title="New Users (7d)" value={kpis.newUsers7d} isLoading={isLoading} />
+      <KpiCard title="Posts Submitted (7d)" value={kpis.postsSubmitted7d} isLoading={isLoading} />
+      <KpiCard title="Questions Pending" value={kpis.questionsPending} isLoading={isLoading} />
+      <KpiCard title="Chat Error Rate (7d)" value={`${kpis.chatErrorRate7d}%`} isLoading={isLoading} />
+      <div className="md:col-span-4">
+        <TrendCard title="Submissions" series={submissionsSeries} rangeLabel="Last 28 days" isLoading={isLoading} />
+      </div>
+    </div>
+  );
+};
+
 export default function DashboardAdmin() {
   useEffect(() => { document.title = "Admin Workspace | EMGurus"; }, []);
 
@@ -64,14 +81,14 @@ export default function DashboardAdmin() {
       title: "Forums",
       icon: MessageSquare,
       tabs: [
-        { id: "all", title: "All Threads", render: <div className="p-0"><Forums embedded /></div> },
+        { id: "moderation", title: "Moderation Queue", render: <div className="p-4"><ForumsModeration /></div> },
       ],
     },
     {
       id: "analytics",
       title: "Analytics",
       icon: BarChart3,
-      tabs: [ { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Analytics module coming soon.</div> } ],
+      tabs: [ { id: "overview", title: "Overview", render: <AdminAnalyticsPanel /> } ],
     },
     { id: "users", title: "Users", icon: UsersRound, tabs: [ { id: "m", title: "Manage", render: <div className="p-4 text-sm text-muted-foreground">User management shortcuts coming soon.</div> } ] },
     { id: "settings", title: "Settings", icon: Settings, tabs: [ { id: "prefs", title: "Preferences", render: <div className="p-4 text-sm text-muted-foreground">Workspace settings.</div> } ] },

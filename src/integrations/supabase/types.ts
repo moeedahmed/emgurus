@@ -904,6 +904,42 @@ export type Database = {
           },
         ]
       }
+      consult_pricing: {
+        Row: {
+          base_rate: number
+          created_at: string
+          currency: string
+          guru_id: string
+          id: string
+          is_public: boolean
+          note: string | null
+          session_durations: number[]
+          updated_at: string
+        }
+        Insert: {
+          base_rate?: number
+          created_at?: string
+          currency?: string
+          guru_id: string
+          id?: string
+          is_public?: boolean
+          note?: string | null
+          session_durations?: number[]
+          updated_at?: string
+        }
+        Update: {
+          base_rate?: number
+          created_at?: string
+          currency?: string
+          guru_id?: string
+          id?: string
+          is_public?: boolean
+          note?: string | null
+          session_durations?: number[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       consult_reminders: {
         Row: {
           booking_id: string
@@ -1180,6 +1216,45 @@ export type Database = {
           description?: string | null
           id?: string
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      forum_flags: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          flagged_by: string
+          id: string
+          reason: string
+          reply_id: string | null
+          resolution_note: string | null
+          status: Database["public"]["Enums"]["forum_flag_status"]
+          thread_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          flagged_by: string
+          id?: string
+          reason: string
+          reply_id?: string | null
+          resolution_note?: string | null
+          status?: Database["public"]["Enums"]["forum_flag_status"]
+          thread_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          flagged_by?: string
+          id?: string
+          reason?: string
+          reply_id?: string | null
+          resolution_note?: string | null
+          status?: Database["public"]["Enums"]["forum_flag_status"]
+          thread_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -3047,6 +3122,7 @@ export type Database = {
         | "FRCEM_SBA"
       exam_type_enum: "MRCEM_PRIMARY" | "MRCEM_SBA" | "FRCEM_SBA" | "OTHER"
       flag_status: "open" | "assigned" | "resolved" | "removed" | "archived"
+      forum_flag_status: "open" | "in_review" | "resolved" | "dismissed"
       guru_application_status: "pending" | "approved" | "rejected"
       notification_type:
         | "question_flagged"
@@ -3241,6 +3317,7 @@ export const Constants = {
       ],
       exam_type_enum: ["MRCEM_PRIMARY", "MRCEM_SBA", "FRCEM_SBA", "OTHER"],
       flag_status: ["open", "assigned", "resolved", "removed", "archived"],
+      forum_flag_status: ["open", "in_review", "resolved", "dismissed"],
       guru_application_status: ["pending", "approved", "rejected"],
       notification_type: [
         "question_flagged",

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
-import { BookOpen, Stethoscope, GraduationCap, BarChart3 } from "lucide-react";
+import { BookOpen, Stethoscope, GraduationCap, BarChart3, MessageSquare } from "lucide-react";
 import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
 import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
 import Bookings from "@/pages/Bookings";
@@ -11,6 +11,8 @@ import KpiCard from "@/components/dashboard/KpiCard";
 import TrendCard from "@/components/dashboard/TrendCard";
 import { useGuruMetrics } from "@/hooks/metrics/useGuruMetrics";
 import { supabase } from "@/integrations/supabase/client";
+import Pricing from "@/pages/guru/Pricing";
+import ForumsModeration from "@/pages/ForumsModeration";
 
 // Small wrappers that preset reviewer/admin tabs via URL params without leaving the route
 function ReviewerPending() { useEffect(() => { const p = new URLSearchParams(window.location.search); p.set('view','reviewer'); p.set('tab','pending'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts />; }
@@ -59,7 +61,16 @@ export default function DashboardGuru() {
       icon: Stethoscope,
       tabs: [
         { id: "availability", title: "Availability", render: <div className="p-0"><Availability /></div> },
+        { id: "pricing", title: "Pricing", render: <div className="p-4"><Pricing /></div> },
         { id: "bookings", title: "My Bookings", render: <div className="p-4"><Bookings /></div> },
+      ],
+    },
+    {
+      id: "forums",
+      title: "Forums",
+      icon: MessageSquare,
+      tabs: [
+        { id: "moderation", title: "Moderation Queue", render: <div className="p-4"><ForumsModeration /></div> },
       ],
     },
     {
