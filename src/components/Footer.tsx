@@ -2,7 +2,7 @@ import { useState } from "react";
 import { BookOpen, Mail, Twitter, Linkedin, Youtube, Instagram, Link as LinkIcon, PlaySquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const Footer = () => {

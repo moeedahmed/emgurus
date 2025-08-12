@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BookingModal } from "@/components/consultations/BookingModal";
 import type { Guru } from "@/components/consultations/GuruCard";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Linkedin, Twitter } from "lucide-react";
 
 interface ProfileRow {
