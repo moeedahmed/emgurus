@@ -348,12 +348,12 @@ export default function Profile() {
                         ) : null}
                       </div>
                       <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full max-w-md">
-                        <Label htmlFor="hourly" className="sm:w-44">Hourly rate (USD)</Label>
+                        <Label htmlFor="hourly" className="sm:w-44">Price per 30 min (USD)</Label>
                         <div className="flex w-full gap-3">
                           <Input id="hourly" className="flex-1" type="number" min={0} step={1} value={hourly} onChange={(e) => setHourly(e.target.value === '' ? '' : Number(e.target.value))} />
                           <Button className="sm:w-auto w-full" onClick={async () => {
-                            if (hourly === '' || hourly < 0) { toast({ title: 'Enter a valid hourly rate' }); return; }
-                            const per30 = Math.round((Number(hourly) / 2) * 100) / 100;
+                            if (hourly === '' || hourly < 0) { toast({ title: 'Enter a valid price per 30 min' }); return; }
+                            const per30 = Math.round(Number(hourly) * 100) / 100;
                             const { error } = await supabase.from('profiles').update({ price_per_30min: per30 }).eq('user_id', user!.id);
                             if (error) { toast({ title: 'Could not save', description: error.message }); } else { toast({ title: 'Pricing updated' }); setProfile(p => p ? ({ ...p, price_per_30min: per30 }) : p); }
                           }}>Save</Button>

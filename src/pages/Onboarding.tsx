@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,7 +15,6 @@ const specialties = ["Emergency Medicine","Internal Medicine","Surgery","Pediatr
 const seededExamTags = ["MRCEM (UK)","FRCEM (UK)","FCPS (Pakistan)","MRCS (EM)","FCEM (India)","ABEM (US)","FACEM (Australia)","PLAB","USMLE"];
 const timezones = ["UTC","Europe/London","America/New_York","Asia/Dubai","Asia/Kolkata","Asia/Karachi","Australia/Sydney"];
 const seededLanguageTags = ["English","Arabic","Hindi","Urdu","French","Spanish"];
-
 
 export default function Onboarding() {
   const { user } = useAuth();
@@ -39,19 +36,19 @@ export default function Onboarding() {
   const [position, setPosition] = useState("");
   const [hospital, setHospital] = useState("");
 
-// Suggestions for tag inputs
-const [examSuggestions, setExamSuggestions] = useState<string[]>(seededExamTags);
-const [languageSuggestions, setLanguageSuggestions] = useState<string[]>(seededLanguageTags);
+  // Suggestions for tag inputs
+  const [examSuggestions, setExamSuggestions] = useState<string[]>(seededExamTags);
+  const [languageSuggestions, setLanguageSuggestions] = useState<string[]>(seededLanguageTags);
 
-// Step 3
-const [bio, setBio] = useState("");
-const [showProfilePublic, setShowProfilePublic] = useState(true);
-const [showSocialsPublic, setShowSocialsPublic] = useState(true);
-const [linkedinUrl, setLinkedinUrl] = useState("");
-const [twitterUrl, setTwitterUrl] = useState("");
+  // Step 3
+  const [bio, setBio] = useState("");
+  const [showProfilePublic, setShowProfilePublic] = useState(true);
+  const [showSocialsPublic, setShowSocialsPublic] = useState(true);
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [twitterUrl, setTwitterUrl] = useState("");
 
-const [saving, setSaving] = useState(false);
-const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     document.title = "Complete your profile | EM Gurus";
@@ -276,19 +273,12 @@ const [loading, setLoading] = useState(true);
           </div>
           <div className="grid gap-1">
             <Label>Languages *</Label>
-            <div className="flex flex-wrap gap-2">
-              {languageOptions.map(l => (
-                <Badge key={l} variant={languages.includes(l) ? 'default' : 'outline'} className="cursor-pointer" onClick={() => toggleChip(languages, setLanguages, l)}>
-                  {l}
-                </Badge>
-              ))}
-            </div>
-            {languages.includes('Other') && (
-              <div className="grid gap-1 pt-2">
-                <Label>Other language</Label>
-                <Input value={otherLanguage} onChange={(e) => setOtherLanguage(e.target.value)} placeholder="Enter other language" />
-              </div>
-            )}
+            <TagInput
+              value={languages}
+              onChange={setLanguages}
+              suggestions={languageSuggestions}
+              placeholder="Type language tags (e.g., English, Arabic) and press Enter"
+            />
           </div>
         </div>
       </section>
