@@ -27,6 +27,7 @@ export default function EditorEdit() {
   const [categories, setCategories] = useState<{ id: string; title: string }[]>([]);
   const [allTags, setAllTags] = useState<{ id: string; slug: string; title: string }[]>([]);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const [isAssignedReviewer, setIsAssignedReviewer] = useState(false);
   useEffect(() => {
     if (!user) navigate("/auth");
   }, [user]);
@@ -57,7 +58,7 @@ export default function EditorEdit() {
       if (!id) return;
       const { data: post } = await supabase
         .from("blog_posts")
-        .select("id, title, description, content, cover_image_url, category_id")
+        .select("id, title, description, content, cover_image_url, category_id, reviewer_id")
         .eq("id", id)
         .maybeSingle();
       if (!post) { toast.error("Draft not found"); navigate("/dashboard"); return; }
@@ -65,6 +66,7 @@ export default function EditorEdit() {
       setCover((post as any).cover_image_url || "");
       setContent((post as any).content || "");
       setCategoryId((post as any).category_id || undefined);
+      setIsAssignedReviewer(((post as any).reviewer_id && user?.id) ? (post as any).reviewer_id === user.id : false);
       // Load tags
       const { data: tagRows } = await supabase
         .from("blog_post_tags")

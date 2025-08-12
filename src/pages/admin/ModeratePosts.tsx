@@ -23,7 +23,7 @@ interface PostItem {
 interface ReviewerProfile { user_id: string; full_name: string | null; email: string | null; }
 interface Assignment { id: string; post_id: string; reviewer_id: string; status: string; notes: string | null; }
 
-const ModeratePosts = () => {
+const ModeratePosts: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const { user } = useAuth();
   const { roles } = useRoles();
   const isAdmin = roles.includes("admin");
@@ -232,7 +232,7 @@ const ModeratePosts = () => {
                   ))}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {view === 'admin' ? (
                   <>
                     <Button asChild variant="secondary">
@@ -274,32 +274,36 @@ const ModeratePosts = () => {
                 ) : (
                   <>
                     <Button asChild variant="secondary">
-                      <Link to={`/blogs/editor/${p.id}`}>Open Review</Link>
+                      <Link to={`/blogs/editor/${p.id}`}>{embedded ? 'Review' : 'Open Review'}</Link>
                     </Button>
-                    <Button variant="outline" onClick={async () => {
-                      const note = window.prompt('Provide a short note for rejection (visible to author):');
-                      if (!note || !note.trim()) { toast.error('Note is required'); return; }
-                      try {
-                        const { error } = await supabase.rpc('review_request_changes', { p_post_id: p.id, p_note: note.trim() });
-                        if (error) throw error;
-                        toast.success('Rejected with note');
-                        // Notify author
-                        notifyInApp({ toUserId: p.author_id, type: 'blog_changes_requested', title: 'Changes requested on your blog', body: note.trim(), data: { post_id: p.id } });
-                        notifyEmailIfConfigured({ toUserIds: [p.author_id], subject: 'Changes requested on your blog', html: `<p>Changes requested on <strong>${p.title}</strong></p><p>Note: ${note.trim()}</p>` });
-                        loadPosts();
-                      } catch (e) { console.error(e); toast.error('Failed'); }
-                    }}>Reject</Button>
-                    <Button onClick={async () => {
-                      try {
-                        const { error } = await supabase.from('blog_review_logs').insert({ post_id: p.id, actor_id: user?.id, action: 'approve', note: '' });
-                        if (error) throw error as any;
-                        toast.success('Approved — sent to Admin Reviewed');
-                        // Notify author of approval
-                        notifyInApp({ toUserId: p.author_id, type: 'blog_approved', title: 'Your blog was approved', body: `${p.title} has been approved and moved forward.`, data: { post_id: p.id } });
-                        notifyEmailIfConfigured({ toUserIds: [p.author_id], subject: 'Your blog was approved', html: `<p><strong>${p.title}</strong> has been approved and moved forward.</p>` });
-                        loadPosts();
-                      } catch (e) { console.error(e); toast.error('Failed'); }
-                    }}>Approve</Button>
+                    {!embedded && (
+                      <>
+                        <Button variant="outline" onClick={async () => {
+                          const note = window.prompt('Provide a short note for rejection (visible to author):');
+                          if (!note || !note.trim()) { toast.error('Note is required'); return; }
+                          try {
+                            const { error } = await supabase.rpc('review_request_changes', { p_post_id: p.id, p_note: note.trim() });
+                            if (error) throw error;
+                            toast.success('Rejected with note');
+                            // Notify author
+                            notifyInApp({ toUserId: p.author_id, type: 'blog_changes_requested', title: 'Changes requested on your blog', body: note.trim(), data: { post_id: p.id } });
+                            notifyEmailIfConfigured({ toUserIds: [p.author_id], subject: 'Changes requested on your blog', html: `<p>Changes requested on <strong>${p.title}</strong></p><p>Note: ${note.trim()}</p>` });
+                            loadPosts();
+                          } catch (e) { console.error(e); toast.error('Failed'); }
+                        }}>Reject</Button>
+                        <Button onClick={async () => {
+                          try {
+                            const { error } = await supabase.from('blog_review_logs').insert({ post_id: p.id, actor_id: user?.id, action: 'approve', note: '' });
+                            if (error) throw error as any;
+                            toast.success('Approved — sent to Admin Reviewed');
+                            // Notify author of approval
+                            notifyInApp({ toUserId: p.author_id, type: 'blog_approved', title: 'Your blog was approved', body: `${p.title} has been approved and moved forward.`, data: { post_id: p.id } });
+                            notifyEmailIfConfigured({ toUserIds: [p.author_id], subject: 'Your blog was approved', html: `<p><strong>${p.title}</strong> has been approved and moved forward.</p>` });
+                            loadPosts();
+                          } catch (e) { console.error(e); toast.error('Failed'); }
+                        }}>Approve</Button>
+                      </>
+                    )}
                   </>
                 )}
               </div>
