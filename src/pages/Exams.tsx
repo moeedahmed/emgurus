@@ -9,11 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { EXAMS, CURRICULA, ExamName } from "@/lib/curricula";
 import { getJson } from "@/lib/functionsClient";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Exams() {
   const navigate = useNavigate();
   const [practiceOpen, setPracticeOpen] = useState(false);
   const [examOpen, setExamOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const [pExam, setPExam] = useState<ExamName | "">("");
   const [pTopic, setPTopic] = useState<string>("All areas");
@@ -23,6 +25,10 @@ export default function Exams() {
   const [eCount, setECount] = useState<number>(25);
   const [eTimed, setETimed] = useState<boolean>(true);
 
+  const [aiExam, setAiExam] = useState<ExamName | "">("");
+  const [aiCount, setAiCount] = useState<number>(10);
+  const [aiArea, setAiArea] = useState<string>("All areas");
+
   useEffect(() => {
     document.title = "EMGurus Exam Practice • EM Gurus";
     const desc = "Targeted MCQs for MRCEM Primary, MRCEM SBA, and FRCEM. Learn smarter, score higher.";
@@ -31,18 +37,39 @@ export default function Exams() {
     meta.setAttribute('content', desc);
   }, []);
 
-  const startPractice = async () => {
+  // Fetch reviewed question IDs via Edge Function, with direct-table fallback
+  const fetchReviewedIds = async (exam?: ExamName | "", topic?: string, limit: number = 50) => {
+    const params = new URLSearchParams();
+    params.set('limit', String(Math.max(1, Math.min(100, limit))));
+    if (exam) params.set('exam', String(exam));
+    if (topic && topic !== 'All areas') params.set('q', topic);
     try {
-      const params = new URLSearchParams();
-      params.set('limit', '50');
-      if (pExam) params.set('exam', String(pExam));
-      // For topic we piggyback on search text if function supports only q
-      if (pTopic && pTopic !== 'All areas') params.set('q', pTopic);
       const res = await getJson(`/public-reviewed-exams?${params.toString()}`);
       const items = Array.isArray(res.items) ? res.items : [];
-      const ids: string[] = items.map((r: any) => r.id).filter(Boolean);
+      return items.map((r: any) => r.id).filter(Boolean);
+    } catch {
+      // Fallback to direct table query
+      let q = (supabase as any)
+        .from('reviewed_exam_questions')
+        .select('id', { count: 'exact' })
+        .eq('status', 'approved')
+        .order('reviewed_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(Math.max(1, Math.min(100, limit)));
+      if (exam) q = q.or(`exam.eq.${exam},exam_type.eq.${exam}`);
+      if (topic && topic !== 'All areas') {
+        q = (q as any).contains?.('tags', [topic]) || (q as any).eq('topic', topic);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+      return (Array.isArray(data) ? data : []).map((r: any) => r.id).filter(Boolean);
+    }
+  };
+
+  const startPractice = async () => {
+    try {
+      const ids = await fetchReviewedIds(pExam, pTopic, 50);
       if (!ids.length) { setPracticeOpen(false); return; }
-      // Navigate to first question in practice runner with full id list in state
       navigate(`/exams/reviewed/${ids[0]}`, { state: { ids, index: 0 } });
     } finally {
       setPracticeOpen(false);
@@ -51,13 +78,7 @@ export default function Exams() {
 
   const startExam = async () => {
     try {
-      const params = new URLSearchParams();
-      params.set('limit', String(Math.max(5, Math.min(100, eCount))));
-      if (eExam) params.set('exam', String(eExam));
-      if (eTopic && eTopic !== 'All areas') params.set('q', eTopic);
-      const res = await getJson(`/public-reviewed-exams?${params.toString()}`);
-      const items = Array.isArray(res.items) ? res.items : [];
-      const ids: string[] = items.map((r: any) => r.id).filter(Boolean);
+      const ids = await fetchReviewedIds(eExam, eTopic, Math.max(5, Math.min(100, eCount)));
       if (!ids.length) { setExamOpen(false); return; }
       const limitSec = eTimed ? Math.round(Math.max(1, Math.min(300, eCount)) * 90) : undefined; // ~90s per Q
       navigate('/exams/reviewed-exam', { state: { ids, limitSec } });
@@ -85,9 +106,61 @@ export default function Exams() {
               </ul>
             </div>
             <div className="pt-6">
-              <Button size="lg" onClick={() => navigate('/exams/ai-practice')} aria-label="Start AI Mode">
-                Start AI Mode
-              </Button>
+              <Dialog open={aiOpen} onOpenChange={setAiOpen}>
+                <DialogTrigger asChild>
+                  <Button size="lg" aria-label="Start AI Mode">Start AI Mode</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>AI Practice (Beta)</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div>
+                      <Label>Exam</Label>
+                      <Select value={aiExam || undefined as any} onValueChange={(v) => setAiExam(v as ExamName)}>
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
+                        <SelectContent className="z-50">
+                          {EXAMS.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Number of questions</Label>
+                      <Select value={String(aiCount)} onValueChange={(v)=> setAiCount(Number(v))}>
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="10" /></SelectTrigger>
+                        <SelectContent className="z-50">
+                          {[10,25,50].map(c => (<SelectItem key={c} value={String(c)}>{c}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Curriculum</Label>
+                      <Select value={aiArea} onValueChange={setAiArea} disabled={!aiExam}>
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="All areas" /></SelectTrigger>
+                        <SelectContent className="z-50">
+                          {(aiExam ? ["All areas", ...CURRICULA[aiExam]] : ["All areas"]).map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-3 flex items-center justify-end gap-2 pt-2">
+                      <Button variant="outline" onClick={() => setAiOpen(false)}>Cancel</Button>
+                      <Button onClick={async()=>{
+                        if(!aiExam) return; 
+                        try {
+                          const res = await supabase.functions.invoke('ai-exams-api', { body: { action: 'start_session', examType: aiExam } });
+                          const sessionId = (res as any)?.data?.session?.id;
+                          if(sessionId){
+                            const params = new URLSearchParams();
+                            params.set('count', String(aiCount));
+                            if (aiArea && aiArea !== 'All areas') params.set('slo', aiArea);
+                            navigate(`/exams/ai-practice/session/${sessionId}?${params.toString()}`);
+                          }
+                        } finally { setAiOpen(false); }
+                      }} disabled={!aiExam}>Start</Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </Card>
 
