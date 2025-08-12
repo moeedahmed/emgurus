@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,6 +39,9 @@ export default function Onboarding() {
   // Suggestions for tag inputs
   const [examSuggestions, setExamSuggestions] = useState<string[]>(seededExamTags);
   const [languageSuggestions, setLanguageSuggestions] = useState<string[]>(seededLanguageTags);
+  const [countrySuggestions, setCountrySuggestions] = useState<string[]>(countries);
+  const [timezoneSuggestions, setTimezoneSuggestions] = useState<string[]>(timezones);
+  const [specialtySuggestions, setSpecialtySuggestions] = useState<string[]>(specialties);
 
   // Step 3
   const [bio, setBio] = useState("");
@@ -118,6 +121,46 @@ export default function Onboarding() {
       }
     })();
   }, [user?.id]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // Expand timezone suggestions from browser's IANA list if available
+        const supported = (Intl as any)?.supportedValuesOf?.('timeZone') || [];
+        if (supported.length) {
+          setTimezoneSuggestions(prev => Array.from(new Set([...prev, ...supported])));
+        }
+      } catch {}
+      try {
+        // Discover commonly used tags from existing profiles
+        const { data } = await supabase
+          .from('profiles')
+          .select('country, timezone, languages, primary_specialty, specialty, exam_interests, exams')
+          .limit(1000);
+        if (data) {
+          const c = new Set<string>();
+          const t = new Set<string>();
+          const l = new Set<string>();
+          const e = new Set<string>();
+          const s = new Set<string>();
+          for (const row of data as any[]) {
+            if (row.country) c.add(row.country);
+            if (row.timezone) t.add(row.timezone);
+            (Array.isArray(row.languages) ? row.languages : []).forEach((x: string) => x && l.add(x));
+            (Array.isArray(row.exam_interests) ? row.exam_interests : []).forEach((x: string) => x && e.add(x));
+            (Array.isArray(row.exams) ? row.exams : []).forEach((x: string) => x && e.add(x));
+            if (row.primary_specialty) s.add(row.primary_specialty);
+            if (row.specialty) s.add(row.specialty);
+          }
+          setCountrySuggestions(prev => Array.from(new Set([...prev, ...c])));
+          setTimezoneSuggestions(prev => Array.from(new Set([...prev, ...t])));
+          setLanguageSuggestions(prev => Array.from(new Set([...prev, ...l])));
+          setExamSuggestions(prev => Array.from(new Set([...prev, ...e])));
+          setSpecialtySuggestions(prev => Array.from(new Set([...prev, ...s])));
+        }
+      } catch {}
+    })();
+  }, []);
 
   useEffect(() => {
     if (!user || loading) return;
@@ -234,33 +277,36 @@ export default function Onboarding() {
           </div>
           <div className="grid gap-1">
             <Label>Country *</Label>
-            <Select value={country} onValueChange={setCountry}>
-              <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
-              <SelectContent className="z-50 bg-popover">
-                {countries.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
-              </SelectContent>
-            </Select>
+            <TagInput
+              value={country ? [country] : []}
+              onChange={(vals) => setCountry(vals[0] || "")}
+              suggestions={countrySuggestions}
+              maxTags={1}
+              placeholder="Type or select a country"
+            />
           </div>
           <div className="grid gap-1">
             <Label>Timezone *</Label>
-            <Select value={tz} onValueChange={setTz}>
-              <SelectTrigger><SelectValue placeholder="Select timezone" /></SelectTrigger>
-              <SelectContent className="z-50 bg-popover">
-                {timezones.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
-              </SelectContent>
-            </Select>
+            <TagInput
+              value={tz ? [tz] : []}
+              onChange={(vals) => setTz(vals[0] || "")}
+              suggestions={timezoneSuggestions}
+              maxTags={1}
+              placeholder="Type or select a timezone (e.g., Europe/London)"
+            />
           </div>
         </div>
 
         <div className="space-y-4">
           <div className="grid gap-1">
             <Label>Primary specialty *</Label>
-            <Select value={primarySpecialty} onValueChange={setPrimarySpecialty}>
-              <SelectTrigger><SelectValue placeholder="Select specialty" /></SelectTrigger>
-              <SelectContent className="z-50 bg-popover">
-                {specialties.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
-              </SelectContent>
-            </Select>
+            <TagInput
+              value={primarySpecialty ? [primarySpecialty] : []}
+              onChange={(vals) => setPrimarySpecialty(vals[0] || "")}
+              suggestions={specialtySuggestions}
+              maxTags={1}
+              placeholder="Type or select a specialty"
+            />
           </div>
           <div className="grid gap-1">
             <Label>Exam interests *</Label>
