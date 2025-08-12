@@ -10,11 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useRoles } from "@/hooks/useRoles";
 import { submitPost, updateDraft } from "@/lib/blogsApi";
 
 export default function EditorEdit() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { roles } = useRoles();
+  const isAdmin = roles.includes("admin");
   const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
@@ -93,6 +96,38 @@ export default function EditorEdit() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const onReject = async () => {
+    if (!id) return;
+    const note = window.prompt('Provide a short note for rejection (visible to author):');
+    if (!note || !note.trim()) { toast.error('Note is required'); return; }
+    try {
+      setLoading(true);
+      const { error } = await supabase.rpc('review_request_changes', { p_post_id: id, p_note: note.trim() });
+      if (error) throw error as any;
+      toast.success('Changes requested');
+      navigate(-1);
+    } catch (e) { console.error(e); toast.error('Failed'); }
+    finally { setLoading(false); }
+  };
+
+  const onApprove = async () => {
+    if (!id || !user) return;
+    try {
+      setLoading(true);
+      if (isAdmin) {
+        const { error } = await supabase.rpc('review_approve_publish', { p_post_id: id });
+        if (error) throw error as any;
+        toast.success('Post published');
+      } else {
+        const { error } = await supabase.from('blog_review_logs').insert({ post_id: id, actor_id: user.id, action: 'approve', note: '' });
+        if (error) throw error as any;
+        toast.success('Approved — sent to Admin Reviewed');
+      }
+      navigate(-1);
+    } catch (e) { console.error(e); toast.error('Failed'); }
+    finally { setLoading(false); }
   };
 
   return (
@@ -209,10 +244,18 @@ export default function EditorEdit() {
           <Label>Content</Label>
           <Textarea className="min-h-[300px]" value={content} onChange={(e) => setContent(e.target.value)} placeholder="# Heading\nYour content..." />
         </div>
-        <div className="flex gap-2 justify-end">
-          <Button variant="outline" onClick={() => onSave(false)} disabled={loading}>Save</Button>
-          <Button onClick={() => onSave(true)} disabled={loading}>Submit</Button>
-        </div>
+        { (isAdmin || isAssignedReviewer) ? (
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={onReject} disabled={loading}>Reject</Button>
+            <Button onClick={onApprove} disabled={loading}>Approve</Button>
+          </div>
+        ) : (
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => onSave(false)} disabled={loading}>Save</Button>
+            <Button onClick={() => onSave(true)} disabled={loading}>Submit</Button>
+          </div>
+        )}
+
       </Card>
     </main>
   );

@@ -225,7 +225,7 @@ const ModeratePosts: React.FC<{ embedded?: boolean; forceView?: 'admin'|'reviewe
       <div className="space-y-4">
         {posts.map((p) => (
           <Card key={p.id} className="p-4 space-y-3">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
                 <div className="font-semibold">{p.title}</div>
                 <div className="text-sm text-muted-foreground line-clamp-2">{p.description}</div>
@@ -237,27 +237,12 @@ const ModeratePosts: React.FC<{ embedded?: boolean; forceView?: 'admin'|'reviewe
                   ))}
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap mt-2 sm:mt-0">
                 {view === 'admin' ? (
                   <>
                     <Button asChild variant="secondary">
                       <Link to={`/blogs/editor/${p.id}`}>Edit</Link>
                     </Button>
-                    <Button variant="outline" onClick={async () => {
-                      const note = window.prompt('Provide a short note for rejection (visible to author):');
-                      if (!note || !note.trim()) { toast.error('Note is required'); return; }
-                      try {
-                        const { error } = await supabase.rpc('review_request_changes', { p_post_id: p.id, p_note: note.trim() });
-                        if (error) throw error;
-                        toast.success('Changes requested');
-                        // Notify author
-                        notifyInApp({ toUserId: p.author_id, type: 'blog_changes_requested', title: 'Changes requested on your blog', body: note.trim(), data: { post_id: p.id } });
-                        notifyEmailIfConfigured({ toUserIds: [p.author_id], subject: 'Changes requested on your blog', html: `<p>Changes requested on <strong>${p.title}</strong></p><p>Note: ${note.trim()}</p>` });
-                        // Ensure in-app via service role for non-admin actors
-                        await supabase.functions.invoke('notifications-dispatch', { body: { inApp: [{ userId: p.author_id, type: 'blog_changes_requested', title: 'Changes requested on your blog', body: note.trim(), data: { post_id: p.id } }] } });
-                        loadPosts();
-                      } catch (e) { console.error(e); toast.error('Failed'); }
-                    }}>Reject</Button>
                     <Button onClick={async () => {
                       try {
                         const { error } = await supabase.rpc('review_approve_publish', { p_post_id: p.id });
@@ -279,7 +264,7 @@ const ModeratePosts: React.FC<{ embedded?: boolean; forceView?: 'admin'|'reviewe
                 ) : (
                   <>
                     <Button asChild variant="secondary">
-                      <Link to={`/blogs/editor/${p.id}`}>{embedded ? 'Review' : 'Open Review'}</Link>
+                      <Link to={`/blogs/editor/${p.id}`}>Review</Link>
                     </Button>
                     {!embedded && (
                       <>
@@ -315,9 +300,9 @@ const ModeratePosts: React.FC<{ embedded?: boolean; forceView?: 'admin'|'reviewe
             </div>
 
             {isAdmin && view === 'admin' && (
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <Select value={selectedReviewer[p.id] || ""} onValueChange={(v) => setSelectedReviewer(prev => ({ ...prev, [p.id]: v }))}>
-                  <SelectTrigger className="w-64">
+                  <SelectTrigger className="w-full sm:w-64">
                     <SelectValue placeholder="Assign a reviewer" />
                   </SelectTrigger>
                   <SelectContent>
