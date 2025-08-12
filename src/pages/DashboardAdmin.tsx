@@ -9,6 +9,7 @@ import TrendCard from "@/components/dashboard/TrendCard";
 import { useAdminMetrics } from "@/hooks/metrics/useAdminMetrics";
 import ModeratePosts from "@/pages/admin/ModeratePosts";
 import AssignReviews from "@/pages/admin/AssignReviews";
+import { Button } from "@/components/ui/button";
 
 function AdminUnassigned() { useEffect(() => { const p = new URLSearchParams(location.search); p.set('view','admin'); p.set('tab','unassigned'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts />; }
 function AdminAssigned() { useEffect(() => { const p = new URLSearchParams(location.search); p.set('view','admin'); p.set('tab','assigned'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts />; }
@@ -52,6 +53,14 @@ const AdminAnalyticsPanel: React.FC = () => {
   );
 };
 
+const AdminExamShortcutsBar: React.FC = () => (
+  <div className="px-4 py-3 border-b flex flex-wrap gap-2">
+    <Button asChild size="sm" variant="outline"><a href="/admin/exams-curation">AI Curation & Assign</a></Button>
+    <Button asChild size="sm" variant="outline"><a href="/admin/question-sets">Question Sets</a></Button>
+    <Button asChild size="sm" variant="outline"><a href="/admin/marked-questions">Marked Questions</a></Button>
+  </div>
+);
+
 export default function DashboardAdmin() {
   useEffect(() => { document.title = "Admin Workspace | EMGurus"; }, []);
 
@@ -72,8 +81,8 @@ export default function DashboardAdmin() {
       title: "Exams",
       icon: GraduationCap,
       tabs: [
-        { id: "question-bank", title: "Question Bank", render: <div className="p-0"><ReviewedQuestionBank embedded /></div> },
-        { id: "ai-practice", title: "AI Practice", render: <div className="p-0"><AiPracticeConfig /></div> },
+        { id: "question-bank", title: "Question Bank", render: <div className="p-0"><AdminExamShortcutsBar /><ReviewedQuestionBank embedded /></div> },
+        { id: "ai-practice", title: "AI Practice", render: <div className="p-0"><AdminExamShortcutsBar /><AiPracticeConfig /></div> },
       ],
     },
     {

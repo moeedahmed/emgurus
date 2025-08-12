@@ -13,6 +13,7 @@ import { useGuruMetrics } from "@/hooks/metrics/useGuruMetrics";
 import { supabase } from "@/integrations/supabase/client";
 import Pricing from "@/pages/guru/Pricing";
 import ForumsModeration from "@/pages/ForumsModeration";
+import { Button } from "@/components/ui/button";
 
 // Small wrappers that preset reviewer/admin tabs via URL params without leaving the route
 function ReviewerPending() { useEffect(() => { const p = new URLSearchParams(window.location.search); p.set('view','reviewer'); p.set('tab','pending'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts />; }
@@ -36,6 +37,15 @@ export default function DashboardGuru() {
     );
   };
 
+  const ExamShortcutsBar: React.FC = () => (
+    <div className="px-4 py-3 border-b flex flex-wrap gap-2">
+      <Button asChild size="sm" variant="outline"><a href="/guru/exams/review">Review Pending</a></Button>
+      <Button asChild size="sm" variant="outline"><a href="/guru/reviewed">Reviewed by Me</a></Button>
+      <Button asChild size="sm" variant="outline"><a href="/guru/questions">My Questions</a></Button>
+    </div>
+  );
+
+
   const sections: WorkspaceSection[] = [
     {
       id: "blogs",
@@ -51,8 +61,8 @@ export default function DashboardGuru() {
       title: "Exams",
       icon: GraduationCap,
       tabs: [
-        { id: "question-bank", title: "Question Bank", render: <div className="p-0"><ReviewedQuestionBank embedded /></div> },
-        { id: "ai-practice", title: "AI Practice", render: <div className="p-0"><AiPracticeConfig /></div> },
+        { id: "question-bank", title: "Question Bank", render: <div className="p-0"><ExamShortcutsBar /><ReviewedQuestionBank embedded /></div> },
+        { id: "ai-practice", title: "AI Practice", render: <div className="p-0"><ExamShortcutsBar /><AiPracticeConfig /></div> },
       ],
     },
     {

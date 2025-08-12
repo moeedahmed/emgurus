@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
@@ -46,10 +46,13 @@ export default function WorkspaceLayout({
 
   const current = sections.find(s => s.id === sectionId) || sections[0];
 
+  const { state } = useSidebar();
+  const collapsed = state === 'collapsed';
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <Sidebar className="border-r" collapsible="icon">
+        <Sidebar className={cn("border-r", collapsed ? "w-14" : "w-60")} collapsible="icon">
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel className="sticky top-0 z-10 bg-sidebar text-sm font-semibold">{title}</SidebarGroupLabel>
@@ -69,7 +72,7 @@ export default function WorkspaceLayout({
                         aria-current={active ? "page" : undefined}
                       >
                         {Icon && <Icon className="h-4 w-4" />}
-                        <span className="group-data-[collapsible=icon]:hidden">{s.title}</span>
+                        {!collapsed && <span>{s.title}</span>}
                       </a>
                     );
                   })}
