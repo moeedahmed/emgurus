@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import { useRoles } from "@/hooks/useRoles";
+import { notifyInApp, notifyEmailIfConfigured } from "@/lib/notifications";
 
 interface PostItem {
   id: string;
@@ -140,11 +141,17 @@ const ModeratePosts = () => {
 
   const assign = async (postId: string) => {
     const reviewerId = selectedReviewer[postId];
+    const post = posts.find(p => p.id === postId);
     if (!user || !reviewerId) return;
     try {
       const { error } = await supabase.rpc('assign_reviewer', { p_post_id: postId, p_reviewer_id: reviewerId, p_note: '' });
       if (error) throw error;
       toast.success("Reviewer assigned");
+      // In-app + email to reviewer
+      if (post) {
+        notifyInApp({ toUserId: reviewerId, type: 'blog_assigned', title: 'Blog assigned for review', body: `You’ve been assigned: ${post.title}`, data: { post_id: postId } });
+        notifyEmailIfConfigured({ toUserIds: [reviewerId], subject: 'Blog assigned for review', html: `<p>You’ve been assigned: <strong>${post.title}</strong></p>` });
+      }
       loadPosts();
     } catch (e) {
       console.error(e);
@@ -238,6 +245,11 @@ const ModeratePosts = () => {
                         const { error } = await supabase.rpc('review_request_changes', { p_post_id: p.id, p_note: note.trim() });
                         if (error) throw error;
                         toast.success('Changes requested');
+                        // Notify author
+                        notifyInApp({ toUserId: p.author_id, type: 'blog_changes_requested', title: 'Changes requested on your blog', body: note.trim(), data: { post_id: p.id } });
+                        notifyEmailIfConfigured({ toUserIds: [p.author_id], subject: 'Changes requested on your blog', html: `<p>Changes requested on <strong>${p.title}</strong></p><p>Note: ${note.trim()}</p>` });
+                        // Ensure in-app via service role for non-admin actors
+                        await supabase.functions.invoke('notifications-dispatch', { body: { inApp: [{ userId: p.author_id, type: 'blog_changes_requested', title: 'Changes requested on your blog', body: note.trim(), data: { post_id: p.id } }] } });
                         loadPosts();
                       } catch (e) { console.error(e); toast.error('Failed'); }
                     }}>Reject</Button>
@@ -246,6 +258,15 @@ const ModeratePosts = () => {
                         const { error } = await supabase.rpc('review_approve_publish', { p_post_id: p.id });
                         if (error) throw error;
                         toast.success('Post published');
+                        // Notify author (and assigned reviewer if any)
+                        const { data: one } = await supabase.from('blog_posts').select('slug, reviewer_id').eq('id', p.id).maybeSingle();
+                        const link = one?.slug ? `${window.location.origin}/blogs/${one.slug}` : `${window.location.origin}/blogs`;
+                        notifyInApp({ toUserId: p.author_id, type: 'blog_published', title: 'Your blog was published', body: `${p.title}`, data: { post_id: p.id, slug: one?.slug || null } });
+                        notifyEmailIfConfigured({ toUserIds: [p.author_id], subject: 'Your blog was published', html: `<p>Your blog <strong>${p.title}</strong> was published.</p><p><a href="${link}">View post</a></p>` });
+                        if (one?.reviewer_id) {
+                          notifyInApp({ toUserId: one.reviewer_id, type: 'blog_published', title: 'Blog you reviewed was published', body: `${p.title}`, data: { post_id: p.id, slug: one?.slug || null } });
+                          notifyEmailIfConfigured({ toUserIds: [one.reviewer_id], subject: 'Blog you reviewed was published', html: `<p><strong>${p.title}</strong> was published.</p><p><a href="${link}">View post</a></p>` });
+                        }
                         loadPosts();
                       } catch (e) { console.error(e); toast.error('Failed'); }
                     }}>Publish</Button>
@@ -262,6 +283,9 @@ const ModeratePosts = () => {
                         const { error } = await supabase.rpc('review_request_changes', { p_post_id: p.id, p_note: note.trim() });
                         if (error) throw error;
                         toast.success('Rejected with note');
+                        // Notify author
+                        notifyInApp({ toUserId: p.author_id, type: 'blog_changes_requested', title: 'Changes requested on your blog', body: note.trim(), data: { post_id: p.id } });
+                        notifyEmailIfConfigured({ toUserIds: [p.author_id], subject: 'Changes requested on your blog', html: `<p>Changes requested on <strong>${p.title}</strong></p><p>Note: ${note.trim()}</p>` });
                         loadPosts();
                       } catch (e) { console.error(e); toast.error('Failed'); }
                     }}>Reject</Button>
@@ -270,6 +294,9 @@ const ModeratePosts = () => {
                         const { error } = await supabase.from('blog_review_logs').insert({ post_id: p.id, actor_id: user?.id, action: 'approve', note: '' });
                         if (error) throw error as any;
                         toast.success('Approved — sent to Admin Reviewed');
+                        // Notify author of approval
+                        notifyInApp({ toUserId: p.author_id, type: 'blog_approved', title: 'Your blog was approved', body: `${p.title} has been approved and moved forward.`, data: { post_id: p.id } });
+                        notifyEmailIfConfigured({ toUserIds: [p.author_id], subject: 'Your blog was approved', html: `<p><strong>${p.title}</strong> has been approved and moved forward.</p>` });
                         loadPosts();
                       } catch (e) { console.error(e); toast.error('Failed'); }
                     }}>Approve</Button>

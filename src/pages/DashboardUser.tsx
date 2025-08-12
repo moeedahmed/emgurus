@@ -66,6 +66,17 @@ export default function DashboardUser() {
                         onClick={async () => {
                           try {
                             await submitPost(r.id);
+                            // Notify admins (in-app + email if configured)
+                            const title = r.title || 'A blog';
+                            const body = `<p>Blog resubmitted: <strong>${title}</strong></p>`;
+                            try {
+                              const { notifyAdmins } = await import("@/lib/notifications");
+                              await notifyAdmins({
+                                subject: "Blog resubmitted",
+                                html: body,
+                                inApp: { type: 'blog_resubmitted', title: 'Blog resubmitted', body: `Resubmitted: ${title}`, data: { post_id: r.id } },
+                              });
+                            } catch (e) { console.warn('notifyAdmins failed', e); }
                             // Optimistic remove
                             setRows(prev => prev.filter(x => x.id !== r.id));
                           } catch (e: any) {}
