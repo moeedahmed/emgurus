@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
-import { BookOpen, ClipboardList, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings } from "lucide-react";
+import { BookOpen, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings } from "lucide-react";
 import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
 import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
 import ForumsModeration from "@/pages/ForumsModeration";
@@ -8,35 +8,10 @@ import KpiCard from "@/components/dashboard/KpiCard";
 import TrendCard from "@/components/dashboard/TrendCard";
 import { useAdminMetrics } from "@/hooks/metrics/useAdminMetrics";
 import ModeratePosts from "@/pages/admin/ModeratePosts";
-import AssignReviews from "@/pages/admin/AssignReviews";
 import { Button } from "@/components/ui/button";
-
-function AdminUnassigned() { useEffect(() => { const p = new URLSearchParams(location.search); p.set('view','admin'); p.set('tab','unassigned'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts />; }
-function AdminAssigned() { useEffect(() => { const p = new URLSearchParams(location.search); p.set('view','admin'); p.set('tab','assigned'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts />; }
-
-// Minimal Completed list for admin using existing table
 import { supabase } from "@/integrations/supabase/client";
-function AdminCompleted() {
-  const [items, setItems] = React.useState<any[]>([]);
-  useEffect(() => { (async () => {
-    const { data } = await supabase.from('blog_posts').select('id,title,slug,published_at').eq('status','published').order('published_at',{ascending:false}).limit(50);
-    setItems((data as any) || []);
-  })(); }, []);
-  return (
-    <div className="p-4 space-y-2">
-      {items.map((p:any) => (
-        <div key={p.id} className="flex items-center justify-between rounded border p-3">
-          <div>
-            <div className="font-medium">{p.title}</div>
-            <div className="text-xs text-muted-foreground">{p.slug}</div>
-          </div>
-          {p.slug && <a className="text-sm underline" href={`/blogs/${p.slug}`}>View</a>}
-        </div>
-      ))}
-      {items.length===0 && <div className="text-sm text-muted-foreground">No published posts yet.</div>}
-    </div>
-  );
-}
+import { publishPost } from "@/lib/blogsApi";
+import { toast } from "sonner";
 
 const AdminAnalyticsPanel: React.FC = () => {
   const { kpis, submissionsSeries, isLoading } = useAdminMetrics();
@@ -70,10 +45,11 @@ export default function DashboardAdmin() {
       title: "Blogs",
       icon: BookOpen,
       tabs: [
-        { id: "submitted", title: "Submitted/Unassigned", render: <div className="p-4"><AdminUnassigned /></div> },
-        { id: "assigned", title: "Assigned", render: <div className="p-4"><AdminAssigned /></div> },
-        { id: "completed", title: "Completed", render: <div className="p-4"><AdminCompleted /></div> },
-        { id: "assign", title: "Assign Reviews", render: <div className="p-4"><AssignReviews /></div> },
+        { id: "submitted", title: "Submitted", render: <div className="p-4"><AdminSubmitted /></div> },
+        { id: "reviewed", title: "Reviewed", render: <div className="p-4"><AdminReviewed /></div> },
+        { id: "published", title: "Published", render: <div className="p-4"><AdminPublished /></div> },
+        { id: "rejected", title: "Rejected", render: <div className="p-4"><AdminRejected /></div> },
+        { id: "archived", title: "Archived", render: <div className="p-4"><AdminArchived /></div> },
       ],
     },
     {

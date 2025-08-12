@@ -14,10 +14,68 @@ import { supabase } from "@/integrations/supabase/client";
 import Pricing from "@/pages/guru/Pricing";
 import ForumsModeration from "@/pages/ForumsModeration";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Small wrappers that preset reviewer/admin tabs via URL params without leaving the route
-function ReviewerPending() { useEffect(() => { const p = new URLSearchParams(window.location.search); p.set('view','reviewer'); p.set('tab','pending'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts />; }
-function ReviewerCompleted() { useEffect(() => { const p = new URLSearchParams(window.location.search); p.set('view','reviewer'); p.set('tab','completed'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts />; }
+function ReviewerAssigned() { useEffect(() => { const p = new URLSearchParams(window.location.search); p.set('view','reviewer'); p.set('tab','pending'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts />; }
+function ReviewerApprovedPanel() {
+  const { user } = useAuth();
+  const [rows, setRows] = useState<any[]>([]);
+  useEffect(() => { (async () => {
+    if (!user) { setRows([]); return; }
+    const { data } = await supabase
+      .from('blog_review_logs')
+      .select('post_id, created_at, note, post:blog_posts(id,title,slug)')
+      .eq('actor_id', user.id)
+      .eq('action', 'approve')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    setRows((data as any) || []);
+  })(); }, [user?.id]);
+  return (
+    <div className="p-4">
+      <TableCard
+        title="Approved"
+        columns={[
+          { key: 'title', header: 'Title', render: (r: any) => r.post?.title || '-' },
+          { key: 'created_at', header: 'When', render: (r: any) => new Date(r.created_at).toLocaleString() },
+          { key: 'slug', header: 'Link', render: (r: any) => (r.post?.slug ? <a className="underline" href={`/blogs/${r.post.slug}`}>Open</a> : '-') },
+        ]}
+        rows={rows}
+        emptyText="No approvals yet."
+      />
+    </div>
+  );
+}
+function ReviewerRejectedPanel() {
+  const { user } = useAuth();
+  const [rows, setRows] = useState<any[]>([]);
+  useEffect(() => { (async () => {
+    if (!user) { setRows([]); return; }
+    const { data } = await supabase
+      .from('blog_review_logs')
+      .select('post_id, created_at, note, post:blog_posts(id,title,slug)')
+      .eq('actor_id', user.id)
+      .eq('action', 'request_changes')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    setRows((data as any) || []);
+  })(); }, [user?.id]);
+  return (
+    <div className="p-4">
+      <TableCard
+        title="Rejected"
+        columns={[
+          { key: 'title', header: 'Title', render: (r: any) => r.post?.title || '-' },
+          { key: 'note', header: 'Note', render: (r: any) => r.note || '-' },
+          { key: 'created_at', header: 'When', render: (r: any) => new Date(r.created_at).toLocaleString() },
+        ]}
+        rows={rows}
+        emptyText="No rejections yet."
+      />
+    </div>
+  );
+}
+
 
 export default function DashboardGuru() {
   useEffect(() => { document.title = "Guru Workspace | EMGurus"; }, []);
@@ -52,8 +110,9 @@ export default function DashboardGuru() {
       title: "Blogs",
       icon: BookOpen,
       tabs: [
-        { id: "pending", title: "Review Pending", render: <div className="p-4"><ReviewerPending /></div> },
-        { id: "completed", title: "Review Completed", render: <div className="p-4"><ReviewerCompleted /></div> },
+        { id: "assigned", title: "Assigned", render: <div className="p-4"><ReviewerAssigned /></div> },
+        { id: "approved", title: "Approved", render: <div className="p-4"><ReviewerApprovedPanel /></div> },
+        { id: "rejected", title: "Rejected", render: <div className="p-4"><ReviewerRejectedPanel /></div> },
       ],
     },
     {

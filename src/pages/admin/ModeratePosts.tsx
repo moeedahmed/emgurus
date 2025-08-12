@@ -99,17 +99,31 @@ const ModeratePosts = () => {
         if (tab === 'pending') {
           const { data, error } = await (supabase as any).rpc('list_reviewer_queue', { p_limit: 100, p_offset: 0 });
           if (error) throw error;
-          setPosts((data as any) || []);
+          let list = (data as any) || [];
+          // Exclude items I already approved (have an approve log)
+          const ids = list.map((p: any) => p.id);
+          if (ids.length && user) {
+            const { data: logs } = await supabase
+              .from('blog_review_logs')
+              .select('post_id')
+              .eq('actor_id', user.id)
+              .eq('action', 'approve')
+              .in('post_id', ids);
+            const approvedSet = new Set((logs || []).map((l: any) => l.post_id));
+            list = list.filter((p: any) => !approvedSet.has(p.id));
+          }
+          setPosts(list);
         } else {
           if (!user) { setPosts([]); return; }
           const { data, error } = await supabase
-            .from('blog_posts')
-            .select('id,title,description,author_id,created_at,status,reviewed_by')
-            .eq('status', 'published')
-            .eq('reviewed_by', user.id)
+            .from('blog_review_logs')
+            .select('post_id, created_at, post:blog_posts(id,title,description,author_id,created_at,status)')
+            .eq('actor_id', user.id)
+            .eq('action', 'approve')
             .order('created_at', { ascending: false });
           if (error) throw error;
-          setPosts((data as any) || []);
+          const mapped = (data || []).map((r: any) => ({ id: r.post?.id, title: r.post?.title, description: r.post?.description, author_id: r.post?.author_id, created_at: r.created_at, status: r.post?.status }));
+          setPosts(mapped.filter((p: any) => p.id));
         }
         setAssignments({});
       }
@@ -170,13 +184,13 @@ const ModeratePosts = () => {
         <div className="flex gap-2 flex-wrap">
           {view === 'admin' ? (
             <>
-              <Button variant={tab==='unassigned' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('unassigned')}>Submitted & Unassigned</Button>
+              <Button variant={tab==='unassigned' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('unassigned')}>Submitted</Button>
               <Button variant={tab==='assigned' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('assigned')}>Assigned</Button>
             </>
           ) : (
             <>
-              <Button variant={tab==='pending' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('pending')}>Assigned to Me</Button>
-              <Button variant={tab==='completed' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('completed')}>Completed by Me</Button>
+              <Button variant={tab==='pending' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('pending')}>Assigned</Button>
+              <Button variant={tab==='completed' ? 'secondary' : 'outline'} size="sm" onClick={() => setTab('completed')}>Approved</Button>
             </>
           )}
         </div>
@@ -212,11 +226,55 @@ const ModeratePosts = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button asChild variant="secondary">
-                  <Link to={`/blogs/editor/${p.id}`}>Edit</Link>
-                </Button>
-                <Button variant="outline" onClick={() => act(p.id, "archived")}>Reject</Button>
-                <Button onClick={() => act(p.id, "published")}>Publish</Button>
+                {view === 'admin' ? (
+                  <>
+                    <Button asChild variant="secondary">
+                      <Link to={`/blogs/editor/${p.id}`}>Edit</Link>
+                    </Button>
+                    <Button variant="outline" onClick={async () => {
+                      const note = window.prompt('Provide a short note for rejection (visible to author):');
+                      if (!note || !note.trim()) { toast.error('Note is required'); return; }
+                      try {
+                        const { error } = await supabase.rpc('review_request_changes', { p_post_id: p.id, p_note: note.trim() });
+                        if (error) throw error;
+                        toast.success('Changes requested');
+                        loadPosts();
+                      } catch (e) { console.error(e); toast.error('Failed'); }
+                    }}>Reject</Button>
+                    <Button onClick={async () => {
+                      try {
+                        const { error } = await supabase.rpc('review_approve_publish', { p_post_id: p.id });
+                        if (error) throw error;
+                        toast.success('Post published');
+                        loadPosts();
+                      } catch (e) { console.error(e); toast.error('Failed'); }
+                    }}>Publish</Button>
+                  </>
+                ) : (
+                  <>
+                    <Button asChild variant="secondary">
+                      <Link to={`/blogs/editor/${p.id}`}>Open Review</Link>
+                    </Button>
+                    <Button variant="outline" onClick={async () => {
+                      const note = window.prompt('Provide a short note for rejection (visible to author):');
+                      if (!note || !note.trim()) { toast.error('Note is required'); return; }
+                      try {
+                        const { error } = await supabase.rpc('review_request_changes', { p_post_id: p.id, p_note: note.trim() });
+                        if (error) throw error;
+                        toast.success('Rejected with note');
+                        loadPosts();
+                      } catch (e) { console.error(e); toast.error('Failed'); }
+                    }}>Reject</Button>
+                    <Button onClick={async () => {
+                      try {
+                        const { error } = await supabase.from('blog_review_logs').insert({ post_id: p.id, actor_id: user?.id, action: 'approve', note: '' });
+                        if (error) throw error as any;
+                        toast.success('Approved — sent to Admin Reviewed');
+                        loadPosts();
+                      } catch (e) { console.error(e); toast.error('Failed'); }
+                    }}>Approve</Button>
+                  </>
+                )}
               </div>
             </div>
 

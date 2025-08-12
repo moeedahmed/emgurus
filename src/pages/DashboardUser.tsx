@@ -10,17 +10,31 @@ import TableCard from "@/components/dashboard/TableCard";
 import KpiCard from "@/components/dashboard/KpiCard";
 import TrendCard from "@/components/dashboard/TrendCard";
 import { useUserMetrics } from "@/hooks/metrics/useUserMetrics";
+import { submitPost } from "@/lib/blogsApi";
 
 export default function DashboardUser() {
   useEffect(() => { document.title = "Learner Workspace | EMGurus"; }, []);
 
-  const MyPostsPanel: React.FC<{ status: 'draft' | 'in_review' | 'published' }> = ({ status }) => {
+  const MyPostsPanel: React.FC<{ status: 'draft' | 'in_review' | 'published' | 'rejected' }> = ({ status }) => {
     const { user } = useAuth();
     const [rows, setRows] = useState<any[]>([]);
     useEffect(() => {
       let cancelled = false;
       (async () => {
         if (!user) { setRows([]); return; }
+        if (status === 'rejected') {
+          // Show drafts that have review notes (i.e., rejected/requested changes) for resubmission
+          const { data } = await supabase
+            .from('blog_posts')
+            .select('id,title,slug,updated_at,review_notes')
+            .eq('author_id', user.id)
+            .eq('status', 'draft')
+            .not('review_notes', 'is', null)
+            .order('updated_at', { ascending: false })
+            .limit(50);
+          if (!cancelled) setRows((data as any) || []);
+          return;
+        }
         const orderCol = status === 'published' ? 'published_at' : (status === 'in_review' ? 'submitted_at' : 'updated_at');
         const { data } = await supabase
           .from('blog_posts')
@@ -37,12 +51,35 @@ export default function DashboardUser() {
     return (
       <div className="p-4">
         <TableCard
-          title={status === 'draft' ? 'My Drafts' : status === 'in_review' ? 'My Submissions' : 'My Published'}
-          columns={[
-            { key: 'title', header: 'Title' },
-            { key: 'updated_at', header: 'Updated', render: (r: any) => new Date(r.published_at || r.submitted_at || r.updated_at).toLocaleString() },
-            { key: 'slug', header: 'Link', render: (r: any) => (r.slug ? <a className="underline" href={`/blogs/${r.slug}`}>Open</a> : '-') },
-          ]}
+          title={status === 'draft' ? 'Drafts' : status === 'in_review' ? 'Submitted' : status === 'published' ? 'Published' : 'Rejected'}
+          columns={
+            status === 'rejected'
+              ? [
+                  { key: 'title', header: 'Title' },
+                  { key: 'updated_at', header: 'Updated', render: (r: any) => new Date(r.updated_at).toLocaleString() },
+                  { key: 'review_notes', header: 'Note', render: (r: any) => (r.review_notes || '').split('\n').slice(-1)[0] || '-' },
+                  { key: 'actions', header: 'Actions', render: (r: any) => (
+                    <div className="flex gap-2">
+                      <a className="underline" href={`/blogs/editor/${r.id}`}>Edit</a>
+                      <button
+                        className="underline"
+                        onClick={async () => {
+                          try {
+                            await submitPost(r.id);
+                            // Optimistic remove
+                            setRows(prev => prev.filter(x => x.id !== r.id));
+                          } catch (e: any) {}
+                        }}
+                      >Resubmit</button>
+                    </div>
+                  ) },
+                ]
+              : [
+                  { key: 'title', header: 'Title' },
+                  { key: 'updated_at', header: 'Updated', render: (r: any) => new Date(r.published_at || r.submitted_at || r.updated_at).toLocaleString() },
+                  { key: 'slug', header: 'Link', render: (r: any) => (r.slug ? <a className="underline" href={`/blogs/${r.slug}`}>Open</a> : '-') },
+                ]
+          }
           rows={rows}
           emptyText="Nothing here yet."
         />
@@ -83,9 +120,10 @@ export default function DashboardUser() {
       title: "Blogs",
       icon: BookOpen,
       tabs: [
-        { id: "drafts", title: "My Drafts", render: <MyPostsPanel status="draft" /> },
-        { id: "submissions", title: "My Submissions", render: <MyPostsPanel status="in_review" /> },
+        { id: "drafts", title: "Drafts", render: <MyPostsPanel status="draft" /> },
+        { id: "submitted", title: "Submitted", render: <MyPostsPanel status="in_review" /> },
         { id: "published", title: "Published", render: <MyPostsPanel status="published" /> },
+        { id: "rejected", title: "Rejected", render: <MyPostsPanel status="rejected" /> },
       ],
     },
     {
