@@ -93,7 +93,10 @@ export function WorkspaceLayoutInner({
           </header>
 
           <div className="container mx-auto px-4 py-6">
-            <Tabs key={sectionId} defaultValue={current.tabs[0]?.id} value={undefined /* uncontrolled per remount */}>
+            <Tabs key={`${sectionId}:${new URLSearchParams(window.location.search).get('tab') || ''}`}
+              defaultValue={(current.tabs.find(t => t.id === new URLSearchParams(window.location.search).get('tab'))?.id) || current.tabs[0]?.id}
+              value={undefined /* uncontrolled per remount */}
+            >
               <div className="flex items-center justify-between mb-3">
                 <TabsList>
                   {current.tabs.map((t) => (

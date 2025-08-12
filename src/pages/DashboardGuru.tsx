@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
 import { BookOpen, Stethoscope, GraduationCap, BarChart3, MessageSquare } from "lucide-react";
-import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
-import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
+import ReviewedByMe from "@/pages/guru/ReviewedByMe";
+import GuruReviewQueue from "@/pages/guru/ReviewQueue";
+import MyExamDrafts from "@/pages/tools/MyExamDrafts";
+import RejectedByMe from "@/pages/guru/RejectedByMe";
 import Bookings from "@/pages/Bookings";
 import Availability from "@/pages/guru/Availability";
 import ModeratePosts from "@/pages/admin/ModeratePosts";
@@ -95,13 +97,22 @@ export default function DashboardGuru() {
     );
   };
 
-  const ExamShortcutsBar: React.FC = () => (
-    <div className="px-4 py-3 border-b flex flex-wrap gap-2">
-      <Button asChild size="sm" variant="outline"><a href="/guru/exams/review">Review Pending</a></Button>
-      <Button asChild size="sm" variant="outline"><a href="/guru/reviewed">Reviewed by Me</a></Button>
-      <Button asChild size="sm" variant="outline"><a href="/guru/questions">My Questions</a></Button>
-    </div>
-  );
+  const ExamShortcutsBar: React.FC = () => {
+    const goto = (tab: string) => {
+      const p = new URLSearchParams(window.location.search);
+      p.set('tab', tab);
+      history.replaceState(null, '', `${location.pathname}?${p.toString()}#exams`);
+      // Nudge WorkspaceLayout to pick up changes if already on #exams
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    };
+    return (
+      <div className="px-4 py-3 border-b flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={() => goto('assigned')}>Assigned</Button>
+        <Button size="sm" variant="outline" onClick={() => goto('approved')}>Approved</Button>
+        <Button size="sm" variant="outline" onClick={() => goto('my-questions')}>My Questions</Button>
+      </div>
+    );
+  };
 
 
   const sections: WorkspaceSection[] = [
@@ -120,8 +131,10 @@ export default function DashboardGuru() {
       title: "Exams",
       icon: GraduationCap,
       tabs: [
-        { id: "question-bank", title: "Question Bank", render: <div className="p-0"><ExamShortcutsBar /><ReviewedQuestionBank embedded /></div> },
-        { id: "ai-practice", title: "AI Practice", render: <div className="p-0"><ExamShortcutsBar /><AiPracticeConfig /></div> },
+        { id: "assigned", title: "Assigned", render: <div className="p-0"><ExamShortcutsBar /><GuruReviewQueue /></div> },
+        { id: "approved", title: "Approved", render: <div className="p-0"><ExamShortcutsBar /><ReviewedByMe /></div> },
+        { id: "rejected", title: "Rejected", render: <div className="p-0"><ExamShortcutsBar /><RejectedByMe /></div> },
+        { id: "my-questions", title: "My Questions", render: <div className="p-0"><ExamShortcutsBar /><MyExamDrafts /></div> },
       ],
     },
     {
@@ -152,5 +165,5 @@ export default function DashboardGuru() {
     },
   ];
 
-  return <WorkspaceLayout title="Guru Workspace" sections={sections} defaultSectionId="blogs" />;
+  return <WorkspaceLayout title="Guru Workspace" sections={sections} defaultSectionId="exams" />;
 }
