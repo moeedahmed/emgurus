@@ -66,9 +66,9 @@ const Footer = () => {
 
   return (
     <footer className="bg-primary text-primary-foreground">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Top Section */}
-        <div className="grid lg:grid-cols-5 gap-8 mb-12">
+        <div className="grid lg:grid-cols-5 gap-6 mb-8">
           {/* Brand */}
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
@@ -185,7 +185,7 @@ const Footer = () => {
         </div>
 
         {/* Newsletter */}
-        <div className="border-t border-primary-foreground/20 pt-12 mb-12">
+        <div className="border-t border-primary-foreground/20 pt-8 mb-8">
           <div className="max-w-md">
             <h3 className="font-semibold mb-2">Stay Updated</h3>
             <p className="text-primary-foreground/80 mb-4 text-sm">
@@ -210,11 +210,9 @@ const Footer = () => {
         </div>
 
         {/* Bottom Section */}
-        <div className="border-t border-primary-foreground/20 pt-8">
+        <div className="border-t border-primary-foreground/20 pt-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-primary-foreground/80 text-sm">
-              © 2024 EM Gurus. All rights reserved.
-            </p>
+            <p className="text-primary-foreground/80 text-sm">© {new Date().getFullYear()} EM Gurus. All rights reserved.</p>
             <div className="flex space-x-6">
               {footerLinks.legal.map((link) => (
                 <Link

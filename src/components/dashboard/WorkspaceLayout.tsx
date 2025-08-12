@@ -52,9 +52,9 @@ export default function WorkspaceLayout({
         <Sidebar className="border-r">
           <SidebarContent>
             <SidebarGroup>
-              <SidebarGroupLabel className="text-sm font-semibold">{title}</SidebarGroupLabel>
+              <SidebarGroupLabel className="sticky top-0 z-10 bg-sidebar text-sm font-semibold">{title}</SidebarGroupLabel>
               <SidebarGroupContent>
-                <nav className="flex-1 overflow-y-auto flex flex-col gap-1 p-1">
+                <nav className="flex-1 overflow-y-auto flex flex-col gap-1 p-1 pr-2 max-h-[calc(100vh-4rem)]">
                   {sections.map((s) => {
                     const Icon = s.icon as any;
                     const active = s.id === sectionId;
