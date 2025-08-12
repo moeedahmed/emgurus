@@ -181,6 +181,32 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
               </ul>
             </section>
           )}
+          {interestDocs.length > 0 && (
+            <section>
+              <div className="mb-2 flex items-center gap-2 text-sm font-medium"><Tag className="h-4 w-4" /> Interests</div>
+              <ul className="space-y-1">
+                {interestDocs.map((d) => (
+                  <li key={d.id}>
+                    <button
+                      className="w-full text-left rounded-md px-2 py-1 hover:bg-accent"
+                      onClick={() => {
+                        onOpenChange(false);
+                        const href = d.slug_url || d.url || '';
+                        if (!href) return;
+                        if (/^https?:\/\//i.test(href)) window.open(href, '_blank');
+                        else navigate(href.startsWith('/') ? href : `/${href}`);
+                      }}
+                    >
+                      <div className="font-medium">{d.title || d.slug_url || d.url}</div>
+                      {Array.isArray(d.tags) && d.tags.length > 0 && (
+                        <div className="text-xs text-muted-foreground line-clamp-1">{d.tags.slice(0,4).join(', ')}{d.tags.length > 4 ? ` +${d.tags.length-4}` : ''}</div>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>

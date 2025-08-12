@@ -31,6 +31,8 @@ interface ProfileRow {
   twitter: string | null;
   website: string | null;
   price_per_30min: number | null;
+  position?: string | null;
+  hospital?: string | null;
   onboarding_progress?: any;
 }
 
@@ -72,7 +74,7 @@ export default function Profile() {
     (async () => {
       const { data: prof } = await supabase
         .from('profiles')
-        .select('user_id, full_name, email, timezone, country, specialty, avatar_url, cover_image_url, exams, languages, bio, linkedin, twitter, website, price_per_30min')
+        .select('user_id, full_name, email, timezone, country, specialty, avatar_url, cover_image_url, exams, exam_interests, languages, bio, linkedin, twitter, website, price_per_30min, position, hospital')
         .eq('user_id', user.id)
         .maybeSingle();
       setProfile(prof as any);
