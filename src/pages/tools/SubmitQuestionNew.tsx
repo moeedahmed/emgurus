@@ -58,6 +58,7 @@ export default function SubmitQuestionNew() {
   const [saving, setSaving] = useState(false);
   const [gurus, setGurus] = useState<{ id: string; name: string }[]>([]);
   const [selectedGuruId, setSelectedGuruId] = useState<string>("");
+
   useEffect(() => {
     document.title = isEditing ? "Edit Question | EMGurus" : "Submit Question | EMGurus";
     let meta = document.querySelector('meta[name="description"]');
@@ -69,6 +70,7 @@ export default function SubmitQuestionNew() {
     meta.setAttribute('content', isEditing ? 'Edit and update exam questions with full admin control.' : 'Submit new exam questions for review by medical education experts.');
     
     loadDropdownData();
+    loadGurus();
     if (isEditing && id) {
       loadQuestionForEdit(id);
     }
@@ -94,6 +96,21 @@ export default function SubmitQuestionNew() {
       }
     } catch (error) {
       console.error('Error loading dropdown data:', error);
+    }
+  };
+
+  const loadGurus = async () => {
+    try {
+      const { data: guruProfiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', (
+          (await supabase.from('user_roles').select('user_id').eq('role', 'guru')).data || []
+        ).map((r: any) => r.user_id));
+      
+      setGurus((guruProfiles || []).map((p: any) => ({ id: p.user_id, name: p.full_name || 'Unknown' })));
+    } catch (error) {
+      console.error('Error loading gurus:', error);
     }
   };
 
@@ -130,6 +147,14 @@ export default function SubmitQuestionNew() {
             curriculum: data.subtopic || "",
           difficulty: data.difficulty || ""
         });
+
+        // Load existing assignment
+        const { data: assignment } = await supabase
+          .from('exam_review_assignments')
+          .select('reviewer_id')
+          .eq('question_id', questionId)
+          .maybeSingle();
+        if (assignment) setSelectedGuruId(assignment.reviewer_id);
       }
     } catch (error: any) {
       toast({ title: "Error loading question", description: error.message });
@@ -244,6 +269,7 @@ export default function SubmitQuestionNew() {
       toast({ title: "Error assigning question", description: error.message });
     }
   };
+
   if (loading) {
     return (
       <main className="container mx-auto px-4 md:px-6 py-6 md:py-10">
@@ -256,166 +282,200 @@ export default function SubmitQuestionNew() {
 
   return (
     <main className="container mx-auto px-4 md:px-6 py-6 md:py-10">
-      <article className="max-w-4xl mx-auto">
+      <article className="max-w-7xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">
           {isEditing ? "Edit Question" : "Submit Question"}
         </h1>
 
-        <Card className="p-6 space-y-6">
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="stem">Question</Label>
-              <Textarea
-                id="stem"
-                value={question.stem}
-                onChange={(e) => onChange({ stem: e.target.value })}
-                placeholder="Enter your question here..."
-                rows={4}
-              />
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-3">
+            <Card className="p-6 space-y-6">
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="stem">Question</Label>
+                  <Textarea
+                    id="stem"
+                    value={question.stem}
+                    onChange={(e) => onChange({ stem: e.target.value })}
+                    placeholder="Enter your question here..."
+                    rows={4}
+                  />
+                </div>
 
-            <div className="grid gap-4">
-              <Label>Answer Choices</Label>
-              {question.choices.map((choice, index) => (
-                <div key={choice.key} className="grid gap-2">
-                  <div className="flex gap-3 items-center">
-                    <span className="w-8 font-medium">{choice.key}.</span>
-                    <Input
-                      value={choice.text}
-                      onChange={(e) => {
-                        const newChoices = [...question.choices];
-                        newChoices[index].text = e.target.value;
-                        onChange({ choices: newChoices });
-                      }}
-                      placeholder={`Enter choice ${choice.key}`}
-                    />
+                <div className="grid gap-4">
+                  <Label>Answer Choices</Label>
+                  {question.choices.map((choice, index) => (
+                    <div key={choice.key} className="grid gap-2">
+                      <div className="flex gap-3 items-center">
+                        <span className="w-8 font-medium">{choice.key}.</span>
+                        <Input
+                          value={choice.text}
+                          onChange={(e) => {
+                            const newChoices = [...question.choices];
+                            newChoices[index].text = e.target.value;
+                            onChange({ choices: newChoices });
+                          }}
+                          placeholder={`Enter choice ${choice.key}`}
+                        />
+                      </div>
+                      <div className="pl-11">
+                        <Textarea
+                          value={choice.explanation || ""}
+                          onChange={(e) => {
+                            const newChoices = [...question.choices];
+                            newChoices[index].explanation = e.target.value;
+                            onChange({ choices: newChoices });
+                          }}
+                          rows={3}
+                          placeholder={`Why is option ${choice.key} correct/incorrect?`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="correct">Correct Answer</Label>
+                    <Select value={question.correct_answer} onValueChange={(value) => onChange({ correct_answer: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select correct answer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {question.choices.map((choice) => (
+                          <SelectItem key={choice.key} value={choice.key}>
+                            {choice.key}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="pl-11">
-                    <Textarea
-                      value={choice.explanation || ""}
-                      onChange={(e) => {
-                        const newChoices = [...question.choices];
-                        newChoices[index].explanation = e.target.value;
-                        onChange({ choices: newChoices });
-                      }}
-                      rows={3}
-                      placeholder={`Why is option ${choice.key} correct/incorrect?`}
-                    />
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="exam-type">Exam Type</Label>
+                    <Select value={question.exam_type} onValueChange={(value) => onChange({ exam_type: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select exam type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {examTypes.map((exam) => (
+                          <SelectItem key={exam} value={exam}>
+                            {exam.replace('_', ' ')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="difficulty">Difficulty</Label>
+                    <Select value={question.difficulty} onValueChange={(value) => onChange({ difficulty: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select difficulty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DIFFICULTY_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              ))}
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="correct">Correct Answer</Label>
-                <Select value={question.correct_answer} onValueChange={(value) => onChange({ correct_answer: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select correct answer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {question.choices.map((choice) => (
-                      <SelectItem key={choice.key} value={choice.key}>
-                        {choice.key}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="topic">Topic</Label>
+                    <Select value={question.topic} onValueChange={(value) => onChange({ topic: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select topic" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {topics.map((topic) => (
+                          <SelectItem key={topic} value={topic}>
+                            {topic}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="curriculum">Curriculum</Label>
+                    <Select value={question.curriculum} onValueChange={(value) => onChange({ curriculum: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select curriculum" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {curricula.map((curriculum) => (
+                          <SelectItem key={curriculum} value={curriculum}>
+                            {curriculum}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="explanation">Explanation</Label>
+                  <Textarea
+                    id="explanation"
+                    value={question.explanation}
+                    onChange={(e) => onChange({ explanation: e.target.value })}
+                    placeholder="Explain the correct answer and reasoning..."
+                    rows={4}
+                  />
+                </div>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="exam-type">Exam Type</Label>
-                <Select value={question.exam_type} onValueChange={(value) => onChange({ exam_type: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select exam type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {examTypes.map((exam) => (
-                      <SelectItem key={exam} value={exam}>
-                        {exam.replace('_', ' ')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <div className="space-y-4">
+                {isEditing && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="guru-select">Assign to Guru</Label>
+                    <Select value={selectedGuruId} onValueChange={setSelectedGuruId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select guru for assignment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {gurus.map((guru) => (
+                          <SelectItem key={guru.id} value={guru.id}>
+                            {guru.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-              <div className="grid gap-2">
-                <Label htmlFor="difficulty">Difficulty</Label>
-                <Select value={question.difficulty} onValueChange={(value) => onChange({ difficulty: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select difficulty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DIFFICULTY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-4 justify-end">
+                  <Button variant="outline" onClick={() => navigate(-1)}>
+                    Cancel
+                  </Button>
+                  <Button variant="outline" onClick={() => save('draft')} disabled={saving}>
+                    Add to Draft
+                  </Button>
+                  <Button variant="outline" onClick={() => save('under_review')} disabled={saving}>
+                    Submit for Review
+                  </Button>
+                  {isEditing && selectedGuruId && (
+                    <Button onClick={assignToGuru}>
+                      Assign to Guru
+                    </Button>
+                  )}
+                  <Button onClick={() => save()} disabled={saving}>
+                    {saving ? "Saving..." : (isEditing ? "Update Question" : "Save Question")}
+                  </Button>
+                </div>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="topic">Topic</Label>
-                <Select value={question.topic} onValueChange={(value) => onChange({ topic: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select topic" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {topics.map((topic) => (
-                      <SelectItem key={topic} value={topic}>
-                        {topic}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="curriculum">Curriculum</Label>
-                <Select value={question.curriculum} onValueChange={(value) => onChange({ curriculum: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select curriculum" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {curricula.map((curriculum) => (
-                      <SelectItem key={curriculum} value={curriculum}>
-                        {curriculum}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="explanation">Explanation</Label>
-              <Textarea
-                id="explanation"
-                value={question.explanation}
-                onChange={(e) => onChange({ explanation: e.target.value })}
-                placeholder="Explain the correct answer and reasoning..."
-                rows={4}
-              />
-            </div>
+            </Card>
           </div>
 
-          <div className="flex gap-4 justify-end">
-            <Button variant="outline" onClick={() => navigate(-1)}>
-              Cancel
-            </Button>
-            {isEditing && (
-              <Button variant="outline" onClick={assignToGuru}>
-                Assign to Guru for Review
-              </Button>
-            )}
-            <Button onClick={save} disabled={saving}>
-              {saving ? "Saving..." : (isEditing ? "Update Question" : "Save Question")}
-            </Button>
+          <div className="lg:col-span-1">
+            {question.id && <QuestionChat questionId={question.id} />}
           </div>
-        </Card>
+        </div>
       </article>
     </main>
   );
