@@ -29,7 +29,7 @@ const Auth = () => {
   const [signupOtpCode, setSignupOtpCode] = useState("");
 
   useEffect(() => {
-    document.title = "Sign in | EMGurus";
+    document.title = "Sign in | EM Gurus";
   }, []);
 
 useEffect(() => {
@@ -181,7 +181,7 @@ useEffect(() => {
             <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
               <Brain className="w-8 h-8 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold mb-2">Welcome to EMGurus</h1>
+            <h1 className="text-2xl font-bold mb-2">Welcome to EM Gurus</h1>
             <p className="text-muted-foreground">
               Sign in to access AI-powered exam preparation and expert mentorship
             </p>

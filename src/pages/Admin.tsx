@@ -14,7 +14,7 @@ const Admin = () => {
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    document.title = "Admin | EMGurus";
+    document.title = "Admin | EM Gurus";
     const meta = document.querySelector("meta[name='description']");
     if (meta) meta.setAttribute("content", "Admin tools: manage categories and seed test users.");
   }, []);

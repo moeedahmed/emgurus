@@ -1,4 +1,4 @@
-# EMGurus – Project Brief
+# EM Gurus – Project Brief
 
 **Goal:** Ship a functional MVP for Emergency Medicine exam prep + mentorship:
 - AI practice (generate MCQs + explanations)
@@ -8,14 +8,15 @@
 
 ---
 
-## Tech Stack (current)
-- Frontend: React (Vite, TypeScript), Tailwind, shadcn/ui
-- Backend/DB: Supabase (Postgres + RLS, Edge Functions)
-- Vector Search: pgvector with IVF index
-- Deploy/Preview: Lovable (primary editing)
-- Search/Embeddings: OpenAI embeddings via Edge Functions
+## Brand and Roles Standardization
+- Brand name: "EM Gurus" (two words) across all UI text and titles. Keep the domain emgurus.com.
+- Workspace sections (Blogs, Exams, Forums, Consultations) follow consistent tabs for User/Guru/Admin views:
+  - Overview • Drafts • Submitted/Assigned • Approved • Rejected • Marked • Generate/Tools • Settings
+- Use WorkspaceLayout sections/tabs to keep structure uniform and discoverable.
 
 ---
+
+## Tech Stack (current)
 
 ## Environment & Keys
 - `OPENAI_API_KEY`: required

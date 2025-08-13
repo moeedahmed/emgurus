@@ -36,7 +36,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
     setParam(k, cur === v ? "" : v);
   };
   useEffect(() => {
-    document.title = "Blogs | EMGurus";
+    document.title = "Blogs | EM Gurus";
     const meta = document.querySelector("meta[name='description']");
     if (meta) meta.setAttribute("content", "Evidence-based articles, exam guidance, and clinical pearls.");
     const link = document.createElement("link");

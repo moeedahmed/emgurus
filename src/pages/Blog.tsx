@@ -60,9 +60,9 @@ const Blog = () => {
   };
 
   useEffect(() => {
-    document.title = "EMGurus Blog | Medical Insights";
+    document.title = "EM Gurus Blog | Medical Insights";
     const meta = document.querySelector("meta[name='description']");
-    if (meta) meta.setAttribute("content", "EMGurus blog with peer-reviewed medical articles and updates.");
+    if (meta) meta.setAttribute("content", "EM Gurus blog with peer-reviewed medical articles and updates.");
   }, []);
 
   useEffect(() => {

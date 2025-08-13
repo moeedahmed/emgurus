@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 const About = () => {
   useEffect(() => {
-    document.title = "About EM Gurus | EMGurus";
+    document.title = "About EM Gurus | EM Gurus";
   }, []);
 
   return (

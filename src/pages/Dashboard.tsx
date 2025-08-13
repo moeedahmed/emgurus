@@ -8,7 +8,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = "Dashboard | EMGurus";
+    document.title = "Dashboard | EM Gurus";
   }, []);
 
   useEffect(() => {

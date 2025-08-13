@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Chip } from "@/components/ui/chip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type ExamCode = "MRCEM_Primary" | "MRCEM_SBA" | "FRCEM_SBA";
 const EXAM_LABELS: Record<ExamCode, string> = {
@@ -237,127 +238,196 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <section className="lg:col-span-8">
-            <div className="mb-4 lg:hidden">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline">Filters</Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-80 sm:w-96">
-                  <FiltersPanel />
-                </SheetContent>
-              </Sheet>
-            </div>
+        {embedded ? (
+          <div className="grid gap-4">
+            {/* Top horizontal filters */}
+            <Card>
+              <CardContent className="py-4 grid gap-3 md:grid-cols-6">
+                <div className="md:col-span-2">
+                  <Input value={q} onChange={(e)=>{ setQ(e.target.value); setPage(1); }} placeholder="Search" />
+                </div>
+                <Select value={exam || "ALL"} onValueChange={(v)=>{ setExam(v === "ALL" ? "" : (v as any)); setPage(1); }}>
+                  <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All exams</SelectItem>
+                    <SelectItem value="MRCEM_Primary">MRCEM Primary</SelectItem>
+                    <SelectItem value="MRCEM_SBA">MRCEM SBA</SelectItem>
+                    <SelectItem value="FRCEM_SBA">FRCEM SBA</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={topicFilter || "ALL"} onValueChange={(v)=>{ setTopicFilter(v === "ALL" ? "" : v); setPage(1); }}>
+                  <SelectTrigger><SelectValue placeholder="Topic" /></SelectTrigger>
+                  <SelectContent className="max-h-80">
+                    <SelectItem value="ALL">All topics</SelectItem>
+                    {Array.from(new Set(items.map(i => i.topic).filter(Boolean))).map((t: any) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={difficulty || "ALL"} onValueChange={(v)=>{ setDifficulty(v === "ALL" ? "" : v); setPage(1); }}>
+                  <SelectTrigger><SelectValue placeholder="Difficulty" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All levels</SelectItem>
+                    <SelectItem value="Easy">Easy</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="Hard">Hard</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" onClick={() => { setQ(""); setExam(""); setTopicFilter(""); setDifficulty(""); setPage(1); }}>Reset</Button>
+              </CardContent>
+            </Card>
 
-            <div className="space-y-3">
-              {loading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <Card key={i} className="h-24 animate-pulse" />
-                ))
-              ) : (approvedCount === 0 && page === 1) ? (
-                <Card className="p-6 text-center"><div className="text-muted-foreground">No reviewed questions yet. Ask an admin to seed EM questions.</div></Card>
-              ) : visible.length ? (
-                visible.map((it, idx) => (
-                  <Card
-                    key={it.id}
-                    className="hover:bg-accent/30 cursor-pointer"
-                    role="button"
-                    onClick={() => navigate(`/exams/question/${it.id}`, { state: { fromAdmin: embedded } })}
-                  >
-                    <CardHeader>
-                      <CardTitle className="text-base">
-                        <span className="line-clamp-2">{it.stem.slice(0, 200)}</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-sm text-muted-foreground flex flex-col gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {it.reviewed_at && (
-                          <Badge variant="outline" className="text-xs">
-                            Reviewed {formatDistanceToNow(new Date(it.reviewed_at), { addSuffix: true })}
-                            {it.reviewer_id && (
-                              <>
-                                {" "}by{" "}
-                                <Button
-                                  variant="link"
-                                  size="sm"
-                                  className="px-0 gap-1 inline-flex items-center"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const pid = reviewerProfiles[it.reviewer_id!]?.id || it.reviewer_id!;
-                                    navigate(`/profile/${pid}`);
-                                  }}
-                                >
-                                  <Avatar className="h-4 w-4">
-                                    <AvatarImage src={reviewerProfiles[it.reviewer_id!]?.avatar_url || undefined} alt={reviewerProfiles[it.reviewer_id!]?.name || reviewers[it.reviewer_id!] || 'Guru'} />
-                                    <AvatarFallback>GU</AvatarFallback>
-                                  </Avatar>
-                                  {(reviewerProfiles[it.reviewer_id!]?.name || reviewers[it.reviewer_id!] || 'Guru').replace(/^Dr\s+/i,'')}
-                                </Button>
-                              </>
-                            )}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Chip
-                          name="rqb_exam_chip"
-                          value={String(it.exam)}
-                          selected={exam === it.exam}
-                          variant={exam === it.exam ? 'solid' : 'outline'}
-                          size="sm"
-                          onSelect={() => { setExam((it.exam as ExamCode) || ""); setPage(1); }}
-                        >
-                          {(EXAM_LABELS as any)[it.exam] || String(it.exam)}
-                        </Chip>
-                        {!!it.topic && (
-                          <Chip
-                            name="rqb_topic_chip"
-                            value={it.topic}
-                            selected={topicFilter === it.topic}
-                            variant={topicFilter === it.topic ? 'solid' : 'outline'}
-                            size="sm"
-                            onSelect={() => { setTopicFilter(it.topic!); setPage(1); }}
-                          >
-                            {it.topic}
-                          </Chip>
-                        )}
-                        {((it as any).difficulty || (it as any).level) && (
-                          <Chip
-                            name="rqb_difficulty_chip"
-                            value={String((it as any).difficulty || (it as any).level)}
-                            selected={difficulty === String((it as any).difficulty || (it as any).level)}
-                            variant={difficulty === String((it as any).difficulty || (it as any).level) ? 'solid' : 'outline'}
-                            size="sm"
-                            onSelect={() => { setDifficulty(String((it as any).difficulty || (it as any).level)); setPage(1); }}
-                          >
-                            {(it as any).difficulty || (it as any).level}
-                          </Chip>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <Card className="p-6 text-center"><div className="text-muted-foreground">No results match your filters.</div></Card>
-              )}
-            </div>
+            {/* Table results */}
+            <Card className="p-0 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[2%]">ID</TableHead>
+                    <TableHead>Stem</TableHead>
+                    <TableHead className="w-[12%]">Exam</TableHead>
+                    <TableHead className="w-[12%]">Topic</TableHead>
+                    <TableHead className="w-[16%]">Reviewed</TableHead>
+                    <TableHead className="w-[16%]">Reviewer</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow><TableCell colSpan={6}>Loading…</TableCell></TableRow>
+                  ) : (visible.length ? (
+                    visible.map((it) => (
+                      <TableRow key={it.id} className="cursor-pointer hover:bg-accent/30" onClick={() => navigate(`/exams/question/${it.id}`, { state: { fromAdmin: true } })}>
+                        <TableCell className="text-xs">{String(it.id).slice(0,8)}</TableCell>
+                        <TableCell className="text-xs">{(it.stem || '').slice(0, 140)}</TableCell>
+                        <TableCell className="text-xs">{String(it.exam)}</TableCell>
+                        <TableCell className="text-xs">{it.topic || '—'}</TableCell>
+                        <TableCell className="text-xs">{it.reviewed_at ? new Date(it.reviewed_at).toLocaleDateString() : '—'}</TableCell>
+                        <TableCell className="text-xs">{it.reviewer_id ? (reviewerProfiles[it.reviewer_id!]?.name || reviewers[it.reviewer_id!] || 'Guru') : '—'}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No results</TableCell></TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
 
-            <div className="flex items-center justify-center mt-4 gap-4">
+            <div className="flex items-center justify-between">
               <Button variant="outline" disabled={page===1 || loading} onClick={() => setPage(p=>Math.max(1,p-1))}>Previous</Button>
               <div className="text-sm text-muted-foreground">Page {page}{totalCount ? ` / ${Math.max(1, Math.ceil(totalCount / pageSize))}` : ''}</div>
               <Button variant="outline" disabled={loading || (items.length < pageSize && !loading)} onClick={() => setPage(p=>p+1)}>Next</Button>
             </div>
-          </section>
-
-          <aside className="lg:col-span-4 hidden lg:block">
-            <div className="lg:sticky lg:top-20">
-              <div className="max-h-[calc(100vh-6rem)] overflow-auto pr-2">
-                <FiltersPanel />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <section className="lg:col-span-8">
+              <div className="mb-4 lg:hidden">
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline">Filters</Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-80 sm:w-96">
+                    <FiltersPanel />
+                  </SheetContent>
+                </Sheet>
               </div>
-            </div>
-          </aside>
-        </div>
+
+              <div className="space-y-3">
+                {loading ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <Card key={i} className="h-24 animate-pulse" />
+                  ))
+                ) : (approvedCount === 0 && page === 1) ? (
+                  <Card className="p-6 text-center"><div className="text-muted-foreground">No reviewed questions yet. Ask an admin to seed EM questions.</div></Card>
+                ) : visible.length ? (
+                  visible.map((it, idx) => (
+                    <Card
+                      key={it.id}
+                      className="hover:bg-accent/30 cursor-pointer"
+                      role="button"
+                      onClick={() => navigate(`/exams/question/${it.id}`, { state: { fromAdmin: embedded } })}
+                    >
+                      <CardHeader>
+                        <CardTitle className="text-base">
+                          <span className="line-clamp-2">{it.stem.slice(0, 200)}</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="text-sm text-muted-foreground flex flex-col gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {it.reviewed_at && (
+                            <Badge variant="outline" className="text-xs">
+                              Reviewed {formatDistanceToNow(new Date(it.reviewed_at), { addSuffix: true })}
+                              {it.reviewer_id && (
+                                <>
+                                  {" "}by{" "}
+                                  <Button
+                                    variant="link"
+                                    size="sm"
+                                    className="px-0 gap-1 inline-flex items-center"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const pid = reviewerProfiles[it.reviewer_id!]?.id || it.reviewer_id!;
+                                      navigate(`/profile/${pid}`);
+                                    }}
+                                  >
+                                    <Avatar className="h-4 w-4">
+                                      <AvatarImage src={reviewerProfiles[it.reviewer_id!]?.avatar_url || undefined} alt={reviewerProfiles[it.reviewer_id!]?.name || reviewers[it.reviewer_id!] || 'Guru'} />
+                                      <AvatarFallback>GU</AvatarFallback>
+                                    </Avatar>
+                                    {(reviewerProfiles[it.reviewer_id!]?.name || reviewers[it.reviewer_id!] || 'Guru').replace(/^Dr\s+/i,'')}
+                                  </Button>
+                                </>
+                              )}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Chip
+                            name="rqb_exam_chip"
+                            value={String(it.exam)}
+                            selected={exam === it.exam}
+                            variant={exam === it.exam ? 'solid' : 'outline'}
+                            size="sm"
+                            onSelect={() => { setExam((it.exam as any) || ""); setPage(1); }}
+                          >
+                            {(EXAM_LABELS as any)[it.exam] || String(it.exam)}
+                          </Chip>
+                          {!!it.topic && (
+                            <Chip
+                              name="rqb_topic_chip"
+                              value={it.topic as any}
+                              selected={topicFilter === it.topic}
+                              variant={topicFilter === it.topic ? 'solid' : 'outline'}
+                              size="sm"
+                              onSelect={() => { setTopicFilter(it.topic!); setPage(1); }}
+                            >
+                              {it.topic}
+                            </Chip>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <Card className="p-6 text-center"><div className="text-muted-foreground">No results match your filters.</div></Card>
+                )}
+              </div>
+
+              <div className="flex items-center justify-center mt-4 gap-4">
+                <Button variant="outline" disabled={page===1 || loading} onClick={() => setPage(p=>Math.max(1,p-1))}>Previous</Button>
+                <div className="text-sm text-muted-foreground">Page {page}{totalCount ? ` / ${Math.max(1, Math.ceil(totalCount / pageSize))}` : ''}</div>
+                <Button variant="outline" disabled={loading || (items.length < pageSize && !loading)} onClick={() => setPage(p=>p+1)}>Next</Button>
+              </div>
+            </section>
+
+            <aside className="lg:col-span-4 hidden lg:block">
+              <div className="lg:sticky lg:top-20">
+                <div className="max-h-[calc(100vh-6rem)] overflow-auto pr-2">
+                  <FiltersPanel />
+                </div>
+              </div>
+            </aside>
+          </div>
+        )}
       </section>
     </main>
   );

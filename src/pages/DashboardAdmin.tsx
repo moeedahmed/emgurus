@@ -806,6 +806,24 @@ const GuruApprovalsTab: React.FC = () => {
 export default function DashboardAdmin() {
   useEffect(() => { document.title = "Admin Workspace | EM Gurus"; }, []);
 
+  const [examKpis, setExamKpis] = useState({ approved: 0, under_review: 0, draft: 0, rejected: 0, flaggedOpen: 0 });
+  useEffect(() => {
+    (async () => {
+      try {
+        const [{ count: appr }, { count: und }, { count: dr }, { count: rej }, { count: flg }] = await Promise.all([
+          (supabase as any).from('review_exam_questions').select('id', { count: 'exact', head: true }).eq('status','approved'),
+          (supabase as any).from('review_exam_questions').select('id', { count: 'exact', head: true }).eq('status','under_review'),
+          (supabase as any).from('review_exam_questions').select('id', { count: 'exact', head: true }).eq('status','draft'),
+          (supabase as any).from('review_exam_questions').select('id', { count: 'exact', head: true }).eq('status','rejected'),
+          (supabase as any).from('exam_question_flags').select('id', { count: 'exact', head: true }).eq('status','open'),
+        ]);
+        setExamKpis({ approved: appr ?? 0, under_review: und ?? 0, draft: dr ?? 0, rejected: rej ?? 0, flaggedOpen: flg ?? 0 });
+      } catch {
+        setExamKpis({ approved: 0, under_review: 0, draft: 0, rejected: 0, flaggedOpen: 0 });
+      }
+    })();
+  }, []);
+
   const sections: WorkspaceSection[] = [
     {
       id: "blogs",
@@ -828,7 +846,7 @@ export default function DashboardAdmin() {
       title: "Exams",
       icon: GraduationCap,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Question bank curation at a glance.</div> },
+        { id: "overview", title: "Overview", render: <div className="p-4 grid gap-4 md:grid-cols-5"><KpiCard title="Approved" value={examKpis.approved} isLoading={false} /><KpiCard title="Under Review" value={examKpis.under_review} isLoading={false} /><KpiCard title="Drafts" value={examKpis.draft} isLoading={false} /><KpiCard title="Rejected" value={examKpis.rejected} isLoading={false} /><KpiCard title="Flags Open" value={examKpis.flaggedOpen} isLoading={false} /></div> },
         {
           id: "questions",
           title: "Questions",
