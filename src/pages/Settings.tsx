@@ -49,21 +49,20 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState<string>("profile");
+  const [activeTab, setActiveTab] = useState<string>("notifications");
   const [profile, setProfile] = useState<ProfileRowAny | null>(null);
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [timezone, setTimezone] = useState("");
-  const [phone, setPhone] = useState("");
-  const [hasPhoneColumn, setHasPhoneColumn] = useState<boolean>(false);
   const [hasNotifSettingsColumn, setHasNotifSettingsColumn] = useState<boolean>(false);
   const [prefs, setPrefs] = useState<NotificationSettings>(defaultSettings);
   const [usingLocalPrefs, setUsingLocalPrefs] = useState<boolean>(false);
+  
+  // Security
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Determine default tab from URL: /settings/notifications or hash/query
+  // Determine default tab from URL: /settings/security or hash/query
   useEffect(() => {
-    if (location.pathname.endsWith("/settings/notifications") || location.hash === "#notifications" || new URLSearchParams(location.search).get("tab") === "notifications") {
-      setActiveTab("notifications");
+    if (location.pathname.endsWith("/settings/security") || location.hash === "#security" || new URLSearchParams(location.search).get("tab") === "security") {
+      setActiveTab("security");
     }
   }, [location.pathname, location.hash, location.search]);
 
@@ -83,21 +82,9 @@ export default function SettingsPage() {
       const { data } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();
       const row = data as ProfileRowAny | null;
       setProfile(row);
-      setFullName((row?.full_name as string) || "");
-      setEmail((row?.email as string) || (user.email || ""));
-      setTimezone((row?.timezone as string) || "");
 
       // Detect optional columns by presence in fetched row
-      setHasPhoneColumn(Object.prototype.hasOwnProperty.call(row || {}, 'phone'));
       setHasNotifSettingsColumn(Object.prototype.hasOwnProperty.call(row || {}, 'notification_settings'));
-
-      if (Object.prototype.hasOwnProperty.call(row || {}, 'phone')) {
-        setPhone((row?.phone as string) || "");
-      } else {
-        // Try local fallback for phone
-        const localPhone = localStorage.getItem('emg:phone') || "";
-        setPhone(localPhone);
-      }
 
       // Load preferences: server first, else local, else defaults
       let loaded: NotificationSettings | null = null;
@@ -118,31 +105,29 @@ export default function SettingsPage() {
   }, [user?.id]);
 
   const canShowSmsToggle = useMemo(() => {
-    return (hasPhoneColumn && !!phone) || (!!phone && usingLocalPrefs);
-  }, [hasPhoneColumn, phone, usingLocalPrefs]);
+    // Check if phone is available in profile data or localStorage
+    const phoneFromProfile = profile?.phone || "";
+    const phoneFromLocal = localStorage.getItem('emg:phone') || "";
+    return !!(phoneFromProfile || phoneFromLocal);
+  }, [profile?.phone]);
 
-  const saveProfile = async () => {
-    if (!user) return;
-    try {
-      const updates: any = {
-        full_name: fullName,
-        timezone: timezone || null,
-      };
-      if (hasPhoneColumn) {
-        updates.phone = phone || null;
-      } else {
-        // store locally if server column missing
-        localStorage.setItem('emg:phone', phone || "");
-      }
-      const { error } = await supabase.from('profiles').update(updates as any).eq('user_id', user.id);
-      if (error) {
-        toast({ title: 'Could not save profile', description: error.message });
-        return;
-      }
-      toast({ title: 'Profile saved' });
-    } catch (e: any) {
-      toast({ title: 'Save failed', description: e.message });
+  const handleChangePassword = async () => {
+    if (!newPassword || newPassword.length < 8) {
+      toast({ title: "Password too short", description: "Use at least 8 characters." });
+      return;
     }
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Passwords do not match" });
+      return;
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) { 
+      toast({ title: "Could not update password", description: error.message }); 
+      return; 
+    }
+    toast({ title: "Password updated" });
+    setNewPassword(""); 
+    setConfirmPassword("");
   };
 
   const saveNotifications = async () => {
@@ -167,38 +152,40 @@ export default function SettingsPage() {
     <main className="container mx-auto px-4 md:px-6 py-6 md:py-10">
       <article className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-semibold mb-2">Settings</h1>
-        <p className="text-sm text-muted-foreground mb-4">Manage your profile and how we notify you.</p>
+        <p className="text-sm text-muted-foreground mb-4">Manage your notifications and security settings.</p>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profile" className="mt-4">
-            <Card className="p-6 space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-1 md:col-span-2">
-                  <Label>Full name</Label>
-                  <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          <TabsContent value="security" className="mt-4">
+            <Card className="p-6 space-y-4 max-w-xl">
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Change Password</h2>
+                <div className="grid gap-4">
+                  <div className="grid gap-1">
+                    <Label htmlFor="new-password">New password</Label>
+                    <Input 
+                      id="new-password"
+                      type="password" 
+                      placeholder="Enter new password"
+                      value={newPassword} 
+                      onChange={(e) => setNewPassword(e.target.value)} 
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <Label htmlFor="confirm-password">Confirm new password</Label>
+                    <Input 
+                      id="confirm-password"
+                      type="password" 
+                      placeholder="Confirm new password"
+                      value={confirmPassword} 
+                      onChange={(e) => setConfirmPassword(e.target.value)} 
+                    />
+                  </div>
+                  <Button onClick={handleChangePassword}>Update Password</Button>
                 </div>
-                <div className="grid gap-1 md:col-span-2">
-                  <Label>Email</Label>
-                  <Input value={email} disabled />
-                </div>
-                <div className="grid gap-1 md:col-span-2">
-                  <Label>Timezone</Label>
-                  <Input placeholder="e.g., Europe/London" value={timezone} onChange={(e) => setTimezone(e.target.value)} />
-                </div>
-                <div className="grid gap-1 md:col-span-2">
-                  <Label>Phone (optional)</Label>
-                  <Input placeholder="+44 7700 900000" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                  {!hasPhoneColumn && (
-                    <p className="text-xs text-muted-foreground">Stored locally for now — not yet saved to your account.</p>
-                  )}
-                </div>
-              </div>
-              <div className="pt-2">
-                <Button onClick={saveProfile}>Save Profile</Button>
               </div>
             </Card>
           </TabsContent>
@@ -237,7 +224,7 @@ export default function SettingsPage() {
                     disabled={!canShowSmsToggle}
                     onCheckedChange={(v) => {
                       if (!canShowSmsToggle && v) {
-                        toast({ title: 'Add your phone number first', description: 'Add your phone on the Profile tab.' });
+                        toast({ title: 'Add your phone number first', description: 'Add your phone number in your profile first.' });
                         return;
                       }
                       setPrefs({ ...prefs, channels: { ...prefs.channels, sms: !!v } });

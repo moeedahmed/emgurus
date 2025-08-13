@@ -70,6 +70,7 @@ const [phoneInput, setPhoneInput] = useState("");
 const [phoneOtpSent, setPhoneOtpSent] = useState(false);
 const [phoneOtpCode, setPhoneOtpCode] = useState("");
 const [phoneVerified, setPhoneVerified] = useState(false);
+const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
 
   // Social connect helpers
   const onConnect = async (provider: "linkedin_oidc" | "twitter" | "github" | "facebook") => {
@@ -117,6 +118,7 @@ const [phoneVerified, setPhoneVerified] = useState(false);
       setInstagramUrl(row?.instagram || '');
       setYoutubeUrl(row?.youtube || '');
       setAvatarInput(row?.avatar_url || '');
+      setPhoneInput(row?.phone || '');
 
       // Focus Profile tab if mandatory fields missing
       const missing = !row?.full_name || !row?.country || !(row?.primary_specialty || row?.specialty) || !row?.timezone || !((row?.exam_interests || row?.exams || []).length) || !((row?.languages || []).length);
@@ -167,6 +169,7 @@ const [phoneVerified, setPhoneVerified] = useState(false);
         hospital: hospitalText,
         linkedin: linkedinUrl || null,
         twitter: twitterUrl || null,
+        phone: phoneVerified ? phoneInput : null,
         onboarding_required: false,
       };
       const { error } = await supabase.from('profiles').update(payload).eq('user_id', user.id);
@@ -223,6 +226,48 @@ const [phoneVerified, setPhoneVerified] = useState(false);
       toast({ title: 'Avatar updated' });
     } catch (e: any) {
       toast({ title: 'Save failed', description: e.message });
+    }
+  };
+
+  const sendPhoneOtp = async () => {
+    if (!phoneInput || phoneInput.length < 10) {
+      toast({ title: "Invalid phone number", description: "Please enter a valid phone number." });
+      return;
+    }
+    setIsVerifyingPhone(true);
+    try {
+      // Mock OTP sending - in real implementation, you'd call an SMS service
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setPhoneOtpSent(true);
+      toast({ title: "OTP sent", description: "Check your phone for the verification code." });
+    } catch (e: any) {
+      toast({ title: "Failed to send OTP", description: e.message });
+    } finally {
+      setIsVerifyingPhone(false);
+    }
+  };
+
+  const verifyPhoneOtp = async () => {
+    if (!phoneOtpCode || phoneOtpCode.length !== 6) {
+      toast({ title: "Invalid code", description: "Please enter the 6-digit verification code." });
+      return;
+    }
+    setIsVerifyingPhone(true);
+    try {
+      // Mock OTP verification - in real implementation, you'd verify with SMS service
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (phoneOtpCode === "123456") { // Mock verification
+        setPhoneVerified(true);
+        setPhoneOtpSent(false);
+        setPhoneOtpCode("");
+        toast({ title: "Phone verified", description: "Your phone number has been verified successfully." });
+      } else {
+        toast({ title: "Invalid code", description: "The verification code is incorrect." });
+      }
+    } catch (e: any) {
+      toast({ title: "Verification failed", description: e.message });
+    } finally {
+      setIsVerifyingPhone(false);
     }
   };
 
@@ -315,6 +360,54 @@ const [phoneVerified, setPhoneVerified] = useState(false);
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">Connect accounts (preferred). For platforms without login, you can add links.</p>
+                </div>
+                <div className="grid gap-1 md:col-span-2">
+                  <Label>Phone number (optional)</Label>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="+44 7700 900000" 
+                        value={phoneInput} 
+                        onChange={(e) => setPhoneInput(e.target.value)}
+                        disabled={phoneVerified}
+                      />
+                      {!phoneVerified && !phoneOtpSent && (
+                        <Button 
+                          onClick={sendPhoneOtp} 
+                          disabled={isVerifyingPhone || !phoneInput}
+                          variant="outline"
+                        >
+                          {isVerifyingPhone ? "Sending..." : "Verify"}
+                        </Button>
+                      )}
+                      {phoneVerified && (
+                        <Button variant="outline" disabled>
+                          ✓ Verified
+                        </Button>
+                      )}
+                    </div>
+                    {phoneOtpSent && !phoneVerified && (
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="Enter 6-digit code" 
+                          value={phoneOtpCode} 
+                          onChange={(e) => setPhoneOtpCode(e.target.value)}
+                          maxLength={6}
+                        />
+                        <Button 
+                          onClick={verifyPhoneOtp} 
+                          disabled={isVerifyingPhone || phoneOtpCode.length !== 6}
+                        >
+                          {isVerifyingPhone ? "Verifying..." : "Confirm"}
+                        </Button>
+                      </div>
+                    )}
+                    {phoneOtpSent && !phoneVerified && (
+                      <p className="text-xs text-muted-foreground">
+                        Enter the 6-digit code sent to your phone. (Use 123456 for demo)
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="pt-2">
