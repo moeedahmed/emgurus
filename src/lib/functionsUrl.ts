@@ -12,7 +12,7 @@ export function getFunctionsBaseUrl() {
   return base;
 }
 
-export async function callFunction(path: string, body: unknown, includeAuth = true) {
+export async function callFunction(path: string, body?: unknown, includeAuth = true, method: 'GET' | 'POST' = 'POST') {
   // Ensure Supabase Edge Functions prefix
   const base = getFunctionsBaseUrl();
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
@@ -29,10 +29,11 @@ export async function callFunction(path: string, body: unknown, includeAuth = tr
     if (token) headers["Authorization"] = `Bearer ${token}`;
   }
 
+  const isGet = method === 'GET';
   const res = await fetch(url, {
-    method: "POST",
+    method,
     headers,
-    body: JSON.stringify(body ?? {}),
+    body: isGet ? undefined : JSON.stringify(body ?? {}),
     credentials: "omit",
     mode: "cors",
   });
