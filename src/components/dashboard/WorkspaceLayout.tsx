@@ -48,6 +48,7 @@ export function WorkspaceLayoutInner({
 
   const { state, setOpen, isMobile } = useSidebar();
   const collapsed = state === 'collapsed';
+  const [searchSync, setSearchSync] = useState(0);
 
   return (
     
@@ -55,7 +56,7 @@ export function WorkspaceLayoutInner({
         <Sidebar className={cn("border-r z-20")} collapsible="icon">
           <SidebarContent>
             <SidebarGroup>
-              <SidebarGroupLabel className="sticky top-0 z-10 bg-sidebar text-sm font-semibold">{title}</SidebarGroupLabel>
+              <SidebarGroupLabel className="sticky top-16 z-10 bg-sidebar text-sm font-semibold">{title}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <nav className="flex-1 overflow-y-auto flex flex-col gap-1 p-1 pr-2 max-h-[calc(100vh-4rem)]">
                   {sections.map((s) => {
@@ -67,13 +68,15 @@ export function WorkspaceLayoutInner({
                     const go = (sid: string, tid?: string) => {
                       const sp = new URLSearchParams(window.location.search);
                       if (tid) sp.set('tab', tid); else sp.delete('tab');
-                      history.replaceState(null, '', `${location.pathname}#${sid}?${sp.toString()}${location.hash.includes('#') ? '' : ''}`);
-                      // Also update hash if switching sections
+                      const qs = sp.toString();
+                      const nextUrl = qs ? `${location.pathname}?${qs}#${sid}` : `${location.pathname}#${sid}`;
+                      history.replaceState(null, '', nextUrl);
+                      // force re-render so Tabs remount reflects updated ?tab
+                      setSearchSync((v) => v + 1);
                       if (sid !== sectionId) {
                         window.location.hash = `#${sid}`;
                       }
                     };
-
                     return (
                       <div key={s.id} className="flex flex-col">
                         <a
@@ -119,7 +122,7 @@ export function WorkspaceLayoutInner({
         </Sidebar>
 
         <SidebarInset>
-          <header className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <header className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
             <div className="h-12 flex items-center gap-3 px-3">
               <SidebarTrigger />
               <div className="text-sm text-muted-foreground">{title}</div>
@@ -129,7 +132,7 @@ export function WorkspaceLayoutInner({
           </header>
 
           <div className="container mx-auto px-4 py-6">
-            <Tabs key={`${sectionId}:${new URLSearchParams(window.location.search).get('tab') || ''}`}
+            <Tabs key={`${sectionId}:${new URLSearchParams(window.location.search).get('tab') || ''}:${searchSync}`}
               defaultValue={(current.tabs.find(t => t.id === new URLSearchParams(window.location.search).get('tab'))?.id) || current.tabs[0]?.id}
               value={undefined /* uncontrolled per remount */}
             >
