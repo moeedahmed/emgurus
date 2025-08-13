@@ -504,6 +504,103 @@ const RejectedPanel: React.FC = () => {
   );
 };
 
+// --- Section Overview Panels
+const BlogsOverviewPanel: React.FC = () => {
+  const [isLoading, setLoading] = useState(true);
+  const [kpis, setKpis] = useState({ submitted: 0, assigned: 0, published7d: 0, rejected7d: 0 });
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const from = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+        const [ { count: submitted }, { count: assigned }, { count: published7d }, { count: rejected7d } ] = await Promise.all([
+          supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status','in_review'),
+          supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status','in_review').not('reviewer_id','is', null),
+          supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status','published').gte('published_at', from),
+          supabase.from('blog_review_logs').select('post_id', { count: 'exact', head: true }).eq('action','request_changes').gte('created_at', from),
+        ]);
+        if (!cancelled) setKpis({ submitted: submitted ?? 0, assigned: assigned ?? 0, published7d: published7d ?? 0, rejected7d: rejected7d ?? 0 });
+      } catch {
+        if (!cancelled) setKpis({ submitted: 0, assigned: 0, published7d: 0, rejected7d: 0 });
+      } finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  return (
+    <div className="p-4 grid gap-4 md:grid-cols-4">
+      <KpiCard title="Submitted" value={kpis.submitted} isLoading={isLoading} />
+      <KpiCard title="Assigned" value={kpis.assigned} isLoading={isLoading} />
+      <KpiCard title="Published (7d)" value={kpis.published7d} isLoading={isLoading} />
+      <KpiCard title="Rejected (7d)" value={kpis.rejected7d} isLoading={isLoading} />
+    </div>
+  );
+};
+
+const ExamsOverviewPanel: React.FC = () => {
+  const [isLoading, setLoading] = useState(true);
+  const [kpis, setKpis] = useState({ drafts: 0, inReview: 0, flagsOpen: 0, published7d: 0 });
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const from = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+        const [ d1, d2, d3, d4 ] = await Promise.all([
+          supabase.from('review_exam_questions').select('id', { count: 'exact', head: true }).eq('status','draft'),
+          supabase.from('review_exam_questions').select('id', { count: 'exact', head: true }).eq('status','under_review'),
+          supabase.from('exam_question_flags').select('id', { count: 'exact', head: true }).eq('status','open'),
+          supabase.from('review_exam_questions').select('id', { count: 'exact', head: true }).eq('status','published').gte('updated_at', from),
+        ]);
+        if (!cancelled) setKpis({ drafts: d1.count ?? 0, inReview: d2.count ?? 0, flagsOpen: d3.count ?? 0, published7d: d4.count ?? 0 });
+      } catch {
+        if (!cancelled) setKpis({ drafts: 0, inReview: 0, flagsOpen: 0, published7d: 0 });
+      } finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  return (
+    <div className="p-4 grid gap-4 md:grid-cols-4">
+      <KpiCard title="Drafts" value={kpis.drafts} isLoading={isLoading} />
+      <KpiCard title="In Review" value={kpis.inReview} isLoading={isLoading} />
+      <KpiCard title="Flags Open" value={kpis.flagsOpen} isLoading={isLoading} />
+      <KpiCard title="Published (7d)" value={kpis.published7d} isLoading={isLoading} />
+    </div>
+  );
+};
+
+const ForumsOverviewPanel: React.FC = () => {
+  const [isLoading, setLoading] = useState(true);
+  const [kpis, setKpis] = useState({ openFlags: 0, assigned: 0, closed7d: 0, totalCategories: 0 });
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const from = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+        const [ { count: openFlags }, { count: assigned }, { count: closed7d }, { count: cats } ] = await Promise.all([
+          supabase.from('forum_flags').select('id', { count: 'exact', head: true }).eq('status','open'),
+          supabase.from('forum_flags').select('id', { count: 'exact', head: true }).eq('status','open').not('assigned_to','is', null),
+          supabase.from('forum_flags').select('id', { count: 'exact', head: true }).neq('status','open').gte('updated_at', from),
+          supabase.from('forum_categories').select('id', { count: 'exact', head: true }),
+        ]);
+        if (!cancelled) setKpis({ openFlags: openFlags ?? 0, assigned: assigned ?? 0, closed7d: closed7d ?? 0, totalCategories: cats ?? 0 });
+      } catch {
+        if (!cancelled) setKpis({ openFlags: 0, assigned: 0, closed7d: 0, totalCategories: 0 });
+      } finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  return (
+    <div className="p-4 grid gap-4 md:grid-cols-4">
+      <KpiCard title="Open Flags" value={kpis.openFlags} isLoading={isLoading} />
+      <KpiCard title="Assigned" value={kpis.assigned} isLoading={isLoading} />
+      <KpiCard title="Closed (7d)" value={kpis.closed7d} isLoading={isLoading} />
+      <KpiCard title="Categories" value={kpis.totalCategories} isLoading={isLoading} />
+    </div>
+  );
+};
+
 const MarkedPanel: React.FC = () => {
   const { toast } = useToast();
   const [flags, setFlags] = useState<Array<{ id: string; question_id: string; created_at: string; question_source: string; comment?: string | null; status: string; assigned_to?: string | null }>>([]);
@@ -677,7 +774,7 @@ export default function DashboardAdmin() {
       title: "Blogs",
       icon: BookOpen,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-4 text-sm text-muted-foreground">Blog moderation and publishing at a glance.</div> },
+        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blog moderation and publishing at a glance.</div><BlogsOverviewPanel /></div> },
         { id: "submitted", title: "Submitted", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts awaiting triage.</div><AdminSubmitted /></div> },
         { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts assigned to reviewers.</div><AdminAssigned /></div> },
         { id: "reviewed", title: "Reviewed", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Guru‑approved items ready to publish.</div><AdminReviewed /></div> },
