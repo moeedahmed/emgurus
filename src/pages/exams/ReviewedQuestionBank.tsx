@@ -124,6 +124,8 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
             topic: (Array.isArray(row.tags) && row.tags.length ? row.tags[0] : null) as any,
             tags: (Array.isArray(row.tags) ? row.tags : null) as any,
           })) as ReviewedRow[];
+          // Sort by exam only
+          list.sort((a, b) => String(a.exam).localeCompare(String(b.exam)));
           if (!cancelled) {
             setItems(list);
             setTotalCount(Number.isFinite(res.count) ? res.count : (page * pageSize + list.length));
@@ -148,6 +150,8 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
             .range(from, to);
           if (error) throw error;
           let list = (Array.isArray(data) ? (data as unknown as ReviewedRow[]) : []);
+          // Sort by exam only
+          list.sort((a, b) => String(a.exam).localeCompare(String(b.exam)));
           if (!cancelled) {
             setItems(list);
             setTotalCount(count ?? (page * pageSize + list.length));
@@ -282,26 +286,21 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[2%]">ID</TableHead>
                     <TableHead>Stem</TableHead>
                     <TableHead className="w-[12%]">Exam</TableHead>
                     <TableHead className="w-[12%]">Topic</TableHead>
-                    <TableHead className="w-[16%]">Reviewed</TableHead>
-                    <TableHead className="w-[16%]">Reviewer</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow><TableCell colSpan={6}>Loading…</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={3}>Loading…</TableCell></TableRow>
                   ) : (visible.length ? (
                     visible.map((it) => (
-                      <TableRow key={it.id} className="cursor-pointer hover:bg-accent/30" onClick={() => navigate(`/exams/question/${it.id}`, { state: { fromAdmin: true } })}>
+                      <TableRow key={it.id} className="cursor-pointer hover:bg-accent/30" onClick={() => navigate(`/tools/submit-question/${it.id}`, { state: { fromAdmin: true } })}>
                         <TableCell className="text-xs">{String(it.id).slice(0,8)}</TableCell>
                         <TableCell className="text-xs">{(it.stem || '').slice(0, 140)}</TableCell>
                         <TableCell className="text-xs">{String(it.exam)}</TableCell>
                         <TableCell className="text-xs">{it.topic || '—'}</TableCell>
-                        <TableCell className="text-xs">{it.reviewed_at ? new Date(it.reviewed_at).toLocaleDateString() : '—'}</TableCell>
-                        <TableCell className="text-xs">{it.reviewer_id ? (reviewerProfiles[it.reviewer_id!]?.name || reviewers[it.reviewer_id!] || 'Guru') : '—'}</TableCell>
                       </TableRow>
                     ))
                   ) : (
@@ -344,7 +343,7 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
                       key={it.id}
                       className="hover:bg-accent/30 cursor-pointer"
                       role="button"
-                      onClick={() => navigate(`/exams/question/${it.id}`, { state: { fromAdmin: embedded } })}
+                      onClick={() => navigate(`/tools/submit-question/${it.id}`, { state: { fromAdmin: embedded } })}
                     >
                       <CardHeader>
                         <CardTitle className="text-base">

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import TagInput from "@/components/forms/TagInput";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Linkedin, Twitter, Github, Facebook, Instagram, Youtube } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -259,10 +259,19 @@ const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
     <main className="container mx-auto px-4 md:px-6 py-6 md:py-10">
       <article className="max-w-4xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          {/* Tabs header removed - single profile page */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="w-full">
+              <TabsList>
+                <TabsTrigger value="basics">Basics</TabsTrigger>
+                <TabsTrigger value="professional">Professional</TabsTrigger>
+                <TabsTrigger value="social">Social</TabsTrigger>
+                <TabsTrigger value="verification">Verification</TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
 
-          {/* PROFILE EDIT */}
-          <TabsContent value="profile" className="mt-4">
+          {/* BASICS */}
+          <TabsContent value="basics" className="mt-4">
             <Card className="w-full overflow-hidden p-6 shadow-md space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2 md:col-span-2">
@@ -302,30 +311,36 @@ const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
                   <Label>Languages</Label>
                   <TagInput value={languages} onChange={setLanguages} suggestions={[]} placeholder="Type languages and press Enter" />
                 </div>
+              </div>
+              <div className="pt-2"><Button onClick={handleSave}>Save changes</Button></div>
+            </Card>
+          </TabsContent>
+
+          {/* PROFESSIONAL */}
+          <TabsContent value="professional" className="mt-4">
+            <Card className="w-full overflow-hidden p-6 shadow-md space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-1">
                   <Label>Position</Label>
-                  <TagInput 
-                    value={[positionText].filter(Boolean)} 
-                    onChange={(tags) => setPositionText(tags[0] || "")} 
-                    suggestions={["Registrar", "Consultant", "Senior Registrar", "House Officer", "Medical Officer", "Specialist", "Resident"]}
-                    placeholder="Add positions (e.g., Registrar, Consultant)"
-                    maxTags={1}
-                  />
+                  <TagInput value={[positionText].filter(Boolean)} onChange={(tags) => setPositionText(tags[0] || "")} suggestions={["Registrar","Consultant","Senior Registrar","House Officer","Medical Officer","Specialist","Resident"]} placeholder="Add positions (e.g., Registrar, Consultant)" maxTags={1} />
                 </div>
                 <div className="grid gap-1">
                   <Label>Employer</Label>
-                  <TagInput 
-                    value={[hospitalText].filter(Boolean)} 
-                    onChange={(tags) => setHospitalText(tags[0] || "")} 
-                    suggestions={["NHS", "Private Practice", "University Hospital", "General Hospital", "Emergency Department"]}
-                    placeholder="Add employers/institutions"
-                    maxTags={1}
-                  />
+                  <TagInput value={[hospitalText].filter(Boolean)} onChange={(tags) => setHospitalText(tags[0] || "")} suggestions={["NHS","Private Practice","University Hospital","General Hospital","Emergency Department"]} placeholder="Add employers/institutions" maxTags={1} />
                 </div>
                 <div className="grid gap-1 md:col-span-2">
                   <Label>Bio</Label>
                   <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={4} />
                 </div>
+              </div>
+              <div className="pt-2"><Button onClick={handleSave}>Save changes</Button></div>
+            </Card>
+          </TabsContent>
+
+          {/* SOCIAL */}
+          <TabsContent value="social" className="mt-4">
+            <Card className="w-full overflow-hidden p-6 shadow-md space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-1 md:col-span-2">
                   <Label>Social accounts</Label>
                   <div className="flex gap-3 flex-wrap">
@@ -354,22 +369,22 @@ const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
                   </div>
                   <p className="text-xs text-muted-foreground">Connect accounts (preferred). For platforms without login, you can add links.</p>
                 </div>
+              </div>
+              <div className="pt-2"><Button onClick={handleSave}>Save changes</Button></div>
+            </Card>
+          </TabsContent>
+
+          {/* VERIFICATION */}
+          <TabsContent value="verification" className="mt-4">
+            <Card className="w-full overflow-hidden p-6 shadow-md space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-1 md:col-span-2">
                   <Label>Phone number (optional)</Label>
                   <div className="space-y-3">
                     <div className="flex gap-2">
-                      <Input 
-                        placeholder="+44 7700 900000" 
-                        value={phoneInput} 
-                        onChange={(e) => setPhoneInput(e.target.value)}
-                        disabled={phoneVerified}
-                      />
+                      <Input placeholder="+44 7700 900000" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} disabled={phoneVerified} />
                       {!phoneVerified && !phoneOtpSent && (
-                        <Button 
-                          onClick={sendPhoneOtp} 
-                          disabled={isVerifyingPhone || !phoneInput}
-                          variant="outline"
-                        >
+                        <Button onClick={sendPhoneOtp} disabled={isVerifyingPhone || !phoneInput} variant="outline">
                           {isVerifyingPhone ? "Sending..." : "Verify"}
                         </Button>
                       )}
@@ -381,34 +396,21 @@ const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
                     </div>
                     {phoneOtpSent && !phoneVerified && (
                       <div className="flex gap-2">
-                        <Input 
-                          placeholder="Enter 6-digit code" 
-                          value={phoneOtpCode} 
-                          onChange={(e) => setPhoneOtpCode(e.target.value)}
-                          maxLength={6}
-                        />
-                        <Button 
-                          onClick={verifyPhoneOtp} 
-                          disabled={isVerifyingPhone || phoneOtpCode.length !== 6}
-                        >
+                        <Input placeholder="Enter 6-digit code" value={phoneOtpCode} onChange={(e) => setPhoneOtpCode(e.target.value)} maxLength={6} />
+                        <Button onClick={verifyPhoneOtp} disabled={isVerifyingPhone || phoneOtpCode.length !== 6}>
                           {isVerifyingPhone ? "Verifying..." : "Confirm"}
                         </Button>
                       </div>
                     )}
                     {phoneOtpSent && !phoneVerified && (
-                      <p className="text-xs text-muted-foreground">
-                        Enter the 6-digit code sent to your phone. (Use 123456 for demo)
-                      </p>
+                      <p className="text-xs text-muted-foreground">Enter the 6-digit code sent to your phone. (Use 123456 for demo)</p>
                     )}
                   </div>
                 </div>
               </div>
-              <div className="pt-2">
-                <Button onClick={handleSave}>Save changes</Button>
-              </div>
+              <div className="pt-2"><Button onClick={handleSave}>Save changes</Button></div>
             </Card>
           </TabsContent>
-
         </Tabs>
       </article>
     </main>
