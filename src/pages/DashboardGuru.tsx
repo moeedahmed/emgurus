@@ -109,18 +109,18 @@ function MyBlogsPanel() {
   );
 }
 
-function MyThreadsPanel() {
+function MyThreadsPanel({ title }: { title: string }) {
   // Minimal placeholder to avoid heavy queries; can be enhanced later
   return (
     <div className="p-4">
       <TableCard
-        title="My Threads"
+        title={title}
         columns={[
           { key: 'title', header: 'Title' },
           { key: 'activity', header: 'Last activity' },
         ]}
         rows={[]}
-        emptyText="No threads yet."
+        emptyText="Nothing here yet."
       />
     </div>
   );
@@ -268,8 +268,8 @@ export default function DashboardGuru() {
       icon: MessageSquare,
       tabs: [
         { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your forum activity.</div><AnalyticsPanel /></div> },
-        { id: "drafts", title: "Drafts", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your draft threads.</div><MyThreadsPanel /></div> },
-        { id: "threads", title: "Threads", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your published threads.</div><MyThreadsPanel /></div> },
+        { id: "drafts", title: "Drafts", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your draft threads.</div><MyThreadsPanel title="Drafts" /></div> },
+        { id: "threads", title: "Threads", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your published threads.</div><MyThreadsPanel title="Threads" /></div> },
       ],
     },
   ];

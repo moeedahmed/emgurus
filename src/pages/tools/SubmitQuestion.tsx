@@ -81,7 +81,10 @@ export default function SubmitQuestion() {
         if (error) throw error;
         toast({ title: 'Saved', description: 'Draft created.' });
         const newId = Array.isArray(data) && data.length ? (data[0] as any).id : undefined;
-        if (newId) navigate(`/tools/submit-question/${newId}`);
+        if (newId) {
+          setLastSavedId(newId);
+          navigate(`/tools/submit-question/${newId}`);
+        }
       }
     } catch (e: any) {
       toast({ title: 'Failed', description: e.message, variant: 'destructive' });
@@ -91,12 +94,14 @@ export default function SubmitQuestion() {
   const review = async () => {
     try {
       await save();
-      const targetId = id || (new URL(location.href).pathname.split('/').pop() || undefined);
-      if (targetId) {
-        const { error } = await supabase.rpc('submit_exam_for_review', { p_question_id: targetId });
-        if (error) throw error;
-        toast({ title: 'Submitted for review' });
+      const targetId = id || lastSavedId;
+      if (!targetId || !/^[0-9a-fA-F-]{8}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{12}$/.test(targetId)) {
+        toast({ title: 'Submit failed', description: 'No valid question ID to submit yet. Please save first.', variant: 'destructive' });
+        return;
       }
+      const { error } = await supabase.rpc('submit_exam_for_review', { p_question_id: targetId });
+      if (error) throw error;
+      toast({ title: 'Submitted for review' });
     } catch (e:any) {
       toast({ title: 'Failed', description: e.message, variant: 'destructive' });
     }
