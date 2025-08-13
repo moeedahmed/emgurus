@@ -49,6 +49,7 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
   const [mode, setMode] = useState<'function' | 'direct'>('function');
   const [topicFilter, setTopicFilter] = useState<string | "">("");
   const [difficulty, setDifficulty] = useState<string | "">("");
+  const [topicOptions, setTopicOptions] = useState<string[]>([]);
   const [reviewerProfiles, setReviewerProfiles] = useState<Record<string, { id: string; name: string; avatar_url?: string }>>({});
   const navigate = useNavigate();
 
@@ -176,8 +177,28 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
   }, [exam, qDebounced, page, pageSize]);
 
 
+  useEffect(() => {
+    // When an exam is selected, load topic options from curriculum_map for dependent dropdown
+    (async () => {
+      try {
+        if (!exam) { setTopicOptions([]); return; }
+        const { data } = await supabase
+          .from('curriculum_map')
+          .select('slo_title')
+          .eq('exam_type', exam as any)
+          .order('slo_title');
+        const topics = Array.from(new Set(((data as any[]) || []).map(r => r.slo_title).filter(Boolean)));
+        setTopicOptions(topics);
+      } catch {
+        setTopicOptions([]);
+      }
+    })();
+  }, [exam]);
+
   const FiltersPanel = () => {
-    const topics = Array.from(new Set(items.map(i => i.topic).filter(Boolean))) as string[];
+  const topics = (exam && topicOptions.length)
+      ? topicOptions
+      : (Array.from(new Set(items.map(i => i.topic).filter(Boolean))) as string[]);
     return (
       <Card className="p-4 space-y-3">
         <div className="space-y-2">
@@ -263,8 +284,9 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
                   <SelectTrigger><SelectValue placeholder="Topic" /></SelectTrigger>
                   <SelectContent className="max-h-80">
                     <SelectItem value="ALL">All topics</SelectItem>
-                    {Array.from(new Set(items.map(i => i.topic).filter(Boolean))).map((t: any) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    {(exam && topicOptions.length ? topicOptions : Array.from(new Set(items.map(i => i.topic).filter(Boolean))))
+                      .map((t: any) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -297,7 +319,6 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
                   ) : (visible.length ? (
                     visible.map((it) => (
                       <TableRow key={it.id} className="cursor-pointer hover:bg-accent/30" onClick={() => navigate(`/tools/submit-question/${it.id}`, { state: { fromAdmin: true } })}>
-                        <TableCell className="text-xs">{String(it.id).slice(0,8)}</TableCell>
                         <TableCell className="text-xs">{(it.stem || '').slice(0, 140)}</TableCell>
                         <TableCell className="text-xs">{String(it.exam)}</TableCell>
                         <TableCell className="text-xs">{it.topic || '—'}</TableCell>
