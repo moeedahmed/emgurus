@@ -156,7 +156,7 @@ export default function SubmitQuestionNew() {
         });
 
         setCreatedAt((data as any).created_at || "");
-        await loadAdjacent((data as any).created_at || "");
+        await loadAdjacent((data as any).created_at || "", data.id);
 
         // Load existing assignment
         const { data: assignment } = await supabase
@@ -173,21 +173,23 @@ export default function SubmitQuestionNew() {
     }
   };
 
-  const loadAdjacent = async (createdAtVal: string) => {
+  const loadAdjacent = async (createdAtVal: string, currentId: string) => {
     try {
-      if (!createdAtVal) { setNextId(null); setPrevId(null); return; }
+      if (!createdAtVal || !currentId) { setNextId(null); setPrevId(null); return; }
       const [nextRes, prevRes] = await Promise.all([
         supabase
           .from('reviewed_exam_questions')
           .select('id, created_at')
-          .gt('created_at', createdAtVal)
+          .or(`created_at.gt.${createdAtVal},and(created_at.eq.${createdAtVal},id.gt.${currentId})`)
           .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
           .limit(1),
         supabase
           .from('reviewed_exam_questions')
           .select('id, created_at')
-          .lt('created_at', createdAtVal)
+          .or(`created_at.lt.${createdAtVal},and(created_at.eq.${createdAtVal},id.lt.${currentId})`)
           .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
           .limit(1),
       ]);
       const nextRow = (nextRes.data && nextRes.data[0]) as any;
