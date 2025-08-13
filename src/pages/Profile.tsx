@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import TagInput from "@/components/forms/TagInput";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Linkedin, Twitter, Github, Facebook, Instagram, Youtube } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,9 +62,7 @@ const [youtubeUrl, setYoutubeUrl] = useState("");
 const [avatarInput, setAvatarInput] = useState("");
 const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-// Security
-const [pwd, setPwd] = useState("");
-const [pwd2, setPwd2] = useState("");
+// Phone verification
 // Phone verification
 const [phoneInput, setPhoneInput] = useState("");
 const [phoneOtpSent, setPhoneOtpSent] = useState(false);
@@ -83,7 +81,7 @@ const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
     document.title = "My Profile | EMGurus";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name', 'description'); document.head.appendChild(meta); }
-    meta.setAttribute('content', 'Edit your profile information and security settings.');
+    meta.setAttribute('content', 'Edit your profile information.');
     let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!link) { link = document.createElement('link'); link.rel = 'canonical'; document.head.appendChild(link); }
     link.href = window.location.href;
@@ -181,20 +179,6 @@ const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
     }
   };
 
-  const handleChangePassword = async () => {
-    if (!pwd || pwd.length < 8) {
-      toast({ title: "Password too short", description: "Use at least 8 characters." });
-      return;
-    }
-    if (pwd !== pwd2) {
-      toast({ title: "Passwords do not match" });
-      return;
-    }
-    const { error } = await supabase.auth.updateUser({ password: pwd });
-    if (error) { toast({ title: "Could not update password", description: error.message }); return; }
-    toast({ title: "Password updated" });
-    setPwd(""); setPwd2("");
-  };
 
   const handleAvatarFile = async (file: File) => {
     if (!user) return;
@@ -275,10 +259,7 @@ const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
     <main className="container mx-auto px-4 md:px-6 py-6 md:py-10">
       <article className="max-w-4xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-          </TabsList>
+          {/* Tabs header removed - single profile page */}
 
           {/* PROFILE EDIT */}
           <TabsContent value="profile" className="mt-4">
@@ -416,23 +397,6 @@ const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
             </Card>
           </TabsContent>
 
-          {/* SECURITY */}
-          <TabsContent value="security" className="mt-4">
-            <Card className="w-full overflow-hidden p-6 max-w-xl space-y-4 shadow-md">
-              <div className="font-semibold">Change Password</div>
-              <div className="grid gap-3">
-                <div className="grid gap-1">
-                  <Label htmlFor="new-password">New password</Label>
-                  <Input id="new-password" type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} />
-                </div>
-                <div className="grid gap-1">
-                  <Label htmlFor="confirm-password">Confirm new password</Label>
-                  <Input id="confirm-password" type="password" value={pwd2} onChange={(e) => setPwd2(e.target.value)} />
-                </div>
-                <Button onClick={handleChangePassword}>Update Password</Button>
-              </div>
-            </Card>
-          </TabsContent>
         </Tabs>
       </article>
     </main>
