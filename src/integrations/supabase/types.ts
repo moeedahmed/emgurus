@@ -1674,6 +1674,7 @@ export type Database = {
           created_at: string
           credentials: string | null
           email: string | null
+          employer_tags: string[] | null
           exam_interests: string[]
           exams: string[] | null
           facebook: string | null
@@ -1689,6 +1690,7 @@ export type Database = {
           onboarding_required: boolean
           phone: string | null
           position: string | null
+          position_tags: string[] | null
           price_per_30min: number | null
           primary_specialty: string | null
           show_profile_public: boolean
@@ -1715,6 +1717,7 @@ export type Database = {
           created_at?: string
           credentials?: string | null
           email?: string | null
+          employer_tags?: string[] | null
           exam_interests?: string[]
           exams?: string[] | null
           facebook?: string | null
@@ -1730,6 +1733,7 @@ export type Database = {
           onboarding_required?: boolean
           phone?: string | null
           position?: string | null
+          position_tags?: string[] | null
           price_per_30min?: number | null
           primary_specialty?: string | null
           show_profile_public?: boolean
@@ -1756,6 +1760,7 @@ export type Database = {
           created_at?: string
           credentials?: string | null
           email?: string | null
+          employer_tags?: string[] | null
           exam_interests?: string[]
           exams?: string[] | null
           facebook?: string | null
@@ -1771,6 +1776,7 @@ export type Database = {
           onboarding_required?: boolean
           phone?: string | null
           position?: string | null
+          position_tags?: string[] | null
           price_per_30min?: number | null
           primary_specialty?: string | null
           show_profile_public?: boolean

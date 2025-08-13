@@ -304,11 +304,23 @@ const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
                 </div>
                 <div className="grid gap-1">
                   <Label>Position</Label>
-                  <Input value={positionText} onChange={(e) => setPositionText(e.target.value)} placeholder="e.g., Senior Registrar" />
+                  <TagInput 
+                    value={[positionText].filter(Boolean)} 
+                    onChange={(tags) => setPositionText(tags[0] || "")} 
+                    suggestions={["Registrar", "Consultant", "Senior Registrar", "House Officer", "Medical Officer", "Specialist", "Resident"]}
+                    placeholder="Add positions (e.g., Registrar, Consultant)"
+                    maxTags={1}
+                  />
                 </div>
                 <div className="grid gap-1">
-                  <Label>Hospital/Employer</Label>
-                  <Input value={hospitalText} onChange={(e) => setHospitalText(e.target.value)} placeholder="e.g., City Hospital" />
+                  <Label>Employer</Label>
+                  <TagInput 
+                    value={[hospitalText].filter(Boolean)} 
+                    onChange={(tags) => setHospitalText(tags[0] || "")} 
+                    suggestions={["NHS", "Private Practice", "University Hospital", "General Hospital", "Emergency Department"]}
+                    placeholder="Add employers/institutions"
+                    maxTags={1}
+                  />
                 </div>
                 <div className="grid gap-1 md:col-span-2">
                   <Label>Bio</Label>
