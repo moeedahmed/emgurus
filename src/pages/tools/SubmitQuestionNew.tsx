@@ -75,7 +75,6 @@ export default function SubmitQuestionNew() {
     meta.setAttribute('content', isEditing ? 'Edit and update exam questions with full admin control.' : 'Submit new exam questions for review by medical education experts.');
     
     loadDropdownData();
-    loadGurus();
     if (isEditing && id) {
       loadQuestionForEdit(id);
     }
@@ -136,12 +135,12 @@ export default function SubmitQuestionNew() {
         const mappedChoices = (parsedOptions.length ? parsedOptions : ["", "", "", "", ""]).map((opt: any, idx: number) => {
           const key = String.fromCharCode(65 + idx);
           const text = typeof opt === 'string' ? opt : opt.text || "";
-          const optExplanation = typeof opt === 'string' ? "" : (opt.explanation || "");
-          const explanation = (key === answerKey && !optExplanation && data.explanation) ? data.explanation : optExplanation;
+          const optExplanation = typeof opt === 'string' ? '' : (opt.explanation || '');
+          const explanation = optExplanation;
           return { key, text, explanation };
         });
 
-        const correctExplanation = mappedChoices.find(c => c.key === answerKey)?.explanation || data.explanation || "";
+        const correctExplanation = (data.explanation || mappedChoices.find(c => c.key === answerKey)?.explanation || '');
 
         setQuestion({
           id: data.id,
@@ -464,31 +463,14 @@ export default function SubmitQuestionNew() {
               </div>
 
               <div className="space-y-4">
-                {isEditing && isAdmin && (
-                  <div className="grid gap-2">
-                    <Label htmlFor="guru-select">Assigned Guru</Label>
-                    <Select value={selectedGuruId} onValueChange={setSelectedGuruId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select guru for assignment" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {gurus.map((guru) => (
-                          <SelectItem key={guru.id} value={guru.id}>
-                            {guru.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
 
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => navigate('/exams/question-bank')}>
-                      Back to Bank
-                    </Button>
                     {isEditing && (
                       <>
+                        <Button variant="outline" onClick={() => navigate('/exams/question-bank')}>
+                          Back to Bank
+                        </Button>
                         <Button variant="outline" onClick={goPrev} disabled={!prevId}>Previous</Button>
                         <Button variant="outline" onClick={goNext} disabled={!nextId}>Next</Button>
                       </>
@@ -499,17 +481,14 @@ export default function SubmitQuestionNew() {
                     <Button variant="outline" onClick={() => navigate(-1)}>
                       Cancel
                     </Button>
-                    <Button variant="outline" onClick={() => save('draft')} disabled={saving}>
-                      Add to Draft
-                    </Button>
+                    {!isEditing && (
+                      <Button variant="outline" onClick={() => save('draft')} disabled={saving}>
+                        Add to Draft
+                      </Button>
+                    )}
                     <Button variant="outline" onClick={() => save('under_review')} disabled={saving}>
                       Submit for Review
                     </Button>
-                    {isEditing && isAdmin && selectedGuruId && (
-                      <Button onClick={assignToGuru}>
-                        Assign to Guru
-                      </Button>
-                    )}
                     <Button onClick={() => save()} disabled={saving}>
                       {saving ? "Saving..." : (isEditing ? "Update Question" : "Save Question")}
                     </Button>
