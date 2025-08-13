@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import TagInput from "@/components/forms/TagInput";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
@@ -34,7 +35,7 @@ export default function SubmitQuestionNew() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = Boolean(id);
-  const { isAdmin } = useRoles();
+  const { isAdmin, isGuru } = useRoles();
 
   const [question, setQuestion] = useState<QuestionData>({
     stem: "",
@@ -483,57 +484,69 @@ export default function SubmitQuestionNew() {
 
                 <div className="grid gap-4">
                   <Label>Answer Choices</Label>
-                  {question.choices.map((choice, index) => (
-                    <div key={choice.key} className="grid gap-2">
-                      <div className="flex gap-3 items-center">
-                        <span className="w-8 font-medium">{choice.key}.</span>
-                        <Input
-                          value={choice.text}
-                          onChange={(e) => {
-                            const newChoices = [...question.choices];
-                            newChoices[index].text = e.target.value;
-                            onChange({ choices: newChoices });
-                          }}
-                          onBlur={handleBlurAutosave}
-                          placeholder={`Enter choice ${choice.key}`}
-                        />
+                  <RadioGroup
+                    value={question.correct_answer}
+                    onValueChange={(value) => { onChange({ correct_answer: value }); void handleBlurAutosave(); }}
+                    className="grid gap-3"
+                  >
+                    {question.choices.map((choice, index) => (
+                      <div key={choice.key} className="grid gap-2">
+                        <div className="flex gap-3 items-center">
+                          {(isAdmin || isGuru) ? (
+                            <RadioGroupItem value={choice.key} id={`correct-${choice.key}`} />
+                          ) : (
+                            <span className="w-4" />
+                          )}
+                          <Label htmlFor={`correct-${choice.key}`} className="w-8 font-medium">{choice.key}.</Label>
+                          <Input
+                            value={choice.text}
+                            onChange={(e) => {
+                              const newChoices = [...question.choices];
+                              newChoices[index].text = e.target.value;
+                              onChange({ choices: newChoices });
+                            }}
+                            onBlur={handleBlurAutosave}
+                            placeholder={`Enter choice ${choice.key}`}
+                          />
+                        </div>
+                        <div className="pl-11">
+                          <Textarea
+                            value={choice.explanation || ""}
+                            onChange={(e) => {
+                              const newChoices = [...question.choices];
+                              newChoices[index].explanation = e.target.value;
+                              onChange({ choices: newChoices });
+                            }}
+                            onBlur={handleBlurAutosave}
+                            rows={3}
+                            placeholder={`Why is option ${choice.key} correct/incorrect?`}
+                          />
+                        </div>
                       </div>
-                      <div className="pl-11">
-                        <Textarea
-                          value={choice.explanation || ""}
-                          onChange={(e) => {
-                            const newChoices = [...question.choices];
-                            newChoices[index].explanation = e.target.value;
-                            onChange({ choices: newChoices });
-                          }}
-                          onBlur={handleBlurAutosave}
-                          rows={3}
-                          placeholder={`Why is option ${choice.key} correct/incorrect?`}
-                        />
-                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+
+                {!((isAdmin || isGuru)) && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="correct">Correct Answer</Label>
+                      <Select value={question.correct_answer} onValueChange={(value) => { onChange({ correct_answer: value }); void handleBlurAutosave(); }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select correct answer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {question.choices.map((choice) => (
+                            <SelectItem key={choice.key} value={choice.key}>
+                              {choice.key}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="correct">Correct Answer</Label>
-                    <Select value={question.correct_answer} onValueChange={(value) => { onChange({ correct_answer: value }); void handleBlurAutosave(); }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select correct answer" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {question.choices.map((choice) => (
-                          <SelectItem key={choice.key} value={choice.key}>
-                            {choice.key}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
+                )}
 
-
-                </div>
 
 
                 {/* Guru Assignment Section - Only for Admins in Edit Mode */}
