@@ -80,7 +80,10 @@ export default function SubmitQuestionNew() {
     if (isEditing && id) {
       loadQuestionForEdit(id);
     }
-  }, [isEditing, id]);
+    if (isEditing && isAdmin) {
+      loadGurus();
+    }
+  }, [isEditing, id, isAdmin]);
 
   const loadDropdownData = async () => {
     try {
@@ -364,8 +367,31 @@ export default function SubmitQuestionNew() {
 
         {isEditing && (
           <div className="sticky top-16 z-20 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border rounded-md px-4 py-2 mb-4 flex items-center justify-between">
-            <span className="text-sm">ID: {question.id}</span>
-            <span className="text-sm font-medium">Status: {questionStatus || '—'}</span>
+            <div className="flex items-center gap-4">
+              <span className="text-sm">ID: {question.id}</span>
+              {isAdmin && (
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="status-select" className="text-sm">Status:</Label>
+                  <Select value={questionStatus || ""} onValueChange={(value) => {
+                    setQuestionStatus(value);
+                    save(value as 'draft' | 'under_review');
+                  }}>
+                    <SelectTrigger id="status-select" className="w-32 h-8">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="under_review">Under Review</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                      <SelectItem value="archived">Archived</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {!isAdmin && (
+                <span className="text-sm font-medium">Status: {questionStatus || '—'}</span>
+              )}
+            </div>
           </div>
         )}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -500,7 +526,31 @@ export default function SubmitQuestionNew() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
+                 </div>
+
+                {/* Guru Assignment Section - Only for Admins in Edit Mode */}
+                {isEditing && isAdmin && (
+                  <div className="grid gap-2 p-4 border rounded-lg bg-muted/50">
+                    <Label htmlFor="guru-select">Assign to Guru for Review</Label>
+                    <div className="flex gap-2">
+                      <Select value={selectedGuruId} onValueChange={setSelectedGuruId}>
+                        <SelectTrigger id="guru-select" className="flex-1">
+                          <SelectValue placeholder="Select a guru..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {gurus.map((guru) => (
+                            <SelectItem key={guru.id} value={guru.id}>
+                              {guru.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button onClick={assignToGuru} disabled={!selectedGuruId}>
+                        Assign
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
               </div>
 
@@ -521,7 +571,7 @@ export default function SubmitQuestionNew() {
 
                   <div className="flex gap-3">
                     <Button variant="outline" onClick={() => safeNavigate(-1)}>
-                      Cancel
+                      Back
                     </Button>
                     {!isEditing && (
                       <Button variant="outline" onClick={() => save('draft')} disabled={saving}>
