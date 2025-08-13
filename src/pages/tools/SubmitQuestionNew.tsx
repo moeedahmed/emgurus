@@ -447,18 +447,33 @@ export default function SubmitQuestionNew() {
             <div className="flex items-center gap-2">
               {isAdmin ? (
                 <>
-                  <Label htmlFor="status-select" className="text-sm">Status:</Label>
-                  <Select value={questionStatus || ""} onValueChange={(value) => { setQuestionStatus(value); save(value as 'draft' | 'under_review' | 'published' | 'archived'); }}>
-                    <SelectTrigger id="status-select" className="w-32 h-8">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="under_review">Assigned</SelectItem>
-                      <SelectItem value="published">Reviewed</SelectItem>
-                      <SelectItem value="archived">Archived</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="fb-guru" className="text-sm">Guru:</Label>
+                    <Select value={selectedGuruId} onValueChange={setSelectedGuruId}>
+                      <SelectTrigger id="fb-guru" className="w-56 h-8">
+                        <SelectValue placeholder="Select guru" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {gurus.map((g) => (
+                          <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="status-select" className="text-sm">Status:</Label>
+                    <Select value={questionStatus || ""} onValueChange={(value) => { setQuestionStatus(value); save(value as 'draft' | 'under_review' | 'published' | 'archived'); }}>
+                      <SelectTrigger id="status-select" className="w-32 h-8">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="under_review">Assigned</SelectItem>
+                        <SelectItem value="published">Reviewed</SelectItem>
+                        <SelectItem value="archived">Archived</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </>
               ) : (
                 <span className="text-sm font-medium">Status: {statusLabel(questionStatus)}</span>
@@ -527,48 +542,8 @@ export default function SubmitQuestionNew() {
                   </RadioGroup>
                 </div>
 
-                {!((isAdmin || isGuru)) && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="correct">Correct Answer</Label>
-                      <Select value={question.correct_answer} onValueChange={(value) => { onChange({ correct_answer: value }); void handleBlurAutosave(); }}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select correct answer" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {question.choices.map((choice) => (
-                            <SelectItem key={choice.key} value={choice.key}>
-                              {choice.key}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
 
 
-
-                {/* Guru Assignment Section - Only for Admins in Edit Mode */}
-                {isEditing && isAdmin && (
-                  <div className="grid gap-2 p-4 border rounded-lg bg-muted/50">
-                    <Label htmlFor="guru-select">Assign to Guru for Review</Label>
-                    <div className="flex gap-2">
-                      <Select value={selectedGuruId} onValueChange={setSelectedGuruId}>
-                        <SelectTrigger id="guru-select" className="flex-1">
-                          <SelectValue placeholder="Select a guru..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {gurus.map((guru) => (
-                            <SelectItem key={guru.id} value={guru.id}>
-                              {guru.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
 
               </div>
 
