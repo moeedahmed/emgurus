@@ -66,6 +66,16 @@ export default function SubmitQuestionNew() {
   const [isDirty, setIsDirty] = useState(false);
   const [questionStatus, setQuestionStatus] = useState<string | null>(null);
 
+  const statusLabel = (s?: string | null) => {
+    switch (s) {
+      case 'under_review': return 'Assigned';
+      case 'published': return 'Reviewed';
+      case 'draft': return 'Draft';
+      case 'archived': return 'Archived';
+      default: return s || '—';
+    }
+  };
+
   useEffect(() => {
     document.title = isEditing ? "Edit Question | EMGurus" : "Submit Question | EMGurus";
     let meta = document.querySelector('meta[name="description"]');
@@ -251,7 +261,7 @@ export default function SubmitQuestionNew() {
     }
   };
 
-  const save = async (statusOverride?: 'draft' | 'under_review') => {
+  const save = async (statusOverride?: 'draft' | 'under_review' | 'published' | 'archived') => {
     if (!question.stem.trim() || question.choices.some(c => !c.text.trim())) {
       toast({ title: "Please fill in the question and all choices" });
       return;
@@ -262,6 +272,10 @@ export default function SubmitQuestionNew() {
       const options = question.choices.map(c => ({ key: c.key, text: c.text, explanation: c.explanation || "" }));
       const correctChoice = question.choices.find(c => c.key === question.correct_answer);
       const explanationForCorrect = correctChoice?.explanation || question.explanation || "";
+
+      // Auto-status: if admin selected a guru and we're updating, mark as under_review (Assigned)
+      const effectiveStatus = statusOverride || (isEditing && isAdmin && selectedGuruId ? 'under_review' : undefined);
+
       const questionData: any = {
         stem: question.stem,
         options,
@@ -272,7 +286,7 @@ export default function SubmitQuestionNew() {
         subtopic: question.curriculum,
         difficulty: question.difficulty,
       };
-      if (statusOverride) questionData.status = statusOverride;
+      if (effectiveStatus) questionData.status = effectiveStatus;
 
       let result;
       if (isEditing && question.id) {
@@ -299,6 +313,14 @@ export default function SubmitQuestionNew() {
 
       const savedId = (result.data as any)?.id || question.id;
       if (savedId && !question.id) setQuestion(prev => ({ ...prev, id: savedId }));
+
+      // Auto-assign to selected guru when admin has selected one
+      if (isEditing && isAdmin && selectedGuruId && savedId) {
+        const me = await supabase.auth.getUser();
+        await supabase
+          .from('exam_review_assignments')
+          .upsert({ question_id: savedId, reviewer_id: selectedGuruId, assigned_by: me.data.user?.id, status: 'assigned' }, { onConflict: 'question_id,reviewer_id' });
+      }
 
       const newStatus = (result.data as any)?.status;
       if (newStatus) setQuestionStatus(newStatus);
@@ -407,25 +429,38 @@ export default function SubmitQuestionNew() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="fb-difficulty" className="text-sm">Difficulty:</Label>
+                <Select value={question.difficulty} onValueChange={(value) => { onChange({ difficulty: value }); void handleBlurAutosave(); }}>
+                  <SelectTrigger id="fb-difficulty" className="w-32 h-8">
+                    <SelectValue placeholder="Difficulty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DIFFICULTY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {isAdmin ? (
                 <>
                   <Label htmlFor="status-select" className="text-sm">Status:</Label>
-                  <Select value={questionStatus || ""} onValueChange={(value) => { setQuestionStatus(value); save(value as 'draft' | 'under_review'); }}>
+                  <Select value={questionStatus || ""} onValueChange={(value) => { setQuestionStatus(value); save(value as 'draft' | 'under_review' | 'published' | 'archived'); }}>
                     <SelectTrigger id="status-select" className="w-32 h-8">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="under_review">Under Review</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
+                      <SelectItem value="under_review">Assigned</SelectItem>
+                      <SelectItem value="published">Reviewed</SelectItem>
                       <SelectItem value="archived">Archived</SelectItem>
                     </SelectContent>
                   </Select>
                 </>
               ) : (
-                <span className="text-sm font-medium">Status: {questionStatus || '—'}</span>
+                <span className="text-sm font-medium">Status: {statusLabel(questionStatus)}</span>
               )}
             </div>
           </div>
@@ -498,21 +533,6 @@ export default function SubmitQuestionNew() {
                   </div>
 
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="difficulty">Difficulty</Label>
-                    <Select value={question.difficulty} onValueChange={(value) => { onChange({ difficulty: value }); void handleBlurAutosave(); }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select difficulty" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DIFFICULTY_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
 
 
@@ -533,9 +553,6 @@ export default function SubmitQuestionNew() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <Button onClick={assignToGuru} disabled={!selectedGuruId}>
-                        Assign
-                      </Button>
                     </div>
                   </div>
                 )}
@@ -565,7 +582,7 @@ export default function SubmitQuestionNew() {
                     )}
                     {!isAdmin && (
                       <Button variant="outline" onClick={() => save('under_review')} disabled={saving}>
-                        Submit for Review
+                        Submit (Assign)
                       </Button>
                     )}
                     <Button onClick={() => save()} disabled={saving}>
