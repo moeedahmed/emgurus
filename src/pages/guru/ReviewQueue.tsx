@@ -62,7 +62,7 @@ const GuruReviewQueue = () => {
   }, [items, flags]);
 
   useEffect(() => {
-    document.title = "Review Queue | EMGurus";
+    document.title = "Review Queue | EM Gurus";
   }, []);
 
   const offset = useMemo(() => (page - 1) * PAGE_SIZE, [page]);

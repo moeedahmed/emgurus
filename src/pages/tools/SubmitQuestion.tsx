@@ -13,6 +13,7 @@ export default function SubmitQuestion() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [lastSavedId, setLastSavedId] = useState<string | undefined>(id);
 
   const [saving, setSaving] = useState(false);
   const [question, setQuestion] = useState({
@@ -216,7 +217,7 @@ export default function SubmitQuestion() {
 
         <div className="flex flex-wrap gap-2 pt-2">
           <Button disabled={saving} variant="outline" onClick={save}>Save</Button>
-          <Button disabled={saving} onClick={review}>Review</Button>
+          <Button disabled={saving} onClick={review}>Submit</Button>
         </div>
       </Card>
 

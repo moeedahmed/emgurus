@@ -11,7 +11,7 @@ export default function Logo({ variant = "wordmark", className, size = 28 }: Log
   const Mark = (
     <svg
       role="img"
-      aria-label="EMGurus logo mark"
+      aria-label="EM Gurus logo mark"
       width={size}
       height={size}
       viewBox="0 0 24 24"
@@ -31,7 +31,7 @@ export default function Logo({ variant = "wordmark", className, size = 28 }: Log
     <span className={cn("inline-flex items-center gap-2", className)}>
       {Mark}
       <span className="font-display font-bold text-lg sm:text-xl text-foreground tracking-tight">
-        EMGurus
+        EM Gurus
       </span>
     </span>
   );

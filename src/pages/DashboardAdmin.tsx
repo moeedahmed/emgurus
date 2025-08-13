@@ -282,8 +282,8 @@ const DraftsPanel: React.FC = () => {
     setLoading(true);
     try {
       const [gen, g] = await Promise.all([
-        callFunction('/exams-admin-curate/generated', null, true),
-        callFunction('/exams-admin-curate/gurus', null, true),
+        callFunction('/exams-admin-curate/generated', null, true, 'GET'),
+        callFunction('/exams-admin-curate/gurus', null, true, 'GET'),
       ]);
       setRows(gen?.data || []);
       setGurus((g?.data || []) as GuruOption[]);
@@ -367,8 +367,8 @@ const AssignedPanel: React.FC = () => {
     setLoading(true);
     try {
       const [assigned, g] = await Promise.all([
-        callFunction('/exams-admin-curate/assigned', null, true),
-        callFunction('/exams-admin-curate/gurus', null, true),
+        callFunction('/exams-admin-curate/assigned', null, true, 'GET'),
+        callFunction('/exams-admin-curate/gurus', null, true, 'GET'),
       ]);
       setRows((assigned?.data || []) as any);
       setGurus((g?.data || []) as GuruOption[]);
@@ -445,7 +445,7 @@ const ApprovedPanel: React.FC = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const app = await callFunction('/exams-admin-curate/approved', null, true);
+      const app = await callFunction('/exams-admin-curate/approved', null, true, 'GET');
       setRows(app?.data || []);
     } catch (e: any) { toast({ title: 'Load failed', description: e.message, variant: 'destructive' }); }
     finally { setLoading(false); }
@@ -506,7 +506,7 @@ const RejectedPanel: React.FC = () => {
   const [rows, setRows] = useState<LiteQuestion[]>([]);
   const load = async () => {
     try {
-      const rej = await callFunction('/exams-admin-curate/rejected', null, true);
+      const rej = await callFunction('/exams-admin-curate/rejected', null, true, 'GET');
       setRows(rej?.data || []);
     } catch (e: any) { toast({ title: 'Load failed', description: e.message, variant: 'destructive' }); }
   };
@@ -650,7 +650,7 @@ const MarkedPanel: React.FC = () => {
       const { data, error } = await supabase.from('exam_question_flags').select('id, created_at, question_id, question_source, comment, status, assigned_to').order('created_at', { ascending: false });
       if (error) throw error;
       setFlags((data as any) || []);
-      const g = await callFunction('/exams-admin-curate/gurus', null, true);
+      const g = await callFunction('/exams-admin-curate/gurus', null, true, 'GET');
       setGurus((g?.data || []) as GuruOption[]);
     } catch (e: any) {
       toast({ title: 'Failed to load', description: e.message, variant: 'destructive' });
@@ -804,7 +804,7 @@ const GuruApprovalsTab: React.FC = () => {
 };
 
 export default function DashboardAdmin() {
-  useEffect(() => { document.title = "Admin Workspace | EMGurus"; }, []);
+  useEffect(() => { document.title = "Admin Workspace | EM Gurus"; }, []);
 
   const sections: WorkspaceSection[] = [
     {

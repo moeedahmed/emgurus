@@ -198,7 +198,7 @@ function MySubmittedPanel() {
 }
 
 export default function DashboardGuru() {
-  useEffect(() => { document.title = "Guru Workspace | EMGurus"; }, []);
+  useEffect(() => { document.title = "Guru Workspace | EM Gurus"; }, []);
 
   const AnalyticsPanel: React.FC = () => {
     const { kpis, throughputSeries, isLoading } = useGuruMetrics();
@@ -268,7 +268,8 @@ export default function DashboardGuru() {
       icon: MessageSquare,
       tabs: [
         { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your forum activity.</div><AnalyticsPanel /></div> },
-        { id: "my", title: "My Threads", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Threads you started.</div><MyThreadsPanel /></div> },
+        { id: "drafts", title: "Drafts", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your draft threads.</div><MyThreadsPanel /></div> },
+        { id: "threads", title: "Threads", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your published threads.</div><MyThreadsPanel /></div> },
       ],
     },
   ];

@@ -136,10 +136,10 @@ export function WorkspaceLayoutInner({
               value={undefined /* uncontrolled per remount */}
             >
               <div className="flex items-center justify-between mb-3">
-                <div className="w-full overflow-x-auto overscroll-x-contain">
-                  <TabsList className="inline-flex flex-nowrap min-w-max px-2">
+                <div className="w-full overflow-x-auto overscroll-x-contain whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <TabsList className="inline-flex gap-1 flex-nowrap min-w-max px-2">
                     {current.tabs.map((t) => (
-                      <TabsTrigger key={t.id} value={t.id}>{t.title}</TabsTrigger>
+                      <TabsTrigger key={t.id} value={t.id} className="shrink-0">{t.title}</TabsTrigger>
                     ))}
                   </TabsList>
                 </div>

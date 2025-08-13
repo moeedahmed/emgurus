@@ -91,7 +91,7 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Search EMGurus</DialogTitle>
+          <DialogTitle>Search EM Gurus</DialogTitle>
         </DialogHeader>
         <div className="relative">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
