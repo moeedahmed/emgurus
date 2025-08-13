@@ -60,6 +60,9 @@ export default function SubmitQuestionNew() {
   const [saving, setSaving] = useState(false);
   const [gurus, setGurus] = useState<{ id: string; name: string }[]>([]);
   const [selectedGuruId, setSelectedGuruId] = useState<string>("");
+  const [createdAt, setCreatedAt] = useState<string>("");
+  const [nextId, setNextId] = useState<string | null>(null);
+  const [prevId, setPrevId] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = isEditing ? "Edit Question | EMGurus" : "Submit Question | EMGurus";
@@ -152,6 +155,9 @@ export default function SubmitQuestionNew() {
           difficulty: data.difficulty || ""
         });
 
+        setCreatedAt((data as any).created_at || "");
+        await loadAdjacent((data as any).created_at || "");
+
         // Load existing assignment
         const { data: assignment } = await supabase
           .from('exam_review_assignments')
@@ -164,6 +170,32 @@ export default function SubmitQuestionNew() {
       toast({ title: "Error loading question", description: error.message });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAdjacent = async (createdAtVal: string) => {
+    try {
+      if (!createdAtVal) { setNextId(null); setPrevId(null); return; }
+      const [nextRes, prevRes] = await Promise.all([
+        supabase
+          .from('reviewed_exam_questions')
+          .select('id, created_at')
+          .gt('created_at', createdAtVal)
+          .order('created_at', { ascending: true })
+          .limit(1),
+        supabase
+          .from('reviewed_exam_questions')
+          .select('id, created_at')
+          .lt('created_at', createdAtVal)
+          .order('created_at', { ascending: false })
+          .limit(1),
+      ]);
+      const nextRow = (nextRes.data && nextRes.data[0]) as any;
+      const prevRow = (prevRes.data && prevRes.data[0]) as any;
+      setNextId(nextRow ? nextRow.id : null);
+      setPrevId(prevRow ? prevRow.id : null);
+    } catch (e) {
+      // ignore
     }
   };
 
@@ -275,6 +307,9 @@ export default function SubmitQuestionNew() {
       toast({ title: "Error assigning question", description: error.message });
     }
   };
+
+  const goNext = () => { if (nextId) navigate(`/tools/submit-question/${nextId}`); };
+  const goPrev = () => { if (prevId) navigate(`/tools/submit-question/${prevId}`); };
 
   if (loading) {
     return (
@@ -445,24 +480,38 @@ export default function SubmitQuestionNew() {
                   </div>
                 )}
 
-                <div className="flex gap-4 justify-end">
-                  <Button variant="outline" onClick={() => navigate(-1)}>
-                    Cancel
-                  </Button>
-                  <Button variant="outline" onClick={() => save('draft')} disabled={saving}>
-                    Add to Draft
-                  </Button>
-                  <Button variant="outline" onClick={() => save('under_review')} disabled={saving}>
-                    Submit for Review
-                  </Button>
-                  {isEditing && isAdmin && selectedGuruId && (
-                    <Button onClick={assignToGuru}>
-                      Assign to Guru
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => navigate('/exams/question-bank')}>
+                      Back to Bank
                     </Button>
-                  )}
-                  <Button onClick={() => save()} disabled={saving}>
-                    {saving ? "Saving..." : (isEditing ? "Update Question" : "Save Question")}
-                  </Button>
+                    {isEditing && (
+                      <>
+                        <Button variant="outline" onClick={goPrev} disabled={!prevId}>Previous</Button>
+                        <Button variant="outline" onClick={goNext} disabled={!nextId}>Next</Button>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button variant="outline" onClick={() => navigate(-1)}>
+                      Cancel
+                    </Button>
+                    <Button variant="outline" onClick={() => save('draft')} disabled={saving}>
+                      Add to Draft
+                    </Button>
+                    <Button variant="outline" onClick={() => save('under_review')} disabled={saving}>
+                      Submit for Review
+                    </Button>
+                    {isEditing && isAdmin && selectedGuruId && (
+                      <Button onClick={assignToGuru}>
+                        Assign to Guru
+                      </Button>
+                    )}
+                    <Button onClick={() => save()} disabled={saving}>
+                      {saving ? "Saving..." : (isEditing ? "Update Question" : "Save Question")}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </Card>

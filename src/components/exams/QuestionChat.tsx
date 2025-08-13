@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRoles } from "@/hooks/useRoles";
+import { Trash2 } from "lucide-react";
 
 interface Discussion {
   id: string;
@@ -17,6 +19,7 @@ interface Discussion {
 
 export default function QuestionChat({ questionId }: { questionId: string }) {
   const { user } = useAuth();
+  const { isAdmin } = useRoles();
   const [items, setItems] = useState<Discussion[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -52,6 +55,13 @@ export default function QuestionChat({ questionId }: { questionId: string }) {
       // Silently ignore for now; RLS will block unauthorized users
     } finally { setLoading(false); }
   };
+  const handleDelete = async (id: string) => {
+    if (!isAdmin) return;
+    try {
+      await supabase.from('exam_question_discussions').delete().eq('id', id);
+      await load();
+    } catch (e) {}
+  };
 
   return (
     <Card className="p-3 md:p-4 h-[520px] flex flex-col">
@@ -62,8 +72,15 @@ export default function QuestionChat({ questionId }: { questionId: string }) {
             <div className="text-sm text-muted-foreground">No messages yet.</div>
           )}
           {items.map((m) => (
-            <div key={m.id} className="text-sm">
-              <div className="text-muted-foreground text-xs mb-1">{new Date(m.created_at).toLocaleString()} • {m.kind}</div>
+            <div key={m.id} className="text-sm group">
+              <div className="flex items-center justify-between">
+                <div className="text-muted-foreground text-xs mb-1">{new Date(m.created_at).toLocaleString()} • {m.kind}</div>
+                {isAdmin && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" aria-label="Delete message" onClick={() => handleDelete(m.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               <div className="bg-muted rounded-md p-2 whitespace-pre-wrap leading-relaxed">{m.message}</div>
             </div>
           ))}
