@@ -418,22 +418,12 @@ export default function SubmitQuestionNew() {
                   </div>
                 </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="explanation">Explanation</Label>
-                  <Textarea
-                    id="explanation"
-                    value={question.explanation}
-                    onChange={(e) => onChange({ explanation: e.target.value })}
-                    placeholder="Explain the correct answer and reasoning..."
-                    rows={4}
-                  />
-                </div>
               </div>
 
               <div className="space-y-4">
                 {isEditing && (
                   <div className="grid gap-2">
-                    <Label htmlFor="guru-select">Assign to Guru</Label>
+                    <Label htmlFor="guru-select">Assigned Guru</Label>
                     <Select value={selectedGuruId} onValueChange={setSelectedGuruId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select guru for assignment" />

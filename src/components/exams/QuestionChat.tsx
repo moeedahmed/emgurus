@@ -54,22 +54,22 @@ export default function QuestionChat({ questionId }: { questionId: string }) {
   };
 
   return (
-    <Card className="p-3 md:p-4 h-full">
+    <Card className="p-3 md:p-4 h-[520px] flex flex-col">
       <div className="font-semibold mb-2">Discussion</div>
-      <ScrollArea className="h-64 md:h-[480px] pr-3">
-        <div className="space-y-3">
+      <ScrollArea className="flex-1 min-h-0 pr-3">
+        <div className="space-y-3 pb-2">
           {items.length === 0 && (
             <div className="text-sm text-muted-foreground">No messages yet.</div>
           )}
           {items.map((m) => (
             <div key={m.id} className="text-sm">
-              <div className="text-muted-foreground text-xs">{new Date(m.created_at).toLocaleString()} • {m.kind}</div>
-              <div className="whitespace-pre-wrap leading-relaxed">{m.message}</div>
+              <div className="text-muted-foreground text-xs mb-1">{new Date(m.created_at).toLocaleString()} • {m.kind}</div>
+              <div className="bg-muted rounded-md p-2 whitespace-pre-wrap leading-relaxed">{m.message}</div>
             </div>
           ))}
         </div>
       </ScrollArea>
-      <div className="flex gap-2 pt-3">
+      <div className="mt-2 flex gap-2">
         <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a message..." onKeyDown={(e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } }} />
         <Button onClick={send} disabled={loading || !text.trim()}>Send</Button>
       </div>
