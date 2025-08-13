@@ -56,7 +56,7 @@ export function WorkspaceLayoutInner({
         <Sidebar className={cn("border-r z-20")} collapsible="icon">
           <SidebarContent>
             <SidebarGroup>
-              <SidebarGroupLabel className="sticky top-16 z-10 bg-sidebar text-sm font-semibold">{title}</SidebarGroupLabel>
+              <SidebarGroupLabel className="px-2 py-1 text-sm font-semibold">{title}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <nav className="flex-1 overflow-y-auto flex flex-col gap-1 p-1 pr-2 max-h-[calc(100vh-4rem)]">
                   {sections.map((s) => {
@@ -71,11 +71,10 @@ export function WorkspaceLayoutInner({
                       const qs = sp.toString();
                       const nextUrl = qs ? `${location.pathname}?${qs}#${sid}` : `${location.pathname}#${sid}`;
                       history.replaceState(null, '', nextUrl);
+                      // proactively sync local state so content switches immediately
+                      setSectionId(sid);
                       // force re-render so Tabs remount reflects updated ?tab
                       setSearchSync((v) => v + 1);
-                      if (sid !== sectionId) {
-                        window.location.hash = `#${sid}`;
-                      }
                     };
                     return (
                       <div key={s.id} className="flex flex-col">

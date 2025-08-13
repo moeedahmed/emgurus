@@ -120,7 +120,7 @@ const Header = () => {
                   <DropdownMenuLabel>Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/profile')}>
-                    <UserIcon className="mr-2 h-4 w-4" /> My Profile
+                    <UserIcon className="mr-2 h-4 w-4" /> Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/settings')}>
                     <UserIcon className="mr-2 h-4 w-4" /> Settings
@@ -193,7 +193,7 @@ const Header = () => {
                       </Avatar>
                       <div className="text-sm text-foreground">{displayName}</div>
                     </div>
-                    <Button variant="outline" className="justify-start" onClick={() => {navigate('/profile'); setIsMenuOpen(false);}}>My Profile</Button>
+                    <Button variant="outline" className="justify-start" onClick={() => {navigate('/profile'); setIsMenuOpen(false);}}>Profile</Button>
                     <Button variant="outline" className="justify-start" onClick={() => {navigate('/settings'); setIsMenuOpen(false);}}>Settings</Button>
                     <Button variant="outline" className="justify-start" onClick={() => {navigate('/dashboard'); setIsMenuOpen(false);}}>Dashboard</Button>
                     <Button variant="outline" className="justify-start" onClick={signOut}>Sign Out</Button>

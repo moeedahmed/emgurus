@@ -13,6 +13,7 @@ import KpiCard from "@/components/dashboard/KpiCard";
 import TrendCard from "@/components/dashboard/TrendCard";
 import { useGuruMetrics } from "@/hooks/metrics/useGuruMetrics";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -125,6 +126,42 @@ function MyThreadsPanel() {
   );
 }
 
+function MySubmittedPanel() {
+  const { user } = useAuth();
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const load = async () => {
+    if (!user) { setRows([]); return; }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('list_my_exam_submissions', { p_limit: 100, p_offset: 0 });
+      if (error) throw error as any;
+      setRows((data as any) || []);
+    } catch (e) {
+      setRows([]);
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, [user?.id]);
+  return (
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-sm text-muted-foreground">Questions you submitted for review.</div>
+        <Button size="sm" variant="outline" onClick={load} disabled={loading}>Refresh</Button>
+      </div>
+      <TableCard
+        title="Submitted"
+        columns={[
+          { key: 'created_at', header: 'When', render: (r: any) => new Date(r.created_at).toLocaleString() },
+          { key: 'stem', header: 'Question', render: (r: any) => r.stem || '-' },
+          { key: 'exam_type', header: 'Exam', render: (r: any) => r.exam_type || '-' },
+        ]}
+        rows={rows}
+        emptyText="No submissions yet."
+      />
+    </div>
+  );
+}
+
 export default function DashboardGuru() {
   useEffect(() => { document.title = "Guru Workspace | EMGurus"; }, []);
 
@@ -164,10 +201,19 @@ export default function DashboardGuru() {
       icon: GraduationCap,
       tabs: [
         { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your exam reviews and contribution.</div><AnalyticsPanel /></div> },
+        { id: "drafts", title: "Drafts", render: (
+          <div className="p-0">
+            <div className="p-4 flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">Your saved drafts.</div>
+              <Button asChild><a href="/tools/submit-question">Create Question</a></Button>
+            </div>
+            <MyExamDrafts />
+          </div>
+        ) },
+        { id: "submitted", title: "Submitted", render: <div className="p-0"><MySubmittedPanel /></div> },
         { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Questions assigned to you.</div><GuruReviewQueue /></div> },
         { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your completed approvals.</div><ReviewedByMe /></div> },
         { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Items you sent back with notes.</div><RejectedByMe /></div> },
-        { id: "my", title: "My Questions", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Questions you drafted.</div><MyExamDrafts /></div> },
       ],
     },
     {
