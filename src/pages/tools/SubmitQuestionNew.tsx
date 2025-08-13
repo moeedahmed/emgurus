@@ -63,6 +63,8 @@ export default function SubmitQuestionNew() {
   const [createdAt, setCreatedAt] = useState<string>("");
   const [nextId, setNextId] = useState<string | null>(null);
   const [prevId, setPrevId] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [questionStatus, setQuestionStatus] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = isEditing ? "Edit Question | EMGurus" : "Submit Question | EMGurus";
@@ -155,6 +157,8 @@ export default function SubmitQuestionNew() {
         });
 
         setCreatedAt((data as any).created_at || "");
+        setQuestionStatus((data as any).status || null);
+        setIsDirty(false);
         await loadAdjacent((data as any).created_at || "", data.id);
 
         // Load existing assignment
@@ -200,6 +204,17 @@ export default function SubmitQuestionNew() {
     }
   };
 
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
   const updateTopicsForExam = (examType: string) => {
     if (!examType) {
       setTopics([]);
@@ -224,6 +239,7 @@ export default function SubmitQuestionNew() {
 
   const onChange = (updates: Partial<QuestionData>) => {
     setQuestion(prev => ({ ...prev, ...updates }));
+    setIsDirty(true);
     
     if (updates.exam_type) {
       updateTopicsForExam(updates.exam_type);
@@ -281,6 +297,10 @@ export default function SubmitQuestionNew() {
       const savedId = (result.data as any)?.id || question.id;
       if (savedId && !question.id) setQuestion(prev => ({ ...prev, id: savedId }));
 
+      const newStatus = (result.data as any)?.status;
+      if (newStatus) setQuestionStatus(newStatus);
+      setIsDirty(false);
+
       toast({ title: isEditing ? "Question updated!" : "Question saved!" });
       if (!isEditing && result.data) {
         navigate(`/tools/submit-question/${(result.data as any).id}`);
@@ -290,6 +310,19 @@ export default function SubmitQuestionNew() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleBlurAutosave = async () => {
+    if (!isEditing && isDirty && !saving) {
+      await save('draft');
+    }
+  };
+
+  const confirmIfDirty = () => !isDirty || window.confirm('You have unsaved changes. Discard them?');
+  const safeNavigate = (to: string | number) => {
+    if (!confirmIfDirty()) return;
+    if (typeof to === 'number') navigate(to as number);
+    else navigate(to as string);
   };
 
   const assignToGuru = async () => {
@@ -309,8 +342,8 @@ export default function SubmitQuestionNew() {
     }
   };
 
-  const goNext = () => { if (nextId) navigate(`/tools/submit-question/${nextId}`); };
-  const goPrev = () => { if (prevId) navigate(`/tools/submit-question/${prevId}`); };
+  const goNext = () => { if (nextId) safeNavigate(`/tools/submit-question/${nextId}`); };
+  const goPrev = () => { if (prevId) safeNavigate(`/tools/submit-question/${prevId}`); };
 
   if (loading) {
     return (
@@ -329,6 +362,12 @@ export default function SubmitQuestionNew() {
           {isEditing ? "Edit Question" : "Submit Question"}
         </h1>
 
+        {isEditing && (
+          <div className="sticky top-16 z-20 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border rounded-md px-4 py-2 mb-4 flex items-center justify-between">
+            <span className="text-sm">ID: {question.id}</span>
+            <span className="text-sm font-medium">Status: {questionStatus || '—'}</span>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
             <Card className="p-6 space-y-6">
@@ -339,6 +378,7 @@ export default function SubmitQuestionNew() {
                     id="stem"
                     value={question.stem}
                     onChange={(e) => onChange({ stem: e.target.value })}
+                    onBlur={handleBlurAutosave}
                     placeholder="Enter your question here..."
                     rows={4}
                   />
@@ -357,6 +397,7 @@ export default function SubmitQuestionNew() {
                             newChoices[index].text = e.target.value;
                             onChange({ choices: newChoices });
                           }}
+                          onBlur={handleBlurAutosave}
                           placeholder={`Enter choice ${choice.key}`}
                         />
                       </div>
@@ -368,6 +409,7 @@ export default function SubmitQuestionNew() {
                             newChoices[index].explanation = e.target.value;
                             onChange({ choices: newChoices });
                           }}
+                          onBlur={handleBlurAutosave}
                           rows={3}
                           placeholder={`Why is option ${choice.key} correct/incorrect?`}
                         />
@@ -379,7 +421,7 @@ export default function SubmitQuestionNew() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="correct">Correct Answer</Label>
-                    <Select value={question.correct_answer} onValueChange={(value) => onChange({ correct_answer: value })}>
+                    <Select value={question.correct_answer} onValueChange={(value) => { onChange({ correct_answer: value }); void handleBlurAutosave(); }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select correct answer" />
                       </SelectTrigger>
@@ -395,7 +437,7 @@ export default function SubmitQuestionNew() {
 
                   <div className="grid gap-2">
                     <Label htmlFor="exam-type">Exam Type</Label>
-                    <Select value={question.exam_type} onValueChange={(value) => onChange({ exam_type: value })}>
+                    <Select value={question.exam_type} onValueChange={(value) => { onChange({ exam_type: value }); void handleBlurAutosave(); }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select exam type" />
                       </SelectTrigger>
@@ -411,7 +453,7 @@ export default function SubmitQuestionNew() {
 
                   <div className="grid gap-2">
                     <Label htmlFor="difficulty">Difficulty</Label>
-                    <Select value={question.difficulty} onValueChange={(value) => onChange({ difficulty: value })}>
+                    <Select value={question.difficulty} onValueChange={(value) => { onChange({ difficulty: value }); void handleBlurAutosave(); }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select difficulty" />
                       </SelectTrigger>
@@ -429,7 +471,7 @@ export default function SubmitQuestionNew() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="topic">Topic</Label>
-                    <Select value={question.topic} onValueChange={(value) => onChange({ topic: value })}>
+                    <Select value={question.topic} onValueChange={(value) => { onChange({ topic: value }); void handleBlurAutosave(); }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select topic" />
                       </SelectTrigger>
@@ -445,7 +487,7 @@ export default function SubmitQuestionNew() {
 
                   <div className="grid gap-2">
                     <Label htmlFor="curriculum">Curriculum</Label>
-                    <Select value={question.curriculum} onValueChange={(value) => onChange({ curriculum: value })}>
+                    <Select value={question.curriculum} onValueChange={(value) => { onChange({ curriculum: value }); void handleBlurAutosave(); }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select curriculum" />
                       </SelectTrigger>
@@ -468,7 +510,7 @@ export default function SubmitQuestionNew() {
                   <div className="flex gap-2">
                     {isEditing && (
                       <>
-                        <Button variant="outline" onClick={() => navigate('/exams/question-bank')}>
+                        <Button variant="outline" onClick={() => safeNavigate('/exams/question-bank')}>
                           Back to Bank
                         </Button>
                         <Button variant="outline" onClick={goPrev} disabled={!prevId}>Previous</Button>
@@ -478,7 +520,7 @@ export default function SubmitQuestionNew() {
                   </div>
 
                   <div className="flex gap-3">
-                    <Button variant="outline" onClick={() => navigate(-1)}>
+                    <Button variant="outline" onClick={() => safeNavigate(-1)}>
                       Cancel
                     </Button>
                     {!isEditing && (
