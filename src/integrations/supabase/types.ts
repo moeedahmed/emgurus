@@ -1637,6 +1637,102 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_base: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          exam_type: Database["public"]["Enums"]["exam_type_enum"]
+          file_url: string | null
+          id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          exam_type: Database["public"]["Enums"]["exam_type_enum"]
+          file_url?: string | null
+          id?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"]
+          file_url?: string | null
+          id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      knowledge_base_slos: {
+        Row: {
+          created_at: string | null
+          kb_id: string
+          slo_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          kb_id: string
+          slo_id: string
+        }
+        Update: {
+          created_at?: string | null
+          kb_id?: string
+          slo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_slos_kb_id_fkey"
+            columns: ["kb_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_base"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_base_slos_slo_id_fkey"
+            columns: ["slo_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_slos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_base_terms: {
+        Row: {
+          created_at: string | null
+          kb_id: string
+          term_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          kb_id: string
+          term_id: string
+        }
+        Update: {
+          created_at?: string | null
+          kb_id?: string
+          term_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_terms_kb_id_fkey"
+            columns: ["kb_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_base"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_base_terms_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "taxonomy_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       newsletter_subscribers: {
         Row: {
           created_at: string
@@ -2054,6 +2150,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rcem_slos: {
+        Row: {
+          code: string
+          created_at: string | null
+          exam: Database["public"]["Enums"]["exam_type_enum"] | null
+          id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          exam?: Database["public"]["Enums"]["exam_type_enum"] | null
+          id?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          exam?: Database["public"]["Enums"]["exam_type_enum"] | null
+          id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       reactions: {
         Row: {

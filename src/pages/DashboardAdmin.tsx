@@ -22,6 +22,7 @@ import { callFunction } from "@/lib/functionsUrl";
 import ExamsAICuration from "@/pages/admin/ExamsAICuration";
 import SubmitQuestion from "@/pages/tools/SubmitQuestion";
 import QuestionSetsAdmin from "@/pages/admin/QuestionSets";
+import DatabaseManager from "@/components/admin/database/DatabaseManager";
 import AdminConsultsOverview from "@/components/dashboard/consultations/AdminConsultsOverview";
 import AdminConsultsBookings from "@/components/dashboard/consultations/AdminConsultsBookings";
 import AdminConsultsGurus from "@/components/dashboard/consultations/AdminConsultsGurus";
@@ -870,15 +871,7 @@ export default function DashboardAdmin() {
         {
           id: "database",
           title: "Database",
-          render: (
-            <div className="p-4 space-y-4">
-              <div className="text-sm text-muted-foreground">Manage exam metadata, SLOs, and taxonomy.</div>
-              <Card className="p-6">
-                <div className="text-sm text-muted-foreground mb-3">Open the taxonomy manager to edit mappings.</div>
-                <Button asChild><a href="/admin/taxonomy">Open Taxonomy Manager</a></Button>
-              </Card>
-            </div>
-          ),
+          render: <DatabaseManager />,
         },
         { id: "submit", title: "Submit", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Submit new questions for review.</div><SubmitQuestion /></div> },
         {
