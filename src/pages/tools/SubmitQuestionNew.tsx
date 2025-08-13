@@ -9,6 +9,7 @@ import TagInput from "@/components/forms/TagInput";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useRoles } from "@/hooks/useRoles";
 import QuestionChat from "@/components/exams/QuestionChat";
 
 interface QuestionData {
@@ -33,6 +34,7 @@ export default function SubmitQuestionNew() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = Boolean(id);
+  const { isAdmin } = useRoles();
 
   const [question, setQuestion] = useState<QuestionData>({
     stem: "",
@@ -126,25 +128,27 @@ export default function SubmitQuestionNew() {
       if (error) throw error;
 
       if (data) {
+        const answerKey = data.answer_key || "";
+        const parsedOptions = data.options ? (Array.isArray(data.options) ? data.options : JSON.parse(data.options)) : [];
+        const mappedChoices = (parsedOptions.length ? parsedOptions : ["", "", "", "", ""]).map((opt: any, idx: number) => {
+          const key = String.fromCharCode(65 + idx);
+          const text = typeof opt === 'string' ? opt : opt.text || "";
+          const optExplanation = typeof opt === 'string' ? "" : (opt.explanation || "");
+          const explanation = (key === answerKey && !optExplanation && data.explanation) ? data.explanation : optExplanation;
+          return { key, text, explanation };
+        });
+
+        const correctExplanation = mappedChoices.find(c => c.key === answerKey)?.explanation || data.explanation || "";
+
         setQuestion({
           id: data.id,
           stem: data.stem || "",
-          choices: data.options ? (Array.isArray(data.options) ? data.options : JSON.parse(data.options)).map((opt: any, idx: number) => ({
-            key: String.fromCharCode(65 + idx),
-            text: typeof opt === 'string' ? opt : opt.text || "",
-            explanation: typeof opt === 'string' ? "" : (opt.explanation || "")
-          })) : [
-            { key: "A", text: "", explanation: "" },
-            { key: "B", text: "", explanation: "" },
-            { key: "C", text: "", explanation: "" },
-            { key: "D", text: "", explanation: "" },
-            { key: "E", text: "", explanation: "" }
-          ],
-            correct_answer: data.answer_key || "",
-            explanation: data.explanation || "",
-            exam_type: data.exam || "",
-            topic: data.topic || "",
-            curriculum: data.subtopic || "",
+          choices: mappedChoices,
+          correct_answer: answerKey,
+          explanation: correctExplanation,
+          exam_type: data.exam || "",
+          topic: data.topic || "",
+          curriculum: data.subtopic || "",
           difficulty: data.difficulty || ""
         });
 
@@ -204,11 +208,13 @@ export default function SubmitQuestionNew() {
     setSaving(true);
     try {
       const options = question.choices.map(c => ({ key: c.key, text: c.text, explanation: c.explanation || "" }));
+      const correctChoice = question.choices.find(c => c.key === question.correct_answer);
+      const explanationForCorrect = correctChoice?.explanation || question.explanation || "";
       const questionData: any = {
         stem: question.stem,
         options,
         answer_key: question.correct_answer,
-        explanation: question.explanation,
+        explanation: explanationForCorrect,
         exam: question.exam_type,
         topic: question.topic,
         subtopic: question.curriculum,
@@ -421,7 +427,7 @@ export default function SubmitQuestionNew() {
               </div>
 
               <div className="space-y-4">
-                {isEditing && (
+                {isEditing && isAdmin && (
                   <div className="grid gap-2">
                     <Label htmlFor="guru-select">Assigned Guru</Label>
                     <Select value={selectedGuruId} onValueChange={setSelectedGuruId}>
@@ -449,7 +455,7 @@ export default function SubmitQuestionNew() {
                   <Button variant="outline" onClick={() => save('under_review')} disabled={saving}>
                     Submit for Review
                   </Button>
-                  {isEditing && selectedGuruId && (
+                  {isEditing && isAdmin && selectedGuruId && (
                     <Button onClick={assignToGuru}>
                       Assign to Guru
                     </Button>
