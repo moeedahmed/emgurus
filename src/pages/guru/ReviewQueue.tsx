@@ -39,6 +39,28 @@ const GuruReviewQueue = () => {
 
   const [flags, setFlags] = useState<FlagItem[]>([]);
 
+  const combined = useMemo(() => {
+    const a = items.map((it) => ({
+      key: `assign:${it.id}`,
+      when: it.created_at || '',
+      question: (it.stem ?? '').slice(0, 140) || '(no stem)',
+      exam: it.exam_type ?? 'UNKNOWN',
+      marked: false as const,
+      source: 'assigned' as const,
+      ref: it,
+    }));
+    const b = flags.map((f) => ({
+      key: `flag:${f.id}`,
+      when: f.created_at,
+      question: (f.comment ? `Marked: ${f.comment}` : 'Marked question'),
+      exam: '-',
+      marked: true as const,
+      source: 'flag' as const,
+      ref: f,
+    }));
+    return [...a, ...b].sort((x, y) => new Date(y.when).getTime() - new Date(x.when).getTime());
+  }, [items, flags]);
+
   useEffect(() => {
     document.title = "Review Queue | EMGurus";
   }, []);
@@ -127,79 +149,63 @@ const GuruReviewQueue = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[60%]">Question</TableHead>
+              <TableHead>When</TableHead>
+              <TableHead className="w-[50%]">Question</TableHead>
               <TableHead>Exam</TableHead>
+              <TableHead>Marked</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">Loading…</TableCell>
+                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Loading…</TableCell>
               </TableRow>
             )}
             {!loading && error && (
               <TableRow>
-                <TableCell colSpan={3} className="py-8 text-center text-destructive">{error}</TableCell>
+                <TableCell colSpan={5} className="py-8 text-center text-destructive">{error}</TableCell>
               </TableRow>
             )}
-            {!loading && !error && items.length === 0 && (
+            {!loading && !error && combined.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">No items assigned.</TableCell>
+                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No items assigned.</TableCell>
               </TableRow>
             )}
-            {!loading && !error && items.map((it) => (
-              <TableRow key={it.id}>
-                <TableCell>
-                  <button className="text-left hover:underline" onClick={() => setDetail(it)}>
-                    {(it.stem ?? "").slice(0, 140) || "(no stem)"}
-                  </button>
+            {!loading && !error && combined.map((row) => (
+              <TableRow key={row.key}>
+                <TableCell className="whitespace-nowrap text-xs">{new Date(row.when).toLocaleString()}</TableCell>
+                <TableCell className="text-xs">
+                  {row.source === 'assigned' ? (
+                    <button className="text-left hover:underline" onClick={() => setDetail(row.ref as any)}>
+                      {row.question}
+                    </button>
+                  ) : (
+                    <span title={(row.ref as any)?.comment || ''}>{row.question}</span>
+                  )}
                 </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{it.exam_type ?? "UNKNOWN"}</Badge>
-                </TableCell>
+                <TableCell className="text-xs">{row.exam}</TableCell>
+                <TableCell className="text-xs">{row.marked ? 'Yes' : 'No'}</TableCell>
                 <TableCell className="text-right space-x-2">
-                  <Button variant="secondary" size="sm" onClick={() => { setNoteTargetId(it.id); setNoteOpen(true); }}>Request changes</Button>
-                  <Button variant="default" size="sm" onClick={() => setConfirmId(it.id)}>Approve</Button>
+                  {row.source === 'assigned' ? (
+                    <>
+                      <Button variant="secondary" size="sm" onClick={() => { setNoteTargetId((row.ref as any).id); setNoteOpen(true); }}>Request changes</Button>
+                      <Button size="sm" onClick={() => setConfirmId((row.ref as any).id)}>Approve</Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button size="sm" onClick={async () => {
+                        const { data: u } = await supabase.auth.getUser();
+                        const uid = u.user?.id;
+                        await supabase.from('exam_question_flags').update({ status: 'resolved', resolved_by: uid }).eq('id', (row.ref as any).id);
+                        loadFlags();
+                      }}>Approve & Resolve</Button>
+                      <Button variant="destructive" size="sm" onClick={() => { setNoteTargetId((row.ref as any).id); setNoteOpen(true); }}>Remove</Button>
+                    </>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
-          </TableBody>
-        </Table>
-      </Card>
-
-      {/* Marked Questions Assigned Section */}
-      <h2 className="text-2xl font-semibold mt-10 mb-3">Marked Questions Assigned to You</h2>
-      <Card className="p-0 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>When</TableHead>
-              <TableHead>Comment</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {flags.map((f) => (
-              <TableRow key={f.id}>
-                <TableCell className="whitespace-nowrap text-xs">{new Date(f.created_at).toLocaleString()}</TableCell>
-                <TableCell className="text-xs max-w-[520px] truncate" title={f.comment || ''}>{f.comment || '—'}</TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button size="sm" onClick={async () => {
-                    const { data: u } = await supabase.auth.getUser();
-                    const uid = u.user?.id;
-                    await supabase.from('exam_question_flags').update({ status: 'resolved', resolved_by: uid }).eq('id', f.id);
-                    loadFlags();
-                  }}>Approve & Resolve</Button>
-                  <Button variant="destructive" size="sm" onClick={() => { setNoteTargetId(f.id); setNoteOpen(true); }}>Remove</Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {flags.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">No marked questions assigned.</TableCell>
-              </TableRow>
-            )}
           </TableBody>
         </Table>
       </Card>

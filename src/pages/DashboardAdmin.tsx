@@ -177,6 +177,44 @@ const AdminPublished: React.FC = () => {
   );
 };
 
+const MyBlogStatusAdmin: React.FC<{ status: 'draft' | 'in_review' }> = ({ status }) => {
+  const [rows, setRows] = useState<any[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u.user?.id;
+      if (!uid) { setRows([]); return; }
+      const orderCol = status === 'in_review' ? 'submitted_at' : 'updated_at';
+      const { data } = await supabase
+        .from('blog_posts')
+        .select('id,title,slug,updated_at,submitted_at')
+        .eq('author_id', uid)
+        .eq('status', status)
+        .order(orderCol as any, { ascending: false })
+        .limit(50);
+      if (!cancelled) setRows((data as any) || []);
+    })();
+    return () => { cancelled = true; };
+  }, [status]);
+  return (
+    <div className="space-y-3">
+      {rows.map((p) => (
+        <Card key={p.id} className="p-4 flex items-center justify-between">
+          <div>
+            <div className="font-semibold">{p.title}</div>
+            <div className="text-xs text-muted-foreground">{new Date(p.submitted_at || p.updated_at).toLocaleString()}</div>
+          </div>
+          <Button asChild variant="outline"><a href={p.slug ? `/blogs/${p.slug}` : `/blogs`}>View</a></Button>
+        </Card>
+      ))}
+      {rows.length === 0 && (
+        <Card className="p-6 text-sm text-muted-foreground">Nothing here yet.</Card>
+      )}
+    </div>
+  );
+};
+
 const AdminRejected: React.FC = () => {
   const [items, setItems] = useState<Array<{ id: string; title: string; note?: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -779,6 +817,8 @@ export default function DashboardAdmin() {
         { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts assigned to reviewers.</div><AdminAssigned /></div> },
         { id: "reviewed", title: "Reviewed", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Guru‑approved items ready to publish.</div><AdminReviewed /></div> },
         { id: "published", title: "Published", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts that are live.</div><AdminPublished /></div> },
+        { id: "my-drafts", title: "My Drafts", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your blog drafts.</div><MyBlogStatusAdmin status="draft" /></div> },
+        { id: "my-submitted", title: "My Submitted", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your posts awaiting review.</div><MyBlogStatusAdmin status="in_review" /></div> },
         { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts where changes were requested.</div><AdminRejected /></div> },
         { id: "archived", title: "Archived", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts archived from review.</div><AdminArchived /></div> },
       ],

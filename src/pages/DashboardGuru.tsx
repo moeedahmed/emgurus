@@ -126,6 +126,41 @@ function MyThreadsPanel() {
   );
 }
 
+function MyBlogStatusPanel({ status }: { status: 'draft' | 'in_review' }) {
+  const { user } = useAuth();
+  const [rows, setRows] = useState<any[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user) { setRows([]); return; }
+      const orderCol = status === 'in_review' ? 'submitted_at' : 'updated_at';
+      const { data } = await supabase
+        .from('blog_posts')
+        .select('id,title,slug,updated_at,submitted_at')
+        .eq('author_id', user.id)
+        .eq('status', status)
+        .order(orderCol as any, { ascending: false })
+        .limit(50);
+      if (!cancelled) setRows((data as any) || []);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, status]);
+  return (
+    <div className="p-4">
+      <TableCard
+        title={status === 'draft' ? 'Drafts' : 'Submitted'}
+        columns={[
+          { key: 'title', header: 'Title' },
+          { key: 'updated_at', header: status === 'draft' ? 'Updated' : 'Submitted', render: (r: any) => new Date(r.submitted_at || r.updated_at).toLocaleString() },
+          { key: 'slug', header: 'Link', render: (r: any) => (r.slug ? <a className="underline" href={`/blogs/${r.slug}`}>Open</a> : '-') },
+        ]}
+        rows={rows}
+        emptyText="Nothing here yet."
+      />
+    </div>
+  );
+}
+
 function MySubmittedPanel() {
   const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
@@ -192,7 +227,8 @@ export default function DashboardGuru() {
         { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blogs waiting for your review.</div><ReviewerAssigned /></div> },
         { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blogs you approved.</div><ReviewerApprovedPanel /></div> },
         { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blogs you rejected with notes.</div><ReviewerRejectedPanel /></div> },
-        { id: "my", title: "My Blogs", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Drafts and posts you authored.</div><MyBlogsPanel /></div> },
+        { id: "my-drafts", title: "Drafts", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your blog drafts.</div><MyBlogStatusPanel status="draft" /></div> },
+        { id: "my-submitted", title: "Submitted", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts awaiting review.</div><MyBlogStatusPanel status="in_review" /></div> },
       ],
     },
     {

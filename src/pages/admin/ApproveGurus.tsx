@@ -127,8 +127,18 @@ const ApproveGurus: React.FC<{ embedded?: boolean; status?: StatusFilter }> = ({
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => act(a.id, 'reject')}>Reject</Button>
-                    <Button onClick={() => act(a.id, 'approve')}>Approve</Button>
+                    {status === 'pending' && (
+                      <>
+                        <Button variant="outline" onClick={() => act(a.id, 'reject')}>Reject</Button>
+                        <Button onClick={() => act(a.id, 'approve')}>Approve</Button>
+                      </>
+                    )}
+                    {status === 'approved' && (
+                      <Button variant="outline" onClick={() => act(a.id, 'reject')}>Reject</Button>
+                    )}
+                    {status === 'rejected' && (
+                      <Button onClick={() => act(a.id, 'approve')}>Approve</Button>
+                    )}
                   </div>
                 </div>
               </Card>
