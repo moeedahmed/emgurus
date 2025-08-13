@@ -1157,6 +1157,33 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_question_discussions: {
+        Row: {
+          author_id: string
+          created_at: string
+          id: string
+          kind: string
+          message: string
+          question_id: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          id?: string
+          kind?: string
+          message: string
+          question_id: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string
+          question_id?: string
+        }
+        Relationships: []
+      }
       exam_question_flags: {
         Row: {
           assigned_to: string | null

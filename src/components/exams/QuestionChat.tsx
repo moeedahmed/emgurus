@@ -1,0 +1,78 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Discussion {
+  id: string;
+  question_id: string;
+  author_id: string;
+  message: string;
+  kind: string;
+  created_at: string;
+}
+
+export default function QuestionChat({ questionId }: { questionId: string }) {
+  const { user } = useAuth();
+  const [items, setItems] = useState<Discussion[]>([]);
+  const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const load = async () => {
+    if (!questionId) return;
+    const { data, error } = await supabase
+      .from("exam_question_discussions")
+      .select("*")
+      .eq("question_id", questionId)
+      .order("created_at", { ascending: true });
+    if (!error) setItems((data as any) || []);
+  };
+
+  useEffect(() => {
+    load();
+    // Optional: simple polling for now
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
+  }, [questionId]);
+
+  const send = async () => {
+    if (!text.trim() || !user) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("exam_question_discussions")
+        .insert({ question_id: questionId, author_id: user.id, message: text.trim(), kind: "comment" });
+      if (error) throw error;
+      setText("");
+      await load();
+    } catch (e) {
+      // Silently ignore for now; RLS will block unauthorized users
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <Card className="p-3 md:p-4 h-full">
+      <div className="font-semibold mb-2">Discussion</div>
+      <ScrollArea className="h-64 md:h-[480px] pr-3">
+        <div className="space-y-3">
+          {items.length === 0 && (
+            <div className="text-sm text-muted-foreground">No messages yet.</div>
+          )}
+          {items.map((m) => (
+            <div key={m.id} className="text-sm">
+              <div className="text-muted-foreground text-xs">{new Date(m.created_at).toLocaleString()} • {m.kind}</div>
+              <div className="whitespace-pre-wrap leading-relaxed">{m.message}</div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+      <div className="flex gap-2 pt-3">
+        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a message..." onKeyDown={(e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } }} />
+        <Button onClick={send} disabled={loading || !text.trim()}>Send</Button>
+      </div>
+    </Card>
+  );
+}

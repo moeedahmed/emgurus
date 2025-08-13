@@ -9,11 +9,12 @@ import TagInput from "@/components/forms/TagInput";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import QuestionChat from "@/components/exams/QuestionChat";
 
 interface QuestionData {
   id?: string;
   stem: string;
-  choices: { key: string; text: string }[];
+  choices: { key: string; text: string; explanation?: string }[];
   correct_answer: string;
   explanation: string;
   exam_type: string;
@@ -36,11 +37,11 @@ export default function SubmitQuestionNew() {
   const [question, setQuestion] = useState<QuestionData>({
     stem: "",
     choices: [
-      { key: "A", text: "" },
-      { key: "B", text: "" },
-      { key: "C", text: "" },
-      { key: "D", text: "" },
-      { key: "E", text: "" }
+      { key: "A", text: "", explanation: "" },
+      { key: "B", text: "", explanation: "" },
+      { key: "C", text: "", explanation: "" },
+      { key: "D", text: "", explanation: "" },
+      { key: "E", text: "", explanation: "" }
     ],
     correct_answer: "",
     explanation: "",
@@ -55,7 +56,8 @@ export default function SubmitQuestionNew() {
   const [curricula, setCurricula] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-
+  const [gurus, setGurus] = useState<{ id: string; name: string }[]>([]);
+  const [selectedGuruId, setSelectedGuruId] = useState<string>("");
   useEffect(() => {
     document.title = isEditing ? "Edit Question | EMGurus" : "Submit Question | EMGurus";
     let meta = document.querySelector('meta[name="description"]');
@@ -112,13 +114,14 @@ export default function SubmitQuestionNew() {
           stem: data.stem || "",
           choices: data.options ? (Array.isArray(data.options) ? data.options : JSON.parse(data.options)).map((opt: any, idx: number) => ({
             key: String.fromCharCode(65 + idx),
-            text: typeof opt === 'string' ? opt : opt.text || ""
+            text: typeof opt === 'string' ? opt : opt.text || "",
+            explanation: typeof opt === 'string' ? "" : (opt.explanation || "")
           })) : [
-            { key: "A", text: "" },
-            { key: "B", text: "" },
-            { key: "C", text: "" },
-            { key: "D", text: "" },
-            { key: "E", text: "" }
+            { key: "A", text: "", explanation: "" },
+            { key: "B", text: "", explanation: "" },
+            { key: "C", text: "", explanation: "" },
+            { key: "D", text: "", explanation: "" },
+            { key: "E", text: "", explanation: "" }
           ],
             correct_answer: data.answer_key || "",
             explanation: data.explanation || "",
@@ -167,7 +170,7 @@ export default function SubmitQuestionNew() {
     }
   };
 
-  const save = async () => {
+  const save = async (statusOverride?: 'draft' | 'under_review') => {
     if (!question.stem.trim() || question.choices.some(c => !c.text.trim())) {
       toast({ title: "Please fill in the question and all choices" });
       return;
@@ -175,9 +178,10 @@ export default function SubmitQuestionNew() {
 
     setSaving(true);
     try {
-      const questionData = {
+      const options = question.choices.map(c => ({ key: c.key, text: c.text, explanation: c.explanation || "" }));
+      const questionData: any = {
         stem: question.stem,
-        options: question.choices.map(c => c.text),
+        options,
         answer_key: question.correct_answer,
         explanation: question.explanation,
         exam: question.exam_type,
@@ -185,20 +189,23 @@ export default function SubmitQuestionNew() {
         subtopic: question.curriculum,
         difficulty: question.difficulty,
       };
+      if (statusOverride) questionData.status = statusOverride;
 
       let result;
       if (isEditing && question.id) {
         result = await supabase
           .from('reviewed_exam_questions')
           .update(questionData)
-          .eq('id', question.id);
+          .eq('id', question.id)
+          .select()
+          .maybeSingle();
       } else {
         const user = await supabase.auth.getUser();
         result = await supabase
           .from('reviewed_exam_questions')
           .insert({
             ...questionData,
-            status: 'draft',
+            status: statusOverride || 'draft',
             user_id: user.data.user?.id
           })
           .select()
@@ -207,10 +214,12 @@ export default function SubmitQuestionNew() {
 
       if (result.error) throw result.error;
 
+      const savedId = (result.data as any)?.id || question.id;
+      if (savedId && !question.id) setQuestion(prev => ({ ...prev, id: savedId }));
+
       toast({ title: isEditing ? "Question updated!" : "Question saved!" });
-      
       if (!isEditing && result.data) {
-        navigate(`/tools/submit-question/${result.data.id}`);
+        navigate(`/tools/submit-question/${(result.data as any).id}`);
       }
     } catch (error: any) {
       toast({ title: "Error saving question", description: error.message });
@@ -220,17 +229,21 @@ export default function SubmitQuestionNew() {
   };
 
   const assignToGuru = async () => {
-    if (!question.id) return;
-    
+    if (!question.id || !selectedGuruId) {
+      toast({ title: "Select a guru first" });
+      return;
+    }
     try {
-      // Here you would implement the assignment logic
-      // For now, just show a success message
-      toast({ title: "Question assigned to guru for review" });
+      const me = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('exam_review_assignments')
+        .upsert({ question_id: question.id, reviewer_id: selectedGuruId, assigned_by: me.data.user?.id, status: 'assigned' }, { onConflict: 'question_id,reviewer_id' });
+      if (error) throw error;
+      toast({ title: "Assigned for review" });
     } catch (error: any) {
       toast({ title: "Error assigning question", description: error.message });
     }
   };
-
   if (loading) {
     return (
       <main className="container mx-auto px-4 md:px-6 py-6 md:py-10">
@@ -264,17 +277,31 @@ export default function SubmitQuestionNew() {
             <div className="grid gap-4">
               <Label>Answer Choices</Label>
               {question.choices.map((choice, index) => (
-                <div key={choice.key} className="flex gap-3 items-center">
-                  <span className="w-8 font-medium">{choice.key}.</span>
-                  <Input
-                    value={choice.text}
-                    onChange={(e) => {
-                      const newChoices = [...question.choices];
-                      newChoices[index].text = e.target.value;
-                      onChange({ choices: newChoices });
-                    }}
-                    placeholder={`Enter choice ${choice.key}`}
-                  />
+                <div key={choice.key} className="grid gap-2">
+                  <div className="flex gap-3 items-center">
+                    <span className="w-8 font-medium">{choice.key}.</span>
+                    <Input
+                      value={choice.text}
+                      onChange={(e) => {
+                        const newChoices = [...question.choices];
+                        newChoices[index].text = e.target.value;
+                        onChange({ choices: newChoices });
+                      }}
+                      placeholder={`Enter choice ${choice.key}`}
+                    />
+                  </div>
+                  <div className="pl-11">
+                    <Textarea
+                      value={choice.explanation || ""}
+                      onChange={(e) => {
+                        const newChoices = [...question.choices];
+                        newChoices[index].explanation = e.target.value;
+                        onChange({ choices: newChoices });
+                      }}
+                      rows={3}
+                      placeholder={`Why is option ${choice.key} correct/incorrect?`}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-interface Option { key: string; text: string }
+interface Option { key: string; text: string; explanation?: string }
 
 export default function QuestionCard({
   stem,
@@ -69,11 +69,23 @@ export default function QuestionCard({
 
       {showExplanation && (
         <Card>
-          <CardContent className="py-4">
+          <CardContent className="py-4 space-y-3">
             <div id="explanation-heading" tabIndex={-1} className="font-semibold mb-2 outline-none">Explanation</div>
             <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-hidden">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanation || "No explanation provided."}</ReactMarkdown>
             </div>
+            {selectedKey && (
+              <div>
+                <div className="font-medium mb-1">Choice rationale</div>
+                <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-hidden">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {options.find(o => o.key === selectedKey)?.explanation ||
+                      (correctKey ? options.find(o => o.key === correctKey)?.explanation || "" : "") ||
+                      "No specific rationale provided for this option."}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            )}
             {source && (
               <div className="text-sm text-muted-foreground mt-3">Source: {source}</div>
             )}
