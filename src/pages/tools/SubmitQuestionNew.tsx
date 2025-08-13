@@ -366,16 +366,53 @@ export default function SubmitQuestionNew() {
         </h1>
 
         {isEditing && (
-          <div className="sticky top-16 z-20 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border rounded-md px-4 py-2 mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span className="text-sm">ID: {question.id}</span>
-              {isAdmin && (
-                <div className="flex items-center gap-2">
+          <div className="sticky top-16 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border rounded-md px-4 py-2 mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="fb-exam" className="text-sm">Exam:</Label>
+                <Select value={question.exam_type} onValueChange={(value) => { onChange({ exam_type: value }); void handleBlurAutosave(); }}>
+                  <SelectTrigger id="fb-exam" className="w-40 h-8">
+                    <SelectValue placeholder="Exam" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {examTypes.map((exam) => (
+                      <SelectItem key={exam} value={exam}>{exam.replace('_', ' ')}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="fb-topic" className="text-sm">Topic:</Label>
+                <Select value={question.topic} onValueChange={(value) => { onChange({ topic: value }); void handleBlurAutosave(); }}>
+                  <SelectTrigger id="fb-topic" className="w-56 h-8">
+                    <SelectValue placeholder="Topic" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {topics.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="fb-curriculum" className="text-sm">Curriculum:</Label>
+                <Select value={question.curriculum} onValueChange={(value) => { onChange({ curriculum: value }); void handleBlurAutosave(); }}>
+                  <SelectTrigger id="fb-curriculum" className="w-56 h-8">
+                    <SelectValue placeholder="Curriculum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {curricula.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {isAdmin ? (
+                <>
                   <Label htmlFor="status-select" className="text-sm">Status:</Label>
-                  <Select value={questionStatus || ""} onValueChange={(value) => {
-                    setQuestionStatus(value);
-                    save(value as 'draft' | 'under_review');
-                  }}>
+                  <Select value={questionStatus || ""} onValueChange={(value) => { setQuestionStatus(value); save(value as 'draft' | 'under_review'); }}>
                     <SelectTrigger id="status-select" className="w-32 h-8">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
@@ -386,9 +423,8 @@ export default function SubmitQuestionNew() {
                       <SelectItem value="archived">Archived</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              )}
-              {!isAdmin && (
+                </>
+              ) : (
                 <span className="text-sm font-medium">Status: {questionStatus || '—'}</span>
               )}
             </div>
@@ -461,21 +497,6 @@ export default function SubmitQuestionNew() {
                     </Select>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="exam-type">Exam Type</Label>
-                    <Select value={question.exam_type} onValueChange={(value) => { onChange({ exam_type: value }); void handleBlurAutosave(); }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select exam type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {examTypes.map((exam) => (
-                          <SelectItem key={exam} value={exam}>
-                            {exam.replace('_', ' ')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
 
                   <div className="grid gap-2">
                     <Label htmlFor="difficulty">Difficulty</Label>
@@ -494,39 +515,6 @@ export default function SubmitQuestionNew() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="topic">Topic</Label>
-                    <Select value={question.topic} onValueChange={(value) => { onChange({ topic: value }); void handleBlurAutosave(); }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select topic" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {topics.map((topic) => (
-                          <SelectItem key={topic} value={topic}>
-                            {topic}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="curriculum">Curriculum</Label>
-                    <Select value={question.curriculum} onValueChange={(value) => { onChange({ curriculum: value }); void handleBlurAutosave(); }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select curriculum" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {curricula.map((curriculum) => (
-                          <SelectItem key={curriculum} value={curriculum}>
-                            {curriculum}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                 </div>
 
                 {/* Guru Assignment Section - Only for Admins in Edit Mode */}
                 {isEditing && isAdmin && (
@@ -570,17 +558,16 @@ export default function SubmitQuestionNew() {
                   </div>
 
                   <div className="flex gap-3">
-                    <Button variant="outline" onClick={() => safeNavigate(-1)}>
-                      Back
-                    </Button>
                     {!isEditing && (
                       <Button variant="outline" onClick={() => save('draft')} disabled={saving}>
                         Add to Draft
                       </Button>
                     )}
-                    <Button variant="outline" onClick={() => save('under_review')} disabled={saving}>
-                      Submit for Review
-                    </Button>
+                    {!isAdmin && (
+                      <Button variant="outline" onClick={() => save('under_review')} disabled={saving}>
+                        Submit for Review
+                      </Button>
+                    )}
                     <Button onClick={() => save()} disabled={saving}>
                       {saving ? "Saving..." : (isEditing ? "Update Question" : "Save Question")}
                     </Button>
