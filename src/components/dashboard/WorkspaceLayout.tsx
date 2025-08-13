@@ -52,7 +52,7 @@ export function WorkspaceLayoutInner({
 
   return (
     
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full pt-16">
         <Sidebar className={cn("border-r z-20")} collapsible="icon">
           <SidebarContent>
             <SidebarGroup>
@@ -121,7 +121,7 @@ export function WorkspaceLayoutInner({
         </Sidebar>
 
         <SidebarInset>
-          <header className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
             <div className="h-12 flex items-center gap-3 px-3">
               <SidebarTrigger />
               <div className="text-sm text-muted-foreground">{title}</div>

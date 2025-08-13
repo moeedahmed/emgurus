@@ -5,6 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { EXAMS, CURRICULA } from "@/lib/curricula";
 
 interface LiteQuestion {
   id: string;
@@ -45,7 +48,13 @@ const ExamsAICuration = () => {
     })();
   }, []);
 
-
+  // Generator form state
+  const [exam, setExam] = useState<string>(EXAMS[0]);
+  const [topic, setTopic] = useState<string>("");
+  const [difficulty, setDifficulty] = useState<string>("medium");
+  const [count, setCount] = useState<number>(10);
+  const [preset, setPreset] = useState<string>(() => localStorage.getItem("ai_qgen_preset") || "");
+  useEffect(() => { localStorage.setItem("ai_qgen_preset", preset); }, [preset]);
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -58,31 +67,45 @@ const ExamsAICuration = () => {
           <div className="grid gap-3 md:grid-cols-4">
             <div className="md:col-span-1">
               <label className="text-sm">Exam</label>
-              <input className="mt-1 w-full rounded-md border bg-background p-2" placeholder="e.g. mrcem_sba" onChange={(e)=> (window as any)._genExam=e.target.value} />
+              <Select value={exam} onValueChange={(v)=>{ setExam(v); setTopic(""); }}>
+                <SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Select exam" /></SelectTrigger>
+                <SelectContent>
+                  {EXAMS.map((e)=> (<SelectItem key={e} value={e}>{e}</SelectItem>))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="md:col-span-1">
               <label className="text-sm">Topic</label>
-              <input className="mt-1 w-full rounded-md border bg-background p-2" placeholder="e.g. Chest pain" onChange={(e)=> (window as any)._genTopic=e.target.value} />
+              <Select value={topic} onValueChange={setTopic}>
+                <SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Select topic" /></SelectTrigger>
+                <SelectContent>
+                  {(CURRICULA as any)[exam]?.map((t: string) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="md:col-span-1">
               <label className="text-sm">Difficulty</label>
-              <input className="mt-1 w-full rounded-md border bg-background p-2" placeholder="easy | medium | hard" onChange={(e)=> (window as any)._genDiff=e.target.value} />
+              <Select value={difficulty} onValueChange={setDifficulty}>
+                <SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Select difficulty" /></SelectTrigger>
+                <SelectContent>
+                  {['easy','medium','hard'].map(d => (<SelectItem key={d} value={d}>{d}</SelectItem>))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="md:col-span-1">
               <label className="text-sm">Count</label>
-              <input type="number" min={1} max={10} defaultValue={10} className="mt-1 w-full rounded-md border bg-background p-2" onChange={(e)=> (window as any)._genCount=Number(e.target.value)} />
+              <input type="number" min={1} max={10} value={count} onChange={(e)=> setCount(Math.max(1, Math.min(10, Number(e.target.value)||1)))} className="mt-1 w-full rounded-md border bg-background p-2" />
+            </div>
+            <div className="md:col-span-4">
+              <label className="text-sm">Prompt preset</label>
+              <Textarea className="mt-1" placeholder="Optional preset to steer generation (saved locally)" value={preset} onChange={(e)=> setPreset(e.target.value)} />
             </div>
           </div>
           <div className="flex justify-end pt-4">
             <Button onClick={async ()=>{
-              const exam = ((window as any)._genExam||'').trim();
-              const topic = ((window as any)._genTopic||'').trim();
-              const difficulty = ((window as any)._genDiff||'').trim();
-              let count = Number((window as any)._genCount||10); count = Math.max(1, Math.min(10, isNaN(count)?10:count));
-              if(!exam){ toast({ title: 'Missing exam', description: 'Please set Exam before generating.'}); return; }
+              const payload: any = { examType: exam, topic, difficulty, preset };
               try{
                 setLoading(true);
-                const payload = { examType: exam, topic, difficulty } as any;
                 const tasks = Array.from({length: count}).map(()=> callFunction('/generate-ai-question', payload, true));
                 await Promise.allSettled(tasks);
                 toast({ title: 'Generated', description: `Requested ${count} question(s).`});

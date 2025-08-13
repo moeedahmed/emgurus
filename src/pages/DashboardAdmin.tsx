@@ -280,7 +280,7 @@ const DraftsPanel: React.FC = () => {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <div className="font-semibold">Generated</div>
+        <div className="font-semibold">Drafts</div>
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>Refresh</Button>
       </div>
       <Card className="p-0 overflow-hidden">
@@ -308,7 +308,7 @@ const DraftsPanel: React.FC = () => {
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-6">No generated items</TableCell>
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-6">No drafts yet</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -833,7 +833,7 @@ export default function DashboardAdmin() {
             </div>
           ),
         },
-        { id: "generated", title: "Generated", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Freshly generated drafts.</div><DraftsPanel /></div> },
+        { id: "drafts", title: "Drafts", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Freshly generated drafts.</div><DraftsPanel /></div> },
         { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Assigned to reviewers.</div><AssignedPanel /></div> },
         { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Approved and ready to publish.</div><ApprovedPanel /></div> },
         { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Rejected or needs changes.</div><RejectedPanel /></div> },

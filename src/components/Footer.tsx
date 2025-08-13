@@ -66,9 +66,9 @@ const Footer = () => {
 
   return (
     <footer className="bg-primary text-primary-foreground">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
         {/* Top Section */}
-        <div className="grid lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid lg:grid-cols-5 gap-4 md:gap-6 mb-6 md:mb-8">
           {/* Brand */}
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
@@ -77,10 +77,7 @@ const Footer = () => {
               </div>
               <span className="text-xl font-bold">EM Gurus</span>
             </div>
-            <p className="text-primary-foreground/80 mb-6 max-w-md">
-              Empowering medical professionals with AI-powered learning, 
-              expert mentorship, and collaborative education.
-            </p>
+            <p className="hidden sm:block text-primary-foreground/80 mb-6 max-w-md">\n              Empowering medical professionals with AI-powered learning, \n              expert mentorship, and collaborative education.\n            </p>
             <div className="flex flex-wrap gap-2">
               <Button asChild aria-label="YouTube" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
                 <a href="https://youtube.com/@emgurus" target="_blank" rel="noopener noreferrer">
@@ -119,7 +116,7 @@ const Footer = () => {
               </Button>
             </div>
             {/* Trustpilot widget */}
-            <div className="mt-6">
+            <div className="mt-6 hidden sm:block">
               <div
                 className="trustpilot-widget"
                 data-locale="en-GB"
@@ -185,7 +182,7 @@ const Footer = () => {
         </div>
 
         {/* Newsletter */}
-        <div className="border-t border-primary-foreground/20 pt-8 mb-8">
+        <div className="hidden md:block border-t border-primary-foreground/20 pt-8 mb-8">
           <div className="max-w-md">
             <h3 className="font-semibold mb-2">Stay Updated</h3>
             <p className="text-primary-foreground/80 mb-4 text-sm">

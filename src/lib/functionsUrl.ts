@@ -13,7 +13,11 @@ export function getFunctionsBaseUrl() {
 }
 
 export async function callFunction(path: string, body: unknown, includeAuth = true) {
-  const url = path.startsWith("http") ? path : `${getFunctionsBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+  // Ensure Supabase Edge Functions prefix
+  const base = getFunctionsBaseUrl();
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const finalPath = cleanPath.startsWith('/functions/v1/') ? cleanPath : `/functions/v1${cleanPath}`;
+  const url = path.startsWith('http') ? path : `${base}${finalPath}`;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
