@@ -23,13 +23,16 @@ export default function TestSession() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
-  const [question, setQuestion] = useState<Question | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<string>("");
   const [showExplanation, setShowExplanation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [attemptData, setAttemptData] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
   const [score, setScore] = useState<{ correct: number; total: number }>({ correct: 0, total: 0 });
+  const [isFinished, setIsFinished] = useState(false);
 
   useEffect(() => {
     document.title = "Test Session • EM Gurus";
@@ -38,14 +41,14 @@ export default function TestSession() {
 
   // Timer effect
   useEffect(() => {
-    if (timeLeft > 0 && !showExplanation) {
+    if (timeLeft > 0 && !isFinished) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && attemptData) {
+    } else if (timeLeft === 0 && attemptData && !isFinished) {
       // Auto-submit when time runs out
-      handleSubmit();
+      handleFinishTest();
     }
-  }, [timeLeft, showExplanation, attemptData]);
+  }, [timeLeft, isFinished, attemptData]);
 
   const loadAttemptAndFirstQuestion = async () => {
     if (!attemptId) return;
@@ -68,8 +71,8 @@ export default function TestSession() {
       const timeLimit = breakdown?.time_limit || 60;
       setTimeLeft(timeLimit * 60); // Convert minutes to seconds
 
-      // Load first question based on attempt configuration
-      await loadQuestion(attempt);
+      // Load questions based on attempt configuration
+      await loadQuestions(attempt);
     } catch (err: any) {
       console.error('Load failed', err);
       toast({
@@ -82,73 +85,84 @@ export default function TestSession() {
     }
   };
 
-  const loadQuestion = async (attempt: any) => {
+  const loadQuestions = async (attempt: any) => {
     try {
       const config = attempt.breakdown || {};
-      // Use exam_label for reviewed bank queries (string), not enum
       const examLabel = config.exam_label || mapEnumToLabel(config.exam_type) || 'MRCEM Intermediate SBA';
       const topic = config.topic;
+      const totalQuestions = attempt.total_questions || 10;
 
-      // Helper: try N queries, first that returns rows wins
+      // Helper: try queries with fallbacks
       async function fetchReviewed(): Promise<any[]> {
-        // 1) strict (exam + topic)
-        let { data, error } = await supabase
+        let query = supabase
           .from('reviewed_exam_questions')
           .select('id, stem, options, correct_index, explanation, exam, topic, status')
-          .eq('status','approved')
+          .eq('status', 'approved')
+          .eq('exam', examLabel);
+
+        // Add topic filter if specified and not "All areas"
+        if (topic && topic !== 'All areas') {
+          query = query.eq('topic', topic);
+        }
+
+        let { data, error } = await query.limit(totalQuestions);
+        if (error) throw error;
+        if (data?.length) return data;
+
+        // Fallback: exam only (remove topic filter)
+        ({ data, error } = await supabase
+          .from('reviewed_exam_questions')
+          .select('id, stem, options, correct_index, explanation, exam, topic, status')
+          .eq('status', 'approved')
           .eq('exam', examLabel)
-          .eq('topic', topic ?? '__no_topic__');   // forces no match if topic is null
+          .limit(totalQuestions));
         if (error) throw error;
         if (data?.length) return data;
 
-        // 2) relax topic (exam only)
+        // Last resort: any approved questions
         ({ data, error } = await supabase
           .from('reviewed_exam_questions')
           .select('id, stem, options, correct_index, explanation, exam, topic, status')
-          .eq('status','approved')
-          .eq('exam', examLabel));
-        if (error) throw error;
-        if (data?.length) return data;
-
-        // 3) last-ditch: any approved question
-        ({ data, error } = await supabase
-          .from('reviewed_exam_questions')
-          .select('id, stem, options, correct_index, explanation, exam, topic, status')
-          .eq('status','approved')
-          .limit(1)
+          .eq('status', 'approved')
+          .limit(totalQuestions)
           .order('id', { ascending: false }));
         if (error) throw error;
         return data ?? [];
       }
 
-      const questions = await fetchReviewed();
-      if (!questions.length) {
-        setQuestion(null); // render your nice empty state
+      const questionData = await fetchReviewed();
+      if (!questionData.length) {
+        setQuestions([]);
         return;
       }
 
-      // Normalize one question
-      const q = questions[0];
-      const choices: Record<string, string> = {};
-      (q.options || []).forEach((opt: string, i: number) => {
-        choices[String.fromCharCode(65 + i)] = opt;
+      // Normalize all questions
+      const normalizedQuestions = questionData.map(q => {
+        const choices: Record<string, string> = {};
+        (q.options || []).forEach((opt: string, i: number) => {
+          choices[String.fromCharCode(65 + i)] = opt;
+        });
+        return {
+          id: q.id,
+          stem: q.stem,
+          choices,
+          correct_index: q.correct_index ?? 0,
+          explanation: q.explanation ?? '',
+          tags: [q.topic].filter(Boolean),
+        };
       });
-      setQuestion({
-        id: q.id,
-        stem: q.stem,
-        choices,
-        correct_index: q.correct_index ?? 0,
-        explanation: q.explanation ?? '',
-        tags: [q.topic].filter(Boolean),
-      });
+
+      setQuestions(normalizedQuestions);
+      setCurrentIndex(0);
     } catch (err: any) {
-      console.error('Question load failed', err);
-      setQuestion(null);
+      console.error('Questions load failed', err);
+      setQuestions([]);
     }
   };
 
   const handleSubmit = async () => {
-    if (!question || !attemptId) return;
+    const currentQuestion = questions[currentIndex];
+    if (!currentQuestion || !attemptId) return;
 
     try {
       setLoading(true);
@@ -157,31 +171,26 @@ export default function TestSession() {
       if (!user) throw new Error('User not authenticated');
 
       // Save attempt item
-      const isCorrect = selected === Object.keys(question.choices)[question.correct_index];
+      const isCorrect = selected === Object.keys(currentQuestion.choices)[currentQuestion.correct_index];
       
       await supabase
         .from('exam_attempt_items')
         .insert({
           attempt_id: attemptId,
-          question_id: question.id,
+          question_id: currentQuestion.id,
           user_id: user.id,
           selected_key: selected || 'No answer',
-          correct_key: Object.keys(question.choices)[question.correct_index],
-          topic: question.tags?.[0] || 'General',
-          position: 1
+          correct_key: Object.keys(currentQuestion.choices)[currentQuestion.correct_index],
+          topic: currentQuestion.tags?.[0] || 'General',
+          position: currentIndex + 1
         });
 
-      // Update score
+      // Update answers and score
+      setAnswers(prev => ({ ...prev, [currentIndex]: selected }));
       setScore(prev => ({ 
         correct: prev.correct + (isCorrect ? 1 : 0), 
         total: prev.total + 1 
       }));
-
-      // Update attempt as finished
-      await supabase
-        .from('exam_attempts')
-        .update({ finished_at: new Date().toISOString() })
-        .eq('id', attemptId);
 
       setShowExplanation(true);
     } catch (err: any) {
@@ -194,6 +203,51 @@ export default function TestSession() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleNext = () => {
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setSelected("");
+      setShowExplanation(false);
+    } else {
+      handleFinishTest();
+    }
+  };
+
+  const handleFinishTest = async () => {
+    setIsFinished(true);
+    
+    // Submit remaining questions as unanswered
+    const user = (await supabase.auth.getUser()).data.user;
+    if (user && attemptId) {
+      const remainingItems = [];
+      for (let i = currentIndex; i < questions.length; i++) {
+        if (!answers[i]) { // Only submit if not already answered
+          remainingItems.push({
+            attempt_id: attemptId,
+            question_id: questions[i].id,
+            user_id: user.id,
+            selected_key: i === currentIndex ? (selected || 'No answer') : 'No answer',
+            correct_key: Object.keys(questions[i].choices)[questions[i].correct_index],
+            topic: questions[i].tags?.[0] || 'General',
+            position: i + 1
+          });
+        }
+      }
+
+      if (remainingItems.length > 0) {
+        await supabase.from('exam_attempt_items').insert(remainingItems);
+      }
+
+      // Update attempt as finished
+      await supabase
+        .from('exam_attempts')
+        .update({ finished_at: new Date().toISOString() })
+        .eq('id', attemptId);
+    }
+
+    handleFinish();
   };
 
   const handleFinish = async () => {
@@ -218,7 +272,7 @@ export default function TestSession() {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (loading && !question) {
+  if (loading && questions.length === 0) {
     return (
       <div className="container mx-auto px-4 py-10">
         <Card>
@@ -231,7 +285,7 @@ export default function TestSession() {
     );
   }
 
-  if (!question) {
+  if (questions.length === 0 && !loading) {
     return (
       <div className="container mx-auto px-4 py-10">
         <Card>
@@ -249,13 +303,21 @@ export default function TestSession() {
     );
   }
 
+  const currentQuestion = questions[currentIndex];
+  if (!currentQuestion) return null;
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Timer Bar */}
       <Card className="mb-6">
         <CardContent className="py-3">
           <div className="flex justify-between items-center">
-            <span className="font-medium">Test Mode</span>
+            <div className="flex items-center gap-4">
+              <span className="font-medium">Test Mode</span>
+              <span className="text-sm text-muted-foreground">
+                Question {currentIndex + 1} of {questions.length}
+              </span>
+            </div>
             <span className={`font-mono ${timeLeft < 300 ? 'text-destructive' : 'text-foreground'}`}>
               Time Remaining: {formatTime(timeLeft)}
             </span>
@@ -264,14 +326,14 @@ export default function TestSession() {
       </Card>
 
       <QuestionCard
-        stem={question.stem}
-        options={Object.entries(question.choices).map(([key, text]) => ({ key, text }))}
+        stem={currentQuestion.stem}
+        options={Object.entries(currentQuestion.choices).map(([key, text]) => ({ key, text }))}
         selectedKey={selected}
         onSelect={setSelected}
         showExplanation={showExplanation}
-        explanation={question.explanation}
-        correctKey={Object.keys(question.choices)[question.correct_index]}
-        questionId={question.id}
+        explanation={currentQuestion.explanation}
+        correctKey={Object.keys(currentQuestion.choices)[currentQuestion.correct_index]}
+        questionId={currentQuestion.id}
       />
 
       <Card className="mt-6">
@@ -285,15 +347,26 @@ export default function TestSession() {
             </Button>
             
             {!showExplanation ? (
-              <Button 
-                onClick={handleSubmit} 
-                disabled={loading}
-              >
-                {loading ? 'Submitting...' : 'Submit Test'}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleSubmit} 
+                  disabled={loading}
+                >
+                  {loading ? 'Submitting...' : 'Submit Answer'}
+                </Button>
+                {questions.length > 1 && (
+                  <Button 
+                    variant="outline"
+                    onClick={handleFinishTest}
+                    disabled={loading}
+                  >
+                    End Test Early
+                  </Button>
+                )}
+              </div>
             ) : (
-              <Button onClick={handleFinish}>
-                View Results
+              <Button onClick={handleNext}>
+                {currentIndex < questions.length - 1 ? 'Next Question' : 'View Results'}
               </Button>
             )}
           </div>

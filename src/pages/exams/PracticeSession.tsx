@@ -23,11 +23,13 @@ export default function PracticeSession() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
-  const [question, setQuestion] = useState<Question | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<string>("");
   const [showExplanation, setShowExplanation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [attemptData, setAttemptData] = useState<any>(null);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
   const [score, setScore] = useState<{ correct: number; total: number }>({ correct: 0, total: 0 });
 
   useEffect(() => {
@@ -51,8 +53,8 @@ export default function PracticeSession() {
       if (attemptError) throw attemptError;
       setAttemptData(attempt);
 
-      // Load first question based on attempt configuration
-      await loadQuestion(attempt);
+      // Load questions based on attempt configuration
+      await loadQuestions(attempt);
     } catch (err: any) {
       console.error('Load failed', err);
       toast({
@@ -65,73 +67,84 @@ export default function PracticeSession() {
     }
   };
 
-  const loadQuestion = async (attempt: any) => {
+  const loadQuestions = async (attempt: any) => {
     try {
       const config = attempt.breakdown || {};
-      // Use exam_label for reviewed bank queries (string), not enum
       const examLabel = config.exam_label || mapEnumToLabel(config.exam_type) || 'MRCEM Intermediate SBA';
       const topic = config.topic;
+      const totalQuestions = attempt.total_questions || 10;
 
-      // Helper: try N queries, first that returns rows wins
+      // Helper: try queries with fallbacks
       async function fetchReviewed(): Promise<any[]> {
-        // 1) strict (exam + topic)
-        let { data, error } = await supabase
+        let query = supabase
           .from('reviewed_exam_questions')
           .select('id, stem, options, correct_index, explanation, exam, topic, status')
-          .eq('status','approved')
+          .eq('status', 'approved')
+          .eq('exam', examLabel);
+
+        // Add topic filter if specified and not "All areas"
+        if (topic && topic !== 'All areas') {
+          query = query.eq('topic', topic);
+        }
+
+        let { data, error } = await query.limit(totalQuestions);
+        if (error) throw error;
+        if (data?.length) return data;
+
+        // Fallback: exam only (remove topic filter)
+        ({ data, error } = await supabase
+          .from('reviewed_exam_questions')
+          .select('id, stem, options, correct_index, explanation, exam, topic, status')
+          .eq('status', 'approved')
           .eq('exam', examLabel)
-          .eq('topic', topic ?? '__no_topic__');   // forces no match if topic is null
+          .limit(totalQuestions));
         if (error) throw error;
         if (data?.length) return data;
 
-        // 2) relax topic (exam only)
+        // Last resort: any approved questions
         ({ data, error } = await supabase
           .from('reviewed_exam_questions')
           .select('id, stem, options, correct_index, explanation, exam, topic, status')
-          .eq('status','approved')
-          .eq('exam', examLabel));
-        if (error) throw error;
-        if (data?.length) return data;
-
-        // 3) last-ditch: any approved question
-        ({ data, error } = await supabase
-          .from('reviewed_exam_questions')
-          .select('id, stem, options, correct_index, explanation, exam, topic, status')
-          .eq('status','approved')
-          .limit(1)
+          .eq('status', 'approved')
+          .limit(totalQuestions)
           .order('id', { ascending: false }));
         if (error) throw error;
         return data ?? [];
       }
 
-      const questions = await fetchReviewed();
-      if (!questions.length) {
-        setQuestion(null); // render your nice empty state
+      const questionData = await fetchReviewed();
+      if (!questionData.length) {
+        setQuestions([]);
         return;
       }
 
-      // Normalize one question
-      const q = questions[0];
-      const choices: Record<string, string> = {};
-      (q.options || []).forEach((opt: string, i: number) => {
-        choices[String.fromCharCode(65 + i)] = opt;
+      // Normalize all questions
+      const normalizedQuestions = questionData.map(q => {
+        const choices: Record<string, string> = {};
+        (q.options || []).forEach((opt: string, i: number) => {
+          choices[String.fromCharCode(65 + i)] = opt;
+        });
+        return {
+          id: q.id,
+          stem: q.stem,
+          choices,
+          correct_index: q.correct_index ?? 0,
+          explanation: q.explanation ?? '',
+          tags: [q.topic].filter(Boolean),
+        };
       });
-      setQuestion({
-        id: q.id,
-        stem: q.stem,
-        choices,
-        correct_index: q.correct_index ?? 0,
-        explanation: q.explanation ?? '',
-        tags: [q.topic].filter(Boolean),
-      });
+
+      setQuestions(normalizedQuestions);
+      setCurrentIndex(0);
     } catch (err: any) {
-      console.error('Question load failed', err);
-      setQuestion(null);
+      console.error('Questions load failed', err);
+      setQuestions([]);
     }
   };
 
   const handleSubmit = async () => {
-    if (!question || !selected || !attemptId) return;
+    const currentQuestion = questions[currentIndex];
+    if (!currentQuestion || !selected || !attemptId) return;
 
     try {
       setLoading(true);
@@ -140,21 +153,22 @@ export default function PracticeSession() {
       if (!user) throw new Error('User not authenticated');
 
       // Save attempt item
-      const isCorrect = selected === Object.keys(question.choices)[question.correct_index];
+      const isCorrect = selected === Object.keys(currentQuestion.choices)[currentQuestion.correct_index];
       
       await supabase
         .from('exam_attempt_items')
         .insert({
           attempt_id: attemptId,
-          question_id: question.id,
+          question_id: currentQuestion.id,
           user_id: user.id,
           selected_key: selected,
-          correct_key: Object.keys(question.choices)[question.correct_index],
-          topic: question.tags?.[0] || 'General',
-          position: 1
+          correct_key: Object.keys(currentQuestion.choices)[currentQuestion.correct_index],
+          topic: currentQuestion.tags?.[0] || 'General',
+          position: currentIndex + 1
         });
 
-      // Update score
+      // Update answers and score
+      setAnswers(prev => ({ ...prev, [currentIndex]: selected }));
       setScore(prev => ({ 
         correct: prev.correct + (isCorrect ? 1 : 0), 
         total: prev.total + 1 
@@ -170,6 +184,16 @@ export default function PracticeSession() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setSelected("");
+      setShowExplanation(false);
+    } else {
+      handleFinish();
     }
   };
 
@@ -189,7 +213,7 @@ export default function PracticeSession() {
     navigate('/exams/practice', { replace: true });
   };
 
-  if (loading && !question) {
+  if (loading && questions.length === 0) {
     return (
       <div className="container mx-auto px-4 py-10">
         <Card>
@@ -202,7 +226,7 @@ export default function PracticeSession() {
     );
   }
 
-  if (!question) {
+  if (questions.length === 0 && !loading) {
     return (
       <div className="container mx-auto px-4 py-10">
         <Card>
@@ -220,17 +244,32 @@ export default function PracticeSession() {
     );
   }
 
+  const currentQuestion = questions[currentIndex];
+  if (!currentQuestion) return null;
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* Progress indicator */}
+      <Card className="mb-6">
+        <CardContent className="py-3">
+          <div className="flex justify-between items-center">
+            <span className="font-medium">Practice Mode</span>
+            <span className="text-sm text-muted-foreground">
+              Question {currentIndex + 1} of {questions.length}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
       <QuestionCard
-        stem={question.stem}
-        options={Object.entries(question.choices).map(([key, text]) => ({ key, text }))}
+        stem={currentQuestion.stem}
+        options={Object.entries(currentQuestion.choices).map(([key, text]) => ({ key, text }))}
         selectedKey={selected}
         onSelect={setSelected}
         showExplanation={showExplanation}
-        explanation={question.explanation}
-        correctKey={Object.keys(question.choices)[question.correct_index]}
-        questionId={question.id}
+        explanation={currentQuestion.explanation}
+        correctKey={Object.keys(currentQuestion.choices)[currentQuestion.correct_index]}
+        questionId={currentQuestion.id}
       />
 
       <Card className="mt-6">
@@ -251,8 +290,8 @@ export default function PracticeSession() {
                 {loading ? 'Submitting...' : 'Submit'}
               </Button>
             ) : (
-              <Button onClick={handleFinish}>
-                Finish Practice
+              <Button onClick={handleNext}>
+                {currentIndex < questions.length - 1 ? 'Next Question' : 'Finish Practice'}
               </Button>
             )}
           </div>
