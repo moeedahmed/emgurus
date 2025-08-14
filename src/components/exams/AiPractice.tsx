@@ -105,7 +105,7 @@ export default function AiPractice() {
               <DialogHeader>
                 <DialogTitle>AI Practice (Beta)</DialogTitle>
               </DialogHeader>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 p-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 p-4">
                 <div>
                   <Label>Exam<span className="sr-only"> required</span></Label>
                   <Select value={exam} onValueChange={(v) => setExam(v as ExamName)}>

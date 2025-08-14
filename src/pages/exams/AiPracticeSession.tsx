@@ -3,8 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import QuestionCard from "@/components/exams/QuestionCard";
+import FloatingSettings from "@/components/exams/FloatingSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ExamName } from "@/lib/curricula";
 
 interface GeneratedQuestion {
   question: string;
@@ -36,6 +38,12 @@ export default function AiPracticeSession() {
   const [error, setError] = useState<string>("");
   const [questions, setQuestions] = useState<(GeneratedQuestion | null)[]>([]);
   const [attemptId, setAttemptId] = useState<string>("");
+  const [currentSettings, setCurrentSettings] = useState({
+    exam: exam as ExamName,
+    count: total,
+    topic: topic || "All areas",
+    difficulty
+  });
 
   useEffect(() => {
     document.title = "AI Practice Session • EM Gurus";
@@ -133,17 +141,41 @@ export default function AiPracticeSession() {
         toast({ title: 'Attempt saved', description: 'Your practice session has been logged.' });
       }
       
-      // Log attempt item with additional metadata for AI questions
+      // Store the AI question data in a separate table for review
+      const questionUuid = crypto.randomUUID();
+      const user = (await supabase.auth.getUser()).data.user;
+      
+      // Insert the AI question data first
+      await supabase
+        .from('questions')
+        .insert({
+          id: questionUuid,
+          question_text: q.question,
+          option_a: q.options.A,
+          option_b: q.options.B,
+          option_c: q.options.C,
+          option_d: q.options.D,
+          correct_answer: q.correct,
+          explanation: q.explanation,
+          topic: q.topic || topic || 'General',
+          subtopic: q.subtopic,
+          difficulty_level: difficulty as 'easy' | 'medium' | 'hard',
+          exam_type: exam.replace(/\s+/g, '_').replace(/\+/g, '_').toUpperCase() as any,
+          is_ai_generated: true,
+          created_by: user?.id || ''
+        });
+
+      // Log attempt item with proper UUID
       const isCorrect = selected.toUpperCase() === q.correct.toUpperCase();
       await supabase
         .from('exam_attempt_items')
         .insert({
           attempt_id: attemptId,
-          question_id: `ai-${Date.now()}-${idx}`, // Fake ID for AI questions
+          question_id: questionUuid,
           user_id: (await supabase.auth.getUser()).data.user?.id,
           selected_key: selected,
           correct_key: q.correct,
-          topic: q.topic || difficulty, // Store difficulty if no topic
+          topic: q.topic || topic || 'General',
           position: idx + 1
         });
 
@@ -170,6 +202,21 @@ export default function AiPracticeSession() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function updateSettings(newSettings: { exam: ExamName; count: number; topic: string; difficulty: string }) {
+    setCurrentSettings(newSettings);
+    // Update search params without navigation
+    const params = new URLSearchParams(window.location.search);
+    params.set('exam', newSettings.exam);
+    params.set('count', String(newSettings.count));
+    if (newSettings.topic !== 'All areas') {
+      params.set('topic', newSettings.topic);
+    } else {
+      params.delete('topic');
+    }
+    params.set('difficulty', newSettings.difficulty);
+    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
   }
 
   function next() {
@@ -257,6 +304,14 @@ export default function AiPracticeSession() {
           </div>
         </CardContent>
       </Card>
+      
+      <FloatingSettings
+        currentExam={currentSettings.exam}
+        currentCount={currentSettings.count}
+        currentTopic={currentSettings.topic}
+        currentDifficulty={currentSettings.difficulty}
+        onUpdate={updateSettings}
+      />
     </div>
   );
 }
