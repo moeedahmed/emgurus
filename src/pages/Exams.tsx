@@ -35,7 +35,7 @@ export default function Exams() {
   const navigate = useNavigate();
   const [practiceOpen, setPracticeOpen] = useState(false);
   const [examOpen, setExamOpen] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
+  // AI modal removed - directly navigate to config page
 
   const [pExam, setPExam] = useState<ExamName | "">("");
   const [pTopic, setPTopic] = useState<string>("All areas");
@@ -44,10 +44,6 @@ export default function Exams() {
   const [eTopic, setETopic] = useState<string>("All areas");
   const [eCount, setECount] = useState<number>(25);
   const [eTimed, setETimed] = useState<boolean>(true);
-
-const [aiExam, setAiExam] = useState<ExamName | "">("");
-const [aiCount, setAiCount] = useState<number>(10);
-const [aiArea, setAiArea] = useState<string>("All areas");
 const { isAdmin, isGuru } = useRoles();
 const [isPaid, setIsPaid] = useState(false);
 const maxExam = isPaid ? 100 : 25;
@@ -258,59 +254,9 @@ useEffect(() => {
               </ul>
             </div>
             <div className="pt-6">
-              <Dialog open={aiOpen} onOpenChange={setAiOpen}>
-                <DialogTrigger asChild>
-                  <Button size="lg" aria-label="Start AI Mode">Start AI Mode</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>AI Practice (Beta)</DialogTitle>
-                    <DialogDescription className="sr-only">Choose exam, number of questions and curriculum to start AI practice.</DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div>
-                      <Label>Exam</Label>
-                      <Select value={aiExam || undefined as any} onValueChange={(v) => setAiExam(v as ExamName)}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
-                        <SelectContent className="z-50">
-                          {EXAMS.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Number of questions</Label>
-                      <Select value={String(aiCount)} onValueChange={(v)=> setAiCount(Number(v))}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder="10" /></SelectTrigger>
-                        <SelectContent className="z-50">
-                          {(isPaid ? [10,25,50,100] : [10,25,50]).map(c => (<SelectItem key={c} value={String(c)}>{c}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Curriculum</Label>
-                      <Select value={aiArea} onValueChange={setAiArea} disabled={!aiExam}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder="All areas" /></SelectTrigger>
-                        <SelectContent className="z-50">
-                          {(aiExam ? ["All areas", ...CURRICULA[aiExam]] : ["All areas"]).map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="md:col-span-3 flex items-center justify-end gap-2 pt-2">
-                      <Button variant="outline" onClick={() => setAiOpen(false)}>Cancel</Button>
-                      <Button onClick={() => {
-                        if (!aiExam) return;
-                        setAiOpen(false);
-                        const params = new URLSearchParams();
-                        params.set('exam', aiExam);
-                        params.set('count', String(Math.min(maxAi, aiCount)));
-                        if (aiArea !== 'All areas') params.set('topic', aiArea);
-                        params.set('difficulty', 'medium');
-                        navigate(`/exams/ai-practice?${params.toString()}`);
-                      }} disabled={!aiExam}>Start</Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Button size="lg" aria-label="Start AI Mode" onClick={() => navigate('/exams/ai-practice')}>
+                Start AI Mode
+              </Button>
             </div>
           </Card>
 
