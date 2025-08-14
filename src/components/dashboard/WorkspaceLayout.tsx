@@ -142,7 +142,13 @@ export function WorkspaceLayoutInner({
             )}
             <Tabs key={`${sectionId}:${searchParams.get('tab') || ''}:${searchSync}`}
               defaultValue={(current.tabs.find(t => t.id === searchParams.get('tab'))?.id) || current.tabs[0]?.id}
-              value={undefined /* uncontrolled per remount */}
+              value={(current.tabs.find(t => t.id === searchParams.get('tab'))?.id) || current.tabs[0]?.id}
+              onValueChange={(tabId) => {
+                const newParams = new URLSearchParams(searchParams);
+                newParams.set('view', sectionId);
+                newParams.set('tab', tabId);
+                setSearchParams(newParams, { replace: true });
+              }}
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="w-full overflow-x-auto overscroll-x-contain whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -160,11 +166,9 @@ export function WorkspaceLayoutInner({
                     <div className="mb-3 text-sm text-muted-foreground">{t.description}</div>
                   )}
                   <div className="border rounded-lg">
-                    <Suspense fallback={<div className="text-sm text-muted-foreground p-4">Loading…</div>}>
-                      <WorkspaceErrorBoundary>
-                        {typeof t.render === 'function' ? (t.render as any)() : t.render}
-                      </WorkspaceErrorBoundary>
-                    </Suspense>
+                    <WorkspaceErrorBoundary>
+                      {typeof t.render === 'function' ? (t.render as any)() : t.render}
+                    </WorkspaceErrorBoundary>
                   </div>
                 </TabsContent>
               ))}

@@ -60,6 +60,7 @@ const ForumsModeration = safeLazy(() => import('../components/dashboard/forums/F
 const AdminGeneration = safeLazy(() => import('../components/admin/AdminGeneration'));
 const ApproveGurus = safeLazy(() => import('../pages/admin/ApproveGurus').then(mod => ({ default: (props: any) => React.createElement(mod.default, { embedded: true, ...props }) })));
 const ExamsAICuration = safeLazy(() => import('../pages/admin/ExamsAICuration'));
+const UsersDirectory = safeLazy(() => import('../components/admin/UsersDirectory'));
 const SettingsPage = safeLazy(() => import('../pages/Settings'));
 
 export const BASE_SECTIONS: WorkspaceSection[] = [
@@ -138,7 +139,7 @@ export const EXTRA_TABS_BY_ROLE: Record<'guru'|'admin', Partial<Record<string, W
     ],
     users: [
       { id: 'approvals', title: 'Approvals', component: ApproveGurus, roles: ['admin'] },
-      { id: 'directory', title: 'Directory', component: EmptyPanel, roles: ['admin'] },
+      { id: 'directory', title: 'Directory', component: UsersDirectory, roles: ['admin'] },
     ],
     settings: [
       { id: 'site', title: 'Site', component: SettingsPage, roles: ['admin'] },

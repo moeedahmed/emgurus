@@ -30,8 +30,14 @@ const Dashboard = () => {
       sections={sections.map(section => ({
         ...section,
         tabs: section.tabs.map(tab => ({
-          ...tab,
-          render: <SafeMount component={tab.component} fallbackText={`${tab.title} component failed to load`} />
+          id: tab.id,
+          title: tab.title,
+          description: tab.description,
+          render: () => (
+            <Suspense fallback={<div className="text-sm text-muted-foreground p-4">Loading…</div>}>
+              <SafeMount component={tab.component} fallbackText={`${tab.title} component failed to load`} />
+            </Suspense>
+          )
         }))
       }))} 
       defaultSectionId="blogs" 
