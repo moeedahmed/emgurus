@@ -1,20 +1,37 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import QuestionCard from "@/components/exams/QuestionCard";
+import { Progress } from "@/components/ui/progress";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
+import MarkForReviewButton from "@/components/exams/MarkForReviewButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { mapEnumToLabel } from "@/lib/exams";
 
-interface Question {
+const letters = ['A','B','C','D','E'];
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+interface FullQuestion {
   id: string;
   stem: string;
-  choices: Record<string, string>;
+  options: string[];
   correct_index: number;
-  explanation: string;
-  tags?: string[];
+  explanation?: string | null;
+  exam?: string | null;
+  topic?: string | null;
 }
+
+type OptWithIdx = { key: string; text: string; origIndex: number };
 
 export default function PracticeSession() {
   const navigate = useNavigate();
@@ -22,18 +39,38 @@ export default function PracticeSession() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
-  const [question, setQuestion] = useState<Question | null>(null);
+  const [idx, setIdx] = useState(0);
+  const [questionIds, setQuestionIds] = useState<string[]>([]);
+  const [q, setQ] = useState<FullQuestion | null>(null);
   const [selected, setSelected] = useState<string>("");
-  const [showExplanation, setShowExplanation] = useState(false);
+  const [answers, setAnswers] = useState<{ id: string; selected: string; correct: string; topic?: string | null }[]>([]);
+  const [reviewMode, setReviewMode] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [dispOptions, setDispOptions] = useState<OptWithIdx[]>([]);
+  const [selectionMap, setSelectionMap] = useState<Record<string, string>>({});
+  const [ended, setEnded] = useState(false);
   const [attemptData, setAttemptData] = useState<any>(null);
+  const loggedRef = useRef(false);
 
   useEffect(() => {
     document.title = "Practice Session • EM Gurus";
-    loadAttemptAndFirstQuestion();
+    loadPracticeSession();
   }, [attemptId]);
 
-  const loadAttemptAndFirstQuestion = async () => {
+  useEffect(() => {
+    if (!questionIds.length) return;
+    void loadQuestion(questionIds[idx]);
+  }, [idx, questionIds.join(',')]);
+
+  useEffect(() => {
+    if (!q) { setDispOptions([]); return; }
+    const arr = (q.options || []).map((t, i) => ({ text: t, origIndex: i }));
+    const shuffled = shuffle(arr);
+    const mapped: OptWithIdx[] = shuffled.map((o, idx) => ({ key: letters[idx] || String(idx+1), text: o.text, origIndex: o.origIndex }));
+    setDispOptions(mapped);
+  }, [q?.id]);
+
+  const loadPracticeSession = async () => {
     if (!attemptId) return;
 
     try {
@@ -49,8 +86,8 @@ export default function PracticeSession() {
       if (attemptError) throw attemptError;
       setAttemptData(attempt);
 
-      // Load first question based on attempt configuration
-      await loadQuestion(attempt);
+      // Load and randomize questions based on attempt configuration
+      await loadAndRandomizeQuestions(attempt);
     } catch (err: any) {
       console.error('Load failed', err);
       toast({
@@ -63,131 +100,154 @@ export default function PracticeSession() {
     }
   };
 
-  const loadQuestion = async (attempt: any) => {
+  const loadAndRandomizeQuestions = async (attempt: any) => {
     try {
       const config = attempt.breakdown || {};
       const enumVal = config.exam_type;
       const examLabel = mapEnumToLabel?.(enumVal) ?? 'MRCEM Intermediate SBA';
       const topic = config.topic;
+      const requestedCount = attempt.total_questions || 25;
 
-      // Helper: try N queries, first that returns rows wins
-      async function fetchReviewed(): Promise<any[]> {
-        // 1) strict (exam + topic)
-        let { data, error } = await supabase
-          .from('reviewed_exam_questions')
-          .select('id, stem, options, correct_index, explanation, exam, topic, status')
-          .eq('status','approved')
-          .eq('exam', examLabel)
-          .eq('topic', topic ?? '__no_topic__');   // forces no match if topic is null
-        if (error) throw error;
-        if (data?.length) return data;
+      // Build query based on filters
+      let query = supabase
+        .from('reviewed_exam_questions')
+        .select('id')
+        .eq('status','approved')
+        .eq('exam', examLabel);
 
-        // 2) relax topic (exam only)
-        ({ data, error } = await supabase
-          .from('reviewed_exam_questions')
-          .select('id, stem, options, correct_index, explanation, exam, topic, status')
-          .eq('status','approved')
-          .eq('exam', examLabel));
-        if (error) throw error;
-        if (data?.length) return data;
-
-        // 3) last-ditch: any approved question
-        ({ data, error } = await supabase
-          .from('reviewed_exam_questions')
-          .select('id, stem, options, correct_index, explanation, exam, topic, status')
-          .eq('status','approved')
-          .limit(1)
-          .order('id', { ascending: false }));
-        if (error) throw error;
-        return data ?? [];
+      if (topic && topic !== 'All areas') {
+        query = query.eq('topic', topic);
       }
 
-      const questions = await fetchReviewed();
-      if (!questions.length) {
-        setQuestion(null); // render your nice empty state
+      const { data: questions, error } = await query.limit(requestedCount * 3); // Get extra to allow for randomization
+
+      if (error) throw error;
+      
+      if (!questions?.length) {
+        setQuestionIds([]);
         return;
       }
 
-      // Normalize one question
-      const q = questions[0];
-      const choices: Record<string, string> = {};
-      (q.options || []).forEach((opt: string, i: number) => {
-        choices[String.fromCharCode(65 + i)] = opt;
-      });
-      setQuestion({
-        id: q.id,
-        stem: q.stem,
-        choices,
-        correct_index: q.correct_index ?? 0,
-        explanation: q.explanation ?? '',
-        tags: [q.topic].filter(Boolean),
-      });
+      // Randomize and take requested count
+      const shuffled = shuffle(questions.map(q => q.id));
+      const selectedIds = shuffled.slice(0, Math.min(requestedCount, shuffled.length));
+      setQuestionIds(selectedIds);
+
+      // Update attempt with question_ids
+      await supabase
+        .from('exam_attempts')
+        .update({ question_ids: selectedIds })
+        .eq('id', attemptId);
+
     } catch (err: any) {
       console.error('Question load failed', err);
-      setQuestion(null);
+      setQuestionIds([]);
     }
   };
 
-  const handleSubmit = async () => {
-    if (!question || !selected || !attemptId) return;
-
+  async function loadQuestion(id: string) {
     try {
       setLoading(true);
-
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error('User not authenticated');
-
-      // Save attempt item
-      const isCorrect = selected === Object.keys(question.choices)[question.correct_index];
-      
-      await supabase
-        .from('exam_attempt_items')
-        .insert({
-          attempt_id: attemptId,
-          question_id: question.id,
-          user_id: user.id,
-          selected_key: selected,
-          correct_key: Object.keys(question.choices)[question.correct_index],
-          topic: question.tags?.[0] || 'General',
-          position: 1
-        });
-
-      setShowExplanation(true);
-    } catch (err: any) {
-      console.error('Submit failed', err);
-      toast({
-        title: 'Submit failed',
-        description: err?.message || String(err),
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
+      const { data, error } = await supabase
+        .from('reviewed_exam_questions')
+        .select('id, stem, options, correct_index, explanation, exam, topic')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      setQ(data as FullQuestion);
+      setSelected(selectionMap[id] || "");
+    } finally { 
+      setLoading(false); 
     }
-  };
-
-  const handleFinish = () => {
-    toast({
-      title: 'Practice Complete!',
-      description: 'Check your dashboard for detailed results.',
-      duration: 3000
-    });
-    navigate('/exams/practice', { replace: true });
-  };
-
-  if (loading && !question) {
-    return (
-      <div className="container mx-auto px-4 py-10">
-        <Card>
-          <CardContent className="py-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading practice session...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
   }
 
-  if (!question) {
+  const correctKey = useMemo(() => {
+    if (!q || !dispOptions.length) return letters[0];
+    const pos = dispOptions.findIndex(o => o.origIndex === (q.correct_index ?? 0));
+    return letters[Math.max(0, pos)];
+  }, [q, dispOptions]);
+
+  const options = useMemo(() => dispOptions.map(({ key, text }) => ({ key, text })), [dispOptions]);
+
+  function submitAnswer() {
+    if (!q || !selected) return;
+    const next = answers.filter(a => a.id !== q.id).concat([{ id: q.id, selected, correct: correctKey, topic: q.topic }]);
+    setAnswers(next);
+    if (idx < questionIds.length - 1) {
+      setIdx(idx + 1);
+    } else {
+      // finished: show summary
+      setReviewMode(false);
+      setEnded(true);
+    }
+  }
+
+  const handleSelect = (val: string) => {
+    setSelected(val);
+    if (q) setSelectionMap((m) => ({ ...m, [q.id]: val }));
+  };
+
+  const score = useMemo(() => answers.reduce((acc, a) => acc + (a.selected === a.correct ? 1 : 0), 0), [answers]);
+  const byTopic = useMemo(() => {
+    const map: Record<string, { total: number; correct: number }> = {};
+    answers.forEach(a => {
+      const key = a.topic || 'General';
+      map[key] = map[key] || { total: 0, correct: 0 };
+      map[key].total += 1;
+      if (a.selected === a.correct) map[key].correct += 1;
+    });
+    return map;
+  }, [answers]);
+
+  const finished = answers.length === questionIds.length;
+  const answeredCount = useMemo(() => questionIds.filter((qid) => !!selectionMap[qid]).length, [questionIds, selectionMap]);
+  const showSummary = ended || finished;
+
+  // Log attempt when session ends
+  useEffect(() => {
+    if (!showSummary || loggedRef.current) return;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        const duration = Math.floor((Date.now() - (attemptData?.started_at ? new Date(attemptData.started_at).getTime() : Date.now())) / 1000);
+        
+        // Update attempt with results
+        await supabase
+          .from('exam_attempts')
+          .update({
+            correct_count: score,
+            total_attempted: answers.length,
+            finished_at: new Date().toISOString(),
+            duration_sec: duration,
+            breakdown: byTopic,
+          })
+          .eq('id', attemptId);
+
+        // Insert attempt items
+        const items = answers.map((a, i) => ({
+          attempt_id: attemptId,
+          user_id: user.id,
+          question_id: a.id,
+          selected_key: a.selected,
+          correct_key: a.correct,
+          topic: a.topic || null,
+          position: i + 1,
+        }));
+        
+        if (items.length > 0) {
+          await supabase.from('exam_attempt_items').insert(items);
+        }
+
+        loggedRef.current = true;
+      } catch (e) {
+        console.warn('Attempt logging failed', e);
+      }
+    })();
+  }, [showSummary, score, answers, attemptId, byTopic, attemptData]);
+
+  if (!questionIds.length && !loading) {
     return (
       <div className="container mx-auto px-4 py-10">
         <Card>
@@ -205,44 +265,186 @@ export default function PracticeSession() {
     );
   }
 
-  return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <QuestionCard
-        stem={question.stem}
-        options={Object.entries(question.choices).map(([key, text]) => ({ key, text }))}
-        selectedKey={selected}
-        onSelect={setSelected}
-        showExplanation={showExplanation}
-        explanation={question.explanation}
-        correctKey={Object.keys(question.choices)[question.correct_index]}
-        questionId={question.id}
-      />
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-10">
+        <Card>
+          <CardContent className="py-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading practice session...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-      <Card className="mt-6">
-        <CardContent className="py-4">
-          <div className="flex justify-between items-center">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/exams/practice')}
-            >
-              Back to Config
-            </Button>
-            
-            {!showExplanation ? (
-              <Button 
-                onClick={handleSubmit} 
-                disabled={!selected || loading}
-              >
-                {loading ? 'Submitting...' : 'Submit'}
-              </Button>
-            ) : (
-              <Button onClick={handleFinish}>
-                Finish Practice
-              </Button>
-            )}
+  return (
+    <div className="container mx-auto px-4 py-6">
+      <div className="mx-auto w-full md:max-w-5xl">
+        {!showSummary ? (
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="md:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Practice Mode</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4">
+                  {q && (
+                    <QuestionCard
+                      key={q.id}
+                      questionId={q.id}
+                      stem={q.stem}
+                      options={options}
+                      selectedKey={selected}
+                      onSelect={handleSelect}
+                      showExplanation={false}
+                      explanation={undefined}
+                      source={`${q.exam || ''}${q.topic ? ' • ' + q.topic : ''}`}
+                    />
+                  )}
+                  <div className="flex items-center justify-between">
+                    <Button variant="outline" onClick={() => navigate('/exams/practice')}>Back to Config</Button>
+                    <div className="flex items-center gap-2">
+                      <div className="md:hidden">
+                        <Drawer>
+                          <DrawerTrigger asChild>
+                            <Button variant="outline" size="sm">Practice Tools</Button>
+                          </DrawerTrigger>
+                          <DrawerContent className="p-4 space-y-4">
+                            <div>
+                              <div className="text-sm font-medium mb-2">Progress</div>
+                              <div className="text-sm mb-2">Question {idx + 1} of {questionIds.length}</div>
+                              <Progress value={(answeredCount / questionIds.length) * 100} />
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium mb-2">Question Map</div>
+                              <div className="grid grid-cols-8 gap-2">
+                                {questionIds.map((qid, i) => {
+                                  const isCurrent = i === idx;
+                                  const entry = answers.find(a => a.id === qid);
+                                  const hasSel = !!entry;
+                                  const correct = hasSel && entry!.selected === entry!.correct;
+                                  const base = "h-8 w-8 rounded text-sm flex items-center justify-center border";
+                                  const state = isCurrent
+                                    ? "bg-primary/10 ring-1 ring-primary"
+                                    : hasSel
+                                      ? (correct ? "bg-success/20 border-success text-success" : "bg-destructive/10 border-destructive text-destructive")
+                                      : "bg-muted";
+                                  return (
+                                    <button
+                                      key={qid}
+                                      onClick={() => setIdx(i)}
+                                      aria-label={`Go to question ${i+1}`}
+                                      className={`${base} ${state} hover:bg-accent/10`}
+                                    >
+                                      {i+1}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </DrawerContent>
+                        </Drawer>
+                      </div>
+                      <Button onClick={submitAnswer} disabled={!selected || loading}>
+                        {idx < questionIds.length - 1 ? 'Next' : 'Finish'}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <aside className="hidden md:block">
+              <div className="sticky top-20 space-y-4">
+                <Card>
+                  <CardContent className="py-4">
+                    <div className="text-sm font-medium mb-1">Progress</div>
+                    <div className="text-sm mb-2">Question {idx + 1} of {questionIds.length}</div>
+                    <Progress value={(answeredCount / questionIds.length) * 100} />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="py-4">
+                    <div className="text-sm font-medium mb-2">Question Map</div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {questionIds.map((qid, i) => {
+                        const isCurrent = i === idx;
+                        const entry = answers.find(a => a.id === qid);
+                        const hasSel = !!entry;
+                        const correct = hasSel && entry!.selected === entry!.correct;
+                        const base = "h-8 w-8 rounded text-sm flex items-center justify-center border";
+                        const state = isCurrent
+                          ? "bg-primary/10 ring-1 ring-primary"
+                          : hasSel
+                            ? (correct ? "bg-success/20 border-success text-success" : "bg-destructive/10 border-destructive text-destructive")
+                            : "bg-muted";
+                        return (
+                          <button
+                            key={qid}
+                            onClick={() => setIdx(i)}
+                            aria-label={`Go to question ${i+1}`}
+                            className={`${base} ${state} hover:bg-accent/10`}
+                          >
+                            {i+1}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </aside>
           </div>
-        </CardContent>
-      </Card>
+        ) : !reviewMode ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Practice Complete!</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="text-lg font-semibold">Score: {score} / {answers.length}</div>
+              <div className="text-sm text-muted-foreground">Attempts: {answers.length} / {questionIds.length}</div>
+              <div className="grid gap-2">
+                {Object.entries(byTopic).map(([t, v]) => (
+                  <div key={t} className="text-sm">{t}: {v.correct}/{v.total}</div>
+                ))}
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <Button variant="outline" onClick={() => navigate('/exams/practice')}>Back to Practice</Button>
+                <Button onClick={() => setReviewMode(true)}>Review Answers</Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Review Answers</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              {q && (
+                <QuestionCard
+                  key={q.id + '-review'}
+                  questionId={q.id}
+                  stem={q.stem}
+                  options={options}
+                  selectedKey={answers.find(a=>a.id===q.id)?.selected || ''}
+                  onSelect={()=>{}}
+                  showExplanation={true}
+                  explanation={q.explanation || ''}
+                  source={`${q.exam || ''}${q.topic ? ' • ' + q.topic : ''}`}
+                  correctKey={correctKey}
+                />
+              )}
+              <div className="flex items-center justify-between">
+                <Button variant="outline" onClick={() => setReviewMode(false)}>Summary</Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => setIdx(Math.max(0, idx-1))} disabled={idx===0}>Previous</Button>
+                  <Button onClick={() => setIdx(Math.min(questionIds.length-1, idx+1))} disabled={idx===questionIds.length-1}>Next</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
