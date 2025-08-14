@@ -64,7 +64,8 @@ export default function ExamsAttempts() {
         .order('position', { ascending: true });
       setItems((it as any[]) || []);
       const qids = attempt.question_ids || [];
-      if (qids.length) {
+      if (qids.length && attempt.source !== 'ai_practice') {
+        // Only try to fetch from reviewed_exam_questions for non-AI sessions
         const { data: qs } = await (supabase as any)
           .from('reviewed_exam_questions')
           .select('id, stem, explanation, correct_index, exam, topic')
@@ -76,9 +77,9 @@ export default function ExamsAttempts() {
 
   const cols = [
     { key: 'started_at', header: 'Date', render: (r: any) => new Date(r.started_at || r.created_at).toLocaleString() },
-    { key: 'exam', header: 'Exam', render: (r: any) => (r.question_ids && r.question_ids.length ? 'Reviewed' : '—') },
+    { key: 'source', header: 'Source', render: (r: any) => r.source === 'ai_practice' ? 'AI Practice' : 'Reviewed' },
     { key: 'total_questions', header: 'Questions', render: (r: any) => r.total_questions || r.total_attempted || 0 },
-    { key: 'score', header: 'Score', render: (r: any) => (r.mode === 'exam' ? `${r.correct_count}/${r.total_attempted}` : 'N/A') },
+    { key: 'score', header: 'Score', render: (r: any) => (r.mode === 'exam' ? `${r.correct_count}/${r.total_attempted}` : `${r.correct_count || 0}/${r.total_attempted || r.total_questions || 0}`) },
     { key: 'duration_sec', header: 'Time', render: (r: any) => `${Math.round((r.duration_sec||0)/60)} min` },
     { key: 'topics', header: 'Topics', render: (r: any) => {
       const b = r.breakdown || {}; const k = Object.keys(b).slice(0,3); return k.map(t => <span key={t} className="mr-2 inline-block text-xs px-2 py-0.5 rounded border">{t}</span>);
@@ -108,11 +109,18 @@ export default function ExamsAttempts() {
               {items.map((it, idx) => {
                 const q = questions.find(q => q.id === it.question_id);
                 const ck = typeof q?.correct_index === 'number' ? String.fromCharCode(65 + q.correct_index) : it.correct_key;
+                const isAI = active?.source === 'ai_practice';
                 return (
                   <div key={it.id} className="rounded border p-3">
-                    <div className="text-sm font-medium mb-1">{idx+1}. {(q?.stem || '').slice(0,200)}</div>
-                    <div className="text-xs text-muted-foreground mb-2">Your: {it.selected_key} • Correct: {ck}</div>
+                    <div className="text-sm font-medium mb-1">
+                      {idx+1}. {isAI ? `AI Generated Question (${it.topic || 'General'})` : (q?.stem || '').slice(0,200)}
+                    </div>
+                    <div className="text-xs text-muted-foreground mb-2">
+                      Your: {it.selected_key} • Correct: {ck} 
+                      {isAI && <span className="ml-2 text-primary">• AI Practice</span>}
+                    </div>
                     {q?.explanation && <div className="text-sm text-muted-foreground">{(q.explanation || '').slice(0,240)}…</div>}
+                    {isAI && !q?.explanation && <div className="text-sm text-muted-foreground italic">AI question details not stored for review</div>}
                   </div>
                 );
               })}

@@ -123,7 +123,7 @@ export default function AiPracticeSession() {
             source: 'ai_practice',
             mode: 'practice',
             total_questions: total,
-            question_ids: []
+            question_ids: [`ai-${Date.now()}-${idx}`] // Add current question ID
           })
           .select('id')
           .single();
@@ -133,7 +133,7 @@ export default function AiPracticeSession() {
         toast({ title: 'Attempt saved', description: 'Your practice session has been logged.' });
       }
       
-      // Log attempt item
+      // Log attempt item with additional metadata for AI questions
       const isCorrect = selected.toUpperCase() === q.correct.toUpperCase();
       await supabase
         .from('exam_attempt_items')
@@ -143,9 +143,25 @@ export default function AiPracticeSession() {
           user_id: (await supabase.auth.getUser()).data.user?.id,
           selected_key: selected,
           correct_key: q.correct,
-          topic: q.topic,
+          topic: q.topic || difficulty, // Store difficulty if no topic
           position: idx + 1
         });
+
+      // Update attempt with current progress
+      const currentCorrect = (await supabase
+        .from('exam_attempt_items')
+        .select('*')
+        .eq('attempt_id', attemptId)
+        .eq('selected_key', 'correct_key')).data?.length || 0;
+      
+      await supabase
+        .from('exam_attempts')
+        .update({
+          total_attempted: idx + 1,
+          correct_count: isCorrect ? (currentCorrect + 1) : currentCorrect,
+          duration_sec: Math.floor((Date.now() - new Date(attemptId).getTime()) / 1000)
+        })
+        .eq('id', attemptId);
       
       setShow(true);
     } catch (err: any) {

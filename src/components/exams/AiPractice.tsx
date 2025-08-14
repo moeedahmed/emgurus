@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
-import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
 interface AIQuestion {
   id: string;
   question: string;
@@ -25,12 +28,12 @@ interface CurriculumRow {
 
 type Feedback = "none" | "too_easy" | "hallucinated" | "wrong" | "not_relevant";
 
-const EXAMS = [
-  { value: "MRCEM_PRIMARY", label: "MRCEM Primary" },
-  { value: "MRCEM_SBA", label: "MRCEM Intermediate SBA" },
-  { value: "FRCEM_SBA", label: "FRCEM SBA" },
-];
 const COUNTS = [10, 25, 50];
+const DIFFICULTIES = [
+  { value: "easy", label: "Easy" },
+  { value: "medium", label: "Medium" },
+  { value: "hard", label: "Hard" }
+];
 
 export default function AiPractice() {
   const { user } = useAuth();
@@ -45,6 +48,46 @@ export default function AiPractice() {
   }
 
   const [configOpen, setConfigOpen] = useState(false);
+  const [exam, setExam] = useState<ExamName | "">("");
+  const [count, setCount] = useState<number>(10);
+  const [area, setArea] = useState<string>("All areas");
+  const [difficulty, setDifficulty] = useState<string>("medium");
+  const [loading, setLoading] = useState(false);
+
+  const areas = exam ? ["All areas", ...CURRICULA[exam]] : ["All areas"];
+
+  const start = async () => {
+    if (!exam) return;
+    
+    // Check auth first
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate(`/auth?returnTo=${encodeURIComponent('/exams/ai-practice')}`);
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Navigate directly to session page with query params
+      const params = new URLSearchParams();
+      params.set('exam', exam);
+      params.set('count', String(count));
+      if (area !== 'All areas') params.set('topic', area);
+      params.set('difficulty', difficulty);
+      navigate(`/exams/ai-practice/session/${Date.now()}?${params.toString()}`);
+      setConfigOpen(false); // Close modal after navigation
+    } catch (err: any) {
+      console.error('Start failed', err);
+      const errorMsg = err?.message || String(err);
+      toast({ 
+        title: "Start failed", 
+        description: errorMsg,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -59,7 +102,53 @@ export default function AiPractice() {
               <Button size="lg">Start</Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
-              <AiPracticeConfig />
+              <DialogHeader>
+                <DialogTitle>AI Practice (Beta)</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 p-4">
+                <div>
+                  <Label>Exam<span className="sr-only"> required</span></Label>
+                  <Select value={exam} onValueChange={(v) => setExam(v as ExamName)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
+                    <SelectContent>
+                       {EXAMS.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Number of questions</Label>
+                  <Select value={String(count)} onValueChange={(v) => setCount(Number(v))}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select count" /></SelectTrigger>
+                    <SelectContent>
+                      {COUNTS.map(c => (<SelectItem key={c} value={String(c)}>{c}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Curriculum</Label>
+                  <Select value={area} onValueChange={setArea} disabled={!exam}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="All areas" /></SelectTrigger>
+                    <SelectContent>
+                      {areas.map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Difficulty</Label>
+                  <Select value={difficulty} onValueChange={setDifficulty}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select difficulty" /></SelectTrigger>
+                    <SelectContent>
+                      {DIFFICULTIES.map(d => (<SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setConfigOpen(false)}>Cancel</Button>
+                <Button onClick={start} disabled={!exam || loading}>
+                  {loading ? 'Generating…' : 'Start Practice'}
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </CardContent>
