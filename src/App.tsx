@@ -165,7 +165,7 @@ const App = () => (
                     </Suspense>
                   </ErrorBoundary>
                 } />
-                <Route path="/exams/practice/:id" element={
+                <Route path="/exams/practice/session/:id" element={
                   <ErrorBoundary>
                     <Suspense fallback={<PageLoadingFallback />}>
                       <PracticeSession />
