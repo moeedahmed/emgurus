@@ -8,6 +8,7 @@ import StickyOptionsBar from "@/components/exams/StickyOptionsBar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { EXAMS, ExamName } from "@/lib/curricula";
+import { mapLabelToEnum } from "@/lib/exams";
 
 interface GeneratedQuestion {
   question: string;
@@ -87,7 +88,7 @@ export default function AiPracticeSession() {
       const { data, error: apiError } = await supabase.functions.invoke('ai-exams-api', {
         body: { 
           action: 'practice_generate', 
-          exam_type: exam, 
+          exam_type: mapLabelToEnum(exam), 
           topic: topic || undefined,
           difficulty,
           count: 1
@@ -138,10 +139,15 @@ export default function AiPracticeSession() {
           .from('exam_attempts')
           .insert({
             user_id: user.id,
-            source: 'ai_practice',
+            source: 'ai',
             mode: 'practice',
             total_questions: total,
-            question_ids: [questionUuid] // Use proper UUID
+            question_ids: [questionUuid], // Use proper UUID
+            breakdown: {
+              exam_type: mapLabelToEnum(exam),
+              topic: topic,
+              difficulty: difficulty
+            }
           })
           .select('id')
           .single();
@@ -231,7 +237,7 @@ export default function AiPracticeSession() {
       if (newTopic !== 'All areas') params.set('topic', newTopic);
       params.set('difficulty', newDifficulty);
       
-      window.history.replaceState({}, '', `/exams/ai-practice/session?${params.toString()}`);
+      window.history.replaceState({}, '', `/exams/ai-practice/session/${sessionId}?${params.toString()}`);
       setCurrentSettings({ exam: newExam as ExamName, count: newCount, topic: newTopic, difficulty: newDifficulty });
       setSelected("");
       generate(idx);

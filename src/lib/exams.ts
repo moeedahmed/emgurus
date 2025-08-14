@@ -1,3 +1,29 @@
+export const EXAM_ENUMS = ["MRCEM_PRIMARY","MRCEM_SBA","FRCEM_SBA","OTHER"] as const;
+export type ExamEnum = typeof EXAM_ENUMS[number];
+
+export function mapLabelToEnum(label?: string | null): ExamEnum {
+  if (!label) return "OTHER";
+  const s = label.trim().toLowerCase();
+  if (s.includes("primary")) return "MRCEM_PRIMARY";
+  if (s.includes("frcem")) return "FRCEM_SBA";
+  if (s.includes("intermediate") || (s.includes("sba") && s.includes("mrcem"))) return "MRCEM_SBA";
+  return "OTHER";
+}
+
+export function mapEnumToLabel(v?: string | null): string {
+  switch (v) {
+    case "MRCEM_PRIMARY": return "MRCEM Primary";
+    case "MRCEM_SBA":     return "MRCEM Intermediate SBA";
+    case "FRCEM_SBA":     return "FRCEM SBA";
+    default:              return "Other";
+  }
+}
+
+export function safeMode(v?: string | null): "practice"|"exam" {
+  return v === "exam" ? "exam" : "practice";
+}
+
+// Legacy compatibility
 export function canonExamType(input?: string | null, choices?: readonly string[]): string | null {
   if (!input) return null;
   // If UI option values are already canonical labels (e.g., "MRCEM Intermediate SBA"), just return as-is.

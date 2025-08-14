@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import QuestionCard from "@/components/exams/QuestionCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { mapEnumToLabel } from "@/lib/exams";
 
 interface Question {
   id: string;
@@ -82,16 +83,26 @@ export default function TestSession() {
   const loadQuestion = async (attempt: any) => {
     try {
       const config = attempt.breakdown || {};
-      const examType = config.exam_type || searchParams.get('exam');
-      const topic = config.topic || searchParams.get('topic');
+      const enumVal = config.exam_type;
+      const examLabel = mapEnumToLabel(enumVal);
+      const topic = config.topic;
 
-      // Simple query for reviewed questions
-      const { data: questions, error } = await supabase
+      // Query reviewed questions with filters
+      let query = supabase
         .from('reviewed_exam_questions')
         .select('id, stem, options, correct_index, explanation, exam, topic')
         .eq('status', 'approved')
-        .order('id', { ascending: false })
-        .limit(1);
+        .order('id', { ascending: false });
+
+      // Apply filters if available
+      if (examLabel && examLabel !== 'Other') {
+        query = query.eq('exam', examLabel);
+      }
+      if (topic) {
+        query = query.eq('topic', topic);
+      }
+
+      const { data: questions, error } = await query.limit(1);
 
       if (error) throw error;
 

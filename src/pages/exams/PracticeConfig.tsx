@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
-import { canonExamType } from "@/lib/exams";
+import { mapLabelToEnum } from "@/lib/exams";
 import PageHero from "@/components/PageHero";
 
 const COUNTS = [10, 25, 50];
@@ -45,7 +45,7 @@ export default function PracticeConfig() {
     setLoading(true);
     try {
       // Use canonical exam type
-      const examType = canonExamType(exam, EXAMS);
+      const examType = mapLabelToEnum(exam);
       
       // Create practice session (attempt)
       const { data: attempt, error: attemptError } = await supabase

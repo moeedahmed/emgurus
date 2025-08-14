@@ -37,7 +37,9 @@ const AiPracticeConfig = lazy(() => import("@/pages/exams/AiPracticeConfig"));
 const AiPracticeSession = lazy(() => import("@/pages/exams/AiPracticeSession"));
 const AiPracticeSessionRedirect = lazy(() => import("@/pages/exams/AiPracticeSessionRedirect"));
 const PracticeConfig = lazy(() => import("@/pages/exams/PracticeConfig"));
+const PracticeSession = lazy(() => import("@/pages/exams/PracticeSession"));
 const TestConfig = lazy(() => import("@/pages/exams/TestConfig"));
+const TestSession = lazy(() => import("@/pages/exams/TestSession"));
 const ExamConfigRedirect = lazy(() => import("@/pages/exams/ExamConfigRedirect"));
 const QuestionBankPage = lazy(() => import("@/pages/exams/QuestionBankPage"));
 const QuestionDetail = lazy(() => import("@/pages/exams/QuestionDetail"));
@@ -147,7 +149,7 @@ const App = () => (
                <Route path="/exams/practice/session/:id" element={
                  <ErrorBoundary>
                    <Suspense fallback={<PageLoadingFallback />}>
-                     <ReviewedQuestionDetail />
+                     <PracticeSession />
                    </Suspense>
                  </ErrorBoundary>
                } />
@@ -161,7 +163,7 @@ const App = () => (
                <Route path="/exams/test/session/:id" element={
                  <ErrorBoundary>
                    <Suspense fallback={<PageLoadingFallback />}>
-                     <ReviewedExamSession />
+                     <TestSession />
                    </Suspense>
                  </ErrorBoundary>
                } />

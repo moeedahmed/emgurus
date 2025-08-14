@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
-import { canonExamType } from "@/lib/exams";
+import { mapLabelToEnum } from "@/lib/exams";
 import PageHero from "@/components/PageHero";
 
 const COUNTS = [10, 25, 50];
@@ -48,7 +48,7 @@ export default function TestConfig() {
     setLoading(true);
     try {
       // Use canonical exam type
-      const examType = canonExamType(exam, EXAMS);
+      const examType = mapLabelToEnum(exam);
       
       // Create test session (attempt with exam mode)
       const { data: attempt, error: attemptError } = await supabase
