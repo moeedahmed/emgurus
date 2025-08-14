@@ -400,6 +400,9 @@ export default function AiPracticeSession() {
           <div className="flex items-center gap-2 justify-between">
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={() => navigate('/exams/ai-practice')}>Edit selection</Button>
+              <Button variant="outline" onClick={showFinalScore} className="text-orange-600">
+                End Early
+              </Button>
               {error && (
                 <Button variant="ghost" onClick={() => generate(idx)} disabled={loading}>Retry</Button>
               )}

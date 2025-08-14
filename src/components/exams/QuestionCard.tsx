@@ -55,10 +55,10 @@ export default function QuestionCard({
                   )}
                 >
                   <RadioGroupItem value={o.key} id={`opt-${questionId || 'q'}-${o.key}`} disabled={!!lockSelection} />
-                  <div className="grid gap-1 min-w-0">
-                    <div className="font-medium shrink-0">{o.key}.</div>
+                  <div className="flex-1 min-w-0">
                     <div className="text-sm text-foreground/90 break-words overflow-x-hidden">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{o.text}</ReactMarkdown>
+                      <span className="font-medium">{o.key}. </span>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} className="inline">{o.text}</ReactMarkdown>
                     </div>
                   </div>
                 </label>

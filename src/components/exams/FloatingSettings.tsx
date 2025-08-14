@@ -52,9 +52,10 @@ export default function FloatingSettings({
         <Button
           onClick={() => setIsOpen(true)}
           size="lg"
-          className="rounded-full w-14 h-14 shadow-lg"
+          className="rounded-full w-16 h-16 shadow-xl bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           <Settings className="w-6 h-6" />
+          <span className="sr-only">Open Settings</span>
         </Button>
       </div>
     );
