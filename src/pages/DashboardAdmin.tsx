@@ -257,6 +257,7 @@ const DraftsPanel: React.FC = () => {
         </Table>
       </Card>
     </div>
+  );
 };
 
 // -------- Add missing original components
