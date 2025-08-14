@@ -17,11 +17,13 @@ export type WorkspaceSection = {
   icon?: React.ComponentType<{ className?: string }>;
 };
 
-const NotFoundStub: React.FC<{ title?: string }> = ({ title }) => (
-  <div className="text-sm text-muted-foreground p-6 border rounded-lg">
-    {title || 'This panel is not available yet.'}
-  </div>
-);
+function NotFoundStub({ title }: { title?: string }) {
+  return React.createElement(
+    'div',
+    { className: 'text-sm text-muted-foreground p-6 border rounded-lg' },
+    title || 'This panel is not available yet.'
+  );
+}
 
 const safeLazy = (factory: () => Promise<{ default: React.ComponentType<any> }>) =>
   lazy(async () => {
@@ -42,30 +44,30 @@ const AdminGeneration = safeLazy(async () => {
 
 const BlogsOverview = safeLazy(() => import('../components/dashboard/blogs/BlogsOverview'));
 const MyBlogs = safeLazy(() => import('../components/dashboard/blogs/MyBlogs'));
-const BlogReviews = safeLazy(() => import('../components/dashboard/blogs/BlogReviews').catch(() => ({ default: NotFoundStub })));
-const BlogSubmissionQueue = safeLazy(() => import('../components/dashboard/blogs/BlogSubmissionQueue').catch(() => ({ default: NotFoundStub })));
-const BlogsAnalytics = safeLazy(() => import('../components/dashboard/blogs/AnalyticsPanel').catch(() => ({ default: NotFoundStub })));
+const BlogReviews = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
+const BlogSubmissionQueue = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
+const BlogsAnalytics = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
 
 const ExamsOverview = safeLazy(() => import('../components/dashboard/exams/ExamsOverview'));
 const ExamsAttempts = safeLazy(() => import('../components/dashboard/exams/ExamsAttempts'));
 const ExamsProgressMatrix = safeLazy(() => import('../components/dashboard/exams/ExamsProgressMatrix'));
 const ExamsFeedbackList = safeLazy(() => import('../components/dashboard/exams/ExamsFeedbackList'));
 
-const ExamReviews = safeLazy(() => import('../components/dashboard/exams/ExamReviews').catch(() => ({ default: NotFoundStub })));
-const ReviewedBank = safeLazy(() => import('../components/dashboard/exams/ReviewedBank').catch(() => ({ default: NotFoundStub })));
+const ExamReviews = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
+const ReviewedBank = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
 
 const ConsultOverview = safeLazy(() => import('../components/dashboard/consultations/ConsultationsOverview'));
-const Bookings = safeLazy(() => import('../components/dashboard/consultations/Bookings').catch(() => ({ default: NotFoundStub })));
-const Availability = safeLazy(() => import('../components/dashboard/consultations/Availability').catch(() => ({ default: NotFoundStub })));
-const Pricing = safeLazy(() => import('../components/dashboard/consultations/Pricing').catch(() => ({ default: NotFoundStub })));
+const Bookings = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
+const Availability = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
+const Pricing = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
 
 const ForumsOverview = safeLazy(() => import('../components/dashboard/forums/ForumsOverview'));
 const MyThreadsWithChips = safeLazy(() => import('../components/dashboard/forums/MyThreadsWithChips'));
 const ForumsModeration = safeLazy(() => import('../components/dashboard/forums/ForumsModerationQueue'));
 
-const UsersManage = safeLazy(() => import('../components/dashboard/admin/UsersManage').catch(() => ({ default: NotFoundStub })));
-const SettingsPanel = safeLazy(() => import('../components/dashboard/admin/SettingsPanel').catch(() => ({ default: NotFoundStub })));
-const GuruApprovals = safeLazy(() => import('../components/dashboard/admin/GuruApprovalsTab').catch(() => ({ default: NotFoundStub })));
+const UsersManage = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
+const SettingsPanel = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
+const GuruApprovals = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
 
 export const BASE_SECTIONS: WorkspaceSection[] = [
   {
