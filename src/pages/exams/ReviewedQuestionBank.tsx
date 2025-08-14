@@ -12,8 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Chip } from "@/components/ui/chip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useIsMobile } from "@/hooks/use-mobile";
-
 type ExamCode = "MRCEM_Primary" | "MRCEM_SBA" | "FRCEM_SBA";
 const EXAM_LABELS: Record<ExamCode, string> = {
   MRCEM_Primary: "MRCEM Primary",
@@ -53,7 +51,6 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
   const [topicOptions, setTopicOptions] = useState<string[]>([]);
   const [reviewerProfiles, setReviewerProfiles] = useState<Record<string, { id: string; name: string; avatar_url?: string }>>({});
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   useEffect(() => {
     document.title = "Question Bank • EM Gurus";
@@ -348,18 +345,16 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <section className="lg:col-span-8">
-              {isMobile && (
-                <div className="mb-4">
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <Button variant="outline">Filters</Button>
-                    </SheetTrigger>
-                    <SheetContent side="right" className="w-80 sm:w-96">
-                      <FiltersPanel />
-                    </SheetContent>
-                  </Sheet>
-                </div>
-              )}
+              <div className="mb-4 lg:hidden">
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline">Filters</Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-80 sm:w-96">
+                    <FiltersPanel />
+                  </SheetContent>
+                </Sheet>
+              </div>
 
               <div className="space-y-3">
                 {loading ? (

@@ -5,6 +5,7 @@ import { BookingModal } from "@/components/consultations/BookingModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import PageHero from "@/components/PageHero";
+import { Chip } from "@/components/ui/chip";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ConsultationsFilterPanel from "@/components/consultations/ConsultationsFilterPanel";
 
@@ -264,15 +265,23 @@ const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
             {(country !== 'all' || specialty !== 'all' || exam !== 'all') && (
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 {country !== 'all' && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setCountry('all')}>{country} ×</Button>
+                  <Chip name="consultations_active_country" value={country} selected variant="solid" size="sm" onSelect={() => setCountry('all')}>
+                    {country} ×
+                  </Chip>
                 )}
                 {specialty !== 'all' && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setSpecialty('all')}>{specialty} ×</Button>
+                  <Chip name="consultations_active_specialty" value={specialty} selected variant="solid" size="sm" onSelect={() => setSpecialty('all')}>
+                    {specialty} ×
+                  </Chip>
                 )}
                 {exam !== 'all' && (
-                  <Button size="sm" variant="secondary" aria-pressed className="rounded-full" onClick={() => setExam('all')}>{exam} ×</Button>
+                  <Chip name="consultations_active_exam" value={exam} selected variant="solid" size="sm" onSelect={() => setExam('all')}>
+                    {exam} ×
+                  </Chip>
                 )}
-                <Button size="sm" variant="ghost" onClick={() => { setCountry('all'); setSpecialty('all'); setExam('all'); }}>Clear all</Button>
+                <Chip name="consultations_clear" value="clear" variant="ghost" size="sm" onSelect={() => { setCountry('all'); setSpecialty('all'); setExam('all'); }}>
+                  Clear all
+                </Chip>
               </div>
             )}
 
