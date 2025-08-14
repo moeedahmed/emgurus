@@ -30,6 +30,14 @@ export default function AiPracticeConfig() {
 
   const start = async () => {
     if (!exam) return;
+    
+    // Check auth first
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate(`/auth?returnTo=${encodeURIComponent('/exams/ai-practice')}`);
+      return;
+    }
+    
     setLoading(true);
     try {
       // Navigate to session page with query params

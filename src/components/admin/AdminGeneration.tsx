@@ -13,6 +13,7 @@ export default function AdminGeneration() {
   const [exam, setExam] = useState<ExamName | "">("");
   const [topic, setTopic] = useState<string>("");
   const [difficulty, setDifficulty] = useState<string>("medium");
+  const [hasError, setHasError] = useState(false);
   const [count, setCount] = useState<number>(5);
   const [reviewerId, setReviewerId] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -41,11 +42,13 @@ export default function AdminGeneration() {
 
   const generateQuestions = async () => {
     if (!exam) return;
+    
     setLoading(true);
+    setHasError(false);
     try {
-      const res = await supabase.functions.invoke('ai-exams-api', {
+      const { data, error } = await supabase.functions.invoke('ai-exams-api', {
         body: {
-          action: 'bulk_generate',
+          action: 'admin_generate_bulk',
           exam_type: exam,
           topic: topic || undefined,
           difficulty,
@@ -55,12 +58,11 @@ export default function AdminGeneration() {
         }
       });
 
-      if (res.error) throw res.error;
-      
-      const { items, count: generated } = res.data || {};
+      if (error) throw error;
+
       toast({
-        title: 'Questions generated',
-        description: `Successfully generated ${generated} out of ${count} questions${reviewerId ? ' and assigned for review' : ''}.`
+        title: "Success",
+        description: `Generated ${count} draft question(s) successfully`,
       });
 
       // Reset form
@@ -68,14 +70,25 @@ export default function AdminGeneration() {
       setTopic("");
       setCount(5);
       setReviewerId("");
-    } catch (err: any) {
-      console.error('Generate failed', err);
-      const errorMsg = err?.message || String(err);
-      toast({
-        title: 'Generation failed',
-        description: errorMsg.includes('OpenAI') ? 'AI service not configured. Please contact support.' : errorMsg,
-        variant: 'destructive'
-      });
+    } catch (error: any) {
+      console.error('Generation failed:', error);
+      setHasError(true);
+      const errorMsg = error.message || "Failed to generate questions";
+      
+      // Show specific error messages verbatim
+      if (errorMsg.includes('OpenAI') || errorMsg.includes('key') || errorMsg.includes('configured')) {
+        toast({
+          title: "Configuration Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Generation failed",
+          description: errorMsg,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -83,12 +96,13 @@ export default function AdminGeneration() {
 
   const testGeneration = async () => {
     if (!exam) return;
+    
     setLoading(true);
     setTestResult(null);
     try {
-      const res = await supabase.functions.invoke('ai-exams-api', {
+      const { data, error } = await supabase.functions.invoke('ai-exams-api', {
         body: {
-          action: 'bulk_generate',
+          action: 'admin_generate_bulk',
           exam_type: exam,
           topic: topic || undefined,
           difficulty,
@@ -97,21 +111,25 @@ export default function AdminGeneration() {
         }
       });
 
-      if (res.error) throw res.error;
+      if (error) throw error;
       
-      const { items } = res.data || {};
-      if (items?.[0]) {
-        setTestResult(items[0]);
+      if (data && data.items && data.items[0]) {
+        setTestResult(data.items[0]);
         toast({ title: 'Test successful', description: 'AI generation is working properly.' });
       } else {
         throw new Error('No question generated');
       }
-    } catch (err: any) {
-      console.error('Test failed', err);
-      const errorMsg = err?.message || String(err);
+    } catch (error: any) {
+      console.error('Test failed:', error);
+      const errorMsg = error.message || 'Test failed';
+      
+      if (errorMsg.includes('OpenAI') || errorMsg.includes('key') || errorMsg.includes('configured')) {
+        setHasError(true);
+      }
+      
       toast({
         title: 'Test failed',
-        description: errorMsg.includes('OpenAI') ? 'AI service not configured. Please contact support.' : errorMsg,
+        description: errorMsg,
         variant: 'destructive'
       });
     } finally {
@@ -120,6 +138,22 @@ export default function AdminGeneration() {
   };
 
   const topics = exam && CURRICULA[exam] ? CURRICULA[exam] : [];
+
+  if (hasError) {
+    return (
+      <div className="p-6 text-center">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold mb-2">OpenAI Configuration Required</h3>
+          <p className="text-sm text-muted-foreground">
+            OpenAI not configured or rate limited. Ask an admin to set OPENAI_API_KEY / OPENAI_MODEL_* in Supabase secrets.
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => setHasError(false)}>
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -229,14 +263,14 @@ export default function AdminGeneration() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
-              <div><strong>Question:</strong> {testResult.question}</div>
+              <div><strong>Question:</strong> {testResult.question || testResult.stem}</div>
               <div><strong>Options:</strong></div>
               <ul className="list-disc list-inside ml-4">
                 {Object.entries(testResult.options || {}).map(([key, value]) => (
                   <li key={key}><strong>{key}:</strong> {String(value)}</li>
                 ))}
               </ul>
-              <div><strong>Correct:</strong> {testResult.correct}</div>
+              <div><strong>Correct:</strong> {testResult.correct_answer || testResult.correct}</div>
               <div><strong>Explanation:</strong> {testResult.explanation}</div>
               {testResult.reference && <div><strong>Reference:</strong> {testResult.reference}</div>}
               {testResult.topic && <div><strong>Topic:</strong> {testResult.topic}</div>}

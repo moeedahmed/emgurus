@@ -8,12 +8,12 @@ import DOMPurify from "dompurify";
 interface ChatMsg { role: 'user'|'assistant'; content: string }
 
 // Streaming helpers
-const supaUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const functionsUrl = (path: string) => (supaUrl && supaUrl.endsWith('/')) ? `${supaUrl}functions/v1/${path}` : (supaUrl ? `${supaUrl}/functions/v1/${path}` : `/functions/v1/${path}`);
+const supaUrl = "https://cgtvvpzrzwyvsbavboxa.supabase.co";
+const functionsUrl = (path: string) => `${supaUrl}/functions/v1/${path}`;
 function supabaseFnHeaders(session?: { access_token?: string }) { 
   const h: Record<string,string> = { 
     'Content-Type': 'application/json', 
-    apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || '' 
+    apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNndHZ2cHpyend5dnNiYXZib3hhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1MjYyNTAsImV4cCI6MjA3MDEwMjI1MH0.IkZEQamwiYvGvb3gFMmL8IDNfh_rAtwyrzwF8zqV7xw"
   }; 
   if (session?.access_token) h.Authorization = `Bearer ${session.access_token}`; 
   return h; 
@@ -153,13 +153,6 @@ export default function AIGuru() {
     };
 
     try {
-      // Check for required env vars
-      const hasEnvVars = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
-      if (!hasEnvVars) {
-        console.warn('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY, falling back to invoke');
-        throw new Error('no-env-vars');
-      }
-
       // Primary streaming path
       const res = await fetch(functionsUrl('ai-route'), {
         method: 'POST',

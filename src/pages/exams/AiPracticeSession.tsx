@@ -41,14 +41,25 @@ export default function AiPracticeSession() {
     document.title = "AI Practice Session • EM Gurus";
   }, []);
 
-  // Redirect if missing required params
+  // Check auth and redirect if missing required params
   useEffect(() => {
-    if (!exam) {
-      navigate('/exams/ai-practice');
-      return;
-    }
-    // Generate first question on mount
-    if (!questions[0]) void generate(0);
+    const checkAuth = async () => {
+      if (!exam) {
+        navigate('/exams/ai-practice');
+        return;
+      }
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate(`/auth?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        return;
+      }
+      
+      // Generate first question on mount
+      if (!questions[0]) void generate(0);
+    };
+    
+    checkAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exam]);
 
@@ -110,15 +121,17 @@ export default function AiPracticeSession() {
           .insert({
             user_id: (await supabase.auth.getUser()).data.user?.id,
             source: 'ai_practice',
-            mode: `AI Practice - ${exam}`,
+            mode: 'practice',
             total_questions: total,
-            question_ids: []
+            question_ids: [],
+            metadata: { source: 'ai', exam_type: exam }
           })
           .select('id')
           .single();
         
         if (attemptError) throw attemptError;
         setAttemptId(attempt.id);
+        toast({ title: 'Attempt saved', description: 'Your practice session has been logged.' });
       }
       
       // Log attempt item
