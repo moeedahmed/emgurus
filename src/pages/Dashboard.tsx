@@ -1,42 +1,44 @@
-import { useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import React, { Suspense, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useRoles } from '@/hooks/useRoles';
+import { buildSectionsForRoles } from '@/config/workspaceRegistry';
+import WorkspaceLayout from '@/components/dashboard/WorkspaceLayout';
+import { SafeMount } from '@/components/common/SafeMount';
 
 const Dashboard = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
+  const { isAdmin, isGuru, isLoading } = useRoles();
+  
   useEffect(() => {
     document.title = "Dashboard | EM Gurus";
   }, []);
+  
+  const sections = buildSectionsForRoles({ isAdmin: !!isAdmin, isGuru: !!isGuru });
 
-  useEffect(() => {
-    const routeByRole = async () => {
-      if (!user) return;
-      try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id);
-        if (error) throw error;
-        const roles = (data || []).map((r: any) => r.role);
-        if (roles.includes('admin')) return navigate('/dashboard/admin', { replace: true });
-        if (roles.includes('guru')) return navigate('/dashboard/guru', { replace: true });
-        // Default to user dashboard
-        return navigate('/dashboard/user', { replace: true });
-      } catch (e) {
-        console.error('Failed to resolve role', e);
-        navigate('/dashboard/user', { replace: true });
-      }
-    };
-    routeByRole();
-  }, [user, navigate]);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary" />
-    </div>
+    <Suspense fallback={<div className="p-8 text-muted-foreground">Loading…</div>}>
+      <WorkspaceLayout 
+        title="Workspace" 
+        sections={sections.map(section => ({
+          ...section,
+          tabs: section.tabs.map(tab => ({
+            ...tab,
+            render: <SafeMount component={tab.component} fallbackText={`${tab.title} component failed to load`} />
+          }))
+        }))} 
+        defaultSectionId="blogs" 
+      />
+    </Suspense>
   );
 };
 
