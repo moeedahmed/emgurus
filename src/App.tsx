@@ -40,6 +40,7 @@ const ExamConfig = lazy(() => import("@/pages/exams/ExamConfig"));
 const QuestionBankPage = lazy(() => import("@/pages/exams/QuestionBankPage"));
 const QuestionDetail = lazy(() => import("@/pages/exams/QuestionDetail"));
 const ReviewedExamSession = lazy(() => import("@/pages/exams/ReviewedExamSession"));
+const ExamSession = lazy(() => import("@/pages/exams/ExamSession"));
 
 // Admin pages - lazy loaded
 const ExamsAICuration = lazy(() => import("./pages/admin/ExamsAICuration"));
@@ -139,6 +140,13 @@ const App = () => (
                   <ErrorBoundary>
                     <Suspense fallback={<PageLoadingFallback />}>
                       <ExamConfig />
+                    </Suspense>
+                  </ErrorBoundary>
+                } />
+                <Route path="/exams/exam/session" element={
+                  <ErrorBoundary>
+                    <Suspense fallback={<PageLoadingFallback />}>
+                      <ExamSession />
                     </Suspense>
                   </ErrorBoundary>
                 } />
@@ -422,12 +430,6 @@ const App = () => (
                   <MyExamDrafts />
                 </Suspense>
               } />
-              <Route path="/pricing" element={<PricingPage />} />
-               <Route path="/exams/exam/session" element={
-                 <Suspense fallback={<PageLoadingFallback />}>
-                   <ReviewedExamSession />
-                 </Suspense>
-               } />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

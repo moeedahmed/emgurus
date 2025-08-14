@@ -94,7 +94,10 @@ export default function ExamSession() {
       ).filter(Boolean).map(q => ({
         id: q!.id,
         stem: q!.stem,
-        options: Array.isArray(q!.options) ? q!.options : [],
+        options: Array.isArray(q!.options) ? q!.options.map((opt: any, index: number) => ({
+          key: String.fromCharCode(65 + index), // A, B, C, D, E
+          text: typeof opt === 'string' ? opt : opt.text || opt.option || ''
+        })) : [],
         topic: q!.topic || undefined,
         exam: q!.exam || undefined,
         answer_key: undefined // Will be handled separately
