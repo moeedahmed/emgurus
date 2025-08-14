@@ -36,6 +36,7 @@ const ReviewedQuestionDetail = lazy(() => import("@/pages/exams/ReviewedQuestion
 const AiPracticeConfig = lazy(() => import("@/pages/exams/AiPracticeConfig"));
 const AiPracticeSession = lazy(() => import("@/pages/exams/AiPracticeSession"));
 const PracticeConfig = lazy(() => import("@/pages/exams/PracticeConfig"));
+const PracticeSession = lazy(() => import("@/pages/exams/PracticeSession"));
 const ExamConfig = lazy(() => import("@/pages/exams/ExamConfig"));
 const QuestionBankPage = lazy(() => import("@/pages/exams/QuestionBankPage"));
 const QuestionDetail = lazy(() => import("@/pages/exams/QuestionDetail"));
@@ -167,7 +168,7 @@ const App = () => (
                 <Route path="/exams/practice/:id" element={
                   <ErrorBoundary>
                     <Suspense fallback={<PageLoadingFallback />}>
-                      <ReviewedQuestionDetail />
+                      <PracticeSession />
                     </Suspense>
                   </ErrorBoundary>
                 } />
