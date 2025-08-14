@@ -70,7 +70,7 @@ export default function AdminConsultsBookings({ statusFilter }: { statusFilter?:
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [statusFilter]);
+  useEffect(() => { load(); }, [statusFilter, status, from, to]);
 
   const updateStatus = async (id: string, next: string) => {
     try {

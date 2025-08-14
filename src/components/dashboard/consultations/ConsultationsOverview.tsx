@@ -8,6 +8,16 @@ export default function ConsultationsOverview(){
   const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isGuru, setIsGuru] = useState(false);
+
+  // Check if user is a guru
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'guru').maybeSingle();
+      setIsGuru(!!data);
+    })();
+  }, [user]);
 
   useEffect(()=>{
     let cancelled=false;
@@ -15,18 +25,19 @@ export default function ConsultationsOverview(){
       if(!user){ setRows([]); return; }
       setLoading(true);
       try{
-        // Query bookings for user (as customer)
+        // Query bookings based on user role - guru sees their guru bookings, user sees their customer bookings
+        const column = isGuru ? 'guru_id' : 'user_id';
         const { data } = await supabase
           .from('consult_bookings')
           .select('id,start_datetime,end_datetime,status')
-          .eq('user_id', user.id)
+          .eq(column, user.id)
           .order('start_datetime', { ascending: false })
           .limit(200);
         if(!cancelled) setRows((data as any[])||[]);
       } finally { if(!cancelled) setLoading(false); }
     })();
     return ()=>{ cancelled=true; };
-  },[user?.id]);
+  },[user?.id, isGuru]);
 
   const stats = useMemo(()=>{
     const now = Date.now();
