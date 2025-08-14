@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import QuestionCard from "@/components/exams/QuestionCard";
+import QuestionChat from "@/components/exams/QuestionChat";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -491,6 +492,13 @@ const goNext = async () => {
                 )}
               </CardContent>
             </Card>
+            
+            {/* Discussion Panel */}
+            {q && (
+              <div className="mt-6">
+                <QuestionChat questionId={q.id} />
+              </div>
+            )}
           </div>
 
           {/* Right sidebar */}

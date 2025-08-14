@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import QuestionCard from "@/components/exams/QuestionCard";
+import QuestionChat from "@/components/exams/QuestionChat";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
@@ -148,6 +149,13 @@ export default function QuestionDetail() {
           )}
         </CardContent>
       </Card>
+      
+      {/* Discussion Panel */}
+      {q && (
+        <div className="mt-6">
+          <QuestionChat questionId={q.id} />
+        </div>
+      )}
     </div>
   );
 }
