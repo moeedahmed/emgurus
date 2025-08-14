@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
@@ -2927,22 +2927,22 @@ export type Database = {
       }
       ai_search_content: {
         Args: {
-          query_embedding: string
-          match_count?: number
           filter_source?: string
+          match_count?: number
+          query_embedding: string
         }
         Returns: {
           id: string
-          title: string
+          similarity: number
           slug_url: string
           source_type: string
           tags: string[]
           text_chunk: string
-          similarity: number
+          title: string
         }[]
       }
       assign_reviewer: {
-        Args: { p_post_id: string; p_reviewer_id: string; p_note: string }
+        Args: { p_note: string; p_post_id: string; p_reviewer_id: string }
         Returns: undefined
       }
       binary_quantize: {
@@ -2951,10 +2951,10 @@ export type Database = {
       }
       create_blog_draft: {
         Args: {
-          p_title: string
-          p_content_md: string
           p_category_id: string
+          p_content_md: string
           p_tags: string[]
+          p_title: string
         }
         Returns: {
           author_id: string
@@ -2981,12 +2981,12 @@ export type Database = {
       }
       create_exam_draft: {
         Args: {
-          p_stem: string
           p_choices: Json
           p_correct_index: number
-          p_explanation: string
-          p_tags: string[]
           p_exam_type: Database["public"]["Enums"]["exam_type_enum"]
+          p_explanation: string
+          p_stem: string
+          p_tags: string[]
         }
         Returns: {
           choices: Json | null
@@ -3011,7 +3011,7 @@ export type Database = {
         Returns: undefined
       }
       exam_request_changes: {
-        Args: { p_question_id: string; p_note: string }
+        Args: { p_note: string; p_question_id: string }
         Returns: undefined
       }
       halfvec_avg: {
@@ -3032,8 +3032,8 @@ export type Database = {
       }
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
       }
@@ -3074,7 +3074,7 @@ export type Database = {
         Returns: string
       }
       list_all_posts_admin: {
-        Args: { p_status: string; p_limit: number; p_offset: number }
+        Args: { p_limit: number; p_offset: number; p_status: string }
         Returns: {
           author_id: string
           category_id: string | null
@@ -3199,16 +3199,16 @@ export type Database = {
       list_public_reviewed_questions: {
         Args: {
           p_exam?: string
-          p_topic?: string
-          p_q?: string
           p_limit?: number
           p_offset?: number
+          p_q?: string
+          p_topic?: string
         }
         Returns: {
-          id: string
-          stem: string
           exam_type: string
+          id: string
           reviewed_at: string
+          stem: string
         }[]
       }
       list_reviewer_queue: {
@@ -3241,7 +3241,7 @@ export type Database = {
         Returns: undefined
       }
       review_request_changes: {
-        Args: { p_post_id: string; p_note: string }
+        Args: { p_note: string; p_post_id: string }
         Returns: undefined
       }
       sparsevec_out: {
