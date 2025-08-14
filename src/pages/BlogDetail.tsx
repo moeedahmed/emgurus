@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import DOMPurify from "dompurify";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { isFeatureEnabled } from "@/lib/constants";
+import AIOverviewPanel from "@/components/blogs/AIOverviewPanel";
 
 export default function BlogDetail() {
   const { slug } = useParams();
@@ -63,7 +65,169 @@ export default function BlogDetail() {
   if (!data?.post) return <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8"><Card className="p-6">Not found</Card></main>;
 
   const p = data.post;
+  const useNewLayout = isFeatureEnabled('BLOG_DETAIL_V2');
 
+  if (useNewLayout) {
+    return (
+      <main className="min-h-screen">
+        {/* Hero Section with Cover Image */}
+        {p.cover_image_url && (
+          <div className="relative w-full h-[60vh] overflow-hidden">
+            <img 
+              src={p.cover_image_url} 
+              alt={`${p.title} cover image`} 
+              className="w-full h-full object-cover" 
+              loading="eager" 
+              decoding="async" 
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-8">
+              <div className="container mx-auto">
+                <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4 drop-shadow-lg">
+                  {p.title}
+                </h1>
+                <div className="flex items-center gap-4 text-white/90">
+                  <AuthorChip 
+                    id={p.author.id} 
+                    name={authorProfile?.full_name || p.author.name} 
+                    avatar={authorProfile?.avatar_url || p.author.avatar} 
+                    onClick={(id) => navigate(`/profile/${id}`)}
+                    className="text-white"
+                  />
+                  <span>•</span>
+                  <span>{p.published_at ? new Date(p.published_at).toLocaleDateString() : ""}</span>
+                  <span>•</span>
+                  <span>{(() => {
+                    const text = (data.post.content || data.post.content_md || data.post.content_html || "").toString();
+                    const words = text.replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length;
+                    const mins = Math.max(1, Math.ceil(words / 220));
+                    return `${mins} min read`;
+                  })()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Breadcrumbs */}
+          <nav className="text-sm text-muted-foreground mb-8">
+            <button className="hover:underline" onClick={() => navigate('/')}>Home</button>
+            <span className="mx-2">›</span>
+            <button className="hover:underline" onClick={() => navigate('/blogs')}>Blogs</button>
+            {p.category?.title && !/^imported$/i.test(p.category.title) && (
+              <>
+                <span className="mx-2">›</span>
+                <button className="hover:underline" onClick={() => navigate(`/blogs?category=${encodeURIComponent(p.category.title)}`)}>{p.category.title}</button>
+              </>
+            )}
+            <span className="mx-2">›</span>
+            <span className="text-foreground">{p.title}</span>
+          </nav>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <article className="lg:col-span-8 space-y-6">
+              {/* AI Overview Panel */}
+              <AIOverviewPanel 
+                postId={p.id} 
+                content={(p.content || p.content_md || p.content_html || "").toString()}
+              />
+
+              {/* Content */}
+              <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: contentHtml }} />
+
+              {/* Simplified Reactions */}
+              <div className="pt-6 border-t flex items-center justify-between">
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                    👍 <span>{(data.reactions?.thumbs_up || 0) + (data.reactions?.like || 0)}</span>
+                  </Button>
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                    ❤️ <span>{data.reactions?.love || 0}</span>
+                  </Button>
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                    👏 <span>{data.reactions?.insightful || 0}</span>
+                  </Button>
+                </div>
+                <ShareButtons title={p.title} url={window.location.href} text={p.excerpt || ""} />
+              </div>
+
+              {/* Author Card */}
+              <section className="mt-8">
+                <Card className="p-6">
+                  <div className="flex items-start gap-4">
+                    <AuthorChip 
+                      id={p.author.id} 
+                      name={authorProfile?.full_name || p.author.name} 
+                      avatar={authorProfile?.avatar_url || p.author.avatar} 
+                      onClick={(id) => navigate(`/profile/${id}`)} 
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-lg">{authorProfile?.full_name || p.author.name}</div>
+                      {authorProfile?.title && <div className="text-sm text-muted-foreground">{authorProfile.title}</div>}
+                      {authorProfile?.bio && <div className="text-sm text-muted-foreground mt-2">{authorProfile.bio}</div>}
+                    </div>
+                  </div>
+                  
+                  {/* Reviewer Attribution */}
+                  {data.post.reviewer && (
+                    <div className="mt-4 pt-4 border-t flex items-start gap-4">
+                      <AuthorChip 
+                        id={data.post.reviewer.id} 
+                        name={reviewerProfile?.full_name || data.post.reviewer.name} 
+                        avatar={reviewerProfile?.avatar_url || data.post.reviewer.avatar} 
+                        onClick={(id) => navigate(`/profile/${id}`)} 
+                      />
+                      <div>
+                        <div className="font-medium">Reviewed by {reviewerProfile?.full_name || data.post.reviewer.name}</div>
+                        {reviewerProfile?.bio && <div className="text-sm text-muted-foreground">{reviewerProfile.bio}</div>}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              </section>
+
+              {/* Comments */}
+              <section className="mt-8" id="comments" ref={commentsRef}>
+                <h2 className="text-xl font-semibold mb-4">Comments</h2>
+                <CommentThread
+                  postId={p.id}
+                  comments={data.comments || []}
+                  onNewComment={(c) => setData((d: any) => ({ ...d, comments: [...(d.comments || []), c] }))}
+                />
+              </section>
+            </article>
+
+            {/* Sidebar */}
+            <aside className="lg:col-span-4 space-y-4">
+              {/* Reserved for related posts, ads, etc. */}
+            </aside>
+          </div>
+        </div>
+
+        {/* Mobile Sticky Bar */}
+        <div className="fixed bottom-0 left-0 right-0 lg:hidden border-t bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto px-4 py-2 flex items-center justify-between">
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm">👍 {(data.reactions?.thumbs_up || 0) + (data.reactions?.like || 0)}</Button>
+              <Button variant="ghost" size="sm">❤️ {data.reactions?.love || 0}</Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={() => {
+                const el = document.getElementById('comments');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}>Comment</Button>
+              <ShareButtons title={p.title} url={window.location.href} text={p.excerpt || ""} size="sm" />
+            </div>
+          </div>
+        </div>
+        
+        <link rel="canonical" href={`${window.location.origin}/blogs/${encodeURIComponent(slug || "")}`} />
+      </main>
+    );
+  }
+
+  // Original layout when feature flag is OFF
   return (
     <main className="min-h-screen">
       {/* Hero */}

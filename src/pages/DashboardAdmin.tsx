@@ -31,6 +31,7 @@ import AdminConsultsPolicies from "@/components/dashboard/consultations/AdminCon
 import AdminConsultsNotifications from "@/components/dashboard/consultations/AdminConsultsNotifications";
 import AdminConsultsSettings from "@/components/dashboard/consultations/AdminConsultsSettings";
 import ApproveGurus from "@/pages/admin/ApproveGurus";
+import BlogTaxonomyManager from "@/components/blogs/BlogTaxonomyManager";
 
 // -------- Analytics panel
 const AdminAnalyticsPanel: React.FC = () => {
@@ -1163,6 +1164,12 @@ export default function DashboardAdmin() {
           title: "Published & Archive", 
           description: "Manage published posts and archive.", 
           render: <BlogPublishedArchive /> 
+        },
+        { 
+          id: "taxonomy", 
+          title: "Taxonomy", 
+          description: "Manage blog categories and subcategories.", 
+          render: <BlogTaxonomyManager /> 
         },
         { 
           id: "my-blogs", 

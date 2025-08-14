@@ -12,6 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useRoles } from "@/hooks/useRoles";
 import { submitPost, updateDraft } from "@/lib/blogsApi";
+import { isFeatureEnabled } from "@/lib/constants";
+import BlocksPalette, { Block } from "@/components/blogs/editor/BlocksPalette";
+import BlockEditor from "@/components/blogs/editor/BlockEditor";
+import { blocksToMarkdown, markdownToBlocks } from "@/components/blogs/editor/BlocksToMarkdown";
 
 export default function EditorEdit() {
   const { id } = useParams();
@@ -31,6 +35,10 @@ export default function EditorEdit() {
   const [allTags, setAllTags] = useState<{ id: string; slug: string; title: string }[]>([]);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [isAssignedReviewer, setIsAssignedReviewer] = useState(false);
+  
+  // New editor state
+  const [useBlockEditor, setUseBlockEditor] = useState(isFeatureEnabled('BLOG_EDITOR_V2'));
+  const [blocks, setBlocks] = useState<Block[]>([]);
   useEffect(() => {
     if (!user) navigate("/auth");
   }, [user]);
@@ -67,9 +75,15 @@ export default function EditorEdit() {
       if (!post) { toast.error("Draft not found"); navigate("/dashboard"); return; }
       setTitle((post as any).title || "");
       setCover((post as any).cover_image_url || "");
-      setContent((post as any).content || "");
+      const contentValue = (post as any).content || "";
+      setContent(contentValue);
       setCategoryId((post as any).category_id || undefined);
       setIsAssignedReviewer(((post as any).reviewer_id && user?.id) ? (post as any).reviewer_id === user.id : false);
+      
+      // Initialize blocks if using block editor
+      if (useBlockEditor && contentValue) {
+        setBlocks(markdownToBlocks(contentValue));
+      }
       // Load tags
       const { data: tagRows } = await supabase
         .from("blog_post_tags")
@@ -87,7 +101,11 @@ export default function EditorEdit() {
       setLoading(true);
       const leftover = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
       const tag_slugs = Array.from(new Set([...tagList, ...leftover].map((t) => t.toLowerCase().replace(/\s+/g, "-"))));
-      await updateDraft(id, { title, content_md: content, category_id: categoryId, tag_slugs, cover_image_url: cover || undefined });
+      
+      // Convert blocks to markdown if using block editor
+      const finalContent = useBlockEditor ? blocksToMarkdown(blocks) : content;
+      
+      await updateDraft(id, { title, content_md: finalContent, category_id: categoryId, tag_slugs, cover_image_url: cover || undefined });
       if (submit) await submitPost(id);
       toast.success(submit ? "Submitted. Thanks — admins will assign a guru reviewer and publish soon." : "Draft updated");
       navigate("/blogs/dashboard");
@@ -96,6 +114,48 @@ export default function EditorEdit() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddBlock = (type: Block['type']) => {
+    const newBlock: Block = {
+      id: `block-${Date.now()}`,
+      type,
+      content: {},
+      order: blocks.length,
+    };
+    setBlocks(prev => [...prev, newBlock]);
+  };
+
+  const handleUpdateBlock = (id: string, content: any) => {
+    setBlocks(prev => prev.map(block => 
+      block.id === id ? { ...block, content } : block
+    ));
+  };
+
+  const handleRemoveBlock = (id: string) => {
+    setBlocks(prev => prev.filter(block => block.id !== id));
+  };
+
+  const handleReorderBlocks = (dragIndex: number, hoverIndex: number) => {
+    setBlocks(prev => {
+      const updated = [...prev];
+      const [draggedItem] = updated.splice(dragIndex, 1);
+      updated.splice(hoverIndex, 0, draggedItem);
+      return updated.map((block, index) => ({ ...block, order: index }));
+    });
+  };
+
+  const toggleEditor = () => {
+    if (useBlockEditor) {
+      // Convert blocks to markdown
+      const markdown = blocksToMarkdown(blocks);
+      setContent(markdown);
+    } else {
+      // Convert markdown to blocks
+      const newBlocks = markdownToBlocks(content);
+      setBlocks(newBlocks);
+    }
+    setUseBlockEditor(!useBlockEditor);
   };
 
   const onReject = async () => {
@@ -132,8 +192,18 @@ export default function EditorEdit() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-3xl font-bold mb-6">Edit Draft</h1>
-      <Card className="p-6 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Edit Draft</h1>
+        {isFeatureEnabled('BLOG_EDITOR_V2') && (
+          <Button variant="outline" onClick={toggleEditor}>
+            {useBlockEditor ? 'Revert to classic editor' : 'Use block editor'}
+          </Button>
+        )}
+      </div>
+      
+      <div className="flex gap-6">
+        <div className="flex-1">
+          <Card className="p-6 space-y-6">
         <div className="space-y-2">
           <Label htmlFor="title">Title</Label>
           <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Post title" />
@@ -240,10 +310,36 @@ export default function EditorEdit() {
             </div>
           )}
         </div>
-        <div className="space-y-2">
-          <Label>Content</Label>
-          <Textarea className="min-h-[300px]" value={content} onChange={(e) => setContent(e.target.value)} placeholder="# Heading\nYour content..." />
-        </div>
+        {useBlockEditor ? (
+          <div className="space-y-4">
+            <Label>Content (Block Editor)</Label>
+            {blocks.length === 0 ? (
+              <Card className="p-8 text-center border-dashed">
+                <div className="text-muted-foreground">
+                  Start building your post by adding blocks from the palette →
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {blocks
+                  .sort((a, b) => a.order - b.order)
+                  .map(block => (
+                    <BlockEditor
+                      key={block.id}
+                      block={block}
+                      onUpdate={(content) => handleUpdateBlock(block.id, content)}
+                      onRemove={() => handleRemoveBlock(block.id)}
+                    />
+                  ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label>Content</Label>
+            <Textarea className="min-h-[300px]" value={content} onChange={(e) => setContent(e.target.value)} placeholder="# Heading\nYour content..." />
+          </div>
+        )}
         { (isAdmin || isAssignedReviewer) ? (
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={onReject} disabled={loading}>Reject</Button>
@@ -256,7 +352,33 @@ export default function EditorEdit() {
           </div>
         )}
 
-      </Card>
+          </Card>
+        </div>
+        
+        {useBlockEditor && (
+          <div className="hidden lg:block">
+            <BlocksPalette
+              blocks={blocks}
+              onAddBlock={handleAddBlock}
+              onUpdateBlock={handleUpdateBlock}
+              onRemoveBlock={handleRemoveBlock}
+              onReorderBlocks={handleReorderBlocks}
+            />
+          </div>
+        )}
+      </div>
+      
+      {useBlockEditor && (
+        <div className="lg:hidden">
+          <BlocksPalette
+            blocks={blocks}
+            onAddBlock={handleAddBlock}
+            onUpdateBlock={handleUpdateBlock}
+            onRemoveBlock={handleRemoveBlock}
+            onReorderBlocks={handleReorderBlocks}
+          />
+        </div>
+      )}
     </main>
   );
 }
