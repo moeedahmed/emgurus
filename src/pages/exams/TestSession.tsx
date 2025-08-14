@@ -2,11 +2,24 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import QuestionCard from "@/components/exams/QuestionCard";
+import MarkForReviewButton from "@/components/exams/MarkForReviewButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { mapEnumToLabel } from "@/lib/exams";
 import { recordNotification } from "@/components/ui/ToastOrNotice";
+
+// Shuffle utility for randomizing questions
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 interface Question {
   id: string;
@@ -33,6 +46,8 @@ export default function TestSession() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [score, setScore] = useState<{ correct: number; total: number }>({ correct: 0, total: 0 });
   const [isFinished, setIsFinished] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
 
   useEffect(() => {
     document.title = "Test Session • EM Gurus";
@@ -92,7 +107,45 @@ export default function TestSession() {
       const topic = config.topic;
       const totalQuestions = attempt.total_questions || 10;
 
-      // Helper: try queries with fallbacks
+      // Check if we already have question IDs stored from session creation
+      if (attempt.question_ids && attempt.question_ids.length > 0) {
+        // Load the stored questions in their randomized order
+        const { data: questionData, error } = await supabase
+          .from('reviewed_exam_questions')
+          .select('id, stem, options, correct_index, explanation, exam, topic, status')
+          .in('id', attempt.question_ids)
+          .eq('status', 'approved');
+        
+        if (error) throw error;
+        
+        // Sort questions according to the stored order
+        const orderedQuestions = attempt.question_ids.map((id: string) => 
+          questionData?.find(q => q.id === id)
+        ).filter(Boolean);
+        
+        if (orderedQuestions.length > 0) {
+          const normalizedQuestions = orderedQuestions.map(q => {
+            const choices: Record<string, string> = {};
+            (q.options || []).forEach((opt: string, i: number) => {
+              choices[String.fromCharCode(65 + i)] = opt;
+            });
+            return {
+              id: q.id,
+              stem: q.stem,
+              choices,
+              correct_index: q.correct_index ?? 0,
+              explanation: q.explanation ?? '',
+              tags: [q.topic].filter(Boolean),
+            };
+          });
+          
+          setQuestions(normalizedQuestions);
+          setCurrentIndex(0);
+          return;
+        }
+      }
+
+      // Fallback: fetch and randomize new questions
       async function fetchReviewed(): Promise<any[]> {
         let query = supabase
           .from('reviewed_exam_questions')
@@ -105,7 +158,7 @@ export default function TestSession() {
           query = query.eq('topic', topic);
         }
 
-        let { data, error } = await query.limit(totalQuestions);
+        let { data, error } = await query.limit(totalQuestions * 3); // Get more for randomization
         if (error) throw error;
         if (data?.length) return data;
 
@@ -115,19 +168,11 @@ export default function TestSession() {
           .select('id, stem, options, correct_index, explanation, exam, topic, status')
           .eq('status', 'approved')
           .eq('exam', examLabel)
-          .limit(totalQuestions));
+          .limit(totalQuestions * 3));
         if (error) throw error;
         if (data?.length) return data;
 
-        // Last resort: any approved questions
-        ({ data, error } = await supabase
-          .from('reviewed_exam_questions')
-          .select('id, stem, options, correct_index, explanation, exam, topic, status')
-          .eq('status', 'approved')
-          .limit(totalQuestions)
-          .order('id', { ascending: false }));
-        if (error) throw error;
-        return data ?? [];
+        return [];
       }
 
       const questionData = await fetchReviewed();
@@ -136,8 +181,18 @@ export default function TestSession() {
         return;
       }
 
-      // Normalize all questions
-      const normalizedQuestions = questionData.map(q => {
+      // Randomize and limit to required count
+      const shuffledQuestions = shuffle(questionData).slice(0, totalQuestions);
+      
+      // Update attempt with randomized question IDs
+      const questionIds = shuffledQuestions.map(q => q.id);
+      await supabase
+        .from('exam_attempts')
+        .update({ question_ids: questionIds })
+        .eq('id', attempt.id);
+
+      // Normalize questions
+      const normalizedQuestions = shuffledQuestions.map(q => {
         const choices: Record<string, string> = {};
         (q.options || []).forEach((opt: string, i: number) => {
           choices[String.fromCharCode(65 + i)] = opt;
@@ -208,11 +263,25 @@ export default function TestSession() {
   const handleNext = () => {
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(currentIndex + 1);
-      setSelected("");
+      setSelected(answers[currentIndex + 1] || "");
       setShowExplanation(false);
     } else {
       handleFinishTest();
     }
+  };
+
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+      setSelected(answers[currentIndex - 1] || "");
+      setShowExplanation(false);
+    }
+  };
+
+  const jumpToQuestion = (index: number) => {
+    setCurrentIndex(index);
+    setSelected(answers[index] || "");
+    setShowExplanation(false);
   };
 
   const handleFinishTest = async () => {
@@ -243,11 +312,15 @@ export default function TestSession() {
       // Update attempt as finished
       await supabase
         .from('exam_attempts')
-        .update({ finished_at: new Date().toISOString() })
+        .update({ 
+          finished_at: new Date().toISOString(),
+          correct_count: score.correct,
+          total_attempted: score.total
+        })
         .eq('id', attemptId);
     }
 
-    handleFinish();
+    setShowSummary(true);
   };
 
   const handleFinish = async () => {
@@ -271,6 +344,22 @@ export default function TestSession() {
     const secs = seconds % 60;
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Calculate summary stats
+  const answeredCount = Object.keys(answers).length;
+  const byTopic = questions.reduce((acc, q, i) => {
+    const topic = q.tags?.[0] || 'General';
+    if (!acc[topic]) acc[topic] = { correct: 0, total: 0 };
+    
+    if (answers[i]) {
+      acc[topic].total++;
+      const correctKey = Object.keys(q.choices)[q.correct_index];
+      if (answers[i] === correctKey) {
+        acc[topic].correct++;
+      }
+    }
+    return acc;
+  }, {} as Record<string, { correct: number; total: number }>);
 
   if (loading && questions.length === 0) {
     return (
@@ -306,72 +395,289 @@ export default function TestSession() {
   const currentQuestion = questions[currentIndex];
   if (!currentQuestion) return null;
 
-  return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Timer Bar */}
-      <Card className="mb-6">
-        <CardContent className="py-3">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <span className="font-medium">Test Mode</span>
+  if (showSummary && !reviewMode) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <Card>
+          <CardContent className="py-8">
+            <h2 className="text-2xl font-semibold mb-6">Test Results</h2>
+            <div className="grid gap-6">
+              <div className="text-lg font-semibold">
+                Score: {score.correct} / {score.total} ({Math.round((score.correct / score.total) * 100)}%)
+              </div>
+              
+              <div className="text-sm text-muted-foreground">
+                Questions attempted: {score.total} of {questions.length} • Time: {formatTime(timeLeft)}
+              </div>
+
+              {Object.keys(byTopic).length > 0 && (
+                <div>
+                  <h3 className="font-medium mb-3">Performance by Topic</h3>
+                  <div className="grid gap-2">
+                    {Object.entries(byTopic).map(([topic, stats]) => (
+                      <div key={topic} className="flex justify-between text-sm">
+                        <span>{topic}</span>
+                        <span>{stats.correct}/{stats.total} ({Math.round((stats.correct / stats.total) * 100)}%)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => navigate('/exams/test')}>
+                  New Test
+                </Button>
+                <Button onClick={() => setReviewMode(true)}>
+                  Review Answers
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (showSummary && reviewMode) {
+    const userAnswer = answers[currentIndex] || '';
+    const correctKey = Object.keys(currentQuestion.choices)[currentQuestion.correct_index];
+    
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <Card className="mb-6">
+          <CardContent className="py-3">
+            <div className="flex justify-between items-center">
+              <span className="font-medium">Review Mode</span>
               <span className="text-sm text-muted-foreground">
                 Question {currentIndex + 1} of {questions.length}
               </span>
             </div>
-            <span className={`font-mono ${timeLeft < 300 ? 'text-destructive' : 'text-foreground'}`}>
-              Time Remaining: {formatTime(timeLeft)}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <QuestionCard
-        stem={currentQuestion.stem}
-        options={Object.entries(currentQuestion.choices).map(([key, text]) => ({ key, text }))}
-        selectedKey={selected}
-        onSelect={setSelected}
-        showExplanation={showExplanation}
-        explanation={currentQuestion.explanation}
-        correctKey={Object.keys(currentQuestion.choices)[currentQuestion.correct_index]}
-        questionId={currentQuestion.id}
-      />
+        <QuestionCard
+          stem={currentQuestion.stem}
+          options={Object.entries(currentQuestion.choices).map(([key, text]) => ({ key, text }))}
+          selectedKey={userAnswer}
+          onSelect={() => {}} // Read-only in review mode
+          showExplanation={true}
+          explanation={currentQuestion.explanation}
+          correctKey={correctKey}
+          questionId={currentQuestion.id}
+          lockSelection={true}
+        />
 
-      <Card className="mt-6">
-        <CardContent className="py-4">
-          <div className="flex justify-between items-center">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/exams/test')}
-            >
-              Back to Config
-            </Button>
-            
-            {!showExplanation ? (
+        <Card className="mt-6">
+          <CardContent className="py-4">
+            <div className="flex justify-between items-center">
+              <Button variant="outline" onClick={() => setReviewMode(false)}>
+                Back to Results
+              </Button>
+              
               <div className="flex gap-2">
                 <Button 
-                  onClick={handleSubmit} 
-                  disabled={loading}
+                  variant="outline" 
+                  onClick={() => jumpToQuestion(Math.max(0, currentIndex - 1))}
+                  disabled={currentIndex === 0}
                 >
-                  {loading ? 'Submitting...' : 'Submit Answer'}
+                  Previous
                 </Button>
-                {questions.length > 1 && (
-                  <Button 
-                    variant="outline"
-                    onClick={handleFinishTest}
-                    disabled={loading}
-                  >
-                    End Test Early
-                  </Button>
-                )}
+                <Button 
+                  onClick={() => jumpToQuestion(Math.min(questions.length - 1, currentIndex + 1))}
+                  disabled={currentIndex === questions.length - 1}
+                >
+                  Next
+                </Button>
               </div>
-            ) : (
-              <Button onClick={handleNext}>
-                {currentIndex < questions.length - 1 ? 'Next Question' : 'View Results'}
-              </Button>
-            )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="grid gap-6 lg:grid-cols-4">
+        <div className="lg:col-span-3">
+          {/* Timer Bar */}
+          <Card className="mb-6">
+            <CardContent className="py-3">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <span className="font-medium">Test Mode</span>
+                  <span className="text-sm text-muted-foreground">
+                    Question {currentIndex + 1} of {questions.length}
+                  </span>
+                </div>
+                <span className={`font-mono text-sm ${timeLeft < 300 ? 'text-destructive' : 'text-foreground'}`}>
+                  {formatTime(timeLeft)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <QuestionCard
+            stem={currentQuestion.stem}
+            options={Object.entries(currentQuestion.choices).map(([key, text]) => ({ key, text }))}
+            selectedKey={selected}
+            onSelect={setSelected}
+            showExplanation={showExplanation}
+            explanation={currentQuestion.explanation}
+            correctKey={Object.keys(currentQuestion.choices)[currentQuestion.correct_index]}
+            questionId={currentQuestion.id}
+            source={currentQuestion.tags?.[0]}
+          />
+
+          <Card className="mt-6">
+            <CardContent className="py-4">
+              <div className="flex justify-between items-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/exams/test')}
+                >
+                  Back to Config
+                </Button>
+                
+                <div className="flex gap-2">
+                  {showExplanation && (
+                    <MarkForReviewButton 
+                      currentQuestionId={currentQuestion.id} 
+                      source="reviewed" 
+                    />
+                  )}
+                  
+                  {!showExplanation ? (
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={handleSubmit} 
+                        disabled={loading}
+                      >
+                        {loading ? 'Submitting...' : 'Submit Answer'}
+                      </Button>
+                      {questions.length > 1 && (
+                        <Button 
+                          variant="outline"
+                          onClick={handleFinishTest}
+                          disabled={loading}
+                        >
+                          End Test Early
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <Button onClick={handleNext}>
+                      {currentIndex < questions.length - 1 ? 'Next Question' : 'View Results'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <aside className="hidden lg:block">
+          <div className="sticky top-20 space-y-4">
+            <Card>
+              <CardContent className="py-4">
+                <div className="text-sm font-medium mb-2">Timer</div>
+                <div className={`text-xl font-semibold ${timeLeft < 300 ? 'text-destructive' : 'text-foreground'}`}>
+                  {formatTime(timeLeft)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="py-4">
+                <div className="text-sm font-medium mb-2">Progress</div>
+                <div className="text-sm mb-2">{answeredCount} of {questions.length} answered</div>
+                <Progress value={(answeredCount / questions.length) * 100} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="py-4">
+                <div className="text-sm font-medium mb-3">Question Map</div>
+                <div className="grid grid-cols-5 gap-2">
+                  {questions.map((_, i) => {
+                    const isCurrent = i === currentIndex;
+                    const hasAnswer = answers[i];
+                    const isCorrect = hasAnswer && answers[i] === Object.keys(questions[i].choices)[questions[i].correct_index];
+                    
+                    const baseClasses = "h-8 w-8 rounded text-sm flex items-center justify-center border cursor-pointer";
+                    const stateClasses = isCurrent
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : hasAnswer
+                        ? isCorrect 
+                          ? "bg-success/20 border-success text-success hover:bg-success/30"
+                          : "bg-destructive/10 border-destructive text-destructive hover:bg-destructive/20"
+                        : "bg-muted hover:bg-muted/70";
+                    
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => jumpToQuestion(i)}
+                        className={`${baseClasses} ${stateClasses}`}
+                        aria-label={`Go to question ${i + 1}`}
+                      >
+                        {i + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Mobile drawer for controls */}
+            <div className="lg:hidden">
+              <Drawer>
+                <DrawerTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full">
+                    Test Tools
+                  </Button>
+                </DrawerTrigger>
+                <DrawerContent className="p-4 space-y-4">
+                  <div>
+                    <div className="text-sm font-medium mb-2">Timer</div>
+                    <div className={`text-lg font-semibold ${timeLeft < 300 ? 'text-destructive' : 'text-foreground'}`}>
+                      {formatTime(timeLeft)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium mb-2">Progress</div>
+                    <div className="text-sm mb-2">{answeredCount} of {questions.length} answered</div>
+                    <Progress value={(answeredCount / questions.length) * 100} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium mb-3">Question Map</div>
+                    <div className="grid grid-cols-8 gap-2">
+                      {questions.map((_, i) => {
+                        const isCurrent = i === currentIndex;
+                        const hasAnswer = answers[i];
+                        
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => jumpToQuestion(i)}
+                            className={`h-8 w-8 rounded text-sm flex items-center justify-center border ${
+                              isCurrent ? "bg-primary text-primary-foreground" : 
+                              hasAnswer ? "bg-muted" : "bg-background"
+                            }`}
+                          >
+                            {i + 1}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </DrawerContent>
+              </Drawer>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </aside>
+      </div>
     </div>
   );
 }
