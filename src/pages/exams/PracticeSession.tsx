@@ -67,51 +67,60 @@ export default function PracticeSession() {
     try {
       const config = attempt.breakdown || {};
       const enumVal = config.exam_type;
-      const examLabel = mapEnumToLabel(enumVal);
+      const examLabel = mapEnumToLabel?.(enumVal) ?? 'MRCEM Intermediate SBA';
       const topic = config.topic;
 
-      // Query reviewed questions with filters
-      let query = supabase
-        .from('reviewed_exam_questions')
-        .select('id, stem, options, correct_index, explanation, exam, topic')
-        .eq('status', 'approved')
-        .order('id', { ascending: false });
+      // Helper: try N queries, first that returns rows wins
+      async function fetchReviewed(): Promise<any[]> {
+        // 1) strict (exam + topic)
+        let { data, error } = await supabase
+          .from('reviewed_exam_questions')
+          .select('id, stem, options, correct_index, explanation, exam, topic, status')
+          .eq('status','approved')
+          .eq('exam', examLabel)
+          .eq('topic', topic ?? '__no_topic__');   // forces no match if topic is null
+        if (error) throw error;
+        if (data?.length) return data;
 
-      // Apply filters if available
-      if (examLabel && examLabel !== 'Other') {
-        query = query.eq('exam', examLabel);
+        // 2) relax topic (exam only)
+        ({ data, error } = await supabase
+          .from('reviewed_exam_questions')
+          .select('id, stem, options, correct_index, explanation, exam, topic, status')
+          .eq('status','approved')
+          .eq('exam', examLabel));
+        if (error) throw error;
+        if (data?.length) return data;
+
+        // 3) last-ditch: any approved question
+        ({ data, error } = await supabase
+          .from('reviewed_exam_questions')
+          .select('id, stem, options, correct_index, explanation, exam, topic, status')
+          .eq('status','approved')
+          .limit(1)
+          .order('id', { ascending: false }));
+        if (error) throw error;
+        return data ?? [];
       }
-      if (topic) {
-        query = query.eq('topic', topic);
-      }
 
-      const { data: questions, error } = await query.limit(1);
-
-      if (error) throw error;
-
-      if (!questions || questions.length === 0) {
-        // Show empty state instead of error
-        setQuestion(null);
+      const questions = await fetchReviewed();
+      if (!questions.length) {
+        setQuestion(null); // render your nice empty state
         return;
       }
 
+      // Normalize one question
       const q = questions[0];
-      // Convert options array to choices object for compatibility
-      const choicesObj: Record<string, string> = {};
-      if (q.options && Array.isArray(q.options)) {
-        q.options.forEach((option: string, index: number) => {
-          const key = String.fromCharCode(65 + index); // A, B, C, D, E
-          choicesObj[key] = option;
-        });
-      }
-      
+      const choices: Record<string, string> = {};
+      (q.options || []).forEach((opt: string, i: number) => {
+        choices[String.fromCharCode(65 + i)] = opt;
+      });
       setQuestion({
         id: q.id,
         stem: q.stem,
-        choices: choicesObj,
-        correct_index: q.correct_index || 0,
-        explanation: q.explanation || '',
-        tags: [q.topic].filter(Boolean)
+        choices,
+        correct_index: q.correct_index ?? 0,
+        explanation: q.explanation ?? '',
+        tags: [q.topic].filter(Boolean),
       });
     } catch (err: any) {
       console.error('Question load failed', err);
@@ -162,7 +171,7 @@ export default function PracticeSession() {
       description: 'Check your dashboard for detailed results.',
       duration: 3000
     });
-    navigate('/dashboard/exams/attempts');
+    navigate('/exams/practice', { replace: true });
   };
 
   if (loading && !question) {

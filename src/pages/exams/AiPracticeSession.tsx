@@ -254,7 +254,12 @@ export default function AiPracticeSession() {
 
   const confirmEndEarly = () => {
     setShowEndDialog(false);
-    showFinalScore();
+    toast({
+      title: 'Session Complete!',
+      description: 'Check your dashboard for detailed results.',
+      duration: 3000
+    });
+    navigate('/exams/ai-practice', { replace: true });
   };
 
   async function submitFeedback(feedbackType: string) {
@@ -324,7 +329,7 @@ export default function AiPracticeSession() {
           .update({ finished_at: new Date().toISOString() })
           .eq('id', attemptId)
           .then(() => {
-            setTimeout(() => navigate('/dashboard/exams/attempts'), 2000);
+            setTimeout(() => navigate('/exams/ai-practice', { replace: true }), 2000);
           });
       });
   }
