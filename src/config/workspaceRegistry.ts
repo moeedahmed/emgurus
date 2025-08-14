@@ -17,57 +17,36 @@ export type WorkspaceSection = {
   icon?: React.ComponentType<{ className?: string }>;
 };
 
-function NotFoundStub({ title }: { title?: string }) {
-  return React.createElement(
-    'div',
-    { className: 'text-sm text-muted-foreground p-6 border rounded-lg' },
-    title || 'This panel is not available yet.'
-  );
-}
+const EmptyPanel = () => (
+  React.createElement('div', { className: 'p-4 border rounded-md bg-muted/30' },
+    React.createElement('div', { className: 'font-medium' }, 'Nothing here yet'),
+    React.createElement('div', { className: 'text-sm text-muted-foreground mt-1' }, 
+      'This panel is temporarily unavailable.')
+  )
+);
 
 const safeLazy = (factory: () => Promise<{ default: React.ComponentType<any> }>) =>
   lazy(async () => {
     try { 
       return await factory(); 
-    } catch { 
-      return { default: NotFoundStub }; 
+    } catch (e) {
+      console.warn('Falling back to EmptyPanel for failed import:', e);
+      return { default: EmptyPanel };
     }
   });
 
-const AdminGeneration = safeLazy(async () => {
-  try {
-    return await import('../components/admin/AdminGeneration');
-  } catch {
-    return await import('../pages/admin/ExamsAICuration');
-  }
-});
-
+// Real components
+const AdminGeneration = safeLazy(() => import('../components/admin/AdminGeneration'));
 const BlogsOverview = safeLazy(() => import('../components/dashboard/blogs/BlogsOverview'));
 const MyBlogs = safeLazy(() => import('../components/dashboard/blogs/MyBlogs'));
-const BlogReviews = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
-const BlogSubmissionQueue = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
-const BlogsAnalytics = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
-
 const ExamsOverview = safeLazy(() => import('../components/dashboard/exams/ExamsOverview'));
 const ExamsAttempts = safeLazy(() => import('../components/dashboard/exams/ExamsAttempts'));
 const ExamsProgressMatrix = safeLazy(() => import('../components/dashboard/exams/ExamsProgressMatrix'));
 const ExamsFeedbackList = safeLazy(() => import('../components/dashboard/exams/ExamsFeedbackList'));
-
-const ExamReviews = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
-const ReviewedBank = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
-
 const ConsultOverview = safeLazy(() => import('../components/dashboard/consultations/ConsultationsOverview'));
-const Bookings = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
-const Availability = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
-const Pricing = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
-
 const ForumsOverview = safeLazy(() => import('../components/dashboard/forums/ForumsOverview'));
 const MyThreadsWithChips = safeLazy(() => import('../components/dashboard/forums/MyThreadsWithChips'));
 const ForumsModeration = safeLazy(() => import('../components/dashboard/forums/ForumsModerationQueue'));
-
-const UsersManage = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
-const SettingsPanel = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
-const GuruApprovals = safeLazy(() => Promise.resolve({ default: NotFoundStub }));
 
 export const BASE_SECTIONS: WorkspaceSection[] = [
   {
@@ -77,7 +56,7 @@ export const BASE_SECTIONS: WorkspaceSection[] = [
     icon: BookOpen,
     tabs: [
       { id: 'overview', title: 'Overview', component: BlogsOverview },
-      { id: 'my-blogs', title: 'My Blogs', component: MyBlogs },
+      { id: 'posts', title: 'Posts', component: MyBlogs },
     ],
   },
   {
@@ -87,8 +66,8 @@ export const BASE_SECTIONS: WorkspaceSection[] = [
     icon: GraduationCap,
     tabs: [
       { id: 'overview', title: 'Overview', component: ExamsOverview },
-      { id: 'attempts', title: 'My Attempts', component: ExamsAttempts },
-      { id: 'progress', title: 'Progress Matrix', component: ExamsProgressMatrix },
+      { id: 'attempts', title: 'Attempts', component: ExamsAttempts },
+      { id: 'progress', title: 'Progress', component: ExamsProgressMatrix },
       { id: 'feedback', title: 'Feedback', component: ExamsFeedbackList },
     ],
   },
@@ -99,7 +78,7 @@ export const BASE_SECTIONS: WorkspaceSection[] = [
     icon: Stethoscope,
     tabs: [
       { id: 'overview', title: 'Overview', component: ConsultOverview },
-      { id: 'bookings', title: 'Bookings', component: Bookings },
+      { id: 'bookings', title: 'Bookings', component: EmptyPanel },
     ],
   },
   {
@@ -109,7 +88,7 @@ export const BASE_SECTIONS: WorkspaceSection[] = [
     icon: MessagesSquare,
     tabs: [
       { id: 'overview', title: 'Overview', component: ForumsOverview },
-      { id: 'my-threads', title: 'My Threads', component: MyThreadsWithChips },
+      { id: 'threads', title: 'Threads', component: MyThreadsWithChips },
     ],
   },
 ];
@@ -117,42 +96,43 @@ export const BASE_SECTIONS: WorkspaceSection[] = [
 export const EXTRA_TABS_BY_ROLE: Record<'guru'|'admin', Partial<Record<string, WorkspaceTab[]>>> = {
   guru: {
     blogs: [
-      { id: 'reviews', title: 'Reviews', component: BlogReviews, roles: ['guru','admin'] },
-      { id: 'analytics', title: 'Analytics', component: BlogsAnalytics, roles: ['guru','admin'] },
+      { id: 'reviews', title: 'Reviews', component: EmptyPanel, roles: ['guru','admin'] },
+      { id: 'analytics', title: 'Analytics', component: EmptyPanel, roles: ['guru','admin'] },
     ],
     exams: [
-      { id: 'reviews', title: 'Reviews', component: ExamReviews, roles: ['guru','admin'] },
-      { id: 'reviewed-bank', title: 'Reviewed Bank', component: ReviewedBank, roles: ['guru','admin'] },
+      { id: 'reviews', title: 'Reviews', component: EmptyPanel, roles: ['guru','admin'] },
+      { id: 'bank', title: 'Bank', component: EmptyPanel, roles: ['guru','admin'] },
     ],
     consultations: [
-      { id: 'availability', title: 'Availability', component: Availability, roles: ['guru','admin'] },
-      { id: 'pricing', title: 'Pricing', component: Pricing, roles: ['guru','admin'] },
+      { id: 'slots', title: 'Slots', component: EmptyPanel, roles: ['guru','admin'] },
+      { id: 'pricing', title: 'Pricing', component: EmptyPanel, roles: ['guru','admin'] },
     ],
     forums: [
-      { id: 'moderation', title: 'Moderation Queue', component: ForumsModeration, roles: ['guru','admin'] },
+      { id: 'moderation', title: 'Moderation', component: ForumsModeration, roles: ['guru','admin'] },
     ],
   },
   admin: {
     blogs: [
-      { id: 'submission-queue', title: 'Submission Queue', component: BlogSubmissionQueue, roles: ['admin'] },
+      { id: 'queue', title: 'Queue', component: EmptyPanel, roles: ['admin'] },
+      { id: 'analytics', title: 'Analytics', component: EmptyPanel, roles: ['admin'] },
     ],
     exams: [
-      { id: 'generation', title: 'Generation', component: AdminGeneration, roles: ['admin'] },
-      { id: 'reviews', title: 'Reviews', component: ExamReviews, roles: ['admin'] },
-      { id: 'reviewed-bank', title: 'Reviewed Bank', component: ReviewedBank, roles: ['admin'] },
+      { id: 'generate', title: 'Generate', component: AdminGeneration, roles: ['admin'] },
+      { id: 'reviews', title: 'Reviews', component: EmptyPanel, roles: ['admin'] },
+      { id: 'bank', title: 'Bank', component: EmptyPanel, roles: ['admin'] },
     ],
     consultations: [
-      { id: 'analytics', title: 'Analytics', component: BlogsAnalytics, roles: ['admin'] },
+      { id: 'analytics', title: 'Analytics', component: EmptyPanel, roles: ['admin'] },
     ],
     forums: [
-      { id: 'moderation', title: 'Moderation Queue', component: ForumsModeration, roles: ['admin'] },
+      { id: 'moderation', title: 'Moderation', component: ForumsModeration, roles: ['admin'] },
     ],
     users: [
-      { id: 'manage', title: 'Manage Users', component: UsersManage, roles: ['admin'] },
-      { id: 'guru-approvals', title: 'Guru Approvals', component: GuruApprovals, roles: ['admin'] },
+      { id: 'approvals', title: 'Approvals', component: EmptyPanel, roles: ['admin'] },
+      { id: 'directory', title: 'Directory', component: EmptyPanel, roles: ['admin'] },
     ],
     settings: [
-      { id: 'general', title: 'Settings', component: SettingsPanel, roles: ['admin'] },
+      { id: 'site', title: 'Site', component: EmptyPanel, roles: ['admin'] },
     ],
   },
 };

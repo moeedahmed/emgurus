@@ -1,5 +1,4 @@
 import React, { Suspense, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useRoles } from '@/hooks/useRoles';
 import { buildSectionsForRoles } from '@/config/workspaceRegistry';
 import WorkspaceLayout from '@/components/dashboard/WorkspaceLayout';
@@ -26,19 +25,17 @@ const Dashboard = () => {
   }
 
   return (
-    <Suspense fallback={<div className="p-8 text-muted-foreground">Loading…</div>}>
-      <WorkspaceLayout 
-        title="Workspace" 
-        sections={sections.map(section => ({
-          ...section,
-          tabs: section.tabs.map(tab => ({
-            ...tab,
-            render: <SafeMount component={tab.component} fallbackText={`${tab.title} component failed to load`} />
-          }))
-        }))} 
-        defaultSectionId="blogs" 
-      />
-    </Suspense>
+    <WorkspaceLayout 
+      title="Workspace" 
+      sections={sections.map(section => ({
+        ...section,
+        tabs: section.tabs.map(tab => ({
+          ...tab,
+          render: <SafeMount component={tab.component} fallbackText={`${tab.title} component failed to load`} />
+        }))
+      }))} 
+      defaultSectionId="blogs" 
+    />
   );
 };
 

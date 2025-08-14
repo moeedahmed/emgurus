@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import WorkspaceErrorBoundary from "@/components/dashboard/WorkspaceErrorBoundary";
 
 export type WorkspaceSection = {
   id: string;            // e.g. "blogs"
@@ -159,7 +160,11 @@ export function WorkspaceLayoutInner({
                     <div className="mb-3 text-sm text-muted-foreground">{t.description}</div>
                   )}
                   <div className="border rounded-lg">
-                    {typeof t.render === 'function' ? (t.render as any)() : t.render}
+                    <Suspense fallback={<div className="text-sm text-muted-foreground p-4">Loading…</div>}>
+                      <WorkspaceErrorBoundary>
+                        {typeof t.render === 'function' ? (t.render as any)() : t.render}
+                      </WorkspaceErrorBoundary>
+                    </Suspense>
                   </div>
                 </TabsContent>
               ))}

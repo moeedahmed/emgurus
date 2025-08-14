@@ -141,14 +141,10 @@ export default function AdminGeneration() {
 
   if (hasError) {
     return (
-      <div className="p-6 text-center">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-2">OpenAI Configuration Required</h3>
-          <p className="text-sm text-muted-foreground">
-            OpenAI not configured or rate limited. Ask an admin to set OPENAI_API_KEY / OPENAI_MODEL_* in Supabase secrets.
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => setHasError(false)}>
+      <div className="p-4 border rounded-md bg-amber-50 text-amber-900">
+        <div className="font-semibold">Generation unavailable</div>
+        <div className="text-sm mt-1">Missing environment configuration. Ask an admin to set the required secrets.</div>
+        <Button variant="outline" size="sm" className="mt-3" onClick={() => setHasError(false)}>
           Try Again
         </Button>
       </div>
