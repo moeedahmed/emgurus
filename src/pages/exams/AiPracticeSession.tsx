@@ -123,8 +123,7 @@ export default function AiPracticeSession() {
             source: 'ai_practice',
             mode: 'practice',
             total_questions: total,
-            question_ids: [],
-            metadata: { source: 'ai', exam_type: exam }
+            question_ids: []
           })
           .select('id')
           .single();

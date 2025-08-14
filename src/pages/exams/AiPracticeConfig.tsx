@@ -9,6 +9,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
 
 const COUNTS = [10, 25, 50];
+const DIFFICULTIES = [
+  { value: "easy", label: "Easy" },
+  { value: "medium", label: "Medium" },
+  { value: "hard", label: "Hard" }
+];
 
 export default function AiPracticeConfig() {
   useEffect(() => {
@@ -24,6 +29,7 @@ export default function AiPracticeConfig() {
   const [exam, setExam] = useState<ExamName | "">("");
   const [count, setCount] = useState<number>(10);
   const [area, setArea] = useState<string>("All areas");
+  const [difficulty, setDifficulty] = useState<string>("medium");
   const [loading, setLoading] = useState(false);
 
   const areas = useMemo(() => (exam ? ["All areas", ...CURRICULA[exam]] : ["All areas"]) , [exam]);
@@ -45,7 +51,7 @@ export default function AiPracticeConfig() {
       params.set('exam', exam);
       params.set('count', String(count));
       if (area !== 'All areas') params.set('topic', area);
-      params.set('difficulty', 'medium'); // Default difficulty
+      params.set('difficulty', difficulty);
       navigate(`/exams/ai-practice/session/${Date.now()}?${params.toString()}`);
     } catch (err: any) {
       console.error('Start failed', err);
@@ -66,7 +72,7 @@ export default function AiPracticeConfig() {
         <CardHeader>
           <CardTitle>AI Practice (Beta)</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
+        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <Label>Exam<span className="sr-only"> required</span></Label>
             <Select value={exam} onValueChange={(v) => setExam(v as ExamName)}>
@@ -94,7 +100,16 @@ export default function AiPracticeConfig() {
               </SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-3 flex items-center gap-2 justify-end pt-2">
+          <div>
+            <Label>Difficulty</Label>
+            <Select value={difficulty} onValueChange={setDifficulty}>
+              <SelectTrigger className="mt-1"><SelectValue placeholder="Select difficulty" /></SelectTrigger>
+              <SelectContent>
+                {DIFFICULTIES.map(d => (<SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-2 lg:col-span-4 flex items-center gap-2 justify-end pt-2">
             <Button onClick={start} disabled={!exam || loading}>
               {loading ? 'Generating…' : 'Generate'}
             </Button>
