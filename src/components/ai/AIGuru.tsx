@@ -7,6 +7,18 @@ import DOMPurify from "dompurify";
 
 interface ChatMsg { role: 'user'|'assistant'; content: string }
 
+// Streaming helpers
+const supaUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const functionsUrl = (path: string) => (supaUrl && supaUrl.endsWith('/')) ? `${supaUrl}functions/v1/${path}` : (supaUrl ? `${supaUrl}/functions/v1/${path}` : `/functions/v1/${path}`);
+function supabaseFnHeaders(session?: { access_token?: string }) { 
+  const h: Record<string,string> = { 
+    'Content-Type': 'application/json', 
+    apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || '' 
+  }; 
+  if (session?.access_token) h.Authorization = `Bearer ${session.access_token}`; 
+  return h; 
+}
+
 function detectPageContext() {
   const path = window.location.pathname;
   let page_type: string = 'other';
@@ -82,19 +94,6 @@ export default function AIGuru() {
     };
   }, [open]);
 
-  const invokeWithTimeout = useCallback(async (p: Promise<Response>, ms = 60000) => {
-    const ctrl = new AbortController();
-    const timeout = setTimeout(() => ctrl.abort('timeout'), ms);
-    try {
-      const res = await Promise.race([
-        p,
-        new Promise<never>((_, rej) => setTimeout(() => rej(new Error('Request timeout after 60s')), ms))
-      ]);
-      return res;
-    } finally {
-      clearTimeout(timeout);
-    }
-  }, []);
 
   const send = useCallback(async (text?: string) => {
     const content = (text ?? input).trim();
@@ -105,114 +104,161 @@ export default function AIGuru() {
     setLoading(true);
     setStatusText('Generating…');
 
+    // Add assistant placeholder for streaming
+    setMsgs(m => [...m, { role: 'assistant', content: '' }]);
+
     // transient status
     const statusTimer = setTimeout(() => setStatusText('Searching EM Gurus…'), 600);
 
-    try {
-      // Add assistant placeholder for streaming
-      setMsgs(m => [...m, { role: 'assistant', content: '' }]);
+    const payload = {
+      session_id: sessionKey.current,
+      anon_id: sessionKey.current,
+      pageContext: pageContext,
+      messages: newMsgs.slice(-20),
+      browsing: allowBrowsing,
+      purpose: "chatbot",
+    };
 
-      const controller = new AbortController();
-      const fetchPromise = supabase.functions.invoke('ai-route', {
-        body: {
-          session_id: sessionKey.current,
-          anon_id: sessionKey.current,
-          pageContext: pageContext,
-          messages: newMsgs,
-          browsing: allowBrowsing,
-          purpose: "chatbot",
+    const scrollToBottom = () => {
+      setTimeout(() => {
+        const chatContainer = panelRef.current?.querySelector('.overflow-y-auto');
+        if (chatContainer) {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
         }
-      }).then(res => {
-        if (res.error) throw new Error(res.error.message);
-        // Convert Supabase response to fetch-like response for streaming
-        return new Response(JSON.stringify(res.data || {}), {
-          headers: { 'content-type': 'application/json' }
-        });
-      });
+      }, 10);
+    };
 
-      const res = await invokeWithTimeout(fetchPromise, 60000);
-      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-
-      const ctype = res.headers.get('content-type') || '';
-      clearTimeout(statusTimer);
-      setStatusText('');
-
-      // Non-streaming JSON fallback
-      if (!ctype.includes('text/event-stream')) {
-        try {
-          const json = await res.json();
-          const serverMsg = json?.message || json?.error || JSON.stringify(json);
-          setMsgs(m => [...m, { role: 'assistant', content: String(serverMsg || 'Sorry, I could not generate a response.') }]);
-          return;
-        } catch {
-          const txt = await res.text();
-          setMsgs(m => [...m, { role: 'assistant', content: txt || 'Sorry, I could not generate a response.' }]);
-          return;
-        }
-      }
-
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error('No response body');
-
-      const decoder = new TextDecoder();
-      let full = '';
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split(/\r?\n/);
-        for (const line of lines) {
-          if (!line.startsWith('data:')) continue;
-          const data = line.slice(5).trim();
-          if (!data || data === '[DONE]') continue;
-          try {
-            const json = JSON.parse(data);
-            const delta = json?.choices?.[0]?.delta?.content || json?.delta || json?.content || '';
-            const errMsg = json?.message || json?.error || '';
-            if (delta) {
-              full += delta;
-              setMsgs(m => {
-                const copy = [...m];
-                const idx = copy.length - 1;
-                copy[idx] = { ...copy[idx], content: (copy[idx].content || '') + delta } as ChatMsg;
-                return copy;
-              });
-            } else if (errMsg) {
-              // Surface server-sent error messages in the chat bubble
-              full = String(errMsg);
-              setMsgs(m => {
-                const copy = [...m];
-                const idx = copy.length - 1;
-                copy[idx] = { ...copy[idx], content: String(errMsg) } as ChatMsg;
-                return copy;
-              });
-            }
-          } catch {}
-        }
-      }
-
-      // Finalize
-      if (full) return;
-      // If no streamed content, show fallback
+    const updateLastAssistant = (content: string) => {
       setMsgs(m => {
         const copy = [...m];
         const idx = copy.length - 1;
-        copy[idx] = { ...copy[idx], content: copy[idx].content || 'Sorry, I could not generate a response.' } as ChatMsg;
+        if (idx >= 0 && copy[idx].role === 'assistant') {
+          copy[idx] = { ...copy[idx], content };
+        }
         return copy;
       });
-    } catch (e: any) {
+      scrollToBottom();
+    };
+
+    const appendToLastAssistant = (chunk: string) => {
+      setMsgs(m => {
+        const copy = [...m];
+        const idx = copy.length - 1;
+        if (idx >= 0 && copy[idx].role === 'assistant') {
+          copy[idx] = { ...copy[idx], content: copy[idx].content + chunk };
+        }
+        return copy;
+      });
+      scrollToBottom();
+    };
+
+    try {
+      // Check for required env vars
+      const hasEnvVars = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
+      if (!hasEnvVars) {
+        console.warn('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY, falling back to invoke');
+        throw new Error('no-env-vars');
+      }
+
+      // Primary streaming path
+      const res = await fetch(functionsUrl('ai-route'), {
+        method: 'POST',
+        headers: supabaseFnHeaders(session),
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => `HTTP ${res.status}`);
+        updateLastAssistant(errorText);
+        return;
+      }
+
+      if (!res.body) {
+        throw new Error('no-stream');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+
       clearTimeout(statusTimer);
       setStatusText('');
-      const aborted = /timeout/i.test(String(e?.message)) || e?.name === 'AbortError';
-      const errorMsg = e?.message || 'Sorry, I couldn\'t generate a response.';
-      const msg = aborted ? 'Request timeout after 60s' : errorMsg;
-      setMsgs(m => [...m.slice(0, m.length - (m[m.length-1]?.role === 'assistant' ? 0 : 0)), { role: 'assistant', content: msg }]);
-      console.error('AI Guru error', e);
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        
+        if (value) {
+          const chunk = decoder.decode(value, { stream: !done });
+          
+          // Handle different response formats
+          if (chunk.includes('data:')) {
+            // Server-sent events format
+            const lines = chunk.split(/\r?\n/);
+            for (const line of lines) {
+              if (!line.startsWith('data:')) continue;
+              const data = line.slice(5).trim();
+              if (!data || data === '[DONE]') continue;
+              try {
+                const json = JSON.parse(data);
+                const delta = json?.choices?.[0]?.delta?.content || json?.delta || json?.content || '';
+                const errMsg = json?.message || json?.error || '';
+                if (delta) {
+                  appendToLastAssistant(delta);
+                } else if (errMsg) {
+                  updateLastAssistant(String(errMsg));
+                  break;
+                }
+              } catch {}
+            }
+          } else {
+            // Try parsing as JSON first
+            try {
+              const json = JSON.parse(chunk);
+              if (json.error) {
+                updateLastAssistant(String(json.error));
+                break;
+              } else if (json.message || json.text) {
+                updateLastAssistant(String(json.message || json.text));
+                break;
+              }
+            } catch {
+              // Treat as raw text chunk
+              appendToLastAssistant(chunk);
+            }
+          }
+        }
+      }
+
+    } catch (e: any) {
+      // Fallback to supabase.functions.invoke
+      console.log('Falling back to supabase.functions.invoke due to:', e?.message);
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('ai-route', {
+          body: payload
+        });
+        
+        clearTimeout(statusTimer);
+        setStatusText('');
+        
+        if (error) {
+          updateLastAssistant(String(error.message || error));
+        } else {
+          const content = data?.message || data?.text || data?.content || String(data || 'Sorry, I could not generate a response.');
+          updateLastAssistant(content);
+        }
+      } catch (fallbackError: any) {
+        clearTimeout(statusTimer);
+        setStatusText('');
+        const errorMsg = fallbackError?.message || 'Sorry, I couldn\'t generate a response.';
+        updateLastAssistant(errorMsg);
+        console.error('AI Guru fallback error', fallbackError);
+      }
     } finally {
       setLoading(false);
     }
-  }, [input, msgs, pageContext, allowBrowsing, session?.access_token, invokeWithTimeout]);
+  }, [input, msgs, pageContext, allowBrowsing, session]);
 
   const runSelfTest = async () => {
     await send("Give me 2 links about sepsis from EM Gurus");
