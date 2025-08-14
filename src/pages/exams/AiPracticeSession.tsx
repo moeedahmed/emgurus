@@ -24,6 +24,8 @@ export default function AiPracticeSession() {
   const [search] = useSearchParams();
   const { toast } = useToast();
 
+  // Get session ID from URL params
+  const sessionId = window.location.pathname.split('/').pop();
   const exam = search.get("exam");
   const topic = search.get("topic");
   const difficulty = search.get("difficulty") || "medium";

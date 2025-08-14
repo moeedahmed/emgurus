@@ -35,7 +35,8 @@ export default function Exams() {
   const navigate = useNavigate();
   const [practiceOpen, setPracticeOpen] = useState(false);
   const [examOpen, setExamOpen] = useState(false);
-  // AI modal removed - directly navigate to config page
+  // Modal feature flags for potential rollback
+  const USE_EXAM_PRACTICE_MODALS = false;
 
   const [pExam, setPExam] = useState<ExamName | "">("");
   const [pTopic, setPTopic] = useState<string>("All areas");
@@ -271,106 +272,118 @@ useEffect(() => {
               </ul>
             </div>
             <div className="pt-6">
-              <Dialog open={practiceOpen} onOpenChange={setPracticeOpen}>
-                <DialogTrigger asChild>
-                  <Button size="lg" aria-label="Start Practice">Start Practice</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Start Practice</DialogTitle>
-                    <DialogDescription className="sr-only">Select an exam and topic to start practice mode.</DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label>Exam</Label>
-                      <Select value={pExam || undefined as any} onValueChange={(v) => setPExam(v as ExamName)}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
-                        <SelectContent className="z-50">
-                          {availExams.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
+              {USE_EXAM_PRACTICE_MODALS ? (
+                <Dialog open={practiceOpen} onOpenChange={setPracticeOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="lg" aria-label="Start Practice">Start Practice</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Start Practice</DialogTitle>
+                      <DialogDescription className="sr-only">Select an exam and topic to start practice mode.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <Label>Exam</Label>
+                        <Select value={pExam || undefined as any} onValueChange={(v) => setPExam(v as ExamName)}>
+                          <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
+                          <SelectContent className="z-50">
+                            {availExams.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Topic</Label>
+                        <Select value={pTopic} onValueChange={setPTopic} disabled={!pExam}>
+                          <SelectTrigger className="mt-1"><SelectValue placeholder="All areas" /></SelectTrigger>
+                          <SelectContent className="z-50">
+                            {pAreas.map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="md:col-span-2 flex items-center justify-end gap-2 pt-2">
+                        <Button variant="outline" onClick={() => setPracticeOpen(false)}>Cancel</Button>
+                        <Button onClick={startPractice} disabled={!pExam || !pHasAny}>Start</Button>
+                      </div>
                     </div>
-                    <div>
-                      <Label>Topic</Label>
-                      <Select value={pTopic} onValueChange={setPTopic} disabled={!pExam}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder="All areas" /></SelectTrigger>
-                        <SelectContent className="z-50">
-                          {pAreas.map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="md:col-span-2 flex items-center justify-end gap-2 pt-2">
-                      <Button variant="outline" onClick={() => setPracticeOpen(false)}>Cancel</Button>
-                      <Button onClick={startPractice} disabled={!pExam || !pHasAny}>Start</Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
+              ) : (
+                <Button size="lg" aria-label="Start Practice Mode" onClick={() => navigate('/exams/practice')}>
+                  Start Practice Mode
+                </Button>
+              )}
             </div>
           </Card>
 
           {/* Exam Mode */}
           <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
-              <h3 className="text-xl font-semibold mb-2">Exam Mode</h3>
+              <h3 className="text-xl font-semibold mb-2">Test Mode</h3>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Timed practice exams</li>
-                <li>• Realistic exam conditions</li>
+                <li>• Timed practice tests</li>
+                <li>• Realistic test conditions</li>
                 <li>• Complete score analysis</li>
               </ul>
             </div>
             <div className="pt-6">
-              <Dialog open={examOpen} onOpenChange={setExamOpen}>
-                <DialogTrigger asChild>
-                  <Button size="lg" aria-label="Start Exam">Start Exam</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Start Exam</DialogTitle>
-                    <DialogDescription className="sr-only">Select exam and topic, then set number and time to begin a timed exam.</DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="md:col-span-1">
-                      <Label>Exam</Label>
-                      <Select value={eExam || undefined as any} onValueChange={(v) => setEExam(v as ExamName)}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
-                        <SelectContent className="z-50">
-                          {availExams.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
+              {USE_EXAM_PRACTICE_MODALS ? (
+                <Dialog open={examOpen} onOpenChange={setExamOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="lg" aria-label="Start Test">Start Test</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Start Test</DialogTitle>
+                      <DialogDescription className="sr-only">Select exam and topic, then set number and time to begin a timed test.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="md:col-span-1">
+                        <Label>Exam</Label>
+                        <Select value={eExam || undefined as any} onValueChange={(v) => setEExam(v as ExamName)}>
+                          <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
+                          <SelectContent className="z-50">
+                            {availExams.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="md:col-span-1">
+                        <Label>Topic</Label>
+                        <Select value={eTopic} onValueChange={setETopic} disabled={!eExam}>
+                          <SelectTrigger className="mt-1"><SelectValue placeholder="All areas" /></SelectTrigger>
+                          <SelectContent className="z-50">
+                            {eAreas.map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="md:col-span-1">
+                        <Label>Number</Label>
+                        <Input type="number" min={5} max={maxExam} value={eCount} onChange={(e)=> {
+                          const v = Number(e.target.value || 25);
+                          setECount(Math.max(5, Math.min(maxExam, v)));
+                        }} className="mt-1" />
+                      </div>
+                      <div className="md:col-span-1">
+                        <Label>Time</Label>
+                        <Select value={eTime} onValueChange={setETime}>
+                          <SelectTrigger className="mt-1"><SelectValue placeholder="Select time" /></SelectTrigger>
+                          <SelectContent className="z-50">
+                            {[30,45,60,90,120].map(m => (<SelectItem key={m} value={String(m)}>{m} min</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="md:col-span-3 flex items-center justify-end gap-2 pt-2">
+                        <Button variant="outline" onClick={() => setExamOpen(false)}>Cancel</Button>
+                        <Button onClick={startExam} disabled={!eExam || !eHasAny}>Start</Button>
+                      </div>
                     </div>
-                    <div className="md:col-span-1">
-                      <Label>Topic</Label>
-                      <Select value={eTopic} onValueChange={setETopic} disabled={!eExam}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder="All areas" /></SelectTrigger>
-                        <SelectContent className="z-50">
-                          {eAreas.map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="md:col-span-1">
-                      <Label>Number</Label>
-                      <Input type="number" min={5} max={maxExam} value={eCount} onChange={(e)=> {
-                        const v = Number(e.target.value || 25);
-                        setECount(Math.max(5, Math.min(maxExam, v)));
-                      }} className="mt-1" />
-                    </div>
-                    <div className="md:col-span-1">
-                      <Label>Time</Label>
-                      <Select value={eTime} onValueChange={setETime}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select time" /></SelectTrigger>
-                        <SelectContent className="z-50">
-                          {[30,45,60,90,120].map(m => (<SelectItem key={m} value={String(m)}>{m} min</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="md:col-span-3 flex items-center justify-end gap-2 pt-2">
-                      <Button variant="outline" onClick={() => setExamOpen(false)}>Cancel</Button>
-                      <Button onClick={startExam} disabled={!eExam || !eHasAny}>Start</Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
+              ) : (
+                <Button size="lg" aria-label="Start Test Mode" onClick={() => navigate('/exams/test')}>
+                  Start Test Mode
+                </Button>
+              )}
             </div>
           </Card>
         </div>
