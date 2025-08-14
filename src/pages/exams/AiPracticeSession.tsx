@@ -38,6 +38,7 @@ export default function AiPracticeSession() {
   const [error, setError] = useState<string>("");
   const [questions, setQuestions] = useState<(GeneratedQuestion | null)[]>([]);
   const [attemptId, setAttemptId] = useState<string>("");
+  const [storedQuestions, setStoredQuestions] = useState<{ [key: number]: string }>({});
   const [currentSettings, setCurrentSettings] = useState({
     exam: exam as ExamName,
     count: total,
@@ -146,28 +147,40 @@ export default function AiPracticeSession() {
         toast({ title: 'Attempt saved', description: 'Your practice session has been logged.' });
       }
       
-      // Try to insert the AI question data first (if the questions table exists)
+      // Store AI question in ai_exam_questions for proper tracking
       try {
+        // Create AI exam session if needed
+        let sessionId = '';
+        const { data: session, error: sessionError } = await supabase
+          .from('ai_exam_sessions')
+          .insert({
+            user_id: user.id,
+            exam_type: exam.replace(/\s+/g, '_').replace(/\+/g, '_').toUpperCase() as any
+          })
+          .select('id')
+          .single();
+          
+        if (sessionError) throw sessionError;
+        sessionId = session.id;
+
+        // Insert AI question with proper structure
         await supabase
-          .from('questions')
+          .from('ai_exam_questions')
           .insert({
             id: questionUuid,
-            question_text: q.question,
-            option_a: q.options.A,
-            option_b: q.options.B,
-            option_c: q.options.C,
-            option_d: q.options.D,
+            session_id: sessionId,
+            question: q.question,
+            options: q.options,
             correct_answer: q.correct,
             explanation: q.explanation,
             topic: q.topic || topic || 'General',
-            subtopic: q.subtopic,
-            difficulty_level: difficulty as 'easy' | 'medium' | 'hard',
-            exam_type: exam.replace(/\s+/g, '_').replace(/\+/g, '_').toUpperCase() as any,
-            is_ai_generated: true,
-            created_by: user.id
+            subtopic: q.subtopic
           });
+          
+        // Store question ID for later reference
+        setStoredQuestions(prev => ({ ...prev, [idx]: questionUuid }));
       } catch (questionInsertError) {
-        console.warn('Failed to insert AI question into questions table:', questionInsertError);
+        console.warn('Failed to insert AI question:', questionInsertError);
         // Continue anyway - we'll use a simpler approach
       }
 
@@ -229,6 +242,30 @@ export default function AiPracticeSession() {
     window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
   }
 
+  async function submitFeedback(feedbackType: string) {
+    try {
+      const questionId = storedQuestions[idx];
+      if (!questionId) return;
+      
+      await supabase
+        .from('ai_exam_answers')
+        .insert({
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          question_id: questionId,
+          selected_answer: selected,
+          is_correct: selected.toUpperCase() === q?.correct.toUpperCase(),
+          feedback: feedbackType as any
+        });
+        
+      toast({
+        title: 'Feedback submitted',
+        description: 'Thank you for your feedback!',
+      });
+    } catch (err) {
+      console.error('Feedback submission failed:', err);
+    }
+  }
+
   function next() {
     if (idx < total - 1) {
       const nextIdx = idx + 1;
@@ -237,8 +274,44 @@ export default function AiPracticeSession() {
       setShow(false);
       if (!questions[nextIdx]) void generate(nextIdx);
     } else {
-      navigate('/exams');
+      // Show final score before navigating
+      showFinalScore();
     }
+  }
+
+  function showFinalScore() {
+    if (!attemptId) {
+      navigate('/exams');
+      return;
+    }
+    
+    // Get final stats
+    supabase
+      .from('exam_attempt_items')
+      .select('selected_key, correct_key')
+      .eq('attempt_id', attemptId)
+      .then(({ data }) => {
+        const correctCount = data?.filter(item => 
+          item.selected_key?.toUpperCase() === item.correct_key?.toUpperCase()
+        ).length || 0;
+        
+        const percentage = Math.round((correctCount / total) * 100);
+        
+        toast({
+          title: 'Session Complete!',
+          description: `You scored ${correctCount}/${total} (${percentage}%)`,
+          duration: 5000
+        });
+        
+        // Update final attempt record
+        supabase
+          .from('exam_attempts')
+          .update({ finished_at: new Date().toISOString() })
+          .eq('id', attemptId)
+          .then(() => {
+            setTimeout(() => navigate('/dashboard/exams/attempts'), 2000);
+          });
+      });
   }
 
   function prev() {
@@ -280,16 +353,44 @@ export default function AiPracticeSession() {
           )}
           
           {q && (
-            <QuestionCard
-              stem={q.question}
-              options={Object.entries(q.options).map(([key, text]) => ({ key, text }))}
-              selectedKey={selected}
-              onSelect={setSelected}
-              showExplanation={show}
-              explanation={q.explanation}
-              source={q.reference}
-              correctKey={q.correct}
-            />
+            <>
+              <div className="p-3 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm mb-4">
+                <div className="font-medium mb-1">⚠️ AI Generated Content - Experimental</div>
+                <div>This content is AI-generated and may not always be accurate. Please exercise your judgment and provide feedback if you notice any issues.</div>
+              </div>
+              <QuestionCard
+                stem={q.question}
+                options={Object.entries(q.options).map(([key, text]) => ({ key, text }))}
+                selectedKey={selected}
+                onSelect={setSelected}
+                showExplanation={show}
+                explanation={q.explanation}
+                source={q.reference}
+                correctKey={q.correct}
+              />
+              {show && (
+                <div className="mt-4 p-3 border rounded-md bg-muted/30">
+                  <div className="font-medium mb-2">Feedback on this AI question:</div>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button size="sm" variant="outline" onClick={() => submitFeedback('accurate')}>
+                      👍 Accurate
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => submitFeedback('inaccurate')}>
+                      👎 Inaccurate
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => submitFeedback('too_easy')}>
+                      😴 Too Easy
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => submitFeedback('too_hard')}>
+                      🤯 Too Hard
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => submitFeedback('irrelevant')}>
+                      🚫 Irrelevant
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
           
           {!q && !error && (

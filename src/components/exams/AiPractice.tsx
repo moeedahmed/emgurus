@@ -74,7 +74,7 @@ export default function AiPractice() {
       params.set('count', String(count));
       if (area !== 'All areas') params.set('topic', area);
       params.set('difficulty', difficulty);
-      navigate(`/exams/ai-practice/session/${Date.now()}?${params.toString()}`);
+      navigate(`/exams/ai-practice/session?${params.toString()}`);
       setConfigOpen(false); // Close modal after navigation
     } catch (err: any) {
       console.error('Start failed', err);
