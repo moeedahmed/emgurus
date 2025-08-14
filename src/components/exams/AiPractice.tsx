@@ -47,18 +47,9 @@ export default function AiPractice() {
     return <div>Old inline form disabled</div>;
   }
 
-  const [configOpen, setConfigOpen] = useState(false);
-  const [exam, setExam] = useState<ExamName | "">("");
-  const [count, setCount] = useState<number>(10);
-  const [area, setArea] = useState<string>("All areas");
-  const [difficulty, setDifficulty] = useState<string>("medium");
   const [loading, setLoading] = useState(false);
 
-  const areas = exam ? ["All areas", ...CURRICULA[exam]] : ["All areas"];
-
   const start = async () => {
-    if (!exam) return;
-    
     // Check auth first
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -68,14 +59,12 @@ export default function AiPractice() {
     
     setLoading(true);
     try {
-      // Navigate directly to session page with query params
+      // Navigate directly to session with default settings
       const params = new URLSearchParams();
-      params.set('exam', exam);
-      params.set('count', String(count));
-      if (area !== 'All areas') params.set('topic', area);
-      params.set('difficulty', difficulty);
+      params.set('exam', 'MRCEM Primary SBA'); // Default exam
+      params.set('count', '10'); // Default count
+      params.set('difficulty', 'medium'); // Default difficulty
       navigate(`/exams/ai-practice/session?${params.toString()}`);
-      setConfigOpen(false); // Close modal after navigation
     } catch (err: any) {
       console.error('Start failed', err);
       const errorMsg = err?.message || String(err);
@@ -97,60 +86,9 @@ export default function AiPractice() {
             <h3 className="text-xl font-semibold mb-2">AI Practice (Beta)</h3>
             <p className="text-muted-foreground">Start an AI-generated practice set.</p>
           </div>
-          <Dialog open={configOpen} onOpenChange={setConfigOpen}>
-            <DialogTrigger asChild>
-              <Button size="lg">Start</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl">
-              <DialogHeader>
-                <DialogTitle>AI Practice (Beta)</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 p-4">
-                <div>
-                  <Label>Exam<span className="sr-only"> required</span></Label>
-                  <Select value={exam} onValueChange={(v) => setExam(v as ExamName)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
-                    <SelectContent>
-                       {EXAMS.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Number of questions</Label>
-                  <Select value={String(count)} onValueChange={(v) => setCount(Number(v))}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select count" /></SelectTrigger>
-                    <SelectContent>
-                      {COUNTS.map(c => (<SelectItem key={c} value={String(c)}>{c}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Curriculum</Label>
-                  <Select value={area} onValueChange={setArea} disabled={!exam}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="All areas" /></SelectTrigger>
-                    <SelectContent>
-                      {areas.map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Difficulty</Label>
-                  <Select value={difficulty} onValueChange={setDifficulty}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select difficulty" /></SelectTrigger>
-                    <SelectContent>
-                      {DIFFICULTIES.map(d => (<SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setConfigOpen(false)}>Cancel</Button>
-                <Button onClick={start} disabled={!exam || loading}>
-                  {loading ? 'Generating…' : 'Start Practice'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button size="lg" onClick={start} disabled={loading}>
+            {loading ? 'Starting...' : 'Start'}
+          </Button>
         </CardContent>
       </Card>
     </div>
