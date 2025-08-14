@@ -1,14 +1,143 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import OverviewTab from "./OverviewTab";
 import ExamsTab from "./ExamsTab";
 import CurriculumTab from "./CurriculumTab";
 import KnowledgeBaseTab from "./KnowledgeBaseTab";
 
 const DatabaseManager = () => {
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const seedFcpsEm = async () => {
+    if (!confirm("Seed FCPS EM (Pakistan) exam, curriculum, and knowledge-base entries? (safe to run repeatedly)")) {
+      return;
+    }
+
+    setIsSeeding(true);
+    try {
+      let newRows = 0;
+      let skippedRows = 0;
+
+      // A) Exam entry - check and insert taxonomy term
+      const { data: existingExam } = await supabase
+        .from('taxonomy_terms')
+        .select('id')
+        .eq('slug', 'fcps-em-pk')
+        .eq('kind', 'exam')
+        .maybeSingle();
+
+      if (!existingExam) {
+        await supabase
+          .from('taxonomy_terms')
+          .insert({
+            slug: 'fcps-em-pk',
+            title: 'FCPS Emergency Medicine (Pakistan)',
+            kind: 'exam',
+            description: 'Fellowship of College of Physicians and Surgeons Emergency Medicine program (Pakistan)'
+          });
+        newRows++;
+      } else {
+        skippedRows++;
+      }
+
+      // B) Curriculum entries
+      const curriculumData = [
+        { domain: 'Adult Resuscitation & Shock', capabilities: ['Airway management and ventilation', 'Sepsis recognition and management', 'Anaphylaxis treatment', 'Cardiac arrest protocols'] },
+        { domain: 'Cardiovascular Emergencies', capabilities: ['Acute coronary syndrome management', 'Arrhythmia recognition and treatment', 'Heart failure management', 'Hypertensive emergencies'] },
+        { domain: 'Respiratory', capabilities: ['Asthma management', 'COPD exacerbation treatment', 'Pulmonary embolism diagnosis', 'Respiratory failure management'] },
+        { domain: 'Neurology', capabilities: ['Stroke and TIA management', 'Seizure management', 'Headache red flag recognition', 'Altered mental status evaluation'] },
+        { domain: 'Trauma', capabilities: ['ATLS primary survey', 'ATLS secondary survey', 'Head trauma management', 'Chest and abdominal trauma'] },
+        { domain: 'Toxicology & Environmental', capabilities: ['Poisoning management', 'Envenomation treatment', 'Heat injury management', 'Cold injury management'] },
+        { domain: 'Infectious Disease', capabilities: ['Sepsis bundle implementation', 'Antimicrobial selection', 'Tropical disease recognition', 'Infection control measures'] },
+        { domain: 'Obstetrics & Gynaecology', capabilities: ['Pregnancy emergencies', 'Postpartum hemorrhage management', 'Eclampsia treatment', 'Gynecological emergencies'] },
+        { domain: 'Paediatrics', capabilities: ['Pediatric fever management', 'Dehydration assessment', 'Bronchiolitis treatment', 'Status asthmaticus management'] },
+        { domain: 'Procedures & Skills', capabilities: ['Procedural sedation', 'Central line insertion', 'Chest drain insertion', 'Rapid sequence intubation'] },
+        { domain: 'Imaging & Diagnostics', capabilities: ['ECG interpretation', 'ED ultrasound basics', 'Radiological interpretation', 'Point-of-care testing'] },
+        { domain: 'Ethics, Governance & Communication', capabilities: ['Informed consent', 'Safeguarding protocols', 'Clinical handover', 'End-of-life care'] }
+      ];
+
+      let sloNumber = 1;
+      for (const { domain, capabilities } of curriculumData) {
+        for (const capability of capabilities) {
+          const { data: existingSlo } = await supabase
+            .from('curriculum_map')
+            .select('id')
+            .eq('exam_type', 'OTHER')
+            .eq('slo_title', capability)
+            .eq('key_capability_title', domain)
+            .maybeSingle();
+
+          if (!existingSlo) {
+            await supabase
+              .from('curriculum_map')
+              .insert({
+                exam_type: 'OTHER' as const,
+                slo_number: sloNumber,
+                slo_title: capability,
+                key_capability_number: Math.ceil(sloNumber / 4), // Group by domain
+                key_capability_title: domain
+              });
+            newRows++;
+          } else {
+            skippedRows++;
+          }
+          sloNumber++;
+        }
+      }
+
+      // C) Knowledge Base entries
+      const knowledgeItems = [
+        { title: 'CPSP FCPS EM Curriculum (PK)', exam_type: 'OTHER' as const },
+        { title: 'National ED Guidelines (PK)', exam_type: 'OTHER' as const }
+      ];
+
+      for (const item of knowledgeItems) {
+        const { data: existingKb } = await supabase
+          .from('knowledge_base')
+          .select('id')
+          .eq('title', item.title)
+          .eq('exam_type', item.exam_type)
+          .maybeSingle();
+
+        if (!existingKb) {
+          await supabase
+            .from('knowledge_base')
+            .insert({
+              title: item.title,
+              exam_type: item.exam_type,
+              content: 'Placeholder content - please update with actual resources.'
+            });
+          newRows++;
+        } else {
+          skippedRows++;
+        }
+      }
+
+      toast.success(`Seed complete: ${newRows} new entries created, ${skippedRows} existing entries skipped`);
+    } catch (error: any) {
+      console.error('Seeding error:', error);
+      toast.error(`Seeding failed: ${error.message}`);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   return (
     <div className="p-4">
-      <div className="text-sm text-muted-foreground mb-4">Manage exam metadata, SLOs, and taxonomy.</div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-sm text-muted-foreground">Manage exam metadata, SLOs, and taxonomy.</div>
+        <Button 
+          onClick={seedFcpsEm} 
+          disabled={isSeeding}
+          variant="outline"
+          size="sm"
+        >
+          {isSeeding ? 'Seeding...' : 'Seed: FCPS Emergency Medicine (Pakistan)'}
+        </Button>
+      </div>
       
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
