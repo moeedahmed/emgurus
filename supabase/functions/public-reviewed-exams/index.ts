@@ -53,6 +53,8 @@ serve(async (req) => {
     const exam = u.searchParams.get("exam") || undefined;
     const topic = u.searchParams.get("topic") || undefined;
     const q = u.searchParams.get("q") || undefined;
+    const difficulty = u.searchParams.get("difficulty") || undefined;
+    const slo = u.searchParams.get("slo") || undefined;
     let limit = Number(u.searchParams.get("limit") || 24);
     let offset = Number(u.searchParams.get("offset") || 0);
     if (!Number.isFinite(limit) || limit <= 0) limit = 24;
@@ -69,6 +71,8 @@ serve(async (req) => {
         p_exam: exam || null,
         p_topic: topic || null,
         p_q: q || null,
+        p_difficulty: difficulty || null,
+        p_slo: slo || null,
         p_limit: limit,
         p_offset: offset,
       });
@@ -90,7 +94,7 @@ serve(async (req) => {
     // Build primary query
     let primary = admin
       .from("reviewed_exam_questions")
-      .select("id, stem, exam_type, reviewed_at", { count: "exact" })
+      .select("id, stem, exam_type, reviewed_at, difficulty, topic, tags", { count: "exact" })
       .order("reviewed_at", { ascending: false })
       .order("id", { ascending: false });
 
@@ -111,6 +115,13 @@ serve(async (req) => {
     if (q) {
       primary = primary.ilike("stem", `%${q}%`);
     }
+    if (difficulty) {
+      primary = primary.eq("difficulty", difficulty);
+    }
+    if (slo) {
+      // Filter by SLO via curriculum mapping join
+      primary = primary.eq("slo_id", slo);
+    }
 
     const { data: pData, count: pCount, error: pErr } = await primary.range(offset, offset + limit - 1);
 
@@ -118,13 +129,15 @@ serve(async (req) => {
       // Fallback: exam_questions
       let fb = admin
         .from("exam_questions")
-        .select("id, stem, exam_type, created_at", { count: "exact" })
+        .select("id, stem, exam_type, created_at, difficulty, topic, tags", { count: "exact" })
         .in("status", ["published", "approved", "reviewed", "approved_public"])
         .order("created_at", { ascending: false })
         .order("id", { ascending: false });
       if (exam) fb = fb.eq("exam_type", exam).or(`exam.eq.${exam}`);
       if (topic) fb = (fb as any).contains?.("tags", [topic]) || (fb as any).eq("topic", topic);
       if (q) fb = fb.ilike("stem", `%${q}%`);
+      if (difficulty) fb = fb.eq("difficulty", difficulty);
+      if (slo) fb = fb.eq("slo_id", slo);
       const { data: fData, count: fCount, error: fErr } = await fb.range(offset, offset + limit - 1);
       if (fErr) throw fErr;
       items = (fData || []).map((r: any) => ({ id: r.id, stem: r.stem, exam_type: r.exam_type || r.exam, reviewed_at: r.created_at }));

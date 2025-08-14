@@ -76,7 +76,7 @@ export default function QuestionDetail() {
         // TODO: replace (supabase as any) with typed client once Supabase types are regenerated to include reviewed_exam_questions.
         const { data, error } = await (supabase as any)
           .from('reviewed_exam_questions')
-          .select('*')
+          .select('id, stem, options, explanation, exam, topic, difficulty, source, reviewer_id, reviewed_at, correct_index')
           .eq('id', id as any)
           .maybeSingle();
         if (error) throw error;

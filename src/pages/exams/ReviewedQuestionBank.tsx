@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Chip } from "@/components/ui/chip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type ExamCode = "MRCEM_Primary" | "MRCEM_SBA" | "FRCEM_SBA";
 const EXAM_LABELS: Record<ExamCode, string> = {
@@ -52,6 +53,7 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
   const [topicOptions, setTopicOptions] = useState<string[]>([]);
   const [reviewerProfiles, setReviewerProfiles] = useState<Record<string, { id: string; name: string; avatar_url?: string }>>({});
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     document.title = "Question Bank • EM Gurus";
@@ -113,6 +115,9 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
           params.set('limit', String(pageSize));
           params.set('offset', String(offset));
           if (exam) params.set('exam', String(exam));
+          if (topicFilter) params.set('topic', topicFilter);
+          if (difficulty) params.set('difficulty', difficulty);
+          if (sloId) params.set('slo', sloId);
           const qtext = qDebounced.trim();
           if (qtext) params.set('q', qtext);
           const res = await getJson(`/public-reviewed-exams?${params.toString()}`, { signal: ctrl.signal } as any);
@@ -137,9 +142,12 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
           // Fallback to direct table query with filters and pagination
           let base = (supabase as any)
             .from('reviewed_exam_questions')
-            .select('id, exam, stem, reviewer_id, reviewed_at, topic', { count: 'exact' })
+            .select('id, exam, stem, reviewer_id, reviewed_at, topic, difficulty, tags', { count: 'exact' })
             .eq('status', 'approved');
           if (exam) base = base.eq('exam', exam);
+          if (topicFilter) base = base.eq('topic', topicFilter);
+          if (difficulty) base = base.eq('difficulty', difficulty);
+          if (sloId) base = base.eq('slo_id', sloId);
           const qtext = qDebounced.trim();
           if (qtext) base = base.ilike('stem', `%${qtext}%`);
 
@@ -174,7 +182,7 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
       }
     })();
     return () => { cancelled = true; };
-  }, [exam, qDebounced, page, pageSize]);
+  }, [exam, topicFilter, difficulty, sloId, qDebounced, page, pageSize]);
 
 
   useEffect(() => {
@@ -340,16 +348,18 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <section className="lg:col-span-8">
-              <div className="mb-4 lg:hidden">
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button variant="outline">Filters</Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-80 sm:w-96">
-                    <FiltersPanel />
-                  </SheetContent>
-                </Sheet>
-              </div>
+              {isMobile && (
+                <div className="mb-4">
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button variant="outline">Filters</Button>
+                    </SheetTrigger>
+                    <SheetContent side="right" className="w-80 sm:w-96">
+                      <FiltersPanel />
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              )}
 
               <div className="space-y-3">
                 {loading ? (
