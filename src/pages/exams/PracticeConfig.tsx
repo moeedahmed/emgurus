@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
+import { canonExamType } from "@/lib/exams";
 import PageHero from "@/components/PageHero";
 
 const COUNTS = [10, 25, 50];
@@ -43,6 +44,9 @@ export default function PracticeConfig() {
     
     setLoading(true);
     try {
+      // Use canonical exam type
+      const examType = canonExamType(exam, EXAMS);
+      
       // Create practice session (attempt)
       const { data: attempt, error: attemptError } = await supabase
         .from('exam_attempts')
@@ -51,7 +55,13 @@ export default function PracticeConfig() {
           source: 'reviewed',
           mode: 'practice',
           total_questions: count,
-          question_ids: [] // Will be populated as questions are answered
+          question_ids: [], // Will be populated as questions are answered
+          // Store exam configuration in breakdown for session queries
+          breakdown: { 
+            exam_type: examType,
+            topic: area !== 'All areas' ? area : null,
+            selection_id: null // No preselected list
+          }
         })
         .select('id')
         .single();

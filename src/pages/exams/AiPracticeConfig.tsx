@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
+import { canonExamType } from "@/lib/exams";
 import PageHero from "@/components/PageHero";
 
 const COUNTS = [10, 25, 50];
@@ -49,12 +50,15 @@ export default function AiPracticeConfig() {
     
     setLoading(true);
     try {
+      // Use canonical exam type
+      const examType = canonExamType(exam, EXAMS);
+      
       // Create AI exam session
       const { data: session, error: sessionError } = await supabase
         .from('ai_exam_sessions')
         .insert({
           user_id: user.id,
-          exam_type: exam.replace(/\s+/g, '_').replace(/\+/g, '_').toUpperCase() as any
+          exam_type: examType as any
         })
         .select('id')
         .single();

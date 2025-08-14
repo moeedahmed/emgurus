@@ -153,26 +153,16 @@ export default function AiPracticeSession() {
       
       // Store AI question in ai_exam_questions for proper tracking
       try {
-        // Create AI exam session if needed
-        let sessionId = '';
-        const { data: session, error: sessionError } = await supabase
-          .from('ai_exam_sessions')
-          .insert({
-            user_id: user.id,
-            exam_type: exam.replace(/\s+/g, '_').replace(/\+/g, '_').toUpperCase() as any
-          })
-          .select('id')
-          .single();
-          
-        if (sessionError) throw sessionError;
-        sessionId = session.id;
+        // Use existing session ID from URL
+        const currentSessionId = window.location.pathname.split('/').pop();
+        if (!currentSessionId) throw new Error('No session ID found');
 
         // Insert AI question with proper structure
         await supabase
           .from('ai_exam_questions')
           .insert({
             id: questionUuid,
-            session_id: sessionId,
+            session_id: currentSessionId,
             question: q.question,
             options: q.options,
             correct_answer: q.correct,
