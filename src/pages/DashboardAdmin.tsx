@@ -683,13 +683,13 @@ const ExamMarkedQuality: React.FC = () => {
 };
 
 const ExamBankSets: React.FC = () => {
-  const [activeFilter, setActiveFilter] = useState<'questions' | 'sets' | 'taxonomy'>('questions');
+  const [activeFilter, setActiveFilter] = useState<'questions' | 'sets' | 'database'>('questions');
 
   const getComponent = () => {
     switch (activeFilter) {
       case 'questions': return <ReviewedQuestionBank embedded />;
       case 'sets': return <QuestionSetsAdmin />;
-      case 'taxonomy': return <Taxonomy />;
+      case 'database': return <DatabaseManager />;
       default: return <ReviewedQuestionBank embedded />;
     }
   };
@@ -697,14 +697,14 @@ const ExamBankSets: React.FC = () => {
   return (
     <div className="p-0">
       <div className="p-4 text-sm text-muted-foreground">
-        Browse approved questions and manage sets.
+        Browse approved questions, manage sets, and configure exam database.
       </div>
       
       <div className="flex gap-2 mb-4 px-4">
         {[
           { id: 'questions' as const, label: 'Questions' },
           { id: 'sets' as const, label: 'Sets' },
-          { id: 'taxonomy' as const, label: 'Taxonomy' },
+          { id: 'database' as const, label: 'Database' },
         ].map(chip => (
           <Button
             key={chip.id}
