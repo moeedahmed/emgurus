@@ -160,7 +160,7 @@ export default function PracticeSession() {
     if (currentIndex < questions.length - 1) {
       const nextIdx = currentIndex + 1;
       setCurrentIndex(nextIdx);
-      navigate(`/exams/practice/${questions[nextIdx].id}`, { 
+      navigate(`/exams/practice/session/${questions[nextIdx].id}`, { 
         state: sessionState,
         replace: true 
       });
@@ -179,7 +179,7 @@ export default function PracticeSession() {
     if (currentIndex > 0) {
       const prevIdx = currentIndex - 1;
       setCurrentIndex(prevIdx);
-      navigate(`/exams/practice/${questions[prevIdx].id}`, { 
+      navigate(`/exams/practice/session/${questions[prevIdx].id}`, { 
         state: sessionState,
         replace: true 
       });
