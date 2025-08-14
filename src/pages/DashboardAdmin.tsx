@@ -564,13 +564,13 @@ const RejectedPanel: React.FC = () => {
 
 // -------- Exams workflow components with chips
 const ExamGeneration: React.FC = () => {
-  const [activeFilter, setActiveFilter] = useState<'draft' | 'submitted'>('draft');
+  const [activeFilter, setActiveFilter] = useState<'generate' | 'drafts'>('generate');
 
   const getComponent = () => {
     switch (activeFilter) {
-      case 'draft': return <DraftsPanel />;
-      case 'submitted': return <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">Submitted questions view coming soon.</Card></div>;
-      default: return <DraftsPanel />;
+      case 'generate': return <AdminGeneration />;
+      case 'drafts': return <DraftsPanel />;
+      default: return <AdminGeneration />;
     }
   };
 
@@ -579,8 +579,8 @@ const ExamGeneration: React.FC = () => {
       
       <div className="flex gap-2 mb-4 px-4">
         {[
-          { id: 'draft' as const, label: 'Draft (generated)' },
-          { id: 'submitted' as const, label: 'Submitted' },
+          { id: 'generate' as const, label: 'Generate' },
+          { id: 'drafts' as const, label: 'Drafts' },
         ].map(chip => (
           <Button
             key={chip.id}
