@@ -8,6 +8,9 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    /* Layout dimensions */
+    --header-h: 64px;
+    
     /* Medical theme - professional blues and teals */
     --background: 0 0% 100%;
     --foreground: 210 15% 10%;

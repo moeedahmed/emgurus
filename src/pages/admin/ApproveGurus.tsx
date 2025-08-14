@@ -101,11 +101,13 @@ const ApproveGurus: React.FC<{ embedded?: boolean; status?: StatusFilter }> = ({
         </>
       )}
 
-      <div className="grid gap-2 grid-cols-1 sm:grid-cols-3 mb-4">
-        <Card className="p-3 text-sm"><div className="text-muted-foreground">Pending</div><div className="text-xl font-semibold">{counts.pending}</div></Card>
-        <Card className="p-3 text-sm"><div className="text-muted-foreground">Approved (7d)</div><div className="text-xl font-semibold">{counts.approved7d}</div></Card>
-        <Card className="p-3 text-sm"><div className="text-muted-foreground">Rejected (7d)</div><div className="text-xl font-semibold">{counts.rejected7d}</div></Card>
-      </div>
+      {!embedded && (
+        <div className="grid gap-2 grid-cols-1 sm:grid-cols-3 mb-4">
+          <Card className="p-3 text-sm"><div className="text-muted-foreground">Pending</div><div className="text-xl font-semibold">{counts.pending}</div></Card>
+          <Card className="p-3 text-sm"><div className="text-muted-foreground">Approved (7d)</div><div className="text-xl font-semibold">{counts.approved7d}</div></Card>
+          <Card className="p-3 text-sm"><div className="text-muted-foreground">Rejected (7d)</div><div className="text-xl font-semibold">{counts.rejected7d}</div></Card>
+        </div>
+      )}
 
       {apps.length === 0 ? (
         <div className="rounded-lg border p-6 bg-card">No pending applications.</div>

@@ -88,6 +88,7 @@ export default function SettingsPage() {
   const [phoneOtpCode, setPhoneOtpCode] = useState("");
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
 
   // Determine tab from URL: #profile, #notifications, #security
   useEffect(() => {
@@ -142,6 +143,11 @@ export default function SettingsPage() {
         setYoutubeUrl(row.youtube || '');
         setAvatarInput(row.avatar_url || '');
         setPhoneInput(row.phone || '');
+        
+        // Check if phone is verified from notification settings
+        if (row.notification_settings?.phone_verified) {
+          setPhoneVerified(true);
+        }
       }
 
       // Detect optional columns by presence in fetched row
@@ -277,11 +283,43 @@ export default function SettingsPage() {
       return;
     }
     setIsVerifyingPhone(true);
+    setVerificationError(null);
+    
     try {
-      // Mock OTP sending - in real implementation, you'd call an SMS service
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setPhoneOtpSent(true);
-      toast({ title: "OTP sent", description: "Check your phone for the verification code." });
+      // Generate 6-digit code
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+      
+      // Store in localStorage for verification
+      localStorage.setItem('phone_verification', JSON.stringify({
+        code,
+        phone: phoneInput,
+        expiresAt
+      }));
+      
+      // Try to send via notifications-dispatch
+      try {
+        const response = await fetch('/functions/v1/notifications-dispatch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel: 'sms',
+            phone: phoneInput,
+            message: `Your EMGurus verification code is: ${code}`
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('SMS service not configured');
+        }
+        
+        setPhoneOtpSent(true);
+        toast({ title: "OTP sent", description: "Check your phone for the verification code." });
+      } catch (smsError) {
+        // SMS not configured - show graceful message
+        setVerificationError("SMS isn't configured on this environment. Please contact support to enable phone verification.");
+        setPhoneOtpSent(true); // Still show the input for testing
+      }
     } catch (e: any) {
       toast({ title: "Failed to send OTP", description: e.message });
     } finally {
@@ -295,13 +333,51 @@ export default function SettingsPage() {
       return;
     }
     setIsVerifyingPhone(true);
+    
     try {
-      // Mock OTP verification - in real implementation, you'd verify with SMS service
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      if (phoneOtpCode === "123456") { // Mock verification
+      // Get stored verification data
+      const stored = localStorage.getItem('phone_verification');
+      if (!stored) {
+        toast({ title: "Verification expired", description: "Please request a new code." });
+        setPhoneOtpSent(false);
+        return;
+      }
+      
+      const { code, phone, expiresAt } = JSON.parse(stored);
+      
+      // Check expiry
+      if (Date.now() > expiresAt) {
+        toast({ title: "Code expired", description: "Please request a new verification code." });
+        localStorage.removeItem('phone_verification');
+        setPhoneOtpSent(false);
+        return;
+      }
+      
+      // Verify code
+      if (phoneOtpCode === code && phone === phoneInput) {
+        // Update profile with verified phone
+        if (user) {
+          const currentSettings = profile?.notification_settings || {};
+          const updatedSettings = {
+            ...currentSettings,
+            phone_verified: true,
+            phone_verified_at: new Date().toISOString()
+          };
+          
+          await supabase
+            .from('profiles')
+            .update({ 
+              phone: phoneInput,
+              notification_settings: updatedSettings 
+            })
+            .eq('user_id', user.id);
+        }
+        
         setPhoneVerified(true);
         setPhoneOtpSent(false);
         setPhoneOtpCode("");
+        setVerificationError(null);
+        localStorage.removeItem('phone_verification');
         toast({ title: "Phone verified", description: "Your phone number has been verified successfully." });
       } else {
         toast({ title: "Invalid code", description: "The verification code is incorrect." });
@@ -502,6 +578,11 @@ export default function SettingsPage() {
                     )}
                     {phoneOtpSent && !phoneVerified && (
                       <div className="space-y-2">
+                        {verificationError && (
+                          <div className="text-sm text-warning bg-warning/10 p-2 rounded border">
+                            {verificationError}
+                          </div>
+                        )}
                         <Label htmlFor="otp">Verification code</Label>
                         <Input 
                           id="otp"
@@ -509,14 +590,18 @@ export default function SettingsPage() {
                           value={phoneOtpCode} 
                           onChange={(e) => setPhoneOtpCode(e.target.value)}
                           maxLength={6}
+                          disabled={!!verificationError}
                         />
-                        <Button onClick={verifyPhoneOtp} disabled={isVerifyingPhone || !phoneOtpCode}>
+                        <Button 
+                          onClick={verifyPhoneOtp} 
+                          disabled={isVerifyingPhone || !phoneOtpCode || !!verificationError}
+                        >
                           {isVerifyingPhone ? "Verifying..." : "Verify phone"}
                         </Button>
                       </div>
                     )}
                     {phoneVerified && (
-                      <div className="text-sm text-green-600">✅ Phone number verified</div>
+                      <div className="text-sm text-success">✅ Phone number verified</div>
                     )}
                   </div>
                 </div>

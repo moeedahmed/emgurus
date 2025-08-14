@@ -52,14 +52,17 @@ export function WorkspaceLayoutInner({
   const [searchSync, setSearchSync] = useState(0);
 
   return (
-    
-      <div className="min-h-screen flex w-full pt-16">
-        <Sidebar className={cn("border-r z-20")} collapsible="icon">
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel className="px-2 py-1 text-sm font-semibold">{title}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <nav className="flex-1 overflow-y-auto flex flex-col gap-1 p-1 pr-2 max-h-[calc(100vh-4rem)]">
+    <div className="min-h-screen flex w-full">
+      <Sidebar
+        variant="sidebar"
+        collapsible="offcanvas"
+        className="bg-sidebar border-r"
+      >
+        <SidebarContent className="pt-[var(--header-h)]">
+          <SidebarGroup>
+            <SidebarGroupLabel className="px-2 py-1 text-sm font-semibold">{title}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <nav className="flex-1 overflow-y-auto flex flex-col gap-1 p-1 pr-2 max-h-[calc(100vh-var(--header-h)-4rem)]">
                   {sections.map((s) => {
                     const Icon = s.icon as any;
                     const active = s.id === sectionId;
@@ -83,8 +86,8 @@ export function WorkspaceLayoutInner({
                           href={`#${s.id}`}
                           onClick={(e) => { e.preventDefault(); go(s.id, currentTab); }}
                           className={cn(
-                            "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                            active ? "bg-muted text-primary" : "hover:bg-muted/50"
+                            "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
+                            active ? "bg-muted text-primary font-semibold" : "hover:bg-muted/50 text-foreground"
                           )}
                           aria-current={active ? "page" : undefined}
                         >
@@ -102,7 +105,7 @@ export function WorkspaceLayoutInner({
                                   onClick={() => go(s.id, t.id)}
                                   className={cn(
                                     "text-left text-xs rounded-md px-2 py-1 transition-colors",
-                                    isActiveTab ? "bg-muted font-medium" : "hover:bg-muted/50"
+                                    isActiveTab ? "bg-muted font-medium text-primary" : "hover:bg-muted/50 text-muted-foreground"
                                   )}
                                   aria-current={isActiveTab ? "true" : undefined}
                                 >
@@ -121,10 +124,10 @@ export function WorkspaceLayoutInner({
           </SidebarContent>
         </Sidebar>
 
-        <SidebarInset>
-          <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <SidebarInset className="pt-[var(--header-h)]">
+          <header className="sticky top-[var(--header-h)] z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
             <div className="h-12 flex items-center gap-3 px-3">
-              <SidebarTrigger />
+              <SidebarTrigger className="lg:hidden" />
               <div className="text-sm text-muted-foreground">{title}</div>
               <div className="text-sm">/</div>
               <div className="font-medium">{current.title}</div>
@@ -159,8 +162,7 @@ export function WorkspaceLayoutInner({
             </Tabs>
           </div>
         </SidebarInset>
-      </div>
-    
+    </div>
   );
 }
 

@@ -74,9 +74,6 @@ const BlogSubmissionQueue: React.FC = () => {
 
   return (
     <div className="p-4">
-      <div className="mb-4 text-sm text-muted-foreground">
-        Triage incoming posts and assign to reviewers.
-      </div>
       
       <div className="flex gap-2 mb-4">
         {[
@@ -115,9 +112,6 @@ const BlogPublishedArchive: React.FC = () => {
 
   return (
     <div className="p-4">
-      <div className="mb-4 text-sm text-muted-foreground">
-        Manage published posts and archive.
-      </div>
       
       <div className="flex gap-2 mb-4">
         {[
@@ -146,9 +140,6 @@ const MyBlogsAdmin: React.FC = () => {
 
   return (
     <div className="p-4">
-      <div className="mb-4 text-sm text-muted-foreground">
-        Your authored posts.
-      </div>
       
       <div className="flex gap-2 mb-4">
         {[
@@ -584,9 +575,6 @@ const ExamGeneration: React.FC = () => {
 
   return (
     <div className="p-0">
-      <div className="p-4 text-sm text-muted-foreground">
-        Generate AI questions by exam/topic/difficulty.
-      </div>
       
       <div className="flex gap-2 mb-4 px-4">
         {[
@@ -625,9 +613,6 @@ const ExamReviewAssignment: React.FC = () => {
 
   return (
     <div className="p-0">
-      <div className="p-4 text-sm text-muted-foreground">
-        Assign questions to gurus and track decisions.
-      </div>
       
       <div className="flex gap-2 mb-4 px-4">
         {[

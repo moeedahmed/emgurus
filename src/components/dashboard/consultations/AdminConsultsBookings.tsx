@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errors";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 interface BookingRow {
   id: string;
@@ -21,6 +23,7 @@ interface BookingRow {
 export default function AdminConsultsBookings({ statusFilter }: { statusFilter?: 'upcoming' | 'past' | 'cancelled' }) {
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
@@ -29,6 +32,7 @@ export default function AdminConsultsBookings({ statusFilter }: { statusFilter?:
 
   const load = async () => {
     setLoading(true);
+    setError(null);
     try {
       let query: any = supabase
         .from('consult_bookings')
@@ -52,7 +56,16 @@ export default function AdminConsultsBookings({ statusFilter }: { statusFilter?:
       if (from) query = query.gte('start_datetime', new Date(from).toISOString());
       if (to) query = query.lte('start_datetime', new Date(to).toISOString());
       
-      const { data } = await query;
+      const { data, error: queryError } = await query;
+      
+      if (queryError) {
+        if (queryError.code === 'PGRST301' || queryError.message?.includes('permission')) {
+          setError('You do not have permission to view bookings. Please contact an administrator.');
+          return;
+        }
+        throw queryError;
+      }
+      
       const list = (data || []) as any as BookingRow[];
       setRows(list);
       const ids = Array.from(new Set(list.flatMap(r => [r.user_id, r.guru_id])));
@@ -64,8 +77,9 @@ export default function AdminConsultsBookings({ statusFilter }: { statusFilter?:
       } else {
         setNameMap({});
       }
-    } catch (e) {
-      toast.error('Failed to load bookings');
+    } catch (e: any) {
+      setError(e.message || 'Failed to load bookings');
+      showErrorToast(e, 'Failed to load bookings');
       setRows([]);
     } finally { setLoading(false); }
   };
@@ -104,70 +118,95 @@ export default function AdminConsultsBookings({ statusFilter }: { statusFilter?:
     'pending_payment', 'confirmed', 'rescheduled', 'cancelled', 'completed', 'refund_requested', 'refunded'
   ], []);
 
-  return (
-    <div className="p-4 space-y-3">
-      <div className="flex flex-wrap items-end gap-2">
-        <div>
-          <div className="text-xs text-muted-foreground">Status</div>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="Any" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Any</SelectItem>
-              {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <div className="text-xs text-muted-foreground">From</div>
-          <Input type="date" value={from} onChange={(e)=>setFrom(e.target.value)} />
-        </div>
-        <div>
-          <div className="text-xs text-muted-foreground">To</div>
-          <Input type="date" value={to} onChange={(e)=>setTo(e.target.value)} />
-        </div>
-        <Button onClick={load} disabled={loading} variant="outline">Apply</Button>
+  if (error) {
+    return (
+      <div className="p-4 space-y-3">
+        <Card className="p-6 border-destructive bg-destructive/5">
+          <div className="text-sm text-destructive mb-2">Error loading bookings</div>
+          <div className="text-xs text-muted-foreground mb-3">{error}</div>
+          <Button size="sm" variant="outline" onClick={load}>
+            Retry
+          </Button>
+        </Card>
       </div>
+    );
+  }
 
-      <Card className="p-0 overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Start</TableHead>
-              <TableHead>Learner</TableHead>
-              <TableHead>Guru</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map(r => (
-              <TableRow key={r.id}>
-                <TableCell className="whitespace-nowrap text-xs">{new Date(r.start_datetime).toLocaleString()}</TableCell>
-                <TableCell className="text-xs">{nameMap[r.user_id] || r.user_id.slice(0,6)}</TableCell>
-                <TableCell className="text-xs">{nameMap[r.guru_id] || r.guru_id.slice(0,6)}</TableCell>
-                <TableCell className="text-xs">{r.price ? `$${r.price}` : 'Free'}</TableCell>
-                <TableCell className="text-xs">
-                  <Select value={updating[r.id] || r.status} onValueChange={(v)=>updateStatus(r.id, v)}>
-                    <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button size="sm" variant="outline" onClick={()=>resend(r.id)}>Resend notifications</Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {rows.length === 0 && (
+  return (
+    <ErrorBoundary>
+      <div className="p-4 space-y-3">
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <div className="text-xs text-muted-foreground">Status</div>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="w-44"><SelectValue placeholder="Any" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Any</SelectItem>
+                {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">From</div>
+            <Input type="date" value={from} onChange={(e)=>setFrom(e.target.value)} />
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">To</div>
+            <Input type="date" value={to} onChange={(e)=>setTo(e.target.value)} />
+          </div>
+          <Button onClick={load} disabled={loading} variant="outline">
+            {loading ? 'Loading...' : 'Apply'}
+          </Button>
+        </div>
+
+        <Card className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-6">No bookings found</TableCell>
+                <TableHead>Start</TableHead>
+                <TableHead>Learner</TableHead>
+                <TableHead>Guru</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </Card>
-    </div>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-6">Loading bookings...</TableCell>
+                </TableRow>
+              ) : rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                    No bookings found {statusFilter && `for ${statusFilter} filter`}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map(r => (
+                  <TableRow key={r.id}>
+                    <TableCell className="whitespace-nowrap text-xs">{new Date(r.start_datetime).toLocaleString()}</TableCell>
+                    <TableCell className="text-xs">{nameMap[r.user_id] || r.user_id.slice(0,6)}</TableCell>
+                    <TableCell className="text-xs">{nameMap[r.guru_id] || r.guru_id.slice(0,6)}</TableCell>
+                    <TableCell className="text-xs">{r.price ? `$${r.price}` : 'Free'}</TableCell>
+                    <TableCell className="text-xs">
+                      <Select value={updating[r.id] || r.status} onValueChange={(v)=>updateStatus(r.id, v)}>
+                        <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button size="sm" variant="outline" onClick={()=>resend(r.id)}>Resend notifications</Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </Card>
+      </div>
+    </ErrorBoundary>
   );
 }
