@@ -1,5 +1,5 @@
 import React, { lazy } from 'react';
-import { BookOpen, Stethoscope, GraduationCap, MessagesSquare, UsersRound, Settings } from 'lucide-react';
+import { BookOpen, Stethoscope, GraduationCap, MessagesSquare, UsersRound, Settings as SettingsIcon } from 'lucide-react';
 
 export type WorkspaceTab = {
   id: string;
@@ -35,8 +35,7 @@ const safeLazy = (factory: () => Promise<{ default: React.ComponentType<any> }>)
     }
   });
 
-// Real components
-const AdminGeneration = safeLazy(() => import('../components/admin/AdminGeneration'));
+// User components
 const BlogsOverview = safeLazy(() => import('../components/dashboard/blogs/BlogsOverview'));
 const MyBlogs = safeLazy(() => import('../components/dashboard/blogs/MyBlogs'));
 const ExamsOverview = safeLazy(() => import('../components/dashboard/exams/ExamsOverview'));
@@ -46,7 +45,22 @@ const ExamsFeedbackList = safeLazy(() => import('../components/dashboard/exams/E
 const ConsultOverview = safeLazy(() => import('../components/dashboard/consultations/ConsultationsOverview'));
 const ForumsOverview = safeLazy(() => import('../components/dashboard/forums/ForumsOverview'));
 const MyThreadsWithChips = safeLazy(() => import('../components/dashboard/forums/MyThreadsWithChips'));
+
+// Real page components wrapped for dashboard use
+const Bookings = safeLazy(() => import('../pages/Bookings').then(mod => ({ default: (props: any) => React.createElement(mod.default, { embedded: true, ...props }) })));
+const QuestionBank = safeLazy(() => import('../pages/exams/ReviewedQuestionBank').then(mod => ({ default: (props: any) => React.createElement(mod.default, { embedded: true, ...props }) })));
+
+// Guru components
+const GuruPricing = safeLazy(() => import('../pages/guru/Pricing'));
+const GuruAvailability = safeLazy(() => import('../pages/guru/Availability'));
+const ExamsReviewQueue = safeLazy(() => import('../pages/guru/ExamsReviewQueue'));
 const ForumsModeration = safeLazy(() => import('../components/dashboard/forums/ForumsModerationQueue'));
+
+// Admin components
+const AdminGeneration = safeLazy(() => import('../components/admin/AdminGeneration'));
+const ApproveGurus = safeLazy(() => import('../pages/admin/ApproveGurus').then(mod => ({ default: (props: any) => React.createElement(mod.default, { embedded: true, ...props }) })));
+const ExamsAICuration = safeLazy(() => import('../pages/admin/ExamsAICuration'));
+const SettingsPage = safeLazy(() => import('../pages/Settings'));
 
 export const BASE_SECTIONS: WorkspaceSection[] = [
   {
@@ -67,6 +81,7 @@ export const BASE_SECTIONS: WorkspaceSection[] = [
     tabs: [
       { id: 'overview', title: 'Overview', component: ExamsOverview },
       { id: 'attempts', title: 'Attempts', component: ExamsAttempts },
+      { id: 'bank', title: 'Bank', component: QuestionBank },
       { id: 'progress', title: 'Progress', component: ExamsProgressMatrix },
       { id: 'feedback', title: 'Feedback', component: ExamsFeedbackList },
     ],
@@ -78,7 +93,7 @@ export const BASE_SECTIONS: WorkspaceSection[] = [
     icon: Stethoscope,
     tabs: [
       { id: 'overview', title: 'Overview', component: ConsultOverview },
-      { id: 'bookings', title: 'Bookings', component: EmptyPanel },
+      { id: 'bookings', title: 'Bookings', component: Bookings },
     ],
   },
   {
@@ -95,17 +110,12 @@ export const BASE_SECTIONS: WorkspaceSection[] = [
 
 export const EXTRA_TABS_BY_ROLE: Record<'guru'|'admin', Partial<Record<string, WorkspaceTab[]>>> = {
   guru: {
-    blogs: [
-      { id: 'reviews', title: 'Reviews', component: EmptyPanel, roles: ['guru','admin'] },
-      { id: 'analytics', title: 'Analytics', component: EmptyPanel, roles: ['guru','admin'] },
-    ],
     exams: [
-      { id: 'reviews', title: 'Reviews', component: EmptyPanel, roles: ['guru','admin'] },
-      { id: 'bank', title: 'Bank', component: EmptyPanel, roles: ['guru','admin'] },
+      { id: 'reviews', title: 'Reviews', component: ExamsReviewQueue, roles: ['guru','admin'] },
     ],
     consultations: [
-      { id: 'slots', title: 'Slots', component: EmptyPanel, roles: ['guru','admin'] },
-      { id: 'pricing', title: 'Pricing', component: EmptyPanel, roles: ['guru','admin'] },
+      { id: 'slots', title: 'Slots', component: GuruAvailability, roles: ['guru','admin'] },
+      { id: 'pricing', title: 'Pricing', component: GuruPricing, roles: ['guru','admin'] },
     ],
     forums: [
       { id: 'moderation', title: 'Moderation', component: ForumsModeration, roles: ['guru','admin'] },
@@ -113,13 +123,12 @@ export const EXTRA_TABS_BY_ROLE: Record<'guru'|'admin', Partial<Record<string, W
   },
   admin: {
     blogs: [
-      { id: 'queue', title: 'Queue', component: EmptyPanel, roles: ['admin'] },
+      { id: 'reviews', title: 'Reviews', component: EmptyPanel, roles: ['admin'] },
       { id: 'analytics', title: 'Analytics', component: EmptyPanel, roles: ['admin'] },
     ],
     exams: [
       { id: 'generate', title: 'Generate', component: AdminGeneration, roles: ['admin'] },
-      { id: 'reviews', title: 'Reviews', component: EmptyPanel, roles: ['admin'] },
-      { id: 'bank', title: 'Bank', component: EmptyPanel, roles: ['admin'] },
+      { id: 'reviews', title: 'Reviews', component: ExamsAICuration, roles: ['admin'] },
     ],
     consultations: [
       { id: 'analytics', title: 'Analytics', component: EmptyPanel, roles: ['admin'] },
@@ -128,11 +137,11 @@ export const EXTRA_TABS_BY_ROLE: Record<'guru'|'admin', Partial<Record<string, W
       { id: 'moderation', title: 'Moderation', component: ForumsModeration, roles: ['admin'] },
     ],
     users: [
-      { id: 'approvals', title: 'Approvals', component: EmptyPanel, roles: ['admin'] },
+      { id: 'approvals', title: 'Approvals', component: ApproveGurus, roles: ['admin'] },
       { id: 'directory', title: 'Directory', component: EmptyPanel, roles: ['admin'] },
     ],
     settings: [
-      { id: 'site', title: 'Site', component: EmptyPanel, roles: ['admin'] },
+      { id: 'site', title: 'Site', component: SettingsPage, roles: ['admin'] },
     ],
   },
 };
@@ -143,7 +152,7 @@ export function buildSectionsForRoles(flags: { isAdmin: boolean; isGuru: boolean
 
   if (flags.isAdmin) {
     byId['users'] ??= { id: 'users', title: 'Users', icon: UsersRound, tabs: [] };
-    byId['settings'] ??= { id: 'settings', title: 'Settings', icon: Settings, tabs: [] };
+    byId['settings'] ??= { id: 'settings', title: 'Settings', icon: SettingsIcon, tabs: [] };
   }
 
   const rolesToApply: Array<'guru'|'admin'> = [
