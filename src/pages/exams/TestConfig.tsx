@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
-import { buildAttemptBreakdown } from "@/lib/exams";
+import { mapLabelToEnum } from "@/lib/exams";
 import PageHero from "@/components/PageHero";
 
 const COUNTS = [10, 25, 50];
@@ -47,14 +47,10 @@ export default function TestConfig() {
     
     setLoading(true);
     try {
-      // Create test session (attempt with exam mode) with both label and enum
-      const breakdown = buildAttemptBreakdown({
-        examLabel: exam,              // dropdown label, e.g., "MRCEM Intermediate SBA"
-        topic: area !== 'All areas' ? area : null,
-        total: count,
-        timeLimitMin: parseInt(timeLimit)
-      });
-
+      // Use canonical exam type
+      const examType = mapLabelToEnum(exam);
+      
+      // Create test session (attempt with exam mode)
       const { data: attempt, error: attemptError } = await supabase
         .from('exam_attempts')
         .insert({
@@ -63,15 +59,26 @@ export default function TestConfig() {
           mode: 'exam', // Keep DB value as 'exam'
           total_questions: count,
           question_ids: [], // Will be populated as questions are answered
-          breakdown
+          // Store exam configuration in breakdown for session queries
+          breakdown: { 
+            exam_type: examType,
+            topic: area !== 'All areas' ? area : null,
+            time_limit: parseInt(timeLimit),
+            selection_id: null // No preselected list
+          }
         })
         .select('id')
         .single();
       
       if (attemptError) throw attemptError;
 
-      // Navigate to test session with new ID-based route
-      navigate(`/exams/test/session/${attempt.id}`);
+      // Navigate to test session
+      const params = new URLSearchParams();
+      params.set('exam', exam);
+      params.set('count', String(count));
+      if (area !== 'All areas') params.set('topic', area);
+      params.set('timeLimit', timeLimit);
+      navigate(`/exams/test/session/${attempt.id}?${params.toString()}`);
     } catch (err: any) {
       console.error('Start failed', err);
       const errorMsg = err?.message || String(err);

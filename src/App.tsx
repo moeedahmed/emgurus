@@ -19,7 +19,6 @@ import ComingSoon from "./pages/ComingSoon";
 import PricingPage from "./pages/Pricing";
 
 // Heavy pages - lazy loaded
-const Dashboard = lazy(() => import("./pages/Dashboard"));
 const DashboardUser = lazy(() => import("./pages/DashboardUser"));
 const DashboardGuru = lazy(() => import("./pages/DashboardGuru"));
 const DashboardAdmin = lazy(() => import("./pages/DashboardAdmin"));
@@ -253,15 +252,44 @@ const App = () => (
                 path="/dashboard"
                 element={
                   <ProtectedRoute>
+                    <RoleRedirector />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/user"
+                element={
+                  <ProtectedRoute>
                     <Suspense fallback={<PageLoadingFallback />}>
-                      <Dashboard />
+                      <DashboardUser />
                     </Suspense>
                   </ProtectedRoute>
                 }
               />
-              <Route path="/dashboard/user" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard/guru" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard/admin" element={<Navigate to="/dashboard" replace />} />
+              <Route
+                path="/dashboard/guru"
+                element={
+                  <ProtectedRoute>
+                    <RoleProtectedRoute roles={["guru", "admin"]}>
+                      <Suspense fallback={<PageLoadingFallback />}>
+                        <DashboardGuru />
+                      </Suspense>
+                    </RoleProtectedRoute>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/admin"
+                element={
+                  <ProtectedRoute>
+                    <RoleProtectedRoute roles={["admin"]}>
+                      <Suspense fallback={<PageLoadingFallback />}>
+                        <DashboardAdmin />
+                      </Suspense>
+                    </RoleProtectedRoute>
+                  </ProtectedRoute>
+                }
+              />
 
                <Route path="/consultations" element={
                  <Suspense fallback={<PageLoadingFallback />}>

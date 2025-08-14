@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
-import { buildAttemptBreakdown } from "@/lib/exams";
+import { mapLabelToEnum } from "@/lib/exams";
 import PageHero from "@/components/PageHero";
 
 const COUNTS = [10, 25, 50];
@@ -44,14 +44,10 @@ export default function PracticeConfig() {
     
     setLoading(true);
     try {
-      // Create practice session (attempt) with both label and enum
-      const breakdown = buildAttemptBreakdown({
-        examLabel: exam,              // dropdown label, e.g., "MRCEM Intermediate SBA"
-        topic: area !== 'All areas' ? area : null,
-        total: count,
-        timeLimitMin: null
-      });
-
+      // Use canonical exam type
+      const examType = mapLabelToEnum(exam);
+      
+      // Create practice session (attempt)
       const { data: attempt, error: attemptError } = await supabase
         .from('exam_attempts')
         .insert({
@@ -60,15 +56,24 @@ export default function PracticeConfig() {
           mode: 'practice',
           total_questions: count,
           question_ids: [], // Will be populated as questions are answered
-          breakdown
+          // Store exam configuration in breakdown for session queries
+          breakdown: { 
+            exam_type: examType,
+            topic: area !== 'All areas' ? area : null,
+            selection_id: null // No preselected list
+          }
         })
         .select('id')
         .single();
       
       if (attemptError) throw attemptError;
 
-      // Navigate to practice session with new ID-based route
-      navigate(`/exams/practice/session/${attempt.id}`);
+      // Navigate to practice session
+      const params = new URLSearchParams();
+      params.set('exam', exam);
+      params.set('count', String(count));
+      if (area !== 'All areas') params.set('topic', area);
+      navigate(`/exams/practice/session/${attempt.id}?${params.toString()}`);
     } catch (err: any) {
       console.error('Start failed', err);
       const errorMsg = err?.message || String(err);

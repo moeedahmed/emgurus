@@ -60,11 +60,12 @@ export default function QuestionCard({
                     disabled={!!lockSelection} 
                     className="mt-1"
                   />
-                   <div className="flex-1">
-                     <span className="text-sm leading-relaxed">
-                       <span className="font-semibold">{o.key}.</span> <ReactMarkdown remarkPlugins={[remarkGfm]} className="inline">{o.text}</ReactMarkdown>
-                     </span>
-                   </div>
+                  <div className="inline-flex items-start gap-3 flex-1">
+                    <span className="font-semibold shrink-0 text-sm">{o.key}.</span>
+                    <span className="text-sm leading-relaxed whitespace-pre-wrap">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} className="inline">{o.text}</ReactMarkdown>
+                    </span>
+                  </div>
                 </label>
               );
             })}

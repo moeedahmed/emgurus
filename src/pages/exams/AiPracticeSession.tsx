@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { EXAMS, ExamName } from "@/lib/curricula";
 import { mapLabelToEnum } from "@/lib/exams";
-import { recordNotification } from "@/components/ui/ToastOrNotice";
 
 interface GeneratedQuestion {
   question: string;
@@ -253,48 +252,13 @@ export default function AiPracticeSession() {
     setShowEndDialog(true);
   };
 
-  const confirmEndEarly = async () => {
+  const confirmEndEarly = () => {
     setShowEndDialog(false);
-    
-    // Get current score for early end
-    try {
-      const { data } = await supabase
-        .from('exam_attempt_items')
-        .select('selected_key, correct_key')
-        .eq('attempt_id', attemptId);
-      
-      const correctCount = data?.filter(item => 
-        item.selected_key?.toUpperCase() === item.correct_key?.toUpperCase()
-      ).length || 0;
-      
-      const answeredCount = data?.length || 0;
-      const scoreText = `${correctCount}/${answeredCount}`;
-      
-      toast({
-        title: 'Session Complete!',
-        description: `You scored ${scoreText} correct`,
-        duration: 5000
-      });
-      
-      const user = (await supabase.auth.getUser()).data.user;
-      await recordNotification(user?.id, 'AI Practice complete', `You scored ${scoreText}`, '/dashboard?view=exams&tab=attempts');
-      
-      // Update attempt as finished
-      await supabase
-        .from('exam_attempts')
-        .update({ finished_at: new Date().toISOString() })
-        .eq('id', attemptId);
-        
-    } catch (err) {
-      console.error('Error getting final score:', err);
-      toast({
-        title: 'Session Complete!',
-        description: 'Practice session ended early.',
-        duration: 3000
-      });
-    }
-    
-    // Navigate safely - no 404
+    toast({
+      title: 'Session Complete!',
+      description: 'Check your dashboard for detailed results.',
+      duration: 3000
+    });
     navigate('/exams/ai-practice', { replace: true });
   };
 
@@ -335,46 +299,39 @@ export default function AiPracticeSession() {
     }
   }
 
-  async function showFinalScore() {
+  function showFinalScore() {
     if (!attemptId) {
       navigate('/exams');
       return;
     }
     
-    try {
-      // Get final stats
-      const { data } = await supabase
-        .from('exam_attempt_items')
-        .select('selected_key, correct_key')
-        .eq('attempt_id', attemptId);
+    // Get final stats
+    supabase
+      .from('exam_attempt_items')
+      .select('selected_key, correct_key')
+      .eq('attempt_id', attemptId)
+      .then(({ data }) => {
+        const correctCount = data?.filter(item => 
+          item.selected_key?.toUpperCase() === item.correct_key?.toUpperCase()
+        ).length || 0;
         
-      const correctCount = data?.filter(item => 
-        item.selected_key?.toUpperCase() === item.correct_key?.toUpperCase()
-      ).length || 0;
-      
-      const percentage = Math.round((correctCount / total) * 100);
-      const scoreText = `${correctCount}/${total}`;
-      
-      toast({
-        title: 'Session Complete!',
-        description: `You scored ${scoreText} (${percentage}%)`,
-        duration: 5000
+        const percentage = Math.round((correctCount / total) * 100);
+        
+        toast({
+          title: 'Session Complete!',
+          description: `You scored ${correctCount}/${total} (${percentage}%)`,
+          duration: 5000
+        });
+        
+        // Update final attempt record
+        supabase
+          .from('exam_attempts')
+          .update({ finished_at: new Date().toISOString() })
+          .eq('id', attemptId)
+          .then(() => {
+            setTimeout(() => navigate('/exams/ai-practice', { replace: true }), 2000);
+          });
       });
-      
-      const user = (await supabase.auth.getUser()).data.user;
-      await recordNotification(user?.id, 'AI Practice complete', `You scored ${scoreText}`, '/dashboard?view=exams&tab=attempts');
-      
-      // Update final attempt record
-      await supabase
-        .from('exam_attempts')
-        .update({ finished_at: new Date().toISOString() })
-        .eq('id', attemptId);
-        
-      setTimeout(() => navigate('/exams/ai-practice', { replace: true }), 2000);
-    } catch (err) {
-      console.error('Error showing final score:', err);
-      navigate('/exams/ai-practice', { replace: true });
-    }
   }
 
   function prev() {
