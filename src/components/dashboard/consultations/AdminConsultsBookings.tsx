@@ -18,7 +18,7 @@ interface BookingRow {
   payment_status: string | null;
 }
 
-export default function AdminConsultsBookings() {
+export default function AdminConsultsBookings({ statusFilter }: { statusFilter?: 'upcoming' | 'past' | 'cancelled' }) {
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string>("");
@@ -34,9 +34,24 @@ export default function AdminConsultsBookings() {
         .from('consult_bookings')
         .select('id, user_id, guru_id, start_datetime, end_datetime, status, price, payment_status')
         .order('start_datetime', { ascending: false });
+
+      // Apply status filter based on statusFilter prop
+      if (statusFilter) {
+        const now = new Date().toISOString();
+        if (statusFilter === 'upcoming') {
+          query = query.gte('start_datetime', now).neq('status', 'cancelled');
+        } else if (statusFilter === 'past') {
+          query = query.lt('end_datetime', now).neq('status', 'cancelled');
+        } else if (statusFilter === 'cancelled') {
+          query = query.eq('status', 'cancelled');
+        }
+      }
+
+      // Apply additional filters
       if (status) query = (query as any).eq('status', status as any);
       if (from) query = query.gte('start_datetime', new Date(from).toISOString());
       if (to) query = query.lte('start_datetime', new Date(to).toISOString());
+      
       const { data } = await query;
       const list = (data || []) as any as BookingRow[];
       setRows(list);
@@ -55,7 +70,7 @@ export default function AdminConsultsBookings() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [statusFilter]);
 
   const updateStatus = async (id: string, next: string) => {
     try {

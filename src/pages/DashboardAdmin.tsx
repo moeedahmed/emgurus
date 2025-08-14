@@ -1062,7 +1062,7 @@ const ConsultBookingsOversight: React.FC = () => {
         ))}
       </div>
 
-      <AdminConsultsBookings />
+      <AdminConsultsBookings statusFilter={activeFilter} />
     </div>
   );
 };

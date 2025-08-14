@@ -15,6 +15,7 @@ export default function ConsultationsOverview(){
       if(!user){ setRows([]); return; }
       setLoading(true);
       try{
+        // Query bookings for user (as customer)
         const { data } = await supabase
           .from('consult_bookings')
           .select('id,start_datetime,end_datetime,status')
