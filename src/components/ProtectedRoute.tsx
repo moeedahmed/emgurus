@@ -39,7 +39,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 
   if (needsOnboarding) {
-    return <Navigate to="/profile" state={{ from: location }} replace />;
+    return <Navigate to="/settings#profile" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

@@ -38,6 +38,7 @@ import ModeratePosts from "./pages/admin/ModeratePosts";
 import AssignReviews from "./pages/admin/AssignReviews";
 import Taxonomy from "./pages/admin/Taxonomy";
 import Profile from "./pages/Profile";
+import ProfileRedirect from "./pages/ProfileRedirect";
 import PublicProfile from "./pages/PublicProfile";
 import Bookings from "./pages/Bookings";
 import SettingsPage from "./pages/Settings";
@@ -180,10 +181,11 @@ const App = () => (
                <Route path="/forums/:category_id" element={<ForumCategory />} />
                <Route path="/threads/:thread_id" element={<ThreadView />} />
                
-               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+               <Route path="/profile" element={<ProtectedRoute><ProfileRedirect /></ProtectedRoute>} />
                <Route path="/profile/:id" element={<PublicProfile />} />
                <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
                <Route path="/settings/notifications" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+               <Route path="/settings/security" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
                <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
                <Route path="/dashboard/user/progress" element={<UserProgress />} />
 <Route path="/guru/questions" element={<RoleProtectedRoute roles={["guru", "admin"]}><GuruQuestions /></RoleProtectedRoute>} />
