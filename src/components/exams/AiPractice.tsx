@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
+import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
 interface AIQuestion {
   id: string;
   question: string;
@@ -43,6 +44,8 @@ export default function AiPractice() {
     return <div>Old inline form disabled</div>;
   }
 
+  const [configOpen, setConfigOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -51,7 +54,14 @@ export default function AiPractice() {
             <h3 className="text-xl font-semibold mb-2">AI Practice (Beta)</h3>
             <p className="text-muted-foreground">Start an AI-generated practice set.</p>
           </div>
-          <Button size="lg" onClick={() => navigate('/exams/ai-practice')}>Start</Button>
+          <Dialog open={configOpen} onOpenChange={setConfigOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg">Start</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <AiPracticeConfig />
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
     </div>

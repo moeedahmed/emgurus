@@ -46,7 +46,7 @@ export default function AiPracticeConfig() {
     
     setLoading(true);
     try {
-      // Navigate to session page with query params
+      // Navigate directly to session page with query params
       const params = new URLSearchParams();
       params.set('exam', exam);
       params.set('count', String(count));

@@ -194,7 +194,7 @@ export default function AiPracticeSession() {
       <Card>
         <CardHeader>
           <CardTitle>AI Practice: Question {idx + 1} of {total}</CardTitle>
-          <div className="text-sm text-muted-foreground">{exam} • {topic || 'All topics'} • {difficulty}</div>
+          <div className="text-sm text-muted-foreground">{exam} • {topic || 'All topics'} • {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</div>
         </CardHeader>
         <CardContent className="grid gap-4">
           {error && (

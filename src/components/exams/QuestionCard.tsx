@@ -69,25 +69,37 @@ export default function QuestionCard({
 
       {showExplanation && (
         <Card>
-          <CardContent className="py-4 space-y-3">
-            <div id="explanation-heading" tabIndex={-1} className="font-semibold mb-2 outline-none">Explanation</div>
-            <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-hidden">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanation || "No explanation provided."}</ReactMarkdown>
+          <CardContent className="py-4 space-y-4">
+            <div>
+              <div id="explanation-heading" tabIndex={-1} className="font-semibold mb-2 outline-none">Main Explanation</div>
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-hidden">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanation || "No explanation provided."}</ReactMarkdown>
+              </div>
             </div>
-            {selectedKey && (
+            
+            {options.some(o => o.explanation) && (
               <div>
-                <div className="font-medium mb-1">Choice rationale</div>
-                <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-hidden">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {options.find(o => o.key === selectedKey)?.explanation ||
-                      (correctKey ? options.find(o => o.key === correctKey)?.explanation || "" : "") ||
-                      "No specific rationale provided for this option."}
-                  </ReactMarkdown>
+                <div className="font-semibold mb-2">Answer Options Rationale</div>
+                <div className="space-y-3">
+                  {options.filter(o => o.explanation).map(option => (
+                    <div key={option.key} className={cn(
+                      "border-l-4 pl-4 py-2",
+                      option.key === correctKey ? "border-success bg-success/5" : "border-muted"
+                    )}>
+                      <div className="font-medium text-sm mb-1">
+                        {option.key}. {option.text.length > 50 ? `${option.text.substring(0, 50)}...` : option.text}
+                      </div>
+                      <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-hidden">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{option.explanation}</ReactMarkdown>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
+            
             {source && (
-              <div className="text-sm text-muted-foreground mt-3">Source: {source}</div>
+              <div className="text-sm text-muted-foreground border-t pt-3">Source: {source}</div>
             )}
           </CardContent>
         </Card>
