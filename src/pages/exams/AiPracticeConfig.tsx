@@ -31,24 +31,20 @@ export default function AiPracticeConfig() {
   const start = async () => {
     if (!exam) return;
     setLoading(true);
-    const slo = area === 'All areas' ? null : area;
     try {
-      const res = await supabase.functions.invoke('ai-exams-api', {
-        body: { action: 'start_session', examType: exam }
-      });
-      if (res.error) throw res.error;
-      const sessionId = res.data?.session?.id;
-      if (!sessionId) throw new Error('Failed to start session');
+      // Navigate to session page with query params
       const params = new URLSearchParams();
+      params.set('exam', exam);
       params.set('count', String(count));
-      if (slo) params.set('slo', slo);
-      navigate(`/exams/ai-practice/session/${sessionId}?${params.toString()}`);
+      if (area !== 'All areas') params.set('topic', area);
+      params.set('difficulty', 'medium'); // Default difficulty
+      navigate(`/exams/ai-practice?${params.toString()}`);
     } catch (err: any) {
-      console.error('Start session failed', err);
+      console.error('Start failed', err);
       const errorMsg = err?.message || String(err);
       toast({ 
-        title: "AI Practice failed", 
-        description: errorMsg.includes('OpenAI') ? 'AI service not configured. Please contact support.' : errorMsg,
+        title: "Start failed", 
+        description: errorMsg,
         variant: 'destructive'
       });
     } finally {

@@ -300,13 +300,12 @@ useEffect(() => {
                       <Button onClick={() => {
                         if (!aiExam) return;
                         setAiOpen(false);
-                        navigate('/exams/ai-practice', { 
-                          state: { 
-                            exam: aiExam, 
-                            count: Math.min(maxAi, aiCount), 
-                            area: aiArea 
-                          } 
-                        });
+                        const params = new URLSearchParams();
+                        params.set('exam', aiExam);
+                        params.set('count', String(Math.min(maxAi, aiCount)));
+                        if (aiArea !== 'All areas') params.set('topic', aiArea);
+                        params.set('difficulty', 'medium');
+                        navigate(`/exams/ai-practice?${params.toString()}`);
                       }} disabled={!aiExam}>Start</Button>
                     </div>
                   </div>

@@ -18,6 +18,15 @@ type RequestBody = StartSessionBody | GenerateQuestionBody | SubmitAnswerBody | 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Check OpenAI key first
+  const openaiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!openaiKey) {
+    return new Response(JSON.stringify({ error: "OpenAI key not configured" }), { 
+      status: 500, 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_ANON_KEY") ?? ""
@@ -32,7 +41,32 @@ serve(async (req) => {
     if (userErr) throw userErr;
     if (!user) throw new Error("User not authenticated");
 
-    const body = (await req.json()) as RequestBody;
+    let body;
+    try {
+      body = (await req.json()) as RequestBody;
+    } catch (e) {
+      return new Response(JSON.stringify({ error: "Invalid JSON payload" }), { 
+        status: 400, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+
+    // Add simple validation for bulk_generate action
+    if (body.action === "bulk_generate") {
+      const { exam_type, count = 1 } = body as BulkGenerateBody;
+      if (!exam_type || typeof exam_type !== 'string') {
+        return new Response(JSON.stringify({ error: "Invalid payload: exam_type required" }), { 
+          status: 400, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+      if (typeof count !== 'number' || count < 1 || count > 20) {
+        return new Response(JSON.stringify({ error: "Invalid payload: count must be 1-20" }), { 
+          status: 400, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+    }
 
     if (body.action === "start_session") {
       const { examType } = body as StartSessionBody;
