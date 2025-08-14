@@ -49,10 +49,17 @@ export default function PracticeSession() {
       return;
     }
 
-    setCurrentIndex(sessionState.index || 0);
+    // Set index from URL params if available
+    const questionId = params.id;
+    if (questionId && sessionState.ids.includes(questionId)) {
+      setCurrentIndex(sessionState.ids.indexOf(questionId));
+    } else {
+      setCurrentIndex(sessionState.index || 0);
+    }
+    
     loadQuestions();
     createAttempt();
-  }, [sessionState, navigate]);
+  }, [sessionState, navigate, params.id]);
 
   const loadQuestions = async () => {
     if (!sessionState?.ids) return;
@@ -60,7 +67,7 @@ export default function PracticeSession() {
     try {
       const { data, error } = await supabase
         .from('reviewed_exam_questions')
-        .select('id, stem, options, topic, exam')
+        .select('id, stem, options, topic, exam, subtopic, correct_index, explanation')
         .in('id', sessionState.ids)
         .eq('status', 'approved');
 
@@ -78,8 +85,9 @@ export default function PracticeSession() {
         })) : [],
         topic: q!.topic || undefined,
         exam: q!.exam || undefined,
-        correct_answer: undefined, // Will fetch separately if needed
-        explanation: undefined // Will fetch separately if needed
+        source: `${q!.exam || ''}${q!.topic ? ' • ' + q!.topic : ''}${q!.subtopic ? ' • ' + q!.subtopic : ''}`,
+        correct_answer: q!.correct_index !== undefined ? String.fromCharCode(65 + q!.correct_index) : undefined,
+        explanation: q!.explanation || undefined
       }));
 
       setQuestions(orderedQuestions);
@@ -266,6 +274,7 @@ export default function PracticeSession() {
                 showExplanation={showExplanations[currentQuestion.id] || false}
                 explanation={currentQuestion.explanation}
                 correctKey={currentQuestion.correct_answer}
+                source={currentQuestion.source}
                 questionId={currentQuestion.id}
               />
 
