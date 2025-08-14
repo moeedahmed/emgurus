@@ -17,7 +17,7 @@ interface BookingRow {
   meeting_link: string | null;
 }
 
-export default function Bookings() {
+export default function Bookings({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const [past, setPast] = useState<BookingRow[]>([]);
   const [gurus, setGurus] = useState<Record<string, { name: string; avatar_url: string | null }>>({});
@@ -59,13 +59,15 @@ export default function Bookings() {
   const title = useMemo(() => "Bookings", []);
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      <header className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">{title}</h1>
-          <p className="text-muted-foreground">Your upcoming and past consultations.</p>
-        </div>
-      </header>
+    <main className={embedded ? "" : "container mx-auto px-4 py-8"}>
+      {!embedded && (
+        <header className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">{title}</h1>
+            <p className="text-muted-foreground">Your upcoming and past consultations.</p>
+          </div>
+        </header>
+      )}
 
       {past.length === 0 ? (
         <section className="text-center text-muted-foreground py-16">

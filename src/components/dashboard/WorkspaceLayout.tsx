@@ -10,6 +10,7 @@ export type WorkspaceSection = {
   tabs: Array<{
     id: string;          // e.g. "pending"
     title: string;       // tab label
+    description?: string; // one-liner description
     render: React.ReactNode | (() => React.ReactNode);
   }>;
 };
@@ -147,6 +148,9 @@ export function WorkspaceLayoutInner({
 
               {current.tabs.map((t) => (
                 <TabsContent key={t.id} value={t.id} className="mt-0">
+                  {t.description && (
+                    <div className="mb-3 text-sm text-muted-foreground">{t.description}</div>
+                  )}
                   <div className="border rounded-lg">
                     {typeof t.render === 'function' ? (t.render as any)() : t.render}
                   </div>
