@@ -142,7 +142,13 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
             .select('id, exam, stem, reviewer_id, reviewed_at, topic, difficulty, tags', { count: 'exact' })
             .eq('status', 'approved');
           if (exam) base = base.eq('exam', exam);
-          if (topicFilter) base = base.eq('topic', topicFilter);
+          if (topicFilter) {
+            try {
+              base = base.contains('tags', [topicFilter]);
+            } catch {
+              base = base.eq('topic', topicFilter);
+            }
+          }
           if (difficulty) base = base.eq('difficulty', difficulty);
           if (sloId) base = base.eq('slo_id', sloId);
           const qtext = qDebounced.trim();
@@ -345,6 +351,7 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <section className="lg:col-span-8">
+              {/* Mobile Filter Sheet - only render below lg breakpoint */}
               <div className="mb-4 lg:hidden">
                 <Sheet>
                   <SheetTrigger asChild>

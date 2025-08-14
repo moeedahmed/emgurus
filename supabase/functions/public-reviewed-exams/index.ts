@@ -109,8 +109,12 @@ serve(async (req) => {
       primary = primary.eq("exam_type", exam).or(`exam.eq.${exam}`);
     }
     if (topic) {
-      // Try tags array contains, fallback topic column
-      primary = primary.contains?.("tags" as any, [topic] as any) || primary.eq("topic" as any, topic as any);
+      // Try tags array contains first, then fallback to topic column
+      try {
+        primary = primary.contains("tags", [topic]);
+      } catch {
+        primary = primary.eq("topic", topic);
+      }
     }
     if (q) {
       primary = primary.ilike("stem", `%${q}%`);
@@ -133,8 +137,14 @@ serve(async (req) => {
         .in("status", ["published", "approved", "reviewed", "approved_public"])
         .order("created_at", { ascending: false })
         .order("id", { ascending: false });
-      if (exam) fb = fb.eq("exam_type", exam).or(`exam.eq.${exam}`);
-      if (topic) fb = (fb as any).contains?.("tags", [topic]) || (fb as any).eq("topic", topic);
+      if (exam) fb = fb.eq("exam_type", exam);
+      if (topic) {
+        try {
+          fb = fb.contains("tags", [topic]);
+        } catch {
+          fb = fb.eq("topic", topic);
+        }
+      }
       if (q) fb = fb.ilike("stem", `%${q}%`);
       if (difficulty) fb = fb.eq("difficulty", difficulty);
       if (slo) fb = fb.eq("slo_id", slo);
