@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -199,7 +200,13 @@ export default function EditorEdit() {
         <EmailVerifyBanner className="mb-6" />
         
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Edit Draft</h1>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+            <h1 className="text-3xl font-bold">Edit Blog</h1>
+          </div>
           {isFeatureEnabled('BLOG_EDITOR_V2') && (
             <Button variant="outline" onClick={toggleEditor}>
               {useBlockEditor ? 'Revert to classic editor' : 'Use block editor'}
