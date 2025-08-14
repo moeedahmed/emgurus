@@ -35,6 +35,8 @@ const ReviewedQuestionBank = lazy(() => import("@/pages/exams/ReviewedQuestionBa
 const ReviewedQuestionDetail = lazy(() => import("@/pages/exams/ReviewedQuestionDetail"));
 const AiPracticeConfig = lazy(() => import("@/pages/exams/AiPracticeConfig"));
 const AiPracticeSession = lazy(() => import("@/pages/exams/AiPracticeSession"));
+const PracticeConfig = lazy(() => import("@/pages/exams/PracticeConfig"));
+const ExamConfig = lazy(() => import("@/pages/exams/ExamConfig"));
 const QuestionBankPage = lazy(() => import("@/pages/exams/QuestionBankPage"));
 const QuestionDetail = lazy(() => import("@/pages/exams/QuestionDetail"));
 const ReviewedExamSession = lazy(() => import("@/pages/exams/ReviewedExamSession"));
@@ -120,13 +122,27 @@ const App = () => (
                  </ErrorBoundary>
                } />
                <Route path="/exams/ai-practice/session/:id" element={
-                 <ErrorBoundary>
-                   <Suspense fallback={<PageLoadingFallback />}>
-                     <AiPracticeSession />
-                   </Suspense>
-                 </ErrorBoundary>
-               } />
-               <Route path="/exams/reviewed" element={
+                  <ErrorBoundary>
+                    <Suspense fallback={<PageLoadingFallback />}>
+                      <AiPracticeSession />
+                    </Suspense>
+                  </ErrorBoundary>
+                } />
+                <Route path="/exams/practice" element={
+                  <ErrorBoundary>
+                    <Suspense fallback={<PageLoadingFallback />}>
+                      <PracticeConfig />
+                    </Suspense>
+                  </ErrorBoundary>
+                } />
+                <Route path="/exams/exam" element={
+                  <ErrorBoundary>
+                    <Suspense fallback={<PageLoadingFallback />}>
+                      <ExamConfig />
+                    </Suspense>
+                  </ErrorBoundary>
+                } />
+                <Route path="/exams/reviewed" element={
                   <ErrorBoundary>
                     <Suspense fallback={<PageLoadingFallback />}>
                       <ReviewedQuestionBank />
@@ -407,11 +423,11 @@ const App = () => (
                 </Suspense>
               } />
               <Route path="/pricing" element={<PricingPage />} />
-              <Route path="/exams/exam" element={
-                <Suspense fallback={<PageLoadingFallback />}>
-                  <ReviewedExamSession />
-                </Suspense>
-              } />
+               <Route path="/exams/exam/session" element={
+                 <Suspense fallback={<PageLoadingFallback />}>
+                   <ReviewedExamSession />
+                 </Suspense>
+               } />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

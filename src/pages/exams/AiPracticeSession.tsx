@@ -244,25 +244,40 @@ export default function AiPracticeSession() {
 
   async function submitFeedback(feedbackType: string) {
     try {
-      const questionId = storedQuestions[idx];
-      if (!questionId) return;
+      // Use the ai-feedback API for better feedback handling
+      const ratingMap: { [key: string]: number } = {
+        'accurate': 1,
+        'inaccurate': -1,
+        'too_easy': -1,
+        'too_hard': -1,
+        'irrelevant': -1
+      };
       
-      await supabase
-        .from('ai_exam_answers')
-        .insert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          question_id: questionId,
-          selected_answer: selected,
-          is_correct: selected.toUpperCase() === q?.correct.toUpperCase(),
-          feedback: feedbackType as any
-        });
-        
+      const rating = ratingMap[feedbackType] || 0;
+      const sessionId = attemptId || 'temp-session'; // Use attempt ID as session reference
+      
+      const { error } = await supabase.functions.invoke('ai-feedback', {
+        body: {
+          session_id: sessionId,
+          message_id: `q${idx}`, // Use question index as message ID
+          rating,
+          comment: feedbackType
+        }
+      });
+      
+      if (error) throw error;
+      
       toast({
         title: 'Feedback submitted',
-        description: 'Thank you for your feedback!',
+        description: 'Thank you for helping us improve!',
       });
     } catch (err) {
       console.error('Feedback submission failed:', err);
+      toast({
+        title: 'Feedback failed',
+        description: 'Please try again later.',
+        variant: 'destructive'
+      });
     }
   }
 
@@ -337,10 +352,35 @@ export default function AiPracticeSession() {
 
   return (
     <div className="container mx-auto px-4 py-6">
+      {/* Sticky progress bar */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 -mx-4 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-semibold">AI Practice Session</h1>
+            <div className="text-sm text-muted-foreground">
+              Question {idx + 1} of {total} • {exam} • {topic || 'All topics'} • {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-muted-foreground">
+              {Math.round(((idx + 1) / total) * 100)}% complete
+            </div>
+            <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${((idx + 1) / total) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>AI Practice: Question {idx + 1} of {total}</CardTitle>
-          <div className="text-sm text-muted-foreground">{exam} • {topic || 'All topics'} • {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</div>
+          <CardTitle className="flex items-center gap-2">
+            <span className="text-primary">⚡</span>
+            AI Question {idx + 1} of {total}
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
           {error && (

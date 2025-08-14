@@ -68,9 +68,28 @@ export default function AiPracticeConfig() {
 
   return (
     <div className="container mx-auto px-4 py-6">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 -mx-4 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold flex items-center gap-2">
+              <span className="text-primary">⚡</span>
+              AI Practice
+            </h1>
+            <p className="text-sm text-muted-foreground">AI-generated questions with instant feedback</p>
+          </div>
+          <Button variant="outline" onClick={() => navigate('/exams')}>
+            Back to Exams
+          </Button>
+        </div>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>AI Practice (Beta)</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            AI Practice Configuration
+            <span className="ml-2 align-middle text-xs px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700">Beta</span>
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div>
