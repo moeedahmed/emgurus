@@ -56,215 +56,118 @@ const AdminExamShortcutsBar: React.FC = () => (
   </div>
 );
 
-// -------- Blogs tab components
-const AdminSubmitted: React.FC = () => {
-  return <ModeratePosts forceView="admin" forceTab="unassigned" />;
-};
+// -------- Blogs workflow components with chips
+const BlogSubmissionQueue: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<'submitted' | 'assigned' | 'approved' | 'rejected'>('submitted');
 
-const AdminAssigned: React.FC = () => {
-  return <ModeratePosts forceView="admin" forceTab="assigned" />;
-};
-
-const AdminReviewed: React.FC = () => {
-  const [posts, setPosts] = useState<Array<{ id: string; title: string; description: string | null; created_at: string }>>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const { data: list } = await supabase
-          .from('blog_posts')
-          .select('id,title,description,created_at')
-          .eq('status', 'in_review')
-          .order('created_at', { ascending: false });
-        const ids = (list || []).map((p: any) => p.id);
-        if (!ids.length) { if (!cancelled) setPosts([]); return; }
-        const { data: logs } = await supabase
-          .from('blog_review_logs')
-          .select('post_id, created_at')
-          .eq('action', 'approve')
-          .in('post_id', ids);
-        const approved = new Set((logs || []).map((l: any) => l.post_id));
-        const filtered = (list || []).filter((p: any) => approved.has(p.id));
-        if (!cancelled) setPosts(filtered as any);
-      } catch (e) {
-        if (!cancelled) setPosts([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  const publish = async (postId: string) => {
-    try {
-      const { error } = await supabase.rpc('review_approve_publish', { p_post_id: postId });
-      if (error) throw error as any;
-      toast.success('Post published');
-      const { data: list } = await supabase
-        .from('blog_posts')
-        .select('id,title,description,created_at')
-        .eq('status', 'in_review')
-        .order('created_at', { ascending: false });
-      const ids = (list || []).map((p: any) => p.id);
-      if (!ids.length) { setPosts([]); return; }
-      const { data: logs } = await supabase
-        .from('blog_review_logs')
-        .select('post_id')
-        .eq('action', 'approve')
-        .in('post_id', ids);
-      const approved = new Set((logs || []).map((l: any) => l.post_id));
-      setPosts(((list || []) as any).filter((p: any) => approved.has(p.id)));
-    } catch (e) {
-      console.error(e);
-      toast.error('Failed to publish');
+  const getComponent = () => {
+    switch (activeFilter) {
+      case 'submitted': return <AdminSubmitted />;
+      case 'assigned': return <AdminAssigned />;
+      case 'approved': return <AdminReviewed />;
+      case 'rejected': return <AdminRejected />;
+      default: return <AdminSubmitted />;
     }
   };
 
   return (
-    <div className="space-y-3">
-      {posts.map((p) => (
-        <Card key={p.id} className="p-4 flex items-start justify-between gap-4">
-          <div>
-            <div className="font-semibold">{p.title}</div>
-            <div className="text-sm text-muted-foreground line-clamp-2">{p.description}</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="secondary"><Link to={`/blogs/editor/${p.id}`}>Edit</Link></Button>
-            <Button onClick={() => publish(p.id)}>Publish</Button>
-          </div>
-        </Card>
-      ))}
-      {!loading && posts.length === 0 && (
-        <Card className="p-6 text-sm text-muted-foreground">No Guru‑approved items awaiting publish.</Card>
-      )}
+    <div className="p-4">
+      <div className="mb-4 text-sm text-muted-foreground">
+        Triage incoming posts and assign to reviewers.
+      </div>
+      
+      <div className="flex gap-2 mb-4">
+        {[
+          { id: 'submitted' as const, label: 'Submitted' },
+          { id: 'assigned' as const, label: 'Assigned' },
+          { id: 'approved' as const, label: 'Guru Approved' },
+          { id: 'rejected' as const, label: 'Rejected' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={activeFilter === chip.id ? "default" : "outline"}
+            onClick={() => setActiveFilter(chip.id)}
+            aria-pressed={activeFilter === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
+      {getComponent()}
     </div>
   );
 };
 
-const AdminPublished: React.FC = () => {
-  const [posts, setPosts] = useState<Array<{ id: string; title: string; slug: string | null; created_at: string }>>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const { data } = await supabase
-          .from('blog_posts')
-          .select('id,title,slug,created_at')
-          .eq('status', 'published')
-          .order('published_at', { ascending: false, nullsFirst: false });
-        if (!cancelled) setPosts((data as any) || []);
-      } catch {
-        if (!cancelled) setPosts([]);
-      } finally { if (!cancelled) setLoading(false); }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+const BlogPublishedArchive: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<'published' | 'archived'>('published');
+
+  const getComponent = () => {
+    switch (activeFilter) {
+      case 'published': return <AdminPublished />;
+      case 'archived': return <AdminArchived />;
+      default: return <AdminPublished />;
+    }
+  };
+
   return (
-    <div className="space-y-3">
-      {posts.map((p) => (
-        <Card key={p.id} className="p-4 flex items-center justify-between">
-          <div className="font-semibold">{p.title}</div>
-          <Button asChild variant="outline"><a href={p.slug ? `/blogs/${p.slug}` : `/blogs`}>View</a></Button>
-        </Card>
-      ))}
-      {!loading && posts.length === 0 && (
-        <Card className="p-6 text-sm text-muted-foreground">No published posts.</Card>
-      )}
+    <div className="p-4">
+      <div className="mb-4 text-sm text-muted-foreground">
+        Manage published posts and archive.
+      </div>
+      
+      <div className="flex gap-2 mb-4">
+        {[
+          { id: 'published' as const, label: 'Published' },
+          { id: 'archived' as const, label: 'Archived' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={activeFilter === chip.id ? "default" : "outline"}
+            onClick={() => setActiveFilter(chip.id)}
+            aria-pressed={activeFilter === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
+      {getComponent()}
     </div>
   );
 };
 
-const MyBlogStatusAdmin: React.FC<{ status: 'draft' | 'in_review' }> = ({ status }) => {
-  const [rows, setRows] = useState<any[]>([]);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const uid = u.user?.id;
-      if (!uid) { setRows([]); return; }
-      const orderCol = status === 'in_review' ? 'submitted_at' : 'updated_at';
-      const { data } = await supabase
-        .from('blog_posts')
-        .select('id,title,slug,updated_at,submitted_at')
-        .eq('author_id', uid)
-        .eq('status', status)
-        .order(orderCol as any, { ascending: false })
-        .limit(50);
-      if (!cancelled) setRows((data as any) || []);
-    })();
-    return () => { cancelled = true; };
-  }, [status]);
+const MyBlogsAdmin: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<'draft' | 'in_review'>('draft');
+
   return (
-    <div className="space-y-3">
-      {rows.map((p) => (
-        <Card key={p.id} className="p-4 flex items-center justify-between">
-          <div>
-            <div className="font-semibold">{p.title}</div>
-            <div className="text-xs text-muted-foreground">{new Date(p.submitted_at || p.updated_at).toLocaleString()}</div>
-          </div>
-          <Button asChild variant="outline"><a href={p.slug ? `/blogs/${p.slug}` : `/blogs`}>View</a></Button>
-        </Card>
-      ))}
-      {rows.length === 0 && (
-        <Card className="p-6 text-sm text-muted-foreground">Nothing here yet.</Card>
-      )}
+    <div className="p-4">
+      <div className="mb-4 text-sm text-muted-foreground">
+        Your authored posts.
+      </div>
+      
+      <div className="flex gap-2 mb-4">
+        {[
+          { id: 'draft' as const, label: 'Draft' },
+          { id: 'in_review' as const, label: 'Submitted' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={activeFilter === chip.id ? "default" : "outline"}
+            onClick={() => setActiveFilter(chip.id)}
+            aria-pressed={activeFilter === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
+      <MyBlogStatusAdmin status={activeFilter} />
     </div>
   );
-};
-
-const AdminRejected: React.FC = () => {
-  const [items, setItems] = useState<Array<{ id: string; title: string; note?: string }>>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const { data: posts } = await supabase
-          .from('blog_posts')
-          .select('id,title')
-          .eq('status', 'archived')
-          .order('updated_at', { ascending: false });
-        const ids = (posts || []).map((p: any) => p.id);
-        let notes: Record<string, string> = {};
-        if (ids.length) {
-          const { data: logs } = await supabase
-            .from('blog_review_logs')
-            .select('post_id, note, created_at')
-            .in('post_id', ids)
-            .eq('action', 'request_changes')
-            .order('created_at', { ascending: false });
-          (logs || []).forEach((l: any) => { if (!notes[l.post_id]) notes[l.post_id] = l.note || ''; });
-        }
-        const merged = ((posts || []) as any).map((p: any) => ({ id: p.id, title: p.title, note: notes[p.id] }));
-        if (!cancelled) setItems(merged);
-      } catch {
-        if (!cancelled) setItems([]);
-      } finally { if (!cancelled) setLoading(false); }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-  return (
-    <div className="space-y-3">
-      {items.map((p) => (
-        <Card key={p.id} className="p-4">
-          <div className="font-semibold">{p.title}</div>
-          {p.note && <div className="text-sm text-muted-foreground mt-1">Note: {p.note}</div>}
-        </Card>
-      ))}
-      {!loading && items.length === 0 && (
-        <Card className="p-6 text-sm text-muted-foreground">No rejected posts.</Card>
-      )}
-    </div>
-  );
-};
-
-const AdminArchived: React.FC = () => {
-  return <AdminRejected />;
 };
 
 // -------- Exams Flow small panels (reuse existing endpoints)
@@ -354,9 +257,221 @@ const DraftsPanel: React.FC = () => {
         </Table>
       </Card>
     </div>
+};
+
+// -------- Add missing original components
+const AdminSubmitted: React.FC = () => {
+  return <ModeratePosts forceView="admin" forceTab="unassigned" />;
+};
+
+const AdminAssigned: React.FC = () => {
+  return <ModeratePosts forceView="admin" forceTab="assigned" />;
+};
+
+const AdminReviewed: React.FC = () => {
+  const [posts, setPosts] = useState<Array<{ id: string; title: string; description: string | null; created_at: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const { data: list } = await supabase
+          .from('blog_posts')
+          .select('id,title,description,created_at')
+          .eq('status', 'in_review')
+          .order('created_at', { ascending: false });
+        const ids = (list || []).map((p: any) => p.id);
+        if (!ids.length) { if (!cancelled) setPosts([]); return; }
+        const { data: logs } = await supabase
+          .from('blog_review_logs')
+          .select('post_id, created_at')
+          .eq('action', 'approve')
+          .in('post_id', ids);
+        const approved = new Set((logs || []).map((l: any) => l.post_id));
+        const filtered = (list || []).filter((p: any) => approved.has(p.id));
+        if (!cancelled) setPosts(filtered as any);
+      } catch (e) {
+        if (!cancelled) setPosts([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const publish = async (postId: string) => {
+    try {
+      const { error } = await supabase.rpc('review_approve_publish', { p_post_id: postId });
+      if (error) throw error as any;
+      toast.success('Post published');
+      const { data: list } = await supabase
+        .from('blog_posts')
+        .select('id,title,description,created_at')
+        .eq('status', 'in_review')
+        .order('created_at', { ascending: false });
+      const ids = (list || []).map((p: any) => p.id);
+      if (!ids.length) { setPosts([]); return; }
+      const { data: logs } = await supabase
+        .from('blog_review_logs')
+        .select('post_id')
+        .eq('action', 'approve')
+        .in('post_id', ids);
+      const approved = new Set((logs || []).map((l: any) => l.post_id));
+      setPosts(((list || []) as any).filter((p: any) => approved.has(p.id)));
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to publish');
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {posts.map((p) => (
+        <Card key={p.id} className="p-4 flex items-start justify-between gap-4">
+          <div>
+            <div className="font-semibold">{p.title}</div>
+            <div className="text-sm text-muted-foreground line-clamp-2">{p.description}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="secondary"><Link to={`/blogs/editor/${p.id}`}>Edit</Link></Button>
+            <Button onClick={() => publish(p.id)}>Publish</Button>
+          </div>
+        </Card>
+      ))}
+      {!loading && posts.length === 0 && (
+        <Card className="p-6 text-sm text-muted-foreground">No Guru‑approved items awaiting publish.</Card>
+      )}
+    </div>
+  );
+};
+};
+
+const AdminPublished: React.FC = () => {
+  const [posts, setPosts] = useState<Array<{ id: string; title: string; slug: string | null; created_at: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const { data } = await supabase
+          .from('blog_posts')
+          .select('id,title,slug,created_at')
+          .eq('status', 'published')
+          .order('published_at', { ascending: false, nullsFirst: false });
+        if (!cancelled) setPosts((data as any) || []);
+      } catch {
+        if (!cancelled) setPosts([]);
+      } finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  return (
+    <div className="space-y-3">
+      {posts.map((p) => (
+        <Card key={p.id} className="p-4 flex items-center justify-between">
+          <div className="font-semibold">{p.title}</div>
+          <Button asChild variant="outline"><a href={p.slug ? `/blogs/${p.slug}` : `/blogs`}>View</a></Button>
+        </Card>
+      ))}
+      {!loading && posts.length === 0 && (
+        <Card className="p-6 text-sm text-muted-foreground">No published posts.</Card>
+      )}
+    </div>
   );
 };
 
+const AdminRejected: React.FC = () => {
+  const [items, setItems] = useState<Array<{ id: string; title: string; note?: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const { data: posts } = await supabase
+          .from('blog_posts')
+          .select('id,title')
+          .eq('status', 'archived')
+          .order('updated_at', { ascending: false });
+        const ids = (posts || []).map((p: any) => p.id);
+        let notes: Record<string, string> = {};
+        if (ids.length) {
+          const { data: logs } = await supabase
+            .from('blog_review_logs')
+            .select('post_id, note, created_at')
+            .in('post_id', ids)
+            .eq('action', 'request_changes')
+            .order('created_at', { ascending: false });
+          (logs || []).forEach((l: any) => { if (!notes[l.post_id]) notes[l.post_id] = l.note || ''; });
+        }
+        const merged = ((posts || []) as any).map((p: any) => ({ id: p.id, title: p.title, note: notes[p.id] }));
+        if (!cancelled) setItems(merged);
+      } catch {
+        if (!cancelled) setItems([]);
+      } finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  return (
+    <div className="space-y-3">
+      {items.map((p) => (
+        <Card key={p.id} className="p-4">
+          <div className="font-semibold">{p.title}</div>
+          {p.note && <div className="text-sm text-muted-foreground mt-1">Note: {p.note}</div>}
+        </Card>
+      ))}
+      {!loading && items.length === 0 && (
+        <Card className="p-6 text-sm text-muted-foreground">No rejected posts.</Card>
+      )}
+    </div>
+  );
+};
+
+const AdminArchived: React.FC = () => {
+  return <AdminRejected />;
+};
+
+const MyBlogStatusAdmin: React.FC<{ status: 'draft' | 'in_review' }> = ({ status }) => {
+  const [rows, setRows] = useState<any[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u.user?.id;
+      if (!uid) { setRows([]); return; }
+      const orderCol = status === 'in_review' ? 'submitted_at' : 'updated_at';
+      const { data } = await supabase
+        .from('blog_posts')
+        .select('id,title,slug,updated_at,submitted_at')
+        .eq('author_id', uid)
+        .eq('status', status)
+        .order(orderCol as any, { ascending: false })
+        .limit(50);
+      if (!cancelled) setRows((data as any) || []);
+    })();
+    return () => { cancelled = true; };
+  }, [status]);
+  return (
+    <div className="space-y-3">
+      {rows.map((p) => (
+        <Card key={p.id} className="p-4 flex items-center justify-between">
+          <div>
+            <div className="font-semibold">{p.title}</div>
+            <div className="text-xs text-muted-foreground">{new Date(p.submitted_at || p.updated_at).toLocaleString()}</div>
+          </div>
+          <Button asChild variant="outline"><a href={p.slug ? `/blogs/${p.slug}` : `/blogs`}>View</a></Button>
+        </Card>
+      ))}
+      {rows.length === 0 && (
+        <Card className="p-6 text-sm text-muted-foreground">Nothing here yet.</Card>
+      )}
+    </div>
+  );
+};
+
+// Exam panel components
 const AssignedPanel: React.FC = () => {
   const { toast } = useToast();
   const [rows, setRows] = useState<Array<LiteQuestion & { reviewer?: string }>>([]);
@@ -413,23 +528,21 @@ const AssignedPanel: React.FC = () => {
               <TableRow key={q.id}>
                 <TableCell className="whitespace-nowrap text-xs">{new Date(q.created_at!).toLocaleString()}</TableCell>
                 <TableCell className="text-xs">{q.question_text || q.stem}</TableCell>
-                <TableCell className="text-xs">{(q as any).reviewer || '—'}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <Select value={reassigning[q.id] || ''} onValueChange={(v) => setReassigning(s => ({ ...s, [q.id]: v }))}>
-                      <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Select Guru" /></SelectTrigger>
-                      <SelectContent>
-                        {gurus.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Button size="sm" onClick={() => reassign(q.id)} disabled={!reassigning[q.id]}>Reassign</Button>
-                  </div>
+                <TableCell className="text-xs">{q.reviewer || '-'}</TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Select value={reassigning[q.id] || ''} onValueChange={(v) => setReassigning(p => ({ ...p, [q.id]: v }))}>
+                    <SelectTrigger className="w-32"><SelectValue placeholder="Reassign" /></SelectTrigger>
+                    <SelectContent>
+                      {gurus.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" onClick={() => reassign(q.id)} disabled={!reassigning[q.id]}>Reassign</Button>
                 </TableCell>
               </TableRow>
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-6">No assigned items</TableCell>
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-6">No assigned questions</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -440,105 +553,205 @@ const AssignedPanel: React.FC = () => {
 };
 
 const ApprovedPanel: React.FC = () => {
-  const { toast } = useToast();
-  const [rows, setRows] = useState<LiteQuestion[]>([]);
-  const [loading, setLoading] = useState(false);
-  const load = async () => {
-    setLoading(true);
-    try {
-      const app = await callFunction('/exams-admin-curate/approved', null, true, 'GET');
-      setRows(app?.data || []);
-    } catch (e: any) { toast({ title: 'Load failed', description: e.message, variant: 'destructive' }); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { load(); }, []);
-
-  const publish = async (id: string) => {
-    try {
-      await callFunction('/review-exams-api', { action: 'admin_publish', payload: { question_id: id } }, true);
-      toast({ title: 'Published', description: 'Question is now live.' });
-      await load();
-    } catch (e: any) {
-      toast({ title: 'Publish failed', description: e.message || 'Please try again', variant: 'destructive' });
-    }
-  };
-
   return (
     <div className="p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="font-semibold">Approved</div>
-        <Button size="sm" variant="outline" onClick={load} disabled={loading}>Refresh</Button>
-      </div>
-      <Card className="p-0 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Created</TableHead>
-              <TableHead>Question</TableHead>
-              <TableHead>Exam</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map(q => (
-              <TableRow key={q.id}>
-                <TableCell className="whitespace-nowrap text-xs">{new Date(q.created_at).toLocaleString()}</TableCell>
-                <TableCell className="text-xs">{q.question_text || q.stem}</TableCell>
-                <TableCell className="text-xs">{q.exam_type || '-'}</TableCell>
-                <TableCell className="text-xs">
-                  <Button size="sm" onClick={() => publish(q.id)}>Publish</Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-6">No approved items</TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+      <Card className="p-6 text-sm text-muted-foreground">Approved questions view coming soon.</Card>
     </div>
   );
 };
 
 const RejectedPanel: React.FC = () => {
-  const { toast } = useToast();
-  const [rows, setRows] = useState<LiteQuestion[]>([]);
-  const load = async () => {
-    try {
-      const rej = await callFunction('/exams-admin-curate/rejected', null, true, 'GET');
-      setRows(rej?.data || []);
-    } catch (e: any) { toast({ title: 'Load failed', description: e.message, variant: 'destructive' }); }
+  return (
+    <div className="p-4 space-y-3">
+      <Card className="p-6 text-sm text-muted-foreground">Rejected questions view coming soon.</Card>
+    </div>
+  );
+};
+
+// -------- Exams workflow components with chips
+const ExamGeneration: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<'draft' | 'submitted'>('draft');
+
+  const getComponent = () => {
+    switch (activeFilter) {
+      case 'draft': return <DraftsPanel />;
+      case 'submitted': return <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">Submitted questions view coming soon.</Card></div>;
+      default: return <DraftsPanel />;
+    }
   };
-  useEffect(() => { load(); }, []);
+
+  return (
+    <div className="p-0">
+      <div className="p-4 text-sm text-muted-foreground">
+        Generate AI questions by exam/topic/difficulty.
+      </div>
+      
+      <div className="flex gap-2 mb-4 px-4">
+        {[
+          { id: 'draft' as const, label: 'Draft (generated)' },
+          { id: 'submitted' as const, label: 'Submitted' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={activeFilter === chip.id ? "default" : "outline"}
+            onClick={() => setActiveFilter(chip.id)}
+            aria-pressed={activeFilter === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
+      {getComponent()}
+    </div>
+  );
+};
+
+const ExamReviewAssignment: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<'draft' | 'assigned' | 'approved' | 'rejected'>('draft');
+
+  const getComponent = () => {
+    switch (activeFilter) {
+      case 'draft': return <DraftsPanel />;
+      case 'assigned': return <AssignedPanel />;
+      case 'approved': return <ApprovedPanel />;
+      case 'rejected': return <RejectedPanel />;
+      default: return <DraftsPanel />;
+    }
+  };
+
+  return (
+    <div className="p-0">
+      <div className="p-4 text-sm text-muted-foreground">
+        Assign questions to gurus and track decisions.
+      </div>
+      
+      <div className="flex gap-2 mb-4 px-4">
+        {[
+          { id: 'draft' as const, label: 'Draft' },
+          { id: 'assigned' as const, label: 'Assigned' },
+          { id: 'approved' as const, label: 'Approved' },
+          { id: 'rejected' as const, label: 'Rejected' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={activeFilter === chip.id ? "default" : "outline"}
+            onClick={() => setActiveFilter(chip.id)}
+            aria-pressed={activeFilter === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
+      {getComponent()}
+    </div>
+  );
+};
+
+const ExamMarkedQuality: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<'open' | 'resolved'>('open');
+
+  return (
+    <div className="p-0">
+      <div className="p-4 text-sm text-muted-foreground">
+        Address user feedback and quality flags.
+      </div>
+      
+      <div className="flex gap-2 mb-4 px-4">
+        {[
+          { id: 'open' as const, label: 'Open' },
+          { id: 'resolved' as const, label: 'Resolved' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={activeFilter === chip.id ? "default" : "outline"}
+            onClick={() => setActiveFilter(chip.id)}
+            aria-pressed={activeFilter === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
+      <MarkedPanel />
+    </div>
+  );
+};
+
+const ExamBankSets: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<'questions' | 'sets' | 'taxonomy'>('questions');
+
+  const getComponent = () => {
+    switch (activeFilter) {
+      case 'questions': return <ReviewedQuestionBank embedded />;
+      case 'sets': return <QuestionSetsAdmin />;
+      case 'taxonomy': return <Taxonomy />;
+      default: return <ReviewedQuestionBank embedded />;
+    }
+  };
+
+  return (
+    <div className="p-0">
+      <div className="p-4 text-sm text-muted-foreground">
+        Browse approved questions and manage sets.
+      </div>
+      
+      <div className="flex gap-2 mb-4 px-4">
+        {[
+          { id: 'questions' as const, label: 'Questions' },
+          { id: 'sets' as const, label: 'Sets' },
+          { id: 'taxonomy' as const, label: 'Taxonomy' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={activeFilter === chip.id ? "default" : "outline"}
+            onClick={() => setActiveFilter(chip.id)}
+            aria-pressed={activeFilter === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
+      {getComponent()}
+    </div>
+  );
+};
+
+const MyQuestionsAdmin: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<'draft' | 'submitted' | 'approved' | 'rejected'>('draft');
+
   return (
     <div className="p-4">
-      <Card className="p-0 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Created</TableHead>
-              <TableHead>Question</TableHead>
-              <TableHead>Exam</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map(q => (
-              <TableRow key={q.id}>
-                <TableCell className="whitespace-nowrap text-xs">{new Date(q.created_at).toLocaleString()}</TableCell>
-                <TableCell className="text-xs">{q.question_text || q.stem}</TableCell>
-                <TableCell className="text-xs">{q.exam_type || '-'}</TableCell>
-              </TableRow>
-            ))}
-            {rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center text-muted-foreground py-6">No rejected items</TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+      <div className="mb-4 text-sm text-muted-foreground">
+        Your authored questions.
+      </div>
+      
+      <div className="flex gap-2 mb-4">
+        {[
+          { id: 'draft' as const, label: 'Draft' },
+          { id: 'submitted' as const, label: 'Submitted' },
+          { id: 'approved' as const, label: 'Approved' },
+          { id: 'rejected' as const, label: 'Rejected' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={activeFilter === chip.id ? "default" : "outline"}
+            onClick={() => setActiveFilter(chip.id)}
+            aria-pressed={activeFilter === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
+      <Card className="p-6 text-sm text-muted-foreground">Your authored questions view coming soon.</Card>
     </div>
   );
 };
@@ -780,25 +993,127 @@ const MarkedPanel: React.FC = () => {
   );
 };
 
+// Consultations workflow components
+const ConsultMarketplaceControls: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<'policies' | 'notifications' | 'settings'>('policies');
+
+  const getComponent = () => {
+    switch (activeFilter) {
+      case 'policies': return <AdminConsultsPolicies />;
+      case 'notifications': return <AdminConsultsNotifications />;
+      case 'settings': return <AdminConsultsSettings />;
+      default: return <AdminConsultsPolicies />;
+    }
+  };
+
+  return (
+    <div className="p-0">
+      <div className="p-4 text-sm text-muted-foreground">
+        Set marketplace rules and defaults.
+      </div>
+      
+      <div className="flex gap-2 mb-4 px-4">
+        {[
+          { id: 'policies' as const, label: 'Policies' },
+          { id: 'notifications' as const, label: 'Notifications' },
+          { id: 'settings' as const, label: 'Settings' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={activeFilter === chip.id ? "default" : "outline"}
+            onClick={() => setActiveFilter(chip.id)}
+            aria-pressed={activeFilter === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
+      {getComponent()}
+    </div>
+  );
+};
+
+const ConsultBookingsOversight: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<'upcoming' | 'past' | 'cancelled'>('upcoming');
+
+  return (
+    <div className="p-0">
+      <div className="p-4 text-sm text-muted-foreground">
+        Monitor consultations across the platform.
+      </div>
+      
+      <div className="flex gap-2 mb-4 px-4">
+        {[
+          { id: 'upcoming' as const, label: 'Upcoming' },
+          { id: 'past' as const, label: 'Past' },
+          { id: 'cancelled' as const, label: 'Cancelled' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={activeFilter === chip.id ? "default" : "outline"}
+            onClick={() => setActiveFilter(chip.id)}
+            aria-pressed={activeFilter === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
+      <AdminConsultsBookings />
+    </div>
+  );
+};
 
 const GuruApprovalsTab: React.FC = () => {
   const [section, setSection] = useState<'pending' | 'approved' | 'rejected'>('pending');
-  const label = section === 'pending'
-    ? 'Users requesting Guru status.'
-    : section === 'approved'
-    ? 'Requests you approved.'
-    : 'Requests you rejected (with reason).';
-  const btnCls = (active: boolean) => active ? 'px-3 py-1.5 text-sm font-medium bg-background rounded-md' : 'px-3 py-1.5 text-sm text-muted-foreground';
+  const [counts, setCounts] = useState<{ pending: number; approved7d: number; rejected7d: number }>({ pending: 0, approved7d: 0, rejected7d: 0 });
+
+  useEffect(() => {
+    (async () => {
+      const now = new Date();
+      const ago7 = new Date(now.getTime() - 7*24*60*60*1000).toISOString();
+      const [{ count: pCount }, { count: a7 }, { count: r7 }] = await Promise.all([
+        supabase.from('guru_applications').select('id', { count: 'exact', head: true }).eq('status','pending'),
+        supabase.from('guru_applications').select('id', { count: 'exact', head: true }).eq('status','approved').gte('updated_at', ago7),
+        supabase.from('guru_applications').select('id', { count: 'exact', head: true }).eq('status','rejected').gte('updated_at', ago7),
+      ]);
+      setCounts({ pending: pCount ?? 0, approved7d: a7 ?? 0, rejected7d: r7 ?? 0 });
+    })();
+  }, []);
+
   return (
-    <div className="p-0">
-      <div className="p-4 text-sm text-muted-foreground">{label}</div>
-      <div className="px-4 pb-2">
-        <div className="inline-flex items-center gap-1 rounded-md border bg-muted p-1">
-          <button className={btnCls(section==='pending')} onClick={()=>setSection('pending')}>Pending</button>
-          <button className={btnCls(section==='approved')} onClick={()=>setSection('approved')}>Approved</button>
-          <button className={btnCls(section==='rejected')} onClick={()=>setSection('rejected')}>Rejected</button>
-        </div>
+    <div className="p-4">
+      <div className="mb-4 text-sm text-muted-foreground">
+        Review and approve guru applications.
       </div>
+      
+      <div className="grid gap-4 md:grid-cols-3 mb-4">
+        <KpiCard title="Pending" value={counts.pending} isLoading={false} />
+        <KpiCard title="Approved (7d)" value={counts.approved7d} isLoading={false} />
+        <KpiCard title="Rejected (7d)" value={counts.rejected7d} isLoading={false} />
+      </div>
+      
+      <div className="flex gap-2 mb-4">
+        {[
+          { id: 'pending' as const, label: 'Pending' },
+          { id: 'approved' as const, label: 'Approved' },
+          { id: 'rejected' as const, label: 'Rejected' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={section === chip.id ? "default" : "outline"}
+            onClick={() => setSection(chip.id)}
+            aria-pressed={section === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+      
       <ApproveGurus embedded status={section} />
     </div>
   );
@@ -831,15 +1146,29 @@ export default function DashboardAdmin() {
       title: "Blogs",
       icon: BookOpen,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blog moderation and publishing at a glance.</div><BlogsOverviewPanel /></div> },
-        { id: "submitted", title: "Submitted", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts awaiting triage.</div><AdminSubmitted /></div> },
-        { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts assigned to reviewers.</div><AdminAssigned /></div> },
-        { id: "reviewed", title: "Reviewed", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Guru‑approved items ready to publish.</div><AdminReviewed /></div> },
-        { id: "published", title: "Published", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts that are live.</div><AdminPublished /></div> },
-        { id: "my-drafts", title: "My Drafts", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your blog drafts.</div><MyBlogStatusAdmin status="draft" /></div> },
-        { id: "my-submitted", title: "My Submitted", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your posts awaiting review.</div><MyBlogStatusAdmin status="in_review" /></div> },
-        { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts where changes were requested.</div><AdminRejected /></div> },
-        { id: "archived", title: "Archived", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts archived from review.</div><AdminArchived /></div> },
+        { 
+          id: "overview", 
+          title: "Overview", 
+          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blog moderation and publishing at a glance.</div><BlogsOverviewPanel /></div> 
+        },
+        { 
+          id: "submission-queue", 
+          title: "Submission Queue", 
+          description: "Triage incoming posts and assign to reviewers.", 
+          render: <BlogSubmissionQueue /> 
+        },
+        { 
+          id: "published-archive", 
+          title: "Published & Archive", 
+          description: "Manage published posts and archive.", 
+          render: <BlogPublishedArchive /> 
+        },
+        { 
+          id: "my-blogs", 
+          title: "My Blogs", 
+          description: "Your authored posts.", 
+          render: <MyBlogsAdmin /> 
+        },
       ],
     },
     {
@@ -847,48 +1176,41 @@ export default function DashboardAdmin() {
       title: "Exams",
       icon: GraduationCap,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-4 grid gap-4 md:grid-cols-5"><KpiCard title="Approved" value={examKpis.approved} isLoading={false} /><KpiCard title="Under Review" value={examKpis.under_review} isLoading={false} /><KpiCard title="Drafts" value={examKpis.draft} isLoading={false} /><KpiCard title="Rejected" value={examKpis.rejected} isLoading={false} /><KpiCard title="Flags Open" value={examKpis.flaggedOpen} isLoading={false} /></div> },
-        {
-          id: "questions",
-          title: "Questions",
-          render: (
-            <div className="p-0">
-              <div className="p-4 text-sm text-muted-foreground">Reviewed bank and filters.</div>
-              <ReviewedQuestionBank embedded />
-            </div>
-          ),
+        { 
+          id: "overview", 
+          title: "Overview", 
+          render: <div className="p-4 grid gap-4 md:grid-cols-5"><KpiCard title="Generated (7d)" value="0" isLoading={false} /><KpiCard title="In Review" value={examKpis.under_review} isLoading={false} /><KpiCard title="Published" value={examKpis.approved} isLoading={false} /><KpiCard title="Quality Flags Open" value={examKpis.flaggedOpen} isLoading={false} /><div className="text-sm text-muted-foreground">Coverage chart coming soon</div></div> 
         },
-        {
-          id: "sets",
-          title: "Sets",
-          render: (
-            <div className="p-0">
-              <div className="p-4 text-sm text-muted-foreground">Create and manage question sets.</div>
-              <QuestionSetsAdmin />
-            </div>
-          ),
+        { 
+          id: "generation", 
+          title: "Generation", 
+          description: "Generate AI questions by exam/topic/difficulty.", 
+          render: <ExamGeneration /> 
         },
-        {
-          id: "database",
-          title: "Database",
-          render: <DatabaseManager />,
+        { 
+          id: "review-assignment", 
+          title: "Review & Assignment", 
+          description: "Assign questions to gurus and track decisions.", 
+          render: <ExamReviewAssignment /> 
         },
-        { id: "submit", title: "Submit", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Submit new questions for review.</div><SubmitQuestion /></div> },
-        {
-          id: "generate",
-          title: "Generate",
-          render: (
-            <div className="p-0">
-              <div className="p-4 text-sm text-muted-foreground">AI generation and assignment.</div>
-              <ExamsAICuration />
-            </div>
-          ),
+        { 
+          id: "marked-quality", 
+          title: "Marked & Quality", 
+          description: "Address user feedback and quality flags.", 
+          render: <ExamMarkedQuality /> 
         },
-        { id: "drafts", title: "Drafts", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Freshly generated drafts.</div><DraftsPanel /></div> },
-        { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Assigned to reviewers.</div><AssignedPanel /></div> },
-        { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Approved and ready to publish.</div><ApprovedPanel /></div> },
-        { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Rejected or needs changes.</div><RejectedPanel /></div> },
-        { id: "marked", title: "Marked", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Learner‑flagged questions.</div><MarkedPanel /></div> },
+        { 
+          id: "bank-sets", 
+          title: "Bank & Sets", 
+          description: "Browse approved questions and manage sets.", 
+          render: <ExamBankSets /> 
+        },
+        { 
+          id: "my-questions", 
+          title: "My Questions", 
+          description: "Your authored questions.", 
+          render: <MyQuestionsAdmin /> 
+        },
       ],
     },
     {
@@ -896,12 +1218,29 @@ export default function DashboardAdmin() {
       title: "Consultations",
       icon: Stethoscope,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Platform-level consultations health.</div><AdminConsultsOverview /></div> },
-        { id: "bookings", title: "Bookings", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">All bookings with admin actions.</div><AdminConsultsBookings /></div> },
-        { id: "gurus", title: "Gurus", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Manage gurus for consultations.</div><AdminConsultsGurus /></div> },
-        { id: "policies", title: "Policies", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Guidelines & messaging shown to users and gurus.</div><AdminConsultsPolicies /></div> },
-        { id: "notifications", title: "Notifications", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Templates and toggles.</div><AdminConsultsNotifications /></div> },
-        { id: "settings", title: "Settings", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Platform rules.</div><AdminConsultsSettings /></div> },
+        { 
+          id: "overview", 
+          title: "Overview", 
+          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Platform-level consultations health.</div><AdminConsultsOverview /></div> 
+        },
+        { 
+          id: "guru-approvals", 
+          title: "Guru Approvals", 
+          description: "Review and approve guru applications.", 
+          render: <GuruApprovalsTab /> 
+        },
+        { 
+          id: "marketplace-controls", 
+          title: "Marketplace Controls", 
+          description: "Set marketplace rules and defaults.", 
+          render: <ConsultMarketplaceControls /> 
+        },
+        { 
+          id: "bookings-oversight", 
+          title: "Bookings Oversight", 
+          description: "Monitor consultations across the platform.", 
+          render: <ConsultBookingsOversight /> 
+        },
       ],
     },
     {
@@ -909,21 +1248,68 @@ export default function DashboardAdmin() {
       title: "Forums",
       icon: MessageSquare,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Forum moderation at a glance.</div></div> },
-        { id: "moderation", title: "Moderation Queue", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Threads and replies requiring action.</div><ForumsModeration /></div> },
+        { 
+          id: "overview", 
+          title: "Overview", 
+          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Forum moderation at a glance.</div><div className="p-4 grid gap-4 md:grid-cols-2"><KpiCard title="Open Moderation" value="0" isLoading={false} /><KpiCard title="Closed This Week" value="0" isLoading={false} /></div></div> 
+        },
+        { 
+          id: "moderation", 
+          title: "Moderation Queue", 
+          description: "Moderate threads and responses.", 
+          render: <div className="p-0"><ForumsModeration /></div> 
+        },
+        { 
+          id: "taxonomy", 
+          title: "Taxonomy & Tags", 
+          description: "Manage forum structure.", 
+          render: <div className="p-0"><Taxonomy /></div> 
+        },
       ],
     },
     {
-      id: "analytics",
-      title: "Analytics",
-      icon: BarChart3,
-      tabs: [ { id: "overview", title: "Overview", render: <AdminAnalyticsPanel /> } ],
+      id: "users",
+      title: "Users",
+      icon: UsersRound,
+      tabs: [
+        { 
+          id: "overview", 
+          title: "Overview", 
+          render: <div className="p-4 grid gap-4 md:grid-cols-3"><KpiCard title="Total Users" value="0" isLoading={false} /><KpiCard title="Active (7d)" value="0" isLoading={false} /><KpiCard title="New Today" value="0" isLoading={false} /></div> 
+        },
+        { 
+          id: "guru-approvals", 
+          title: "Guru Approvals", 
+          description: "Review and approve guru applications.", 
+          render: <GuruApprovalsTab /> 
+        },
+        { 
+          id: "directory", 
+          title: "Directory & Roles", 
+          description: "Manage user roles and permissions.", 
+          render: <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">User directory coming soon.</Card></div> 
+        },
+      ],
     },
-    { id: "users", title: "Users", icon: UsersRound, tabs: [ 
-      { id: "manage", title: "Manage", render: <div className="p-4 text-sm text-muted-foreground">User management shortcuts coming soon.</div> },
-      { id: "guru-approvals", title: "Guru Approvals", render: <GuruApprovalsTab /> },
-    ] },
-    { id: "settings", title: "Settings", icon: Settings, tabs: [ { id: "prefs", title: "Preferences", render: <div className="p-4 text-sm text-muted-foreground">Workspace settings.</div> } ] },
+    {
+      id: "settings",
+      title: "Settings",
+      icon: Settings,
+      tabs: [
+        { 
+          id: "notifications", 
+          title: "Notifications", 
+          description: "Per-role defaults and email settings.", 
+          render: <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">Notification settings coming soon.</Card></div> 
+        },
+        { 
+          id: "features", 
+          title: "Feature Flags / Branding", 
+          description: "Admin toggles and customization.", 
+          render: <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">Feature flags coming soon.</Card></div> 
+        },
+      ],
+    },
   ];
 
   return <WorkspaceLayout title="Admin Workspace" sections={sections} defaultSectionId="blogs" />;
