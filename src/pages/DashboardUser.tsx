@@ -10,7 +10,7 @@ import BlogsOverview from "@/components/dashboard/blogs/BlogsOverview";
 import ConsultationsOverview from "@/components/dashboard/consultations/ConsultationsOverview";
 import ForumsOverview from "@/components/dashboard/forums/ForumsOverview";
 import MyBlogs from "@/components/dashboard/blogs/MyBlogs";
-import MyThreads from "@/components/dashboard/forums/MyThreads";
+import MyThreadsWithChips from "@/components/dashboard/forums/MyThreadsWithChips";
 
 export default function DashboardUser() {
   useEffect(() => { document.title = "Learner Workspace | EMGurus"; }, []);
@@ -53,9 +53,8 @@ export default function DashboardUser() {
       title: "Forums",
       icon: MessagesSquare,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-0"><ForumsOverview /></div> },
-        { id: "questions", title: "Questions", description: "Threads you started.", render: <div className="p-0"><MyThreads filter="questions" /></div> },
-        { id: "answers", title: "Answers", description: "Threads where you replied.", render: <div className="p-0"><MyThreads filter="answers" /></div> },
+        { id: "overview", title: "Overview", description: "Your forum activity at a glance.", render: <div className="p-0"><ForumsOverview /></div> },
+        { id: "my-threads", title: "My Threads", description: "Your questions and answers.", render: <div className="p-0"><MyThreadsWithChips /></div> },
       ],
     },
   ];

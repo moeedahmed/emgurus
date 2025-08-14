@@ -3,7 +3,8 @@ import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/Worksp
 import { BookOpen, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings, Stethoscope } from "lucide-react";
 import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
 import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
-import ForumsModeration from "@/pages/ForumsModeration";
+import ForumsModerationQueue from "@/components/dashboard/forums/ForumsModerationQueue";
+import TaxonomyManager from "@/components/dashboard/forums/TaxonomyManager";
 import KpiCard from "@/components/dashboard/KpiCard";
 import TrendCard from "@/components/dashboard/TrendCard";
 import { useAdminMetrics } from "@/hooks/metrics/useAdminMetrics";
@@ -16,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
-import Taxonomy from "@/pages/admin/Taxonomy";
+
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
 import ExamsAICuration from "@/pages/admin/ExamsAICuration";
@@ -1251,19 +1252,20 @@ export default function DashboardAdmin() {
         { 
           id: "overview", 
           title: "Overview", 
-          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Forum moderation at a glance.</div><div className="p-4 grid gap-4 md:grid-cols-2"><KpiCard title="Open Moderation" value="0" isLoading={false} /><KpiCard title="Closed This Week" value="0" isLoading={false} /></div></div> 
+          description: "Forum health and activity.",
+          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Forum health and activity.</div><ForumsOverviewPanel /></div> 
         },
         { 
           id: "moderation", 
           title: "Moderation Queue", 
-          description: "Moderate threads and responses.", 
-          render: <div className="p-0"><ForumsModeration /></div> 
+          description: "Organization-wide flag handling.", 
+          render: <div className="p-0"><ForumsModerationQueue isAdmin={true} /></div> 
         },
         { 
           id: "taxonomy", 
           title: "Taxonomy & Tags", 
-          description: "Manage forum structure.", 
-          render: <div className="p-0"><Taxonomy /></div> 
+          description: "Manage categories and topics used across forums.", 
+          render: <div className="p-0"><TaxonomyManager /></div> 
         },
       ],
     },

@@ -8,7 +8,8 @@ import RejectedByMe from "@/pages/guru/RejectedByMe";
 import Bookings from "@/pages/Bookings";
 import Availability from "@/pages/guru/Availability";
 import Pricing from "@/pages/guru/Pricing";
-import ForumsModeration from "@/pages/ForumsModeration";
+import ForumsModerationQueue from "@/components/dashboard/forums/ForumsModerationQueue";
+import MyThreadsWithChips from "@/components/dashboard/forums/MyThreadsWithChips";
 import TableCard from "@/components/dashboard/TableCard";
 import KpiCard from "@/components/dashboard/KpiCard";
 import TrendCard from "@/components/dashboard/TrendCard";
@@ -359,13 +360,20 @@ export default function DashboardGuru() {
         { 
           id: "overview", 
           title: "Overview", 
-          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your forum activity.</div><AnalyticsPanel /></div> 
+          description: "Incoming flags and trends.",
+          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Incoming flags and trends.</div><AnalyticsPanel /></div> 
         },
         { 
           id: "moderation", 
           title: "Moderation Queue", 
-          description: "Moderate forum content assigned to you.", 
-          render: <div className="p-0"><ForumsModeration /></div> 
+          description: "Review and resolve flagged posts.", 
+          render: <div className="p-0"><ForumsModerationQueue isAdmin={false} /></div> 
+        },
+        { 
+          id: "my-threads", 
+          title: "My Threads", 
+          description: "Your questions and answers.", 
+          render: <div className="p-0"><MyThreadsWithChips /></div> 
         },
       ],
     },
