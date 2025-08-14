@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { getOpenAI, chat } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,10 +9,11 @@ const corsHeaders = {
 };
 
 type StartSessionBody = { action: "start_session"; examType: string };
-type GenerateQuestionBody = { action: "generate_question"; session_id: string; curriculum_ids?: string[]; topic?: string };
+type GenerateQuestionBody = { action: "generate_question"; session_id: string; curriculum_ids?: string[]; topic?: string; count?: number };
 type SubmitAnswerBody = { action: "submit_answer"; question_id: string; selected_answer: string; feedback?: "none"|"too_easy"|"hallucinated"|"wrong"|"not_relevant" };
+type BulkGenerateBody = { action: "bulk_generate"; exam_type: string; topic?: string; difficulty?: string; count?: number; persistAsDraft?: boolean; reviewer_assign_to?: string };
 
-type RequestBody = StartSessionBody | GenerateQuestionBody | SubmitAnswerBody;
+type RequestBody = StartSessionBody | GenerateQuestionBody | SubmitAnswerBody | BulkGenerateBody;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -90,11 +92,13 @@ serve(async (req) => {
         if (worst && worst.rate >= 0.4) topicToUse = worst.topic;
       }
 
-      const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
-      if (!openAIApiKey) throw new Error("OPENAI_API_KEY not configured");
+      try {
+        getOpenAI();
+      } catch (error) {
+        throw new Error("OpenAI key not configured");
+      }
 
-      const modelEnv = (Deno.env.get("OPENAI_MODEL_CHAT") || "").trim();
-      const candidates = [modelEnv, "gpt-4o-mini", "gpt-4o", "gpt-4.1-mini"].filter(Boolean) as string[];
+      const modelEnv = Deno.env.get("OPENAI_MODEL_EXAM") || Deno.env.get("OPENAI_MODEL_CHAT") || "gpt-4o-mini";
       const countForLog = (body as any).count ?? null;
 
       const systemPrompt = `You are a medical education expert writing Emergency Medicine MCQs. Return strict JSON only.`;
@@ -117,130 +121,69 @@ Return ONLY this JSON schema:
   "subtopic": "string"
 }`;
 
-      async function tryResponses(model: string): Promise<string> {
-        // Debug one-liner (no secrets)
-        console.log(JSON.stringify({ model_used: model, where: "AI Practice" }));
-        const r = await fetch("https://api.openai.com/v1/responses", {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${openAIApiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model, temperature: 0.4, input: [ { role: "system", content: systemPrompt }, { role: "user", content: userPrompt } ] })
+      console.log('AI Exams - model:', modelEnv, 'exam:', session.exam_type, 'topic:', topicToUse);
+
+      try {
+        const result = await chat({
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }],
+          model: modelEnv,
+          responseFormat: 'json_object',
+          temperature: 0.4,
+          maxTokens: 800
         });
-        if (!r.ok) throw new Error(`responses_${r.status}`);
-        const data = await r.json();
-        const text = data.output_text
-          ?? data?.output?.[0]?.content?.[0]?.text
-          ?? data?.data?.[0]?.content?.[0]?.text
-          ?? undefined;
-        if (!text) throw new Error("responses_no_text");
-        return text as string;
-      }
 
-      async function tryChat(model: string): Promise<string> {
-        const r = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${openAIApiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model,
-            temperature: 0.4,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt }
-            ]
-          })
+        const obj = JSON.parse(result);
+        // Normalize options to array [A..E]
+        const optionsObj = obj.options || {};
+        const optionsArr = Array.isArray(optionsObj)
+          ? optionsObj
+          : ["A","B","C","D","E"].map((k) => optionsObj[k] ?? optionsObj[`${k}.`] ?? "");
+
+        const insert = {
+          session_id,
+          question: obj.question,
+          options: optionsArr,
+          correct_answer: obj.correct || obj.correct_answer,
+          explanation: obj.explanation,
+          source: obj.reference || obj.source,
+          topic: obj.topic,
+          subtopic: obj.subtopic
+        };
+        const { data: saved, error: iErr } = await supabase
+          .from("ai_exam_questions")
+          .insert(insert)
+          .select("*")
+          .single();
+        if (iErr) throw iErr;
+
+        // Log success
+        await supabase.from("ai_gen_logs").insert({
+          user_id: user.id,
+          source: "ai_practice",
+          exam: session.exam_type,
+          slo: topicToUse ?? preferredTopic ?? null,
+          count: countForLog,
+          model_used: modelEnv,
+          success: true,
+          error_code: null
         });
-        if (!r.ok) throw new Error(`chat_${r.status}`);
-        const data = await r.json();
-        const text = data.choices?.[0]?.message?.content;
-        if (!text) throw new Error("chat_no_text");
-        return text as string;
+
+        return new Response(JSON.stringify({ question: saved }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      } catch (err: any) {
+        // Log failure
+        await supabase.from("ai_gen_logs").insert({
+          user_id: user.id,
+          source: "ai_practice",
+          exam: session.exam_type,
+          slo: topicToUse ?? preferredTopic ?? null,
+          count: countForLog,
+          model_used: modelEnv,
+          success: false,
+          error_code: String(err?.message ?? err)
+        });
+        throw new Error(`AI generation failed: ${String(err?.message ?? err)}`);
       }
-
-      async function getJsonWithFallback(model: string): Promise<any> {
-        let text: string | undefined;
-        // Try Responses API first, then fallback to Chat
-        try { text = await tryResponses(model); } catch (_) { text = await tryChat(model); }
-        try {
-          return JSON.parse(text!);
-        } catch (_) {
-          // Retry once with a stricter instruction
-          const fixPrompt = `${userPrompt}\nIMPORTANT: Return ONLY valid JSON matching the schema. No prose.`;
-          const r = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${openAIApiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model,
-              temperature: 0.2,
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: fixPrompt }
-              ]
-            })
-          });
-          if (!r.ok) throw new Error(`chat_${r.status}`);
-          const d = await r.json();
-          const t = d.choices?.[0]?.message?.content;
-          return JSON.parse(t);
-        }
-      }
-
-      let lastErr: any = null;
-      for (const m of candidates) {
-        try {
-          const obj = await getJsonWithFallback(m);
-          // Normalize options to array [A..E]
-          const optionsObj = obj.options || {};
-          const optionsArr = Array.isArray(optionsObj)
-            ? optionsObj
-            : ["A","B","C","D","E"].map((k) => optionsObj[k] ?? optionsObj[`${k}.`] ?? "");
-
-          const insert = {
-            session_id,
-            question: obj.question,
-            options: optionsArr,
-            correct_answer: obj.correct || obj.correct_answer,
-            explanation: obj.explanation,
-            source: obj.reference || obj.source,
-            topic: obj.topic,
-            subtopic: obj.subtopic
-          };
-          const { data: saved, error: iErr } = await supabase
-            .from("ai_exam_questions")
-            .insert(insert)
-            .select("*")
-            .single();
-          if (iErr) throw iErr;
-
-          // Log success
-          await supabase.from("ai_gen_logs").insert({
-            user_id: user.id,
-            source: "ai_practice",
-            exam: session.exam_type,
-            slo: topicToUse ?? preferredTopic ?? null,
-            count: countForLog,
-            model_used: m,
-            success: true,
-            error_code: null
-          });
-
-          return new Response(JSON.stringify({ question: saved }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        } catch (err) {
-          lastErr = err;
-          // log failure and try next candidate
-          await supabase.from("ai_gen_logs").insert({
-            user_id: user.id,
-            source: "ai_practice",
-            exam: session.exam_type,
-            slo: topicToUse ?? preferredTopic ?? null,
-            count: countForLog,
-            model_used: m,
-            success: false,
-            error_code: String(err?.message ?? err)
-          });
-          continue;
-        }
-      }
-
-      throw new Error(`Model unavailable. Set OPENAI_MODEL_CHAT in Supabase secrets. Last error: ${String(lastErr)}`);
     }
 
     if (body.action === "submit_answer") {
@@ -262,6 +205,124 @@ Return ONLY this JSON schema:
       if (aErr) throw aErr;
 
       return new Response(JSON.stringify({ result: { is_correct }, answer }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (body.action === "bulk_generate") {
+      const { exam_type, topic, difficulty, count = 5, persistAsDraft = true, reviewer_assign_to } = body as BulkGenerateBody;
+      
+      // Check if user is admin or guru
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      const userRoles = (roles || []).map((r: any) => r.role);
+      const isAdmin = userRoles.includes('admin');
+      const isGuru = userRoles.includes('guru');
+      
+      if (!isAdmin && !isGuru) {
+        throw new Error("Unauthorized: admin or guru role required");
+      }
+
+      const maxCount = isAdmin ? 20 : 10;
+      const safeCount = Math.max(1, Math.min(maxCount, count));
+
+      try {
+        getOpenAI();
+      } catch (error) {
+        throw new Error("OpenAI key not configured");
+      }
+
+      const generated = [];
+      const model = Deno.env.get("OPENAI_MODEL_EXAM") || "gpt-4o-mini";
+
+      for (let i = 0; i < safeCount; i++) {
+        try {
+          const systemPrompt = `You are a medical education expert writing Emergency Medicine MCQs. Return strict JSON only.`;
+          const userPrompt = `Generate one MCQ for ${exam_type}.
+Constraints:
+- Topic focus: ${topic || "random across the EM curriculum"}
+- Difficulty: ${difficulty || "mixed"}
+- 5 options (A–E), exactly one correct
+- Concise, high-yield explanation
+- Add a short credible reference hint (e.g., NICE/RCEM/UpToDate)
+
+Return ONLY this JSON schema:
+{
+  "question": "string",
+  "options": { "A": "string", "B": "string", "C": "string", "D": "string", "E": "string" },
+  "correct": "A"|"B"|"C"|"D"|"E",
+  "explanation": "string",
+  "reference": "string",
+  "topic": "string",
+  "subtopic": "string"
+}`;
+
+          const result = await chat({
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }],
+            model,
+            responseFormat: 'json_object',
+            temperature: 0.4,
+            maxTokens: 800
+          });
+
+          const obj = JSON.parse(result);
+          
+          if (persistAsDraft) {
+            // Insert into review_exam_questions as draft
+            const { data: saved, error: iErr } = await supabase
+              .from("review_exam_questions")
+              .insert({
+                question: obj.question,
+                options: obj.options,
+                correct_answer: obj.correct || obj.correct_answer,
+                explanation: obj.explanation,
+                exam_type: exam_type,
+                created_by: user.id,
+                status: 'draft'
+              })
+              .select("*")
+              .single();
+            
+            if (iErr) throw iErr;
+            generated.push(saved);
+
+            // Create assignment if reviewer specified
+            if (reviewer_assign_to && saved) {
+              await supabase
+                .from("exam_review_assignments")
+                .insert({
+                  question_id: saved.id,
+                  reviewer_id: reviewer_assign_to,
+                  assigned_by: user.id,
+                  status: 'assigned'
+                });
+            }
+          } else {
+            generated.push(obj);
+          }
+        } catch (err: any) {
+          console.error(`Failed to generate question ${i + 1}:`, err);
+        }
+      }
+
+      // Log bulk generation
+      await supabase.from("ai_gen_logs").insert({
+        user_id: user.id,
+        source: "admin_bulk",
+        exam: exam_type,
+        slo: topic || null,
+        count: safeCount,
+        model_used: model,
+        success: generated.length > 0,
+        error_code: generated.length === 0 ? "all_failed" : null
+      });
+
+      return new Response(JSON.stringify({ 
+        items: generated, 
+        count: generated.length,
+        requested: safeCount 
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     throw new Error("Unknown action");

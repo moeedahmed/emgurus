@@ -79,9 +79,11 @@ export default function AiPracticeSession() {
       setShow(false);
     } catch (err: any) {
       console.error('Generate question failed', err);
+      const errorMsg = err?.message || String(err);
       toast({
-        title: 'Generation failed',
-        description: `${String(err?.message || err)}. You can retry or edit selection.`,
+        title: 'AI Generation failed',
+        description: errorMsg.includes('OpenAI') ? 'AI service not configured. Please contact support.' : `${errorMsg}. You can retry or edit selection.`,
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getOpenAI } from "../_shared/openai.ts";
 
 // Dynamic CORS with allowlist
 const allowOrigin = (origin: string | null) => {
@@ -16,7 +17,6 @@ const baseCors = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 const EMBEDDING_MODEL = Deno.env.get("EMBEDDING_MODEL") || "text-embedding-3-small";
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -28,11 +28,12 @@ function sseEncode(data: unknown) {
 }
 
 async function getEmbedding(input: string) {
+  const apiKey = getOpenAI();
   const ctrl = new AbortController();
   const res = await Promise.race([
     fetch('https://api.openai.com/v1/embeddings', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: EMBEDDING_MODEL, input }),
       signal: ctrl.signal,
     }),
@@ -58,10 +59,10 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const allow_browsing: boolean = !!body.allow_browsing;
+    const browsing: boolean = !!body.browsing;
     const sessionId: string | null = body.session_id || null;
     const anonId: string | null = body.anon_id || null;
-    const pageContext: any = body.page_context || {};
+    const pageContext: any = body.pageContext || body.page_context || {};
     const messages: MessageIn[] = Array.isArray(body.messages) ? body.messages.slice(-20) : [];
     const purpose: string = typeof body.purpose === 'string' ? body.purpose : 'chatbot';
     // Map requested purpose to real OpenAI models compatible with Chat Completions
@@ -89,7 +90,7 @@ serve(async (req) => {
     // Build retrieval context if browsing allowed
     let retrieved: any[] = [];
     const lastUser = [...messages].reverse().find(m => m.role === 'user');
-    if (allow_browsing && lastUser?.content) {
+    if (browsing && lastUser?.content) {
       try {
         const embedding = await getEmbedding(lastUser.content);
         if (embedding?.length) {
@@ -105,11 +106,14 @@ serve(async (req) => {
       }
     }
 
-    const systemPrompt = `You are AI Guru, a helpful assistant for EM Gurus. Provide concise, friendly answers using EM Gurus content first. Never give medical advice; include a short disclaimer when medical questions arise. Current page context: ${JSON.stringify(pageContext)}.`;
+    const systemPrompt = `You are AI Guru, a helpful assistant for EM Gurus. Provide concise, friendly answers using EM Gurus content first. Never give medical advice; include a short disclaimer when medical questions arise.${pageContext?.text ? ` CONTEXT: ${pageContext.text.slice(0, 3000)}` : ''}`;
+    console.log('AI Route - model:', model, 'messages:', messages.length, 'browsing:', browsing);
 
     // Validate secrets early to surface clear errors
-    if (!OPENAI_API_KEY) {
-      return new Response(sseEncode({ error: 'missing_key', message: 'Missing OPENAI_API_KEY in Supabase secrets. Set it in Project Settings → Functions.' }), {
+    try {
+      getOpenAI();
+    } catch (error) {
+      return new Response(sseEncode({ error: 'missing_key', message: 'OpenAI key not configured' }), {
         status: 500,
         headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'text/event-stream' },
       });
@@ -136,10 +140,11 @@ serve(async (req) => {
         async function run(withTools: boolean) {
           const ctrl = new AbortController();
           try {
+            const apiKey = getOpenAI();
             const res = await Promise.race([
               fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+                headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   model: model,
                   temperature: 0.3,
@@ -191,9 +196,9 @@ serve(async (req) => {
         }
 
         try {
-          await run(!!allow_browsing);
+          await run(!!browsing);
         } catch (err: any) {
-          if (allow_browsing) {
+          if (browsing) {
             // Tool path failed — inform and retry without tools
             send({ delta: 'Browsing failed; answering without browsing… ' });
             try {

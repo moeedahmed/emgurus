@@ -28,6 +28,7 @@ import AdminConsultsOverview from "@/components/dashboard/consultations/AdminCon
 import AdminConsultsBookings from "@/components/dashboard/consultations/AdminConsultsBookings";
 import AdminConsultsGurus from "@/components/dashboard/consultations/AdminConsultsGurus";
 import AdminConsultsPolicies from "@/components/dashboard/consultations/AdminConsultsPolicies";
+import AdminGeneration from "@/components/admin/AdminGeneration";
 import AdminConsultsNotifications from "@/components/dashboard/consultations/AdminConsultsNotifications";
 import AdminConsultsSettings from "@/components/dashboard/consultations/AdminConsultsSettings";
 import ApproveGurus from "@/pages/admin/ApproveGurus";

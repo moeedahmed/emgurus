@@ -108,31 +108,26 @@ export default function AIGuru() {
     // transient status
     const statusTimer = setTimeout(() => setStatusText('Searching EM Gurus…'), 600);
 
-    const url = `https://cgtvvpzrzwyvsbavboxa.functions.supabase.co/ai-route`;
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      // Public anon key is required by Supabase Edge Functions even when JWT is not verified
-      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNndHZ2cHpyend5dnNiYXZib3hhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1MjYyNTAsImV4cCI6MjA3MDEwMjI1MH0.IkZEQamwiYvGvb3gFMmL8IDNfh_rAtwyrzwF8zqV7xw',
-    };
-    if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
-
     try {
       // Add assistant placeholder for streaming
       setMsgs(m => [...m, { role: 'assistant', content: '' }]);
 
       const controller = new AbortController();
-      const fetchPromise = fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
+      const fetchPromise = supabase.functions.invoke('ai-route', {
+        body: {
           session_id: sessionKey.current,
           anon_id: sessionKey.current,
-          page_context: pageContext,
+          pageContext: pageContext,
           messages: newMsgs,
-          allow_browsing: allowBrowsing,
+          browsing: allowBrowsing,
           purpose: "chatbot",
-        }),
-        signal: controller.signal,
+        }
+      }).then(res => {
+        if (res.error) throw new Error(res.error.message);
+        // Convert Supabase response to fetch-like response for streaming
+        return new Response(JSON.stringify(res.data || {}), {
+          headers: { 'content-type': 'application/json' }
+        });
       });
 
       const res = await invokeWithTimeout(fetchPromise, 60000);
@@ -210,9 +205,8 @@ export default function AIGuru() {
       clearTimeout(statusTimer);
       setStatusText('');
       const aborted = /timeout/i.test(String(e?.message)) || e?.name === 'AbortError';
-      const msg = allowBrowsing
-        ? 'AI Guru failed—try again with browsing off or reload.'
-        : (aborted ? 'Request timeout after 60s' : 'Sorry, I couldn\'t generate a response.');
+      const errorMsg = e?.message || 'Sorry, I couldn\'t generate a response.';
+      const msg = aborted ? 'Request timeout after 60s' : errorMsg;
       setMsgs(m => [...m.slice(0, m.length - (m[m.length-1]?.role === 'assistant' ? 0 : 0)), { role: 'assistant', content: msg }]);
       console.error('AI Guru error', e);
     } finally {

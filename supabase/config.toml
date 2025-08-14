@@ -1,5 +1,15 @@
 project_id = "cgtvvpzrzwyvsbavboxa"
 
+[functions.env]
+OPENAI_API_KEY = "$OPENAI_API_KEY"
+OPENAI_MODEL_CHAT = "gpt-4o-mini"
+OPENAI_MODEL_EXAM = "gpt-4o-mini"
+EMBEDDING_MODEL = "text-embedding-3-small"
+EMBEDDING_DIM = "1536"
+
+[functions.ai-exams-api]
+verify_jwt = true
+
 [functions.generate-ai-question]
 verify_jwt = true
 

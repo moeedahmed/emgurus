@@ -45,7 +45,12 @@ export default function AiPracticeConfig() {
       navigate(`/exams/ai-practice/session/${sessionId}?${params.toString()}`);
     } catch (err: any) {
       console.error('Start session failed', err);
-      toast({ title: "Couldn't start AI practice.", description: String(err?.message || err) });
+      const errorMsg = err?.message || String(err);
+      toast({ 
+        title: "AI Practice failed", 
+        description: errorMsg.includes('OpenAI') ? 'AI service not configured. Please contact support.' : errorMsg,
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }

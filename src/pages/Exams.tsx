@@ -297,19 +297,16 @@ useEffect(() => {
                     </div>
                     <div className="md:col-span-3 flex items-center justify-end gap-2 pt-2">
                       <Button variant="outline" onClick={() => setAiOpen(false)}>Cancel</Button>
-                      <Button onClick={async()=>{
-                        if(!aiExam) return; 
-                        try {
-                          const res = await supabase.functions.invoke('ai-exams-api', { body: { action: 'start_session', examType: aiExam } });
-                          const sessionId = (res as any)?.data?.session?.id;
-                          if(sessionId){
-                            const params = new URLSearchParams();
-                            const count = Math.min(maxAi, aiCount);
-                            params.set('count', String(count));
-                            if (aiArea && aiArea !== 'All areas') params.set('slo', aiArea);
-                            navigate(`/exams/ai-practice/session/${sessionId}?${params.toString()}`);
-                          }
-                        } finally { setAiOpen(false); }
+                      <Button onClick={() => {
+                        if (!aiExam) return;
+                        setAiOpen(false);
+                        navigate('/exams/ai-practice', { 
+                          state: { 
+                            exam: aiExam, 
+                            count: Math.min(maxAi, aiCount), 
+                            area: aiArea 
+                          } 
+                        });
                       }} disabled={!aiExam}>Start</Button>
                     </div>
                   </div>

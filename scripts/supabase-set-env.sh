@@ -7,11 +7,10 @@ PROJECT_REF="<your-project-ref>" # e.g. cgtvvpzrzwyvsbavboxa
 cat <<EOF
 # OpenAI
 supabase functions secrets set OPENAI_API_KEY=sk-... --project-ref $PROJECT_REF
-supabase functions secrets set OPENAI_MODEL_CHAT_BASIC=gpt-5.0-nano --project-ref $PROJECT_REF
-supabase functions secrets set OPENAI_MODEL_CHAT_EXAM=gpt-5.0-pro --project-ref $PROJECT_REF
-supabase functions secrets set OPENAI_MODEL_EXAM=gpt-5.0-pro --project-ref $PROJECT_REF
-supabase functions secrets set OPENAI_EMBED_MODEL=text-embedding-3-small --project-ref $PROJECT_REF
-supabase functions secrets set OPENAI_EMBED_DIM=1536 --project-ref $PROJECT_REF
+supabase functions secrets set OPENAI_MODEL_CHAT=gpt-4o-mini --project-ref $PROJECT_REF
+supabase functions secrets set OPENAI_MODEL_EXAM=gpt-4o-mini --project-ref $PROJECT_REF
+supabase functions secrets set EMBEDDING_MODEL=text-embedding-3-small --project-ref $PROJECT_REF
+supabase functions secrets set EMBEDDING_DIM=1536 --project-ref $PROJECT_REF
 supabase functions secrets set OPENAI_CHAT_TIMEOUT_MS=60000 --project-ref $PROJECT_REF
 supabase functions secrets set OPENAI_EMBED_TIMEOUT_MS=30000 --project-ref $PROJECT_REF
 supabase functions secrets set CHAT_MAX_TOKENS=300 --project-ref $PROJECT_REF
