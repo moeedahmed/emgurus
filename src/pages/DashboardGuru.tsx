@@ -7,7 +7,8 @@ import MyExamDrafts from "@/pages/tools/MyExamDrafts";
 import RejectedByMe from "@/pages/guru/RejectedByMe";
 import Bookings from "@/pages/Bookings";
 import Availability from "@/pages/guru/Availability";
-import ModeratePosts from "@/pages/admin/ModeratePosts";
+import Pricing from "@/pages/guru/Pricing";
+import ForumsModeration from "@/pages/ForumsModeration";
 import TableCard from "@/components/dashboard/TableCard";
 import KpiCard from "@/components/dashboard/KpiCard";
 import TrendCard from "@/components/dashboard/TrendCard";
@@ -17,142 +18,199 @@ import { Button } from "@/components/ui/button";
 
 import { useAuth } from "@/contexts/AuthContext";
 
-function ReviewerAssigned() { useEffect(() => { const p = new URLSearchParams(window.location.search); p.set('view','reviewer'); p.set('tab','pending'); history.replaceState(null,'',`${location.pathname}?${p.toString()}${location.hash}`); }, []); return <ModeratePosts embedded />; }
-function ReviewerApprovedPanel() {
+// Blog Reviews Component - combines Assigned, Approved, Rejected with chips
+function BlogReviews() {
   const { user } = useAuth();
+  const [activeFilter, setActiveFilter] = useState<'assigned' | 'approved' | 'rejected'>('assigned');
   const [rows, setRows] = useState<any[]>([]);
-  useEffect(() => { (async () => {
-    if (!user) { setRows([]); return; }
-    const { data } = await supabase
-      .from('blog_review_logs')
-      .select('post_id, created_at, note, post:blog_posts(id,title,slug)')
-      .eq('actor_id', user.id)
-      .eq('action', 'approve')
-      .order('created_at', { ascending: false })
-      .limit(100);
-    setRows((data as any) || []);
-  })(); }, [user?.id]);
-  return (
-    <div className="p-4">
-      <TableCard
-        title="Approved"
-        columns={[
-          { key: 'title', header: 'Title', render: (r: any) => r.post?.title || '-' },
-          { key: 'created_at', header: 'When', render: (r: any) => new Date(r.created_at).toLocaleString() },
-          { key: 'slug', header: 'Link', render: (r: any) => (r.post?.slug ? <a className="underline" href={`/blogs/${r.post.slug}`}>Open</a> : '-') },
-        ]}
-        rows={rows}
-        emptyText="No approvals yet."
-      />
-    </div>
-  );
-}
-function ReviewerRejectedPanel() {
-  const { user } = useAuth();
-  const [rows, setRows] = useState<any[]>([]);
-  useEffect(() => { (async () => {
-    if (!user) { setRows([]); return; }
-    const { data } = await supabase
-      .from('blog_review_logs')
-      .select('post_id, created_at, note, post:blog_posts(id,title,slug)')
-      .eq('actor_id', user.id)
-      .eq('action', 'request_changes')
-      .order('created_at', { ascending: false })
-      .limit(100);
-    setRows((data as any) || []);
-  })(); }, [user?.id]);
-  return (
-    <div className="p-4">
-      <TableCard
-        title="Rejected"
-        columns={[
-          { key: 'title', header: 'Title', render: (r: any) => r.post?.title || '-' },
-          { key: 'note', header: 'Note', render: (r: any) => r.note || '-' },
-          { key: 'created_at', header: 'When', render: (r: any) => new Date(r.created_at).toLocaleString() },
-        ]}
-        rows={rows}
-        emptyText="No rejections yet."
-      />
-    </div>
-  );
-}
 
-function MyBlogsPanel() {
-  const { user } = useAuth();
-  const [rows, setRows] = useState<any[]>([]);
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       if (!user) { setRows([]); return; }
-      const { data } = await supabase
-        .from('blog_posts')
-        .select('id, title, slug, status, created_at')
-        .eq('author_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      setRows((data as any) || []);
+      
+      if (activeFilter === 'assigned') {
+        // Use existing ModeratePosts logic for assigned items
+        const { data } = await supabase.rpc('list_reviewer_queue', { p_limit: 100, p_offset: 0 });
+        if (!cancelled) setRows((data as any) || []);
+      } else if (activeFilter === 'approved') {
+        const { data } = await supabase
+          .from('blog_review_logs')
+          .select('post_id, created_at, note, post:blog_posts(id,title,slug)')
+          .eq('actor_id', user.id)
+          .eq('action', 'approve')
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (!cancelled) setRows((data as any) || []);
+      } else if (activeFilter === 'rejected') {
+        const { data } = await supabase
+          .from('blog_review_logs')
+          .select('post_id, created_at, note, post:blog_posts(id,title,slug)')
+          .eq('actor_id', user.id)
+          .eq('action', 'request_changes')
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (!cancelled) setRows((data as any) || []);
+      }
     })();
-  }, [user?.id]);
-  return (
-    <div className="p-4">
-      <TableCard
-        title="My Blogs"
-        columns={[
-          { key: 'title', header: 'Title', render: (r: any) => r.title || '-' },
-          { key: 'status', header: 'Status', render: (r: any) => r.status || '-' },
-          { key: 'created_at', header: 'Created', render: (r: any) => new Date(r.created_at).toLocaleString() },
-          { key: 'link', header: 'Link', render: (r: any) => (r.slug ? <a className="underline" href={`/blogs/${r.slug}`}>Open</a> : '-') },
-        ]}
-        rows={rows}
-        emptyText="No posts yet."
-      />
-    </div>
-  );
-}
+    return () => { cancelled = true; };
+  }, [user?.id, activeFilter]);
 
-function MyThreadsPanel({ title }: { title: string }) {
-  // Minimal placeholder to avoid heavy queries; can be enhanced later
+  const getColumns = () => {
+    if (activeFilter === 'assigned') {
+      return [
+        { key: 'title', header: 'Title', render: (r: any) => r.title || '-' },
+        { key: 'submitted_at', header: 'Submitted', render: (r: any) => new Date(r.submitted_at).toLocaleString() },
+        { key: 'actions', header: 'Actions', render: (r: any) => <a className="underline" href={`/blogs/editor/${r.id}`}>Review</a> },
+      ];
+    } else {
+      return [
+        { key: 'title', header: 'Title', render: (r: any) => r.post?.title || '-' },
+        { key: 'created_at', header: 'When', render: (r: any) => new Date(r.created_at).toLocaleString() },
+        { key: 'note', header: 'Note', render: (r: any) => r.note || '-' },
+      ];
+    }
+  };
+
   return (
     <div className="p-4">
+      <div className="mb-4 text-sm text-muted-foreground">
+        Edit and approve assigned blog posts.
+      </div>
+      
+      <div className="flex gap-2 mb-4">
+        {[
+          { id: 'assigned' as const, label: 'Assigned' },
+          { id: 'approved' as const, label: 'Approved' },
+          { id: 'rejected' as const, label: 'Rejected' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={activeFilter === chip.id ? "default" : "outline"}
+            onClick={() => setActiveFilter(chip.id)}
+            aria-pressed={activeFilter === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
       <TableCard
-        title={title}
-        columns={[
-          { key: 'title', header: 'Title' },
-          { key: 'activity', header: 'Last activity' },
-        ]}
-        rows={[]}
+        title="Reviews"
+        columns={getColumns()}
+        rows={rows}
         emptyText="Nothing here yet."
       />
     </div>
   );
 }
 
-function MyBlogStatusPanel({ status }: { status: 'draft' | 'in_review' }) {
+// Exam Reviews Component - combines queue and history
+function ExamReviews() {
+  const { user } = useAuth();
+  const [activeFilter, setActiveFilter] = useState<'assigned' | 'approved' | 'rejected'>('assigned');
+  const [rows, setRows] = useState<any[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user) { setRows([]); return; }
+      
+      if (activeFilter === 'assigned') {
+        try {
+          const { data, error } = await supabase.rpc("list_exam_reviewer_queue", { p_limit: 100, p_offset: 0 });
+          if (!cancelled && !error) setRows((data as any) || []);
+        } catch (e) { if (!cancelled) setRows([]); }
+      } else {
+        // For approved/rejected, would need to query review logs or similar tables
+        // Using placeholder for now as this would need proper exam review logs
+        if (!cancelled) setRows([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, activeFilter]);
+
+  return (
+    <div className="p-4">
+      <div className="mb-4 text-sm text-muted-foreground">
+        Review assigned questions and finalize decisions.
+      </div>
+      
+      <div className="flex gap-2 mb-4">
+        {[
+          { id: 'assigned' as const, label: 'Assigned' },
+          { id: 'approved' as const, label: 'Approved' },
+          { id: 'rejected' as const, label: 'Rejected' },
+        ].map(chip => (
+          <Button
+            key={chip.id}
+            size="sm"
+            variant={activeFilter === chip.id ? "default" : "outline"}
+            onClick={() => setActiveFilter(chip.id)}
+            aria-pressed={activeFilter === chip.id}
+          >
+            {chip.label}
+          </Button>
+        ))}
+      </div>
+
+      <TableCard
+        title="Review & Assignment"
+        columns={[
+          { key: 'created_at', header: 'When', render: (r: any) => new Date(r.created_at).toLocaleString() },
+          { key: 'stem', header: 'Question', render: (r: any) => r.stem || '-' },
+          { key: 'exam_type', header: 'Exam', render: (r: any) => r.exam_type || '-' },
+        ]}
+        rows={rows}
+        emptyText="Nothing assigned yet."
+      />
+    </div>
+  );
+}
+
+// Remove unused components from old structure
+
+// Remove unused components
+
+function MyBlogStatusPanel({ filter }: { filter: 'draft' | 'in_review' }) {
   const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!user) { setRows([]); return; }
-      const orderCol = status === 'in_review' ? 'submitted_at' : 'updated_at';
+      const orderCol = filter === 'in_review' ? 'submitted_at' : 'updated_at';
       const { data } = await supabase
         .from('blog_posts')
         .select('id,title,slug,updated_at,submitted_at')
         .eq('author_id', user.id)
-        .eq('status', status)
+        .eq('status', filter)
         .order(orderCol as any, { ascending: false })
         .limit(50);
       if (!cancelled) setRows((data as any) || []);
     })();
     return () => { cancelled = true; };
-  }, [user?.id, status]);
+  }, [user?.id, filter]);
+
   return (
     <div className="p-4">
+      <div className="mb-4 text-sm text-muted-foreground">
+        {filter === 'draft' ? 'Write or continue your own posts.' : 'Posts awaiting review.'}
+      </div>
+      
+      <div className="flex gap-2 mb-4">
+        <Button size="sm" variant="default" aria-pressed={true}>
+          {filter === 'draft' ? 'Draft' : 'Submitted'}
+        </Button>
+      </div>
+
       <TableCard
-        title={status === 'draft' ? 'Drafts' : 'Submitted'}
+        title={filter === 'draft' ? 'My Blogs' : 'Submitted'}
         columns={[
           { key: 'title', header: 'Title' },
-          { key: 'updated_at', header: status === 'draft' ? 'Updated' : 'Submitted', render: (r: any) => new Date(r.submitted_at || r.updated_at).toLocaleString() },
-          { key: 'slug', header: 'Link', render: (r: any) => (r.slug ? <a className="underline" href={`/blogs/${r.slug}`}>Open</a> : '-') },
+          { key: 'updated_at', header: filter === 'draft' ? 'Updated' : 'Submitted', render: (r: any) => new Date(r.submitted_at || r.updated_at).toLocaleString() },
+          { key: 'slug', header: 'Link', render: (r: any) => (r.slug ? <a className="underline" href={`/blogs/editor/${r.id}`}>Edit</a> : '-') },
         ]}
         rows={rows}
         emptyText="Nothing here yet."
@@ -160,7 +218,6 @@ function MyBlogStatusPanel({ status }: { status: 'draft' | 'in_review' }) {
     </div>
   );
 }
-
 function MySubmittedPanel() {
   const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
@@ -215,20 +272,29 @@ export default function DashboardGuru() {
     );
   };
 
-
-
   const sections: WorkspaceSection[] = [
     {
       id: "blogs",
       title: "Blogs",
       icon: BookOpen,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your recent reviews and publishing impact.</div><AnalyticsPanel /></div> },
-        { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blogs waiting for your review.</div><ReviewerAssigned /></div> },
-        { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blogs you approved.</div><ReviewerApprovedPanel /></div> },
-        { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blogs you rejected with notes.</div><ReviewerRejectedPanel /></div> },
-        { id: "my-drafts", title: "Drafts", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your blog drafts.</div><MyBlogStatusPanel status="draft" /></div> },
-        { id: "my-submitted", title: "Submitted", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Posts awaiting review.</div><MyBlogStatusPanel status="in_review" /></div> },
+        { 
+          id: "overview", 
+          title: "Overview", 
+          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your recent reviews and publishing impact.</div><AnalyticsPanel /></div> 
+        },
+        { 
+          id: "reviews", 
+          title: "Reviews", 
+          description: "Edit and approve assigned blog posts.", 
+          render: <BlogReviews /> 
+        },
+        { 
+          id: "my-blogs", 
+          title: "My Blogs", 
+          description: "Write or continue your own posts.", 
+          render: <MyBlogStatusPanel filter="draft" /> 
+        },
       ],
     },
     {
@@ -236,20 +302,23 @@ export default function DashboardGuru() {
       title: "Exams",
       icon: GraduationCap,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your exam reviews and contribution.</div><AnalyticsPanel /></div> },
-        { id: "drafts", title: "Drafts", render: (
-          <div className="p-0">
-            <div className="p-4 flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">Your saved drafts.</div>
-              <Button asChild><a href="/tools/submit-question">Create Question</a></Button>
-            </div>
-            <MyExamDrafts />
-          </div>
-        ) },
-        { id: "submitted", title: "Submitted", render: <div className="p-0"><MySubmittedPanel /></div> },
-        { id: "assigned", title: "Assigned", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Questions assigned to you.</div><GuruReviewQueue /></div> },
-        { id: "approved", title: "Approved", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your completed approvals.</div><ReviewedByMe /></div> },
-        { id: "rejected", title: "Rejected", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Items you sent back with notes.</div><RejectedByMe /></div> },
+        { 
+          id: "overview", 
+          title: "Overview", 
+          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your exam reviews and contribution.</div><AnalyticsPanel /></div> 
+        },
+        { 
+          id: "review-assignment", 
+          title: "Review & Assignment", 
+          description: "Review assigned questions and finalize decisions.", 
+          render: <ExamReviews /> 
+        },
+        { 
+          id: "my-submissions", 
+          title: "My Submissions", 
+          description: "Questions you wrote or edited.", 
+          render: <div className="p-0"><MySubmittedPanel /></div> 
+        },
       ],
     },
     {
@@ -257,9 +326,29 @@ export default function DashboardGuru() {
       title: "Consultations",
       icon: Stethoscope,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your booking stats at a glance.</div><AnalyticsPanel /></div> },
-        { id: "availability", title: "Availability", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Manage your slots and rates.</div><Availability /></div> },
-        { id: "bookings", title: "Bookings", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Upcoming and past sessions.</div><Bookings /></div> },
+        { 
+          id: "overview", 
+          title: "Overview", 
+          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your booking stats at a glance.</div><AnalyticsPanel /></div> 
+        },
+        { 
+          id: "availability", 
+          title: "Availability", 
+          description: "Define your available slots.", 
+          render: <div className="p-0"><Availability /></div> 
+        },
+        { 
+          id: "pricing", 
+          title: "Pricing", 
+          description: "Set your hourly rate.", 
+          render: <div className="p-0"><Pricing /></div> 
+        },
+        { 
+          id: "bookings", 
+          title: "Bookings", 
+          description: "Your consultation schedule.", 
+          render: <div className="p-0"><Bookings embedded={true} /></div> 
+        },
       ],
     },
     {
@@ -267,12 +356,20 @@ export default function DashboardGuru() {
       title: "Forums",
       icon: MessageSquare,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your forum activity.</div><AnalyticsPanel /></div> },
-        { id: "drafts", title: "Drafts", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your draft threads.</div><MyThreadsPanel title="Drafts" /></div> },
-        { id: "threads", title: "Threads", render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your published threads.</div><MyThreadsPanel title="Threads" /></div> },
+        { 
+          id: "overview", 
+          title: "Overview", 
+          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your forum activity.</div><AnalyticsPanel /></div> 
+        },
+        { 
+          id: "moderation", 
+          title: "Moderation Queue", 
+          description: "Moderate forum content assigned to you.", 
+          render: <div className="p-0"><ForumsModeration /></div> 
+        },
       ],
     },
   ];
 
-  return <WorkspaceLayout title="Guru Workspace" sections={sections} defaultSectionId="exams" />;
+  return <WorkspaceLayout title="Guru Workspace" sections={sections} defaultSectionId="blogs" />;
 }
