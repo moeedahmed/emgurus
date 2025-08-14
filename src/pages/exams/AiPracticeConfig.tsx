@@ -38,7 +38,7 @@ export default function AiPracticeConfig() {
       params.set('count', String(count));
       if (area !== 'All areas') params.set('topic', area);
       params.set('difficulty', 'medium'); // Default difficulty
-      navigate(`/exams/ai-practice?${params.toString()}`);
+      navigate(`/exams/ai-practice/session/${Date.now()}?${params.toString()}`);
     } catch (err: any) {
       console.error('Start failed', err);
       const errorMsg = err?.message || String(err);

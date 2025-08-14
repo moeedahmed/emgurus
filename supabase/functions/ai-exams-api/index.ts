@@ -12,8 +12,9 @@ type StartSessionBody = { action: "start_session"; examType: string };
 type GenerateQuestionBody = { action: "generate_question"; session_id: string; curriculum_ids?: string[]; topic?: string; count?: number };
 type SubmitAnswerBody = { action: "submit_answer"; question_id: string; selected_answer: string; feedback?: "none"|"too_easy"|"hallucinated"|"wrong"|"not_relevant" };
 type BulkGenerateBody = { action: "bulk_generate"; exam_type: string; topic?: string; difficulty?: string; count?: number; persistAsDraft?: boolean; reviewer_assign_to?: string };
+type PracticeGenerateBody = { action: "practice_generate"; exam_type: string; topic?: string; difficulty?: string; count?: number };
 
-type RequestBody = StartSessionBody | GenerateQuestionBody | SubmitAnswerBody | BulkGenerateBody;
+type RequestBody = StartSessionBody | GenerateQuestionBody | SubmitAnswerBody | BulkGenerateBody | PracticeGenerateBody;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -51,17 +52,18 @@ serve(async (req) => {
       });
     }
 
-    // Add simple validation for bulk_generate action
-    if (body.action === "bulk_generate") {
-      const { exam_type, count = 1 } = body as BulkGenerateBody;
+    // Add simple validation for bulk_generate and practice_generate actions
+    if (body.action === "bulk_generate" || body.action === "practice_generate") {
+      const { exam_type, count = 1 } = body as BulkGenerateBody | PracticeGenerateBody;
       if (!exam_type || typeof exam_type !== 'string') {
         return new Response(JSON.stringify({ error: "Invalid payload: exam_type required" }), { 
           status: 400, 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         });
       }
-      if (typeof count !== 'number' || count < 1 || count > 20) {
-        return new Response(JSON.stringify({ error: "Invalid payload: count must be 1-20" }), { 
+      const maxCount = body.action === "practice_generate" ? 1 : 20;
+      if (typeof count !== 'number' || count < 1 || count > maxCount) {
+        return new Response(JSON.stringify({ error: `Invalid payload: count must be 1-${maxCount}` }), { 
           status: 400, 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         });
@@ -356,6 +358,75 @@ Return ONLY this JSON schema:
         items: generated, 
         count: generated.length,
         requested: safeCount 
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (body.action === "practice_generate") {
+      const { exam_type, topic, difficulty, count = 1 } = body as PracticeGenerateBody;
+      
+      // No role restriction for practice - anyone can use it
+      try {
+        getOpenAI();
+      } catch (error) {
+        throw new Error("OpenAI key not configured");
+      }
+
+      const generated = [];
+      const model = Deno.env.get("OPENAI_MODEL_EXAM") || Deno.env.get("OPENAI_MODEL_CHAT") || "gpt-4o-mini";
+
+      for (let i = 0; i < count; i++) {
+        try {
+          const systemPrompt = `You are a medical education expert writing Emergency Medicine MCQs. Return strict JSON only.`;
+          const userPrompt = `Generate one MCQ for ${exam_type}.
+Constraints:
+- Topic focus: ${topic || "random across the EM curriculum"}
+- Difficulty: ${difficulty || "medium"}
+- 5 options (A–E), exactly one correct
+- Concise, high-yield explanation
+- Add a short credible reference hint (e.g., NICE/RCEM/UpToDate)
+
+Return ONLY this JSON schema:
+{
+  "question": "string",
+  "options": { "A": "string", "B": "string", "C": "string", "D": "string", "E": "string" },
+  "correct": "A"|"B"|"C"|"D"|"E",
+  "explanation": "string",
+  "reference": "string",
+  "topic": "string",
+  "subtopic": "string"
+}`;
+
+          const result = await chat({
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }],
+            model,
+            responseFormat: 'json_object',
+            maxTokens: 800
+          });
+
+          const obj = JSON.parse(result);
+          generated.push(obj);
+        } catch (err: any) {
+          console.error(`Failed to generate question ${i + 1}:`, err);
+        }
+      }
+
+      // Log practice generation
+      await supabase.from("ai_gen_logs").insert({
+        user_id: user.id,
+        source: "ai_practice",
+        exam: exam_type,
+        slo: topic || null,
+        count: count,
+        model_used: model,
+        success: generated.length > 0,
+        error_code: generated.length === 0 ? "all_failed" : null
+      });
+
+      return new Response(JSON.stringify({ 
+        items: generated, 
+        count: generated.length,
+        requested: count 
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

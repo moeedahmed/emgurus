@@ -62,12 +62,11 @@ export default function AiPracticeSession() {
       setError("");
       const { data, error: apiError } = await supabase.functions.invoke('ai-exams-api', {
         body: { 
-          action: 'bulk_generate', 
+          action: 'practice_generate', 
           exam_type: exam, 
           topic: topic || undefined,
           difficulty,
-          count: 1,
-          persistAsDraft: false
+          count: 1
         }
       });
       
@@ -90,7 +89,7 @@ export default function AiPracticeSession() {
       setError(errorMsg);
       toast({
         title: 'AI Generation failed',
-        description: errorMsg.includes('OpenAI') ? 'AI service not configured. Please contact support.' : errorMsg,
+        description: errorMsg,
         variant: 'destructive'
       });
     } finally {
