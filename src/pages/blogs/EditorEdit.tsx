@@ -20,6 +20,7 @@ import { blocksToMarkdown, markdownToBlocks } from "@/components/blogs/editor/Bl
 import AuthGate from "@/components/auth/AuthGate";
 import RoleGate from "@/components/auth/RoleGate";
 import EmailVerifyBanner from "@/components/auth/EmailVerifyBanner";
+import BlogCategoryPanel from "@/components/blogs/BlogCategoryPanel";
 
 export default function EditorEdit() {
   const { id } = useParams();
@@ -370,8 +371,8 @@ export default function EditorEdit() {
           </Card>
         </div>
         
-        {useBlockEditor && (
-          <div className="hidden lg:block">
+        <div className="hidden lg:flex lg:flex-col lg:gap-4 lg:w-80">
+          {useBlockEditor && (
             <BlocksPalette
               blocks={blocks}
               onAddBlock={handleAddBlock}
@@ -379,8 +380,15 @@ export default function EditorEdit() {
               onRemoveBlock={handleRemoveBlock}
               onReorderBlocks={handleReorderBlocks}
             />
-          </div>
-        )}
+          )}
+          
+          <BlogCategoryPanel
+            selectedCategoryId={categoryId}
+            selectedTags={tagList}
+            onCategoryChange={setCategoryId}
+            onTagsChange={setTagList}
+          />
+        </div>
       </div>
       
       {useBlockEditor && (

@@ -9,7 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import Logo from "@/components/branding/Logo";
 import { useRoles } from "@/hooks/useRoles";
-import { CATEGORIES } from "@/lib/taxonomy";
 import { listBlogs } from "@/lib/blogsApi";
 import { supabase } from "@/integrations/supabase/client";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
@@ -22,7 +21,7 @@ const Header = () => {
   const [profile, setProfile] = useState<{ full_name?: string; avatar_url?: string } | null>(null);
   const displayName = (profile?.full_name as string) || (user?.user_metadata?.full_name as string) || (user?.email?.split('@')[0] ?? 'Account');
   const initials = displayName.slice(0, 2).toUpperCase();
-  const [catCounts, setCatCounts] = useState<Record<string, number>>({});
+  const [categories, setCategories] = useState<{id: string, title: string, post_count?: number}[]>([]);
   const { roles } = useRoles();
   const isGuru = roles.includes('guru') || roles.includes('admin');
 
@@ -30,15 +29,22 @@ const Header = () => {
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await listBlogs({ status: "published", page_size: 200 });
-        const map: Record<string, number> = {};
-        for (const t of CATEGORIES) map[t] = 0;
-        for (const it of res.items || []) {
-          const key = it.category?.title || "General";
-          if (map[key] === undefined) map[key] = 0;
-          map[key] += 1;
-        }
-        if (!cancelled) setCatCounts(map);
+        // Load categories with post counts
+        const { data: cats } = await supabase
+          .from('blog_categories')
+          .select(`
+            id, title,
+            posts:blog_posts(count)
+          `)
+          .order('title');
+          
+        const categoriesWithCounts = (cats || []).map((cat: any) => ({
+          id: cat.id,
+          title: cat.title,
+          post_count: cat.posts?.[0]?.count || 0,
+        }));
+        
+        if (!cancelled) setCategories(categoriesWithCounts);
       } catch {}
     };
     load();
@@ -79,10 +85,10 @@ const Header = () => {
               </HoverCardTrigger>
               <HoverCardContent className="w-[520px]">
                 <div className="grid grid-cols-2 gap-3">
-                  {CATEGORIES.map((c) => (
-                    <button key={c} onClick={() => navigate(`/blogs?category=${encodeURIComponent(c)}`)} className="flex items-center justify-between rounded-md border p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">
-                      <span>{c}</span>
-                      <span className="text-xs text-muted-foreground">{catCounts[c] ?? 0}</span>
+                  {categories.map((c) => (
+                    <button key={c.id} onClick={() => navigate(`/blogs?category=${encodeURIComponent(c.title)}`)} className="flex items-center justify-between rounded-md border p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">
+                      <span>{c.title}</span>
+                      <span className="text-xs text-muted-foreground">{c.post_count ?? 0}</span>
                     </button>
                   ))}
                 </div>
@@ -119,9 +125,6 @@ const Header = () => {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/settings#profile')}>
-                    <UserIcon className="mr-2 h-4 w-4" /> Profile
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/settings')}>
                     <UserIcon className="mr-2 h-4 w-4" /> Settings
                   </DropdownMenuItem>
