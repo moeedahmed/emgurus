@@ -37,14 +37,54 @@ serve(async (req) => {
 
     const admin = createClient(url, serviceRole, { auth: { persistSession: false } });
 
-    const { data, count, error } = await admin
+    const urlObj = new URL(req.url);
+    const q = urlObj.searchParams.get("q")?.trim() || "";
+    const category = urlObj.searchParams.get("category") || "";
+    const author = urlObj.searchParams.get("author") || "";
+    const tag = urlObj.searchParams.get("tag") || "";
+    const sort = urlObj.searchParams.get("sort") || "newest";
+    const page = Math.max(1, Number(urlObj.searchParams.get("page") || 1));
+    const pageSize = Math.min(50, Math.max(1, Number(urlObj.searchParams.get("page_size") || 12)));
+
+    let query = admin
       .from("blog_posts")
-      .select("id, author_id, title, slug, description, cover_image_url, created_at", { count: "exact" })
-      .eq("status", "published")
-      .order("created_at", { ascending: false })
-      .limit(50);
+      .select("id, author_id, title, slug, description, cover_image_url, created_at, category_id, view_count", { count: "exact" })
+      .eq("status", "published");
+
+    // Apply filters
+    if (q) {
+      query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
+    }
+    if (category) {
+      const { data: cat } = await admin.from("blog_categories").select("id").eq("slug", category).maybeSingle();
+      if (cat) query = query.eq("category_id", cat.id);
+    }
+    if (author) {
+      query = query.eq("author_id", author);
+    }
+
+    // Sorting
+    switch (sort) {
+      case "liked":
+        query = query.order("view_count", { ascending: false }).order("created_at", { ascending: false });
+        break;
+      case "discussed":
+        query = query.order("created_at", { ascending: false }); // Approximate for now
+        break;
+      default:
+        query = query.order("created_at", { ascending: false });
+    }
+
+    // Pagination
+    const offset = (page - 1) * pageSize;
+    query = query.range(offset, offset + pageSize - 1);
+
+    const { data, count, error } = await query;
 
     if (error) throw error;
+
+    // TODO: Handle tag filtering and get additional metadata like reactions/comments
+    // For now, keeping it simple with basic filtering
 
     const items = (data || []).map((p: any) => ({
       id: p.id,
@@ -56,7 +96,13 @@ serve(async (req) => {
       created_at: p.created_at,
     }));
 
-    return new Response(JSON.stringify({ items, count: count ?? items.length }), {
+    return new Response(JSON.stringify({ 
+      items, 
+      count: count ?? items.length,
+      page,
+      page_size: pageSize,
+      total: count ?? items.length
+    }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

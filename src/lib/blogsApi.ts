@@ -48,6 +48,8 @@ export async function listBlogs(params: {
   status?: "draft" | "in_review" | "published" | "archived";
   category?: string;
   tag?: string;
+  author?: string;
+  sort?: string;
   q?: string;
   page?: number;
   page_size?: number;
@@ -57,6 +59,8 @@ export async function listBlogs(params: {
   if (params.category) qs.set("category", params.category);
   if (params.tag) qs.set("tag", params.tag);
   if (params.q) qs.set("q", params.q);
+  if (params.author) qs.set("author", params.author);
+  if (params.sort) qs.set("sort", params.sort);
   if (params.page) qs.set("page", String(params.page));
   if (params.page_size) qs.set("page_size", String(params.page_size));
   try {
@@ -72,8 +76,14 @@ export async function listBlogs(params: {
     let query = supabase
       .from("blog_posts")
       .select("id, title, slug, description, cover_image_url, category_id, author_id, status, view_count, created_at")
-      .eq("status", status)
-      .order("created_at", { ascending: false });
+      .eq("status", status);
+
+    // Apply author filter
+    if (params.author) {
+      query = query.eq("author_id", params.author);
+    }
+
+    query = query.order("created_at", { ascending: false });
 
     // Resolve category by slug or title/name if provided
     let categoryId: string | undefined;

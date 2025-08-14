@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { listBlogs } from "@/lib/blogsApi";
 import { getJson } from "@/lib/functionsClient";
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Card } from "@/components/ui/card";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ import { Chip } from "@/components/ui/chip";
 export default function Blogs({ embedded = false }: { embedded?: boolean } = {}) {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, page_size: 12, total: 0 });
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -24,6 +26,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
   const author = searchParams.get("author") || "";
   const sort = searchParams.get("sort") || "newest";
   const tag = searchParams.get("tag") || "";
+  const page = Number(searchParams.get("page") || 1);
 
   const setParam = (k: string, v: string) => {
     const next = new URLSearchParams(searchParams);
@@ -51,24 +54,42 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
       setLoading(true);
       try {
         try {
-          const res = await getJson('/public-blogs');
+          const params = new URLSearchParams();
+          if (q) params.set("q", q);
+          if (category) params.set("category", category);
+          if (author) params.set("author", author);
+          if (tag) params.set("tag", tag);
+          if (sort) params.set("sort", sort);
+          params.set("page", String(page));
+          params.set("page_size", "12");
+          
+          const res = await getJson(`/public-blogs?${params.toString()}`);
           const mapped = (res.items || []).map((p: any) => ({
             id: p.id,
             title: p.title,
             slug: p.slug,
             excerpt: p.excerpt ?? null,
             cover_image_url: p.cover_image_url ?? null,
-            category: p.category ? { title: p.category.title || p.category } : null,
-            tags: Array.isArray(p.tags) ? p.tags.map((t: any) => ({ slug: t.slug || t, title: t.title || t })) : [],
             author: { id: p.author_id || '', name: 'Author', avatar: null },
             reading_minutes: null,
             published_at: p.created_at ?? null,
             counts: { likes: 0, comments: 0, views: 0 },
           }));
           setItems(mapped);
+          setPagination({ page: res.page || 1, page_size: res.page_size || 12, total: res.total || 0 });
         } catch {
-          const res = await listBlogs({ status: "published", q, category: category || undefined, page_size: 50 });
+          const res = await listBlogs({ 
+            status: "published", 
+            q: q || undefined, 
+            category: category || undefined,
+            author: author || undefined,
+            tag: tag || undefined,
+            sort: sort || undefined,
+            page,
+            page_size: 12
+          });
           setItems(res.items || []);
+          setPagination({ page: res.page, page_size: res.page_size, total: res.total });
         }
       } catch (e: any) {
         toast.error(e.message || "Failed to load blogs");
@@ -77,7 +98,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
       }
     };
     load();
-  }, [q, category]);
+  }, [q, category, author, tag, sort, page]);
 
   const categories = useMemo(() => {
     const map = new Map<string, number>();
@@ -124,36 +145,9 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
   }, [items]);
 
 
-  const filtered = useMemo(() => {
-    let arr = [...items];
-    if (q) {
-      const s = q.toLowerCase();
-      arr = arr.filter((i) => i.title.toLowerCase().includes(s) || (i.excerpt || "").toLowerCase().includes(s));
-    }
-    if (category) arr = arr.filter((i) => (i.category?.title || "General") === category);
-    if (author) arr = arr.filter((i) => (i.author?.id || "") === author);
-    if (tag) arr = arr.filter((i) => (i.tags || []).some((t: any) => (t.slug || t.title) === tag));
-    switch (sort) {
-      case "liked":
-        arr.sort((a, b) => (b.counts?.likes || 0) - (a.counts?.likes || 0));
-        break;
-      case "discussed":
-        arr.sort((a, b) => (b.counts?.comments || 0) - (a.counts?.comments || 0));
-        break;
-      case "editors":
-        arr = arr.filter((i) => (i.tags || []).some((t: any) => /editor|pick/i.test(t.slug || t.title)));
-        break;
-      case "featured":
-        arr = arr.filter((i) => (i.tags || []).some((t: any) => /featured|star|top/i.test(t.slug || t.title)) || /featured/i.test(i.category?.title || ""));
-        break;
-      default:
-        arr.sort((a, b) => new Date(b.published_at || 0).getTime() - new Date(a.published_at || 0).getTime());
-    }
-    return arr;
-  }, [items, q, category, sort, tag]);
   const topByCat = useMemo(() => {
     const byCat = new Map<string, any[]>();
-    for (const it of filtered) {
+    for (const it of items) {
       const key = it.category?.title || "General";
       const arr = byCat.get(key) || [];
       arr.push(it);
@@ -165,7 +159,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
       for (const it of arr.slice(0, 3)) top.add(it.id);
     }
     return top;
-  }, [filtered]);
+  }, [items]);
 
   return (
     <main>
@@ -248,15 +242,15 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
               )}
             </div>
             <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">{filtered.length} posts</div>
+              <div className="text-sm text-muted-foreground">{pagination.total} posts</div>
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <Card key={i} className="h-72 animate-pulse" />
                 ))
-              ) : filtered.length === 0 ? (
+              ) : items.length === 0 ? (
                 <Card className="p-6">No posts yet. Check back soon.</Card>
               ) : (
-                filtered.map((p) => (
+                items.map((p) => (
                 <BlogCard
                   key={p.id}
                   post={p}
@@ -275,6 +269,27 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
                 />
                 ))
               )}
+              
+              {/* Pagination */}
+              {pagination.total > pagination.page_size && (
+                <div className="flex justify-center py-8">
+                  <Pagination>
+                    <PaginationContent>
+                      {page > 1 && (
+                        <PaginationItem>
+                          <PaginationPrevious onClick={() => setParam("page", String(page - 1))} />
+                        </PaginationItem>
+                      )}
+                      {page < Math.ceil(pagination.total / pagination.page_size) && (
+                        <PaginationItem>
+                          <PaginationNext onClick={() => setParam("page", String(page + 1))} />
+                        </PaginationItem>
+                      )}
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+              
               {/* Mobile: Top authors below the list */}
               <div className="lg:hidden">
                 <TopAuthorsPanel authors={topAuthors} />
