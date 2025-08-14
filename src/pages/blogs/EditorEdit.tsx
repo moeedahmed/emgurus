@@ -16,6 +16,9 @@ import { isFeatureEnabled } from "@/lib/constants";
 import BlocksPalette, { Block } from "@/components/blogs/editor/BlocksPalette";
 import BlockEditor from "@/components/blogs/editor/BlockEditor";
 import { blocksToMarkdown, markdownToBlocks } from "@/components/blogs/editor/BlocksToMarkdown";
+import AuthGate from "@/components/auth/AuthGate";
+import RoleGate from "@/components/auth/RoleGate";
+import EmailVerifyBanner from "@/components/auth/EmailVerifyBanner";
 
 export default function EditorEdit() {
   const { id } = useParams();
@@ -191,15 +194,18 @@ export default function EditorEdit() {
   };
 
   return (
-    <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Edit Draft</h1>
-        {isFeatureEnabled('BLOG_EDITOR_V2') && (
-          <Button variant="outline" onClick={toggleEditor}>
-            {useBlockEditor ? 'Revert to classic editor' : 'Use block editor'}
-          </Button>
-        )}
-      </div>
+    <AuthGate>
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <EmailVerifyBanner className="mb-6" />
+        
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">Edit Draft</h1>
+          {isFeatureEnabled('BLOG_EDITOR_V2') && (
+            <Button variant="outline" onClick={toggleEditor}>
+              {useBlockEditor ? 'Revert to classic editor' : 'Use block editor'}
+            </Button>
+          )}
+        </div>
       
       <div className="flex gap-6">
         <div className="flex-1">
@@ -341,10 +347,12 @@ export default function EditorEdit() {
           </div>
         )}
         { (isAdmin || isAssignedReviewer) ? (
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={onReject} disabled={loading}>Reject</Button>
-            <Button onClick={onApprove} disabled={loading}>Approve</Button>
-          </div>
+          <RoleGate roles={['admin', 'guru']}>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={onReject} disabled={loading}>Reject</Button>
+              <Button onClick={onApprove} disabled={loading}>Approve</Button>
+            </div>
+          </RoleGate>
         ) : (
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={() => onSave(false)} disabled={loading}>Save</Button>
@@ -378,7 +386,8 @@ export default function EditorEdit() {
             onReorderBlocks={handleReorderBlocks}
           />
         </div>
-      )}
-    </main>
+        )}
+      </main>
+    </AuthGate>
   );
 }

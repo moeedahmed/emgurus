@@ -32,14 +32,12 @@ const Auth = () => {
     document.title = "Sign in | EM Gurus";
   }, []);
 
-useEffect(() => {
-  if (user) {
-    // Single landing after auth; role routing handled by /dashboard
-    navigate('/dashboard', { replace: true });
-  }
-}, [user, navigate]);
-
-// Removed test user seeding to avoid unnecessary load during auth flows
+  // Remove premature redirect - let RoleRedirector handle post-login navigation
+  // useEffect(() => {
+  //   if (user) {
+  //     navigate('/dashboard', { replace: true });
+  //   }
+  // }, [user, navigate]);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -149,9 +147,17 @@ useEffect(() => {
     }
   };
 
-  // Render auth UI even while checking session to avoid long blocking spinners
-  // Actions are disabled until loading completes via useAuth
-  // (We keep a subtle UX by not showing a full-screen spinner)
+  // Show loading state while auth is checking to prevent flicker
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
 
   return (

@@ -15,6 +15,8 @@ import { isFeatureEnabled } from "@/lib/constants";
 import BlocksPalette, { Block } from "@/components/blogs/editor/BlocksPalette";
 import BlockEditor from "@/components/blogs/editor/BlockEditor";
 import { blocksToMarkdown, markdownToBlocks } from "@/components/blogs/editor/BlocksToMarkdown";
+import AuthGate from "@/components/auth/AuthGate";
+import EmailVerifyBanner from "@/components/auth/EmailVerifyBanner";
 
 export default function EditorNew() {
   const { user } = useAuth();
@@ -134,15 +136,18 @@ export default function EditorNew() {
   };
 
   return (
-    <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">New Blog</h1>
-        {isFeatureEnabled('BLOG_EDITOR_V2') && (
-          <Button variant="outline" onClick={toggleEditor}>
-            {useBlockEditor ? 'Revert to classic editor' : 'Use block editor'}
-          </Button>
-        )}
-      </div>
+    <AuthGate>
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <EmailVerifyBanner className="mb-6" />
+        
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">New Blog</h1>
+          {isFeatureEnabled('BLOG_EDITOR_V2') && (
+            <Button variant="outline" onClick={toggleEditor}>
+              {useBlockEditor ? 'Revert to classic editor' : 'Use block editor'}
+            </Button>
+          )}
+        </div>
       
       <div className="flex gap-6">
         <div className="flex-1">
@@ -299,6 +304,7 @@ export default function EditorNew() {
       )}
       
       <link rel="canonical" href={`${window.location.origin}/blogs/editor/new`} />
-    </main>
+      </main>
+    </AuthGate>
   );
 }
