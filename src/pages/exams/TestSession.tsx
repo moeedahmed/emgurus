@@ -6,6 +6,7 @@ import QuestionCard from "@/components/exams/QuestionCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { mapEnumToLabel } from "@/lib/exams";
+import { recordNotification } from "@/components/ui/ToastOrNotice";
 
 interface Question {
   id: string;
@@ -28,6 +29,7 @@ export default function TestSession() {
   const [loading, setLoading] = useState(false);
   const [attemptData, setAttemptData] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [score, setScore] = useState<{ correct: number; total: number }>({ correct: 0, total: 0 });
 
   useEffect(() => {
     document.title = "Test Session • EM Gurus";
@@ -83,8 +85,8 @@ export default function TestSession() {
   const loadQuestion = async (attempt: any) => {
     try {
       const config = attempt.breakdown || {};
-      const enumVal = config.exam_type;
-      const examLabel = mapEnumToLabel?.(enumVal) ?? 'MRCEM Intermediate SBA';
+      // Use exam_label for reviewed bank queries (string), not enum
+      const examLabel = config.exam_label || mapEnumToLabel(config.exam_type) || 'MRCEM Intermediate SBA';
       const topic = config.topic;
 
       // Helper: try N queries, first that returns rows wins
@@ -169,6 +171,12 @@ export default function TestSession() {
           position: 1
         });
 
+      // Update score
+      setScore(prev => ({ 
+        correct: prev.correct + (isCorrect ? 1 : 0), 
+        total: prev.total + 1 
+      }));
+
       // Update attempt as finished
       await supabase
         .from('exam_attempts')
@@ -188,12 +196,19 @@ export default function TestSession() {
     }
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    const scoreText = `${score.correct}/${score.total}`;
+    
     toast({
       title: 'Test Complete!',
-      description: 'Check your dashboard for detailed results.',
-      duration: 3000
+      description: `You scored ${scoreText} correct`,
+      duration: 5000
     });
+    
+    // Record notification
+    await recordNotification(user?.id, 'Test complete', `You scored ${scoreText}`, '/dashboard?view=exams&tab=attempts');
+    
     navigate('/exams/test', { replace: true });
   };
 

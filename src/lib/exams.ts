@@ -1,8 +1,18 @@
 export const EXAM_ENUMS = ["MRCEM_PRIMARY","MRCEM_SBA","FRCEM_SBA","OTHER"] as const;
 export type ExamEnum = typeof EXAM_ENUMS[number];
 
+export const EXAM_LABEL_TO_ENUM: Record<string, ExamEnum> = {
+  'MRCEM Primary': 'MRCEM_PRIMARY',
+  'MRCEM Intermediate SBA': 'MRCEM_SBA', 
+  'FRCEM SBA': 'FRCEM_SBA',
+};
+
 export function mapLabelToEnum(label?: string | null): ExamEnum {
   if (!label) return "OTHER";
+  // Check direct mapping first
+  if (EXAM_LABEL_TO_ENUM[label]) return EXAM_LABEL_TO_ENUM[label];
+  
+  // Fallback to original logic for partial matches
   const s = label.trim().toLowerCase();
   if (s.includes("primary")) return "MRCEM_PRIMARY";
   if (s.includes("frcem")) return "FRCEM_SBA";
@@ -21,6 +31,22 @@ export function mapEnumToLabel(v?: string | null): string {
 
 export function safeMode(v?: string | null): "practice"|"exam" {
   return v === "exam" ? "exam" : "practice";
+}
+
+// Helper to build attempt breakdown with both label and enum
+export function buildAttemptBreakdown(opts: {
+  examLabel?: string | null;
+  topic?: string | null;
+  total?: number | null;
+  timeLimitMin?: number | null;
+}) {
+  return {
+    exam_label: opts.examLabel ?? null,          // for reviewed bank filter
+    exam_type: mapLabelToEnum(opts.examLabel ?? ''), // for AI/analytics
+    topic: opts.topic ?? null,
+    total: opts.total ?? null,
+    time_limit: opts.timeLimitMin ?? null,
+  };
 }
 
 // Legacy compatibility
