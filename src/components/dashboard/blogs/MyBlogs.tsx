@@ -7,9 +7,13 @@ import { submitPost } from "@/lib/blogsApi";
 
 type BlogStatus = 'draft' | 'in_review' | 'published' | 'rejected';
 
-export default function MyBlogs() {
+interface MyBlogsProps {
+  filter?: BlogStatus;
+}
+
+export default function MyBlogs({ filter = 'draft' }: MyBlogsProps) {
   const { user } = useAuth();
-  const [activeFilter, setActiveFilter] = useState<BlogStatus>('draft');
+  const activeFilter = filter;
   const [rows, setRows] = useState<any[]>([]);
 
   useEffect(() => {
@@ -44,12 +48,15 @@ export default function MyBlogs() {
     return () => { cancelled = true; };
   }, [user?.id, activeFilter]);
 
-  const filterChips = [
-    { id: 'draft' as BlogStatus, label: 'Draft', desc: 'Private posts you\'re still working on.' },
-    { id: 'in_review' as BlogStatus, label: 'Submitted', desc: 'Posts awaiting review by the team.' },
-    { id: 'published' as BlogStatus, label: 'Published', desc: 'Your posts that are live on EMGurus.' },
-    { id: 'rejected' as BlogStatus, label: 'Rejected', desc: 'Changes requested. Edit and resubmit when ready.' },
-  ];
+  const getTitle = () => {
+    switch (activeFilter) {
+      case 'draft': return 'Draft';
+      case 'in_review': return 'Submitted';
+      case 'published': return 'Published';
+      case 'rejected': return 'Rejected';
+      default: return 'Posts';
+    }
+  };
 
   const columns = activeFilter === 'rejected'
     ? [
@@ -91,30 +98,8 @@ export default function MyBlogs() {
 
   return (
     <div className="p-4">
-      <div className="mb-4 text-sm text-muted-foreground">
-        Create and track your blog posts.
-      </div>
-      
-      <div className="flex flex-wrap gap-2 mb-4">
-        {filterChips.map(chip => (
-          <Button
-            key={chip.id}
-            size="sm"
-            variant={activeFilter === chip.id ? "default" : "outline"}
-            onClick={() => setActiveFilter(chip.id)}
-            aria-pressed={activeFilter === chip.id}
-          >
-            {chip.label}
-          </Button>
-        ))}
-      </div>
-      
-      <div className="mb-2 text-sm text-muted-foreground">
-        {filterChips.find(c => c.id === activeFilter)?.desc}
-      </div>
-      
       <TableCard
-        title={filterChips.find(c => c.id === activeFilter)?.label || 'Posts'}
+        title={getTitle()}
         columns={columns}
         rows={rows}
         emptyText="Nothing here yet."

@@ -6,9 +6,13 @@ import { Button } from "@/components/ui/button";
 
 type ThreadFilter = 'questions' | 'answers';
 
-export default function MyThreads() {
+interface MyThreadsProps {
+  filter?: ThreadFilter;
+}
+
+export default function MyThreads({ filter = 'questions' }: MyThreadsProps) {
   const { user } = useAuth();
-  const [activeFilter, setActiveFilter] = useState<ThreadFilter>('questions');
+  const activeFilter = filter;
   const [threads, setThreads] = useState<any[]>([]);
   const [cats, setCats] = useState<Record<string, string>>({});
 
@@ -54,37 +58,14 @@ export default function MyThreads() {
     { key: 'updated_at', header: 'Last activity', render: (r: any) => new Date(r.updated_at || r.created_at).toLocaleString() },
   ], [cats]);
 
-  const filterChips = [
-    { id: 'questions' as ThreadFilter, label: 'Questions', desc: 'Threads you started.' },
-    { id: 'answers' as ThreadFilter, label: 'Answers', desc: 'Threads where you replied.' },
-  ];
+  const getTitle = () => {
+    return activeFilter === 'questions' ? 'My Questions' : 'My Answers';
+  };
 
   return (
     <div className="p-4">
-      <div className="mb-4 text-sm text-muted-foreground">
-        Your posts and replies.
-      </div>
-      
-      <div className="flex flex-wrap gap-2 mb-4">
-        {filterChips.map(chip => (
-          <Button
-            key={chip.id}
-            size="sm"
-            variant={activeFilter === chip.id ? "default" : "outline"}
-            onClick={() => setActiveFilter(chip.id)}
-            aria-pressed={activeFilter === chip.id}
-          >
-            {chip.label}
-          </Button>
-        ))}
-      </div>
-      
-      <div className="mb-2 text-sm text-muted-foreground">
-        {filterChips.find(c => c.id === activeFilter)?.desc}
-      </div>
-      
       <TableCard
-        title={activeFilter === 'questions' ? 'My Questions' : 'My Answers'}
+        title={getTitle()}
         columns={cols as any}
         rows={threads}
         emptyText={activeFilter === 'questions' ? 'No threads yet.' : 'No replies yet.'}
