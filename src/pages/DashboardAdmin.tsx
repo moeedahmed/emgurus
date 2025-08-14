@@ -243,8 +243,8 @@ const DraftsPanel: React.FC = () => {
                 <TableCell className="text-xs">{q.exam_type || '-'}</TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button size="sm" variant="secondary" asChild><a href={`/guru/exams/review?open=${q.id}`}>Open</a></Button>
-                  <Button size="sm" onClick={async()=>{ try{ setLoading(true); await callFunction('/exams-admin-curate/save', { question_ids: [q.id] }, true); await load(); toast({ title: 'Saved as draft' }); } finally { setLoading(false);} }}>Save</Button>
-                  <Button size="sm" variant="outline" onClick={async()=>{ try{ setLoading(true); await callFunction('/exams-admin-curate/archive', { question_ids: [q.id] }, true); await load(); toast({ title: 'Archived' }); } finally { setLoading(false);} }}>Archive</Button>
+                  <Button size="sm" onClick={async()=>{ try{ setLoading(true); await callFunction('/exams-admin-curate/save', { question_ids: [q.id] }, true); await load(); toast({ title: 'Saved as draft' }); } finally { setLoading(false);} }} >Save</Button>
+                  <Button size="sm" variant="outline" onClick={async()=>{ try{ setLoading(true); await callFunction('/exams-admin-curate/archive', { question_ids: [q.id] }, true); await load(); toast({ title: 'Archived' }); } finally { setLoading(false);} }} >Archive</Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -344,7 +344,6 @@ const AdminReviewed: React.FC = () => {
       )}
     </div>
   );
-};
 };
 
 const AdminPublished: React.FC = () => {
