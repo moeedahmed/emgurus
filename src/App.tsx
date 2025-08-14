@@ -35,12 +35,6 @@ const ReviewedQuestionBank = lazy(() => import("@/pages/exams/ReviewedQuestionBa
 const ReviewedQuestionDetail = lazy(() => import("@/pages/exams/ReviewedQuestionDetail"));
 const AiPracticeConfig = lazy(() => import("@/pages/exams/AiPracticeConfig"));
 const AiPracticeSession = lazy(() => import("@/pages/exams/AiPracticeSession"));
-const AiPracticeSessionRedirect = lazy(() => import("@/pages/exams/AiPracticeSessionRedirect"));
-const PracticeConfig = lazy(() => import("@/pages/exams/PracticeConfig"));
-const PracticeSession = lazy(() => import("@/pages/exams/PracticeSession"));
-const TestConfig = lazy(() => import("@/pages/exams/TestConfig"));
-const TestSession = lazy(() => import("@/pages/exams/TestSession"));
-const ExamConfigRedirect = lazy(() => import("@/pages/exams/ExamConfigRedirect"));
 const QuestionBankPage = lazy(() => import("@/pages/exams/QuestionBankPage"));
 const QuestionDetail = lazy(() => import("@/pages/exams/QuestionDetail"));
 const ReviewedExamSession = lazy(() => import("@/pages/exams/ReviewedExamSession"));
@@ -129,55 +123,6 @@ const App = () => (
                  <ErrorBoundary>
                    <Suspense fallback={<PageLoadingFallback />}>
                      <AiPracticeSession />
-                   </Suspense>
-                 </ErrorBoundary>
-               } />
-               <Route path="/exams/ai-practice/session" element={
-                 <ErrorBoundary>
-                   <Suspense fallback={<PageLoadingFallback />}>
-                     <AiPracticeSessionRedirect />
-                   </Suspense>
-                 </ErrorBoundary>
-               } />
-               <Route path="/exams/practice" element={
-                 <ErrorBoundary>
-                   <Suspense fallback={<PageLoadingFallback />}>
-                     <PracticeConfig />
-                   </Suspense>
-                 </ErrorBoundary>
-               } />
-               <Route path="/exams/practice/session/:id" element={
-                 <ErrorBoundary>
-                   <Suspense fallback={<PageLoadingFallback />}>
-                     <PracticeSession />
-                   </Suspense>
-                 </ErrorBoundary>
-               } />
-               <Route path="/exams/test" element={
-                 <ErrorBoundary>
-                   <Suspense fallback={<PageLoadingFallback />}>
-                     <TestConfig />
-                   </Suspense>
-                 </ErrorBoundary>
-               } />
-               <Route path="/exams/test/session/:id" element={
-                 <ErrorBoundary>
-                   <Suspense fallback={<PageLoadingFallback />}>
-                     <TestSession />
-                   </Suspense>
-                 </ErrorBoundary>
-               } />
-               <Route path="/exams/exam" element={
-                 <ErrorBoundary>
-                   <Suspense fallback={<PageLoadingFallback />}>
-                     <ExamConfigRedirect />
-                   </Suspense>
-                 </ErrorBoundary>
-               } />
-               <Route path="/exams/exam/session/:id" element={
-                 <ErrorBoundary>
-                   <Suspense fallback={<PageLoadingFallback />}>
-                     <ReviewedExamSession />
                    </Suspense>
                  </ErrorBoundary>
                } />

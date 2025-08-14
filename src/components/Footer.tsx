@@ -65,14 +65,20 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-primary/90 text-primary-foreground">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+    <footer className="bg-primary text-primary-foreground">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
         {/* Top Section */}
-        <div className="grid gap-y-4 md:gap-y-3 md:grid-cols-4">
+        <div className="grid lg:grid-cols-5 gap-4 md:gap-6 mb-6 md:mb-8">
           {/* Brand */}
-          <div className="space-y-3">
-            <div className="text-lg font-semibold">EM Gurus</div>
-            <div className="flex flex-wrap items-center gap-3 opacity-90 text-sm">
+          <div className="lg:col-span-2">
+            <div className="flex items-center space-x-2 mb-4">
+              <div className="w-8 h-8 bg-primary-foreground rounded-lg flex items-center justify-center">
+                <BookOpen className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-xl font-bold">EM Gurus</span>
+            </div>
+            <p className="hidden sm:block text-primary-foreground/80 mb-6 max-w-md">\n              Empowering medical professionals with AI-powered learning, \n              expert mentorship, and collaborative education.\n            </p>
+            <div className="flex flex-wrap gap-2">
               <Button asChild aria-label="YouTube" variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-foreground/50 ring-offset-primary">
                 <a href="https://youtube.com/@emgurus" target="_blank" rel="noopener noreferrer">
                   <Youtube className="w-5 h-5" />
@@ -109,15 +115,26 @@ const Footer = () => {
                 </a>
               </Button>
             </div>
+            {/* Trustpilot widget */}
+            <div className="mt-6 hidden sm:block">
+              <div
+                className="trustpilot-widget"
+                data-locale="en-GB"
+                data-template-id="53aa8807dec7e10d38f59f32"
+                data-businessunit-id=""
+                data-style-height="150px"
+                data-style-width="100%"
+                data-theme="light"
+              >
+                <a href="https://uk.trustpilot.com/review/emgurus.com" rel="noopener noreferrer" target="_blank">Trustpilot</a>
+              </div>
             </div>
           </div>
-          
-          {/* Link columns */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-4 col-span-3">
-            {/* Each column */}
-            <div className="space-y-2">
-              <div className="text-sm/6 font-semibold opacity-90">Product</div>
-              <ul className="space-y-1.5 text-sm opacity-90">
+
+          {/* Links */}
+          <div>
+            <h3 className="font-semibold mb-4">Product</h3>
+            <ul className="space-y-3">
               {footerLinks.product.map((link) => (
                 <li key={link.name}>
                   <Link
@@ -131,9 +148,9 @@ const Footer = () => {
             </ul>
           </div>
 
-            <div className="space-y-2">
-              <div className="text-sm/6 font-semibold opacity-90">Company</div>
-              <ul className="space-y-1.5 text-sm opacity-90">
+          <div>
+            <h3 className="font-semibold mb-4">Company</h3>
+            <ul className="space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.name}>
                   <Link
@@ -147,9 +164,9 @@ const Footer = () => {
             </ul>
           </div>
 
-            <div className="space-y-2">
-              <div className="text-sm/6 font-semibold opacity-90">Resources</div>
-              <ul className="space-y-1.5 text-sm opacity-90">
+          <div>
+            <h3 className="font-semibold mb-4">Resources</h3>
+            <ul className="space-y-3">
               {footerLinks.resources.map((link) => (
                 <li key={link.name}>
                   <Link
@@ -165,7 +182,7 @@ const Footer = () => {
         </div>
 
         {/* Newsletter */}
-        <div className="hidden md:block border-t border-primary-foreground/20 pt-6 mb-6">
+        <div className="hidden md:block border-t border-primary-foreground/20 pt-8 mb-8">
           <div className="max-w-md">
             <h3 className="font-semibold mb-2">Stay Updated</h3>
             <p className="text-primary-foreground/80 mb-4 text-sm">
@@ -190,10 +207,10 @@ const Footer = () => {
         </div>
 
         {/* Bottom Section */}
-        <div className="border-t border-primary-foreground/20 pt-4">
-          <div className="text-xs opacity-80 flex flex-wrap items-center justify-between gap-3">
-            <span>© 2025 EM Gurus. All rights reserved.</span>
-            <div className="flex flex-wrap gap-3">
+        <div className="border-t border-primary-foreground/20 pt-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-primary-foreground/80 text-sm">© {new Date().getFullYear()} EM Gurus. All rights reserved.</p>
+            <div className="flex space-x-6">
               {footerLinks.legal.map((link) => (
                 <Link
                   key={link.name}

@@ -49,22 +49,17 @@ export default function QuestionCard({
                 <label
                   key={rowKey}
                   className={cn(
-                    "flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted transition-colors w-full",
+                    "flex items-start gap-3 py-2 rounded-md px-2 transition-colors w-full",
                     isCorrect && "bg-success/20 ring-1 ring-success/40",
                     isWrongSel && "bg-destructive/10 ring-1 ring-destructive/40"
                   )}
                 >
-                  <RadioGroupItem 
-                    value={o.key} 
-                    id={`opt-${questionId || 'q'}-${o.key}`} 
-                    disabled={!!lockSelection} 
-                    className="mt-1"
-                  />
-                  <div className="inline-flex items-start gap-3 flex-1">
-                    <span className="font-semibold shrink-0 text-sm">{o.key}.</span>
-                    <span className="text-sm leading-relaxed whitespace-pre-wrap">
+                  <RadioGroupItem value={o.key} id={`opt-${questionId || 'q'}-${o.key}`} disabled={!!lockSelection} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-foreground/90 break-words overflow-x-hidden">
+                      <span className="font-medium">{o.key}. </span>
                       <ReactMarkdown remarkPlugins={[remarkGfm]} className="inline">{o.text}</ReactMarkdown>
-                    </span>
+                    </div>
                   </div>
                 </label>
               );
