@@ -252,9 +252,9 @@ useEffect(() => {
             <div>
               <h3 className="text-xl font-semibold mb-2">AI Mode <span className="ml-2 align-middle text-xs px-2 py-0.5 rounded-full border">Beta</span></h3>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Instantly generated MCQs</li>
-                <li>• Immediate, concise explanations</li>
-                <li>• Topic‑guided practice</li>
+                <li>• AI-generated questions on demand</li>
+                <li>• Instant explanations and feedback</li>
+                <li>• Customizable by exam and topic</li>
               </ul>
             </div>
             <div className="pt-6">
@@ -323,9 +323,9 @@ useEffect(() => {
             <div>
               <h3 className="text-xl font-semibold mb-2">Practice Mode</h3>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Study with reviewed questions</li>
-                <li>• Show answer + explanation after each choice</li>
-                <li>• Untimed, learn‑first workflow</li>
+                <li>• Curated questions from expert reviewers</li>
+                <li>• See answers and explanations immediately</li>
+                <li>• Untimed learning experience</li>
               </ul>
             </div>
             <div className="pt-6">
@@ -372,9 +372,9 @@ useEffect(() => {
             <div>
               <h3 className="text-xl font-semibold mb-2">Exam Mode</h3>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Timed session from reviewed bank</li>
-                <li>• No explanations until finish</li>
-                <li>• Score & topic breakdown</li>
+                <li>• Timed practice exams</li>
+                <li>• Realistic exam conditions</li>
+                <li>• Complete score analysis</li>
               </ul>
             </div>
             <div className="pt-6">
