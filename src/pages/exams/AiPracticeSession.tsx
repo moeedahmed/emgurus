@@ -21,6 +21,9 @@ interface GeneratedQuestion {
   subtopic?: string;
 }
 
+// Standardized feedback tags used across all practice modes
+const FEEDBACK_TAGS = ["Wrong answer", "Ambiguous", "Outdated", "Typo", "Too easy", "Too hard"] as const;
+
 export default function AiPracticeSession() {
   const navigate = useNavigate();
   const [search] = useSearchParams();
@@ -509,8 +512,8 @@ export default function AiPracticeSession() {
                         <div className="space-y-3 p-3 bg-muted/50 rounded-md">
                           <div>
                             <div className="text-sm font-medium mb-2">What's the issue? (select all that apply)</div>
-                            <div className="flex flex-wrap gap-2">
-                              {['Wrong answer', 'Ambiguous', 'Outdated', 'Typo', 'Too easy', 'Too hard'].map(tag => (
+                             <div className="flex flex-wrap gap-2">
+                               {FEEDBACK_TAGS.map(tag => (
                                 <Button
                                   key={tag}
                                   size="sm"
