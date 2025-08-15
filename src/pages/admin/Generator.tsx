@@ -68,7 +68,7 @@ export default function Generator() {
   // Load prompt template based on exam
   useEffect(() => {
     if (exam) {
-      setPromptTemplate(`Create ${count} high-quality multiple choice questions for ${exam}${topic ? ` on topic ${topic}` : ''}${subtopic ? ` focusing on ${subtopic}` : ''}.
+      setPromptTemplate(`Create ${count} high-quality multiple choice questions for ${exam}${topic && topic !== "all" ? ` on topic ${topic}` : ''}${subtopic ? ` focusing on ${subtopic}` : ''}.
 
 Difficulty level: ${difficulty}
 
@@ -93,7 +93,7 @@ Format as strict JSON with: stem, options, correct_index, explanation, reference
     try {
       const response = await callFunction('/admin-generate-questions', {
         exam,
-        topic: topic || null,
+        topic: topic && topic !== "all" ? topic : null,
         count,
         difficulty,
         knowledge_sources: knowledgeSources,
@@ -154,10 +154,10 @@ Format as strict JSON with: stem, options, correct_index, explanation, reference
         correct_index: q.correct_index,
         explanation: q.explanation,
         exam,
-        topic: topic || null,
+        topic: topic && topic !== "all" ? topic : null,
         subtopic: subtopic || null,
         difficulty,
-        tags: ["EM", exam, topic].filter(Boolean),
+        tags: ["EM", exam, topic && topic !== "all" ? topic : null].filter(Boolean),
         status: "draft"
       }));
 
@@ -247,7 +247,7 @@ Format as strict JSON with: stem, options, correct_index, explanation, reference
                         <SelectValue placeholder="All topics" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All topics</SelectItem>
+                        <SelectItem value="all">All topics</SelectItem>
                         {CURRICULA[exam]?.map((topicName) => (
                           <SelectItem key={topicName} value={topicName}>
                             {topicName}
@@ -477,7 +477,7 @@ Format as strict JSON with: stem, options, correct_index, explanation, reference
                   <Label>Injected Variables</Label>
                   <div className="mt-2 space-y-1 text-xs">
                     <div><span className="font-mono">exam:</span> {exam || "Not selected"}</div>
-                    <div><span className="font-mono">topic:</span> {topic || "All"}</div>
+                    <div><span className="font-mono">topic:</span> {topic && topic !== "all" ? topic : "All"}</div>
                     <div><span className="font-mono">difficulty:</span> {difficulty}</div>
                     <div><span className="font-mono">count:</span> {count}</div>
                   </div>
