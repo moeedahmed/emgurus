@@ -3,11 +3,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Flag } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Clock, Flag, ArrowLeft } from "lucide-react";
 import QuestionCard from "@/components/exams/QuestionCard";
 import MarkForReviewButton from "@/components/exams/MarkForReviewButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ExamSessionState {
   ids: string[];
@@ -288,8 +290,19 @@ export default function ExamSession() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Sticky header with timer */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 -mx-4 px-4 py-3">
+      {/* Mobile progress at top */}
+      <div className="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border mb-4">
+        <div className="px-1 py-2">
+          <div className="text-xs text-muted-foreground mb-1">
+            Question {currentIndex + 1} of {questions.length} • {sessionState.exam}
+            {sessionState.topic && ` • ${sessionState.topic}`}
+          </div>
+          <Progress value={((currentIndex + 1) / questions.length) * 100} />
+        </div>
+      </div>
+
+      {/* Desktop sticky header with timer */}
+      <div className="hidden md:block sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 -mx-4 px-4 py-3">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold flex items-center gap-2">
@@ -313,6 +326,20 @@ export default function ExamSession() {
               <div className="text-lg font-semibold">
                 {answeredCount}/{questions.length}
               </div>
+            </div>
+            {markedCount > 0 && (
+              <div className="text-right">
+                <div className="text-sm text-muted-foreground">Marked</div>
+                <div className="text-lg font-semibold text-orange-600">
+                  {markedCount}
+                </div>
+              </div>
+            )}
+            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
+              />
             </div>
           </div>
         </div>
@@ -343,6 +370,7 @@ export default function ExamSession() {
                 onSelect={(key) => setAnswers(prev => ({ ...prev, [currentQuestion.id]: key }))}
                 showExplanation={false}
                 source={currentQuestion.source}
+                questionId={currentQuestion.id}
               />
 
               <div className="flex items-center justify-between pt-4">
@@ -351,6 +379,14 @@ export default function ExamSession() {
                     currentQuestionId={currentQuestion.id}
                     source="reviewed"
                   />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate('/exams/exam')}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Config
+                  </Button>
                   <Button 
                     variant="outline" 
                     onClick={finishExam}
