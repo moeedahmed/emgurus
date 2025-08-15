@@ -24,7 +24,7 @@ export default function AdminConsultsBookings({ statusFilter }: { statusFilter?:
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState<string>("all");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
@@ -52,7 +52,7 @@ export default function AdminConsultsBookings({ statusFilter }: { statusFilter?:
       }
 
       // Apply additional filters
-      if (status) query = (query as any).eq('status', status as any);
+      if (status && status !== "all") query = (query as any).eq('status', status as any);
       if (from) query = query.gte('start_datetime', new Date(from).toISOString());
       if (to) query = query.lte('start_datetime', new Date(to).toISOString());
       
@@ -141,7 +141,7 @@ export default function AdminConsultsBookings({ statusFilter }: { statusFilter?:
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger className="w-44"><SelectValue placeholder="Any" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Any</SelectItem>
+                <SelectItem value="all">Any</SelectItem>
                 {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>

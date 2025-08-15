@@ -42,7 +42,7 @@ export default function Generator() {
   
   // Configuration state
   const [exam, setExam] = useState<ExamName | "">("");
-  const [topic, setTopic] = useState<string>("");
+  const [topic, setTopic] = useState<string>("all");
   const [subtopic, setSubtopic] = useState<string>("");
   const [difficulty, setDifficulty] = useState<string>("standard");
   const [count, setCount] = useState<number>(5);
@@ -222,7 +222,7 @@ Format as strict JSON with: stem, options, correct_index, explanation, reference
                   <Label>Exam Type *</Label>
                   <Select value={exam} onValueChange={(value) => {
                     setExam(value as ExamName);
-                    setTopic("");
+                    setTopic("all");
                     setSubtopic("");
                   }}>
                     <SelectTrigger className="mt-1">

@@ -23,9 +23,9 @@ export default function QuestionBankNew() {
   const [questions, setQuestions] = useState<QuestionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedExam, setSelectedExam] = useState("");
-  const [selectedTopic, setSelectedTopic] = useState("");
-  const [selectedLevel, setSelectedLevel] = useState("");
+  const [selectedExam, setSelectedExam] = useState("all");
+  const [selectedTopic, setSelectedTopic] = useState("all");
+  const [selectedLevel, setSelectedLevel] = useState("all");
   
   const [examTypes, setExamTypes] = useState<string[]>([]);
   const [topics, setTopics] = useState<string[]>([]);
@@ -51,7 +51,7 @@ export default function QuestionBankNew() {
 
   useEffect(() => {
     // Filter topics based on selected exam
-    if (selectedExam) {
+    if (selectedExam && selectedExam !== "all") {
       supabase
         .from('curriculum_map')
         .select('slo_title')
@@ -67,8 +67,8 @@ export default function QuestionBankNew() {
     }
     
     // Reset topic when exam changes
-    if (selectedTopic && selectedExam) {
-      setSelectedTopic("");
+    if (selectedTopic && selectedExam && selectedExam !== "all") {
+      setSelectedTopic("all");
     }
   }, [selectedExam, topics]);
 
@@ -103,13 +103,13 @@ export default function QuestionBankNew() {
         .eq('status', 'approved');
 
       // Apply filters
-      if (selectedExam) {
+      if (selectedExam && selectedExam !== "all") {
         query = query.eq('exam', selectedExam);
       }
-      if (selectedTopic) {
+      if (selectedTopic && selectedTopic !== "all") {
         query = query.eq('topic', selectedTopic);
       }
-      if (selectedLevel) {
+      if (selectedLevel && selectedLevel !== "all") {
         query = query.eq('difficulty', selectedLevel);
       }
       if (searchQuery) {
@@ -133,9 +133,9 @@ export default function QuestionBankNew() {
 
   const resetFilters = () => {
     setSearchQuery("");
-    setSelectedExam("");
-    setSelectedTopic("");
-    setSelectedLevel("");
+    setSelectedExam("all");
+    setSelectedTopic("all");
+    setSelectedLevel("all");
   };
 
   const handleQuestionClick = (questionId: string) => {
@@ -168,7 +168,7 @@ export default function QuestionBankNew() {
                   <SelectValue placeholder="All exams" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All exams</SelectItem>
+                  <SelectItem value="all">All exams</SelectItem>
                   {examTypes.map((exam) => (
                     <SelectItem key={exam} value={exam}>
                       {exam.replace('_', ' ')}
@@ -184,7 +184,7 @@ export default function QuestionBankNew() {
                   <SelectValue placeholder="All topics" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All topics</SelectItem>
+                  <SelectItem value="all">All topics</SelectItem>
                   {filteredTopics.map((topic) => (
                     <SelectItem key={topic} value={topic}>
                       {topic}
@@ -200,7 +200,7 @@ export default function QuestionBankNew() {
                   <SelectValue placeholder="All levels" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All levels</SelectItem>
+                  <SelectItem value="all">All levels</SelectItem>
                   <SelectItem value="easy">Easy</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="hard">Hard</SelectItem>

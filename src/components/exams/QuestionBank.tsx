@@ -79,7 +79,7 @@ export default function QuestionBank() {
           <Select value={exam} onValueChange={setExam}>
             <SelectTrigger><SelectValue placeholder="Exam" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Exams</SelectItem>
+              <SelectItem value="all">All Exams</SelectItem>
               <SelectItem value="MRCEM_PRIMARY">MRCEM Primary</SelectItem>
               <SelectItem value="MRCEM_SBA">MRCEM Intermediate SBA</SelectItem>
               <SelectItem value="FRCEM_SBA">FRCEM SBA</SelectItem>
@@ -88,7 +88,7 @@ export default function QuestionBank() {
           <Select value={difficulty} onValueChange={setDifficulty}>
             <SelectTrigger><SelectValue placeholder="Difficulty" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All</SelectItem>
+              <SelectItem value="all">All</SelectItem>
               <SelectItem value="easy">Easy</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="hard">Hard</SelectItem>
@@ -97,7 +97,7 @@ export default function QuestionBank() {
           <Select value={reviewer} onValueChange={setReviewer}>
             <SelectTrigger><SelectValue placeholder="Reviewed by" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Reviewers</SelectItem>
+              <SelectItem value="all">All Reviewers</SelectItem>
               {Object.entries(reviewers).map(([id, r]) => (
                 <SelectItem key={id} value={id}>{r.name}</SelectItem>
               ))}

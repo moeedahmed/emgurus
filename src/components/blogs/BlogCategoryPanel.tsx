@@ -194,7 +194,7 @@ export default function BlogCategoryPanel({
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent className="z-50">
-                  <SelectItem value="">No category</SelectItem>
+                  <SelectItem value="none">No category</SelectItem>
                   {flatCategories.map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {'  '.repeat(cat.level)}{cat.title}

@@ -49,7 +49,7 @@ export default function ForumsFilterPanel({
           <Select onValueChange={(v) => onChange('topic', v)}>
             <SelectTrigger className="mt-1"><SelectValue placeholder="All Topics" /></SelectTrigger>
             <SelectContent className="z-50">
-              <SelectItem value="">All Topics</SelectItem>
+              <SelectItem value="all">All Topics</SelectItem>
               {topics.map((t) => (
                 <SelectItem key={t} value={t}>{t}</SelectItem>
               ))}

@@ -11,11 +11,11 @@ import { EXAMS, CURRICULA, ExamName } from "@/lib/curricula";
 export default function AdminGeneration() {
   const { toast } = useToast();
   const [exam, setExam] = useState<ExamName | "">("");
-  const [topic, setTopic] = useState<string>("");
+  const [topic, setTopic] = useState<string>("all");
   const [difficulty, setDifficulty] = useState<string>("medium");
   const [hasError, setHasError] = useState(false);
   const [count, setCount] = useState<number>(5);
-  const [reviewerId, setReviewerId] = useState<string>("");
+  const [reviewerId, setReviewerId] = useState<string>("none");
   const [loading, setLoading] = useState(false);
   const [gurus, setGurus] = useState<Array<{ id: string; name: string }>>([]);
   const [testResult, setTestResult] = useState<any>(null);
@@ -50,11 +50,11 @@ export default function AdminGeneration() {
         body: {
           action: 'admin_generate_bulk',
           exam_type: exam,
-          topic: topic || undefined,
+          topic: (topic && topic !== 'all') ? topic : undefined,
           difficulty,
           count,
           persistAsDraft: true,
-          reviewer_assign_to: reviewerId || undefined
+          reviewer_assign_to: (reviewerId && reviewerId !== 'none') ? reviewerId : undefined
         }
       });
 
@@ -67,9 +67,9 @@ export default function AdminGeneration() {
 
       // Reset form
       setExam("");
-      setTopic("");
+      setTopic("all");
       setCount(5);
-      setReviewerId("");
+      setReviewerId("none");
     } catch (error: any) {
       console.error('Generation failed:', error);
       setHasError(true);
@@ -184,7 +184,7 @@ export default function AdminGeneration() {
                   <SelectValue placeholder="All topics" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All topics</SelectItem>
+                  <SelectItem value="all">All topics</SelectItem>
                   {topics.map(t => (
                     <SelectItem key={t} value={t}>{t}</SelectItem>
                   ))}
@@ -228,7 +228,7 @@ export default function AdminGeneration() {
                   <SelectValue placeholder="No assignment" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No assignment</SelectItem>
+                  <SelectItem value="none">No assignment</SelectItem>
                   {gurus.map(g => (
                     <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
                   ))}
