@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import QuestionCard from "@/components/exams/QuestionCard";
 import FloatingSettings from "@/components/exams/FloatingSettings";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ExamName } from "@/lib/curricula";
 
 interface GeneratedQuestion {
+  id?: string;
   question: string;
   options: { A: string; B: string; C: string; D: string; E?: string };
   correct: string;
@@ -39,6 +42,10 @@ export default function AiPracticeSession() {
   const [questions, setQuestions] = useState<(GeneratedQuestion | null)[]>([]);
   const [attemptId, setAttemptId] = useState<string>("");
   const [storedQuestions, setStoredQuestions] = useState<{ [key: number]: string }>({});
+  const [feedbackType, setFeedbackType] = useState<{ [key: number]: 'good' | 'improvement' }>({});
+  const [issueTypes, setIssueTypes] = useState<{ [key: number]: string[] }>({});
+  const [feedbackNotes, setFeedbackNotes] = useState<{ [key: number]: string }>({});
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<{ [key: number]: boolean }>({});
   const [currentSettings, setCurrentSettings] = useState({
     exam: exam as ExamName,
     count: total,
@@ -239,10 +246,77 @@ export default function AiPracticeSession() {
       params.delete('topic');
     }
     params.set('difficulty', newSettings.difficulty);
-    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+  window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
   }
 
-  async function submitFeedback(feedbackType: string) {
+  const handleFeedbackTypeChange = (questionIdx: number, type: 'good' | 'improvement') => {
+    setFeedbackType(prev => ({ ...prev, [questionIdx]: type }));
+    if (type === 'good') {
+      setIssueTypes(prev => ({ ...prev, [questionIdx]: [] }));
+      setFeedbackNotes(prev => ({ ...prev, [questionIdx]: '' }));
+    }
+  };
+
+  const handleToggleFeedbackTag = (questionIdx: number, tag: string) => {
+    setIssueTypes(prev => ({
+      ...prev,
+      [questionIdx]: prev[questionIdx]?.includes(tag) 
+        ? prev[questionIdx].filter(t => t !== tag)
+        : [...(prev[questionIdx] || []), tag]
+    }));
+  };
+
+  const handleFeedbackNotesChange = (questionIdx: number, notes: string) => {
+    setFeedbackNotes(prev => ({ ...prev, [questionIdx]: notes }));
+  };
+
+  async function submitFeedback(questionIdx: number) {
+    const type = feedbackType[questionIdx];
+    if (!type) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      let comment = '';
+      if (type === 'good') {
+        comment = 'Looks good';
+      } else {
+        const issues = issueTypes[questionIdx] || [];
+        const notes = feedbackNotes[questionIdx] || '';
+        comment = `[${issues.join(', ')}] ${notes}`.trim();
+      }
+
+      // For AI questions, we'll store feedback by creating a flag record
+      const currentQuestion = questions[questionIdx];
+      if (currentQuestion) {
+        // Use exam_question_flags table for feedback like practice mode
+        await supabase.from('exam_question_flags').insert({
+          question_id: currentQuestion.id || `ai-q-${questionIdx}`,
+          flagged_by: user.id,
+          question_source: 'ai_generated',
+          comment: comment
+        });
+      }
+
+      setFeedbackSubmitted(prev => ({ ...prev, [questionIdx]: true }));
+      
+      toast({
+        title: 'Feedback submitted',
+        description: 'Thank you for helping us improve!',
+      });
+    } catch (err) {
+      console.error('Feedback submission failed:', err);
+      toast({
+        title: 'Feedback failed',
+        description: 'Please try again later.',
+        variant: 'destructive'
+      });
+    }
+  }
+
+  // Legacy feedback function for backward compatibility
+  async function submitLegacyFeedback(feedbackType: string) {
     try {
       // Use the ai-feedback API for better feedback handling
       const ratingMap: { [key: string]: number } = {
@@ -408,26 +482,80 @@ export default function AiPracticeSession() {
                 source={q.reference}
                 correctKey={q.correct}
               />
-              {show && (
-                <div className="mt-4 p-3 border rounded-md bg-muted/30">
-                  <div className="font-medium mb-2">Feedback on this AI question:</div>
-                  <div className="flex gap-2 flex-wrap">
-                    <Button size="sm" variant="outline" onClick={() => submitFeedback('accurate')}>
-                      👍 Accurate
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => submitFeedback('inaccurate')}>
-                      👎 Inaccurate
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => submitFeedback('too_easy')}>
-                      😴 Too Easy
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => submitFeedback('too_hard')}>
-                      🤯 Too Hard
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => submitFeedback('irrelevant')}>
-                      🚫 Irrelevant
-                    </Button>
-                  </div>
+              {show && !feedbackSubmitted[idx] && (
+                <Card className="mt-4">
+                  <CardContent className="py-4">
+                    <div className="text-sm font-medium mb-3">Question Feedback</div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant={feedbackType[idx] === 'good' ? 'default' : 'outline'}
+                          onClick={() => handleFeedbackTypeChange(idx, 'good')}
+                        >
+                          👍 Looks good
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={feedbackType[idx] === 'improvement' ? 'default' : 'outline'}
+                          onClick={() => handleFeedbackTypeChange(idx, 'improvement')}
+                        >
+                          👎 Needs improvement
+                        </Button>
+                      </div>
+
+                      {feedbackType[idx] === 'improvement' && (
+                        <div className="space-y-3 p-3 bg-muted/50 rounded-md">
+                          <div>
+                            <div className="text-sm font-medium mb-2">What's the issue? (select all that apply)</div>
+                            <div className="flex flex-wrap gap-2">
+                              {['Wrong answer', 'Ambiguous', 'Outdated', 'Typo', 'Too easy', 'Too hard'].map(tag => (
+                                <Button
+                                  key={tag}
+                                  size="sm"
+                                  variant={issueTypes[idx]?.includes(tag) ? 'default' : 'outline'}
+                                  onClick={() => handleToggleFeedbackTag(idx, tag)}
+                                >
+                                  {tag}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor={`feedback-${idx}`} className="text-sm font-medium">
+                              Additional details (optional)
+                            </Label>
+                            <Textarea
+                              id={`feedback-${idx}`}
+                              placeholder="Describe the issue in more detail..."
+                              value={feedbackNotes[idx] || ''}
+                              onChange={(e) => handleFeedbackNotesChange(idx, e.target.value)}
+                              className="mt-1"
+                              rows={3}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {feedbackType[idx] && (
+                        <Button
+                          size="sm"
+                          onClick={() => submitFeedback(idx)}
+                          className="w-full"
+                        >
+                          Submit Feedback
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {feedbackSubmitted[idx] && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-800 text-sm">
+                  ✓ Thank you for your feedback!
                 </div>
               )}
             </>

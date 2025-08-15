@@ -14,6 +14,7 @@ import MarkForReviewButton from "@/components/exams/MarkForReviewButton";
 import FloatingSettings from "@/components/exams/FloatingSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useRoles } from "@/hooks/useRoles";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface PracticeSessionState {
@@ -42,6 +43,7 @@ export default function PracticeSession() {
   const params = useParams();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isAdmin, isGuru } = useRoles();
   const sessionState = location.state as PracticeSessionState | null;
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -724,7 +726,8 @@ export default function PracticeSession() {
           </CardContent>
         </Card>
         
-        {currentQuestion && (
+        {/* Discussion section only visible to admins and gurus */}
+        {currentQuestion && (isAdmin || isGuru) && (
           <Card>
             <CardContent className="py-4">
               <div className="text-sm font-medium mb-2">Discussion</div>
