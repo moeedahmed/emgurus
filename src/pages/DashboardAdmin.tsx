@@ -29,6 +29,7 @@ import AdminConsultsBookings from "@/components/dashboard/consultations/AdminCon
 import AdminConsultsGurus from "@/components/dashboard/consultations/AdminConsultsGurus";
 import AdminConsultsPolicies from "@/components/dashboard/consultations/AdminConsultsPolicies";
 import AdminGeneration from "@/components/admin/AdminGeneration";
+import Generator from "@/pages/admin/Generator";
 import AdminConsultsNotifications from "@/components/dashboard/consultations/AdminConsultsNotifications";
 import AdminConsultsSettings from "@/components/dashboard/consultations/AdminConsultsSettings";
 import ApproveGurus from "@/pages/admin/ApproveGurus";
@@ -564,13 +565,14 @@ const RejectedPanel: React.FC = () => {
 
 // -------- Exams workflow components with chips
 const ExamGeneration: React.FC = () => {
-  const [activeFilter, setActiveFilter] = useState<'generate' | 'drafts'>('generate');
+  const [activeFilter, setActiveFilter] = useState<'generator' | 'generate' | 'drafts'>('generator');
 
   const getComponent = () => {
     switch (activeFilter) {
+      case 'generator': return <Generator />;
       case 'generate': return <AdminGeneration />;
       case 'drafts': return <DraftsPanel />;
-      default: return <AdminGeneration />;
+      default: return <Generator />;
     }
   };
 
@@ -579,6 +581,7 @@ const ExamGeneration: React.FC = () => {
       
       <div className="flex gap-2 mb-4 px-4">
         {[
+          { id: 'generator' as const, label: 'Generator' },
           { id: 'generate' as const, label: 'Generate' },
           { id: 'drafts' as const, label: 'Drafts' },
         ].map(chip => (
