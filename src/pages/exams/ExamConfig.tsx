@@ -177,14 +177,19 @@ export default function ExamConfig() {
       const shuffledIds = [...ids].sort(() => Math.random() - 0.5).slice(0, finalCount);
       const limitSec = Number(timeLimit) * 60;
       
+      // Prepare session state with proper data structure
+      const sessionState = {
+        ids: shuffledIds,
+        limitSec,
+        exam,
+        topic: topic === 'All areas' ? undefined : topic,
+        count: finalCount
+      };
+      
+      console.log('Starting exam session with:', sessionState);
+      
       navigate('/exams/exam/session', { 
-        state: { 
-          ids: shuffledIds, 
-          limitSec,
-          exam,
-          topic: topic === 'All areas' ? null : topic,
-          count: finalCount
-        } 
+        state: sessionState
       });
     } catch (err: any) {
       console.error('Start failed', err);

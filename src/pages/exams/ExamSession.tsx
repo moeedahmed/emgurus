@@ -49,10 +49,12 @@ export default function ExamSession() {
   // Initialize session
   useEffect(() => {
     if (!sessionState?.ids?.length) {
+      console.warn('No session state found, redirecting to exam config');
       navigate('/exams/exam');
       return;
     }
 
+    console.log('Initializing exam session with state:', sessionState);
     setTimeLeft(sessionState.limitSec);
     setStartTime(new Date());
     loadQuestions();
@@ -77,41 +79,66 @@ export default function ExamSession() {
   }, [timeLeft]);
 
   const loadQuestions = async () => {
-    if (!sessionState?.ids) return;
+    if (!sessionState?.ids?.length) {
+      console.error('No question IDs provided');
+      return;
+    }
 
     try {
+      console.log('Loading questions for IDs:', sessionState.ids);
       const { data, error } = await supabase
         .from('reviewed_exam_questions')
         .select('id, stem, options, topic, exam')
         .in('id', sessionState.ids)
         .eq('status', 'approved');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+
+      if (!data?.length) {
+        console.error('No questions found for provided IDs');
+        throw new Error('No questions found');
+      }
 
       // Order questions according to the IDs array
       const orderedQuestions = sessionState.ids.map(id => 
         data?.find(q => q.id === id)
-      ).filter(Boolean).map(q => ({
-        id: q!.id,
-        stem: q!.stem,
-        options: Array.isArray(q!.options) ? q!.options.map((opt: any, index: number) => ({
+      ).filter(Boolean).map(q => {
+        if (!q) return null;
+        
+        const options = Array.isArray(q.options) ? q.options.map((opt: any, index: number) => ({
           key: String.fromCharCode(65 + index), // A, B, C, D, E
           text: typeof opt === 'string' ? opt : opt.text || opt.option || ''
-        })) : [],
-        topic: q!.topic || undefined,
-        exam: q!.exam || undefined,
-        answer_key: undefined // Will be handled separately
-      }));
+        })) : [];
 
+        return {
+          id: q.id,
+          stem: q.stem || '',
+          options,
+          topic: q.topic || undefined,
+          exam: q.exam || undefined,
+          answer_key: undefined // Will be handled separately
+        };
+      }).filter((q): q is NonNullable<typeof q> => q !== null);
+
+      if (!orderedQuestions.length) {
+        throw new Error('No valid questions could be processed');
+      }
+
+      console.log('Successfully loaded questions:', orderedQuestions.length);
       setQuestions(orderedQuestions);
     } catch (err) {
       console.error('Load questions failed:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       toast({
         title: 'Failed to load questions',
-        description: 'Please try again.',
+        description: `Error: ${errorMessage}. Please try again.`,
         variant: 'destructive'
       });
-      navigate('/exams/exam');
+      // Navigate back to config instead of hanging on broken page
+      setTimeout(() => navigate('/exams/exam'), 2000);
     } finally {
       setLoading(false);
     }
