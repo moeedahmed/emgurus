@@ -725,16 +725,6 @@ export default function PracticeSession() {
             </div>
           </CardContent>
         </Card>
-        
-        {/* Discussion section only visible to admins and gurus */}
-        {currentQuestion && (isAdmin || isGuru) && (
-          <Card>
-            <CardContent className="py-4">
-              <div className="text-sm font-medium mb-2">Discussion</div>
-              <QuestionChat questionId={currentQuestion.id} />
-            </CardContent>
-          </Card>
-        )}
       </div>
     </aside>
   </div>
