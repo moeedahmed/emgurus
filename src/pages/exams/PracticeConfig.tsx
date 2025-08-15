@@ -143,8 +143,17 @@ export default function PracticeConfig() {
 
       // Shuffle the IDs for randomization
       const shuffledIds = [...ids].sort(() => Math.random() - 0.5);
+      
+      // Prepare session state with proper exam and topic information
+      const sessionState = { 
+        ids: shuffledIds, 
+        index: 0,
+        exam: exam,
+        topic: topic === 'All areas' ? undefined : topic
+      };
+      
       navigate(`/exams/practice/session/${shuffledIds[0]}`, { 
-        state: { ids: shuffledIds, index: 0 } 
+        state: sessionState
       });
     } catch (err: any) {
       console.error('Start failed', err);
