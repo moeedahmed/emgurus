@@ -5,14 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { BookOpen, ArrowLeft, ArrowRight } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
+import { BookOpen, ArrowLeft, ArrowRight, Settings, Flag } from "lucide-react";
 import QuestionCard from "@/components/exams/QuestionCard";
+import QuestionChat from "@/components/exams/QuestionChat";
+import MarkForReviewButton from "@/components/exams/MarkForReviewButton";
+import FloatingSettings from "@/components/exams/FloatingSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PracticeSessionState {
   ids: string[];
   index: number;
+  exam?: string;
+  topic?: string;
 }
 
 interface Question {
@@ -33,6 +41,7 @@ export default function PracticeSession() {
   const location = useLocation();
   const params = useParams();
   const { toast } = useToast();
+  const { user } = useAuth();
   const sessionState = location.state as PracticeSessionState | null;
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -45,10 +54,41 @@ export default function PracticeSession() {
   const [issueTypes, setIssueTypes] = useState<{ [key: string]: string[] }>({});
   const [feedbackNotes, setFeedbackNotes] = useState<{ [key: string]: string }>({});
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<{ [key: string]: boolean }>({});
+  const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set());
+  const [showQuestionMap, setShowQuestionMap] = useState(false);
+  const SESSION_KEY = 'emgurus.practice.session';
 
   useEffect(() => {
     document.title = "Practice Session • EM Gurus";
   }, []);
+
+  // Save/restore session progress
+  useEffect(() => {
+    const saved = localStorage.getItem(SESSION_KEY);
+    if (saved && !sessionState) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.ids?.length) {
+          navigate(`/exams/practice/session/${data.ids[data.index || 0]}`, { 
+            state: data,
+            replace: true 
+          });
+        }
+      } catch (e) {
+        localStorage.removeItem(SESSION_KEY);
+      }
+    }
+  }, [navigate, sessionState]);
+
+  // Save session to localStorage
+  useEffect(() => {
+    if (sessionState?.ids?.length) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({
+        ...sessionState,
+        index: currentIndex
+      }));
+    }
+  }, [sessionState, currentIndex]);
 
   // Initialize session
   useEffect(() => {
@@ -68,6 +108,34 @@ export default function PracticeSession() {
     loadQuestions();
     createAttempt();
   }, [sessionState, navigate, params.id]);
+
+  const currentQuestion = questions[currentIndex];
+  
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key >= '1' && e.key <= '5') {
+        const idx = parseInt(e.key, 10) - 1;
+        const letters = ['A','B','C','D','E'];
+        const key = letters[idx];
+        if (key && currentQuestion && !showExplanations[currentQuestion.id]) {
+          handleAnswer(currentQuestion.id, key);
+        }
+      } else if (e.key === 'ArrowLeft') {
+        prevQuestion();
+      } else if (e.key === 'ArrowRight') {
+        nextQuestion();
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (currentQuestion && answers[currentQuestion.id] && !showExplanations[currentQuestion.id]) {
+          // Auto-show explanation when Enter/Space is pressed after answering
+          setShowExplanations(prev => ({ ...prev, [currentQuestion.id]: true }));
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [currentQuestion, answers, showExplanations]);
 
   const loadQuestions = async () => {
     if (!sessionState?.ids) return;
@@ -264,8 +332,46 @@ export default function PracticeSession() {
     }
   };
 
-  const currentQuestion = questions[currentIndex];
   const answeredCount = Object.keys(answers).length;
+  const markedCount = markedForReview.size;
+
+  const navigateToQuestion = (questionIndex: number) => {
+    if (questionIndex >= 0 && questionIndex < questions.length) {
+      setCurrentIndex(questionIndex);
+      navigate(`/exams/practice/session/${questions[questionIndex].id}`, { 
+        state: sessionState,
+        replace: true 
+      });
+    }
+  };
+
+  const handleMarkForReview = (questionId: string) => {
+    setMarkedForReview(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(questionId)) {
+        newSet.delete(questionId);
+      } else {
+        newSet.add(questionId);
+      }
+      return newSet;
+    });
+  };
+
+  const endPractice = () => {
+    localStorage.removeItem(SESSION_KEY);
+    // Show final summary
+    const correctCount = questions.reduce((count, q) => {
+      const userAnswer = answers[q.id];
+      return count + (userAnswer === q.correct_answer ? 1 : 0);
+    }, 0);
+    
+    toast({
+      title: 'Practice Complete!',
+      description: `Final Score: ${correctCount}/${questions.length} (${Math.round((correctCount/questions.length)*100)}%)`,
+      duration: 5000
+    });
+    setTimeout(() => navigate('/exams/practice'), 2000);
+  };
 
   if (loading) {
     return (
@@ -296,8 +402,19 @@ export default function PracticeSession() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Sticky header with progress */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 -mx-4 px-4 py-3">
+      {/* Mobile progress at top */}
+      <div className="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border mb-4">
+        <div className="px-1 py-2">
+          <div className="text-xs text-muted-foreground mb-1">
+            Question {currentIndex + 1} of {questions.length} • {currentQuestion?.exam}
+            {currentQuestion?.topic && ` • ${currentQuestion.topic}`}
+          </div>
+          <Progress value={((currentIndex + 1) / questions.length) * 100} />
+        </div>
+      </div>
+
+      {/* Desktop sticky header with progress */}
+      <div className="hidden md:block sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 -mx-4 px-4 py-3">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold flex items-center gap-2">
@@ -316,23 +433,86 @@ export default function PracticeSession() {
                 {answeredCount}/{questions.length}
               </div>
             </div>
-            <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+            {markedCount > 0 && (
+              <div className="text-right">
+                <div className="text-sm text-muted-foreground">Marked</div>
+                <div className="text-lg font-semibold text-orange-600">
+                  {markedCount}
+                </div>
+              </div>
+            )}
+            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
               <div 
                 className="h-full bg-primary transition-all duration-300"
                 style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
               />
             </div>
+            <div className="md:hidden">
+              <Drawer open={showQuestionMap} onOpenChange={setShowQuestionMap}>
+                <DrawerTrigger asChild>
+                  <Button variant="outline" size="sm">Question Map</Button>
+                </DrawerTrigger>
+                <DrawerContent className="p-4">
+                  <div className="space-y-4">
+                    <div className="text-sm font-medium">Jump to Question</div>
+                    <div className="grid grid-cols-8 gap-2">
+                      {questions.map((q, i) => {
+                        const isCurrent = i === currentIndex;
+                        const isAnswered = !!answers[q.id];
+                        const isMarked = markedForReview.has(q.id);
+                        const isCorrect = isAnswered && answers[q.id] === q.correct_answer;
+                        
+                        let buttonClass = "h-8 w-8 rounded text-sm flex items-center justify-center border ";
+                        if (isCurrent) {
+                          buttonClass += "bg-primary text-primary-foreground ring-2 ring-primary";
+                        } else if (isAnswered) {
+                          buttonClass += isCorrect ? "bg-green-100 border-green-300 text-green-700" : "bg-red-100 border-red-300 text-red-700";
+                        } else {
+                          buttonClass += "bg-muted border-muted-foreground/20";
+                        }
+                        
+                        return (
+                          <Button
+                            key={q.id}
+                            onClick={() => {
+                              navigateToQuestion(i);
+                              setShowQuestionMap(false);
+                            }}
+                            className={buttonClass}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            {isMarked && <Flag className="h-3 w-3 text-orange-500 absolute -top-1 -right-1" />}
+                            {i + 1}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </DrawerContent>
+              </Drawer>
+            </div>
           </div>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Question {currentIndex + 1} of {questions.length}</span>
-            <Badge variant="secondary">Untimed</Badge>
-          </CardTitle>
-        </CardHeader>
+      <div className="grid gap-6 lg:grid-cols-4">
+        <div className="lg:col-span-3">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Question {currentIndex + 1} of {questions.length}</span>
+                <div className="flex items-center gap-2">
+                  {markedCount > 0 && (
+                    <Badge variant="outline" className="text-orange-600">
+                      <Flag className="h-3 w-3 mr-1" />
+                      {markedCount} marked
+                    </Badge>
+                  )}
+                  <Badge variant="secondary">Untimed</Badge>
+                </div>
+              </CardTitle>
+            </CardHeader>
         <CardContent className="space-y-4">
           {currentQuestion && (
             <>
@@ -428,14 +608,27 @@ export default function PracticeSession() {
               )}
 
               <div className="flex items-center justify-between pt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate('/exams/practice')}
-                  className="flex items-center gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Config
-                </Button>
+                <div className="flex items-center gap-2">
+                  <MarkForReviewButton
+                    currentQuestionId={currentQuestion.id}
+                    source="reviewed"
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate('/exams/practice')}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Config
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={endPractice}
+                    className="text-orange-600"
+                  >
+                    End Practice
+                  </Button>
+                </div>
 
                 <div className="flex items-center gap-2">
                   <Button
@@ -466,6 +659,72 @@ export default function PracticeSession() {
           )}
         </CardContent>
       </Card>
+    </div>
+
+    {/* Desktop Sidebar */}
+    <aside className="hidden lg:block">
+      <div className="sticky top-20 space-y-4">
+        <Card>
+          <CardContent className="py-4">
+            <div className="text-sm font-medium mb-2">Question Map</div>
+            <div className="grid grid-cols-5 gap-2">
+              {questions.map((q, i) => {
+                const isCurrent = i === currentIndex;
+                const isAnswered = !!answers[q.id];
+                const isMarked = markedForReview.has(q.id);
+                const isCorrect = isAnswered && answers[q.id] === q.correct_answer;
+                
+                let buttonClass = "h-8 w-8 rounded text-sm flex items-center justify-center border relative ";
+                if (isCurrent) {
+                  buttonClass += "bg-primary text-primary-foreground ring-2 ring-primary";
+                } else if (isAnswered) {
+                  buttonClass += isCorrect ? "bg-green-100 border-green-300 text-green-700" : "bg-red-100 border-red-300 text-red-700";
+                } else {
+                  buttonClass += "bg-muted border-muted-foreground/20 hover:bg-accent";
+                }
+                
+                return (
+                  <Button
+                    key={q.id}
+                    onClick={() => navigateToQuestion(i)}
+                    className={buttonClass}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    {isMarked && <Flag className="h-3 w-3 text-orange-500 absolute -top-1 -right-1" />}
+                    {i + 1}
+                  </Button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+        
+        {currentQuestion && (
+          <Card>
+            <CardContent className="py-4">
+              <div className="text-sm font-medium mb-2">Discussion</div>
+              <QuestionChat questionId={currentQuestion.id} />
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </aside>
+  </div>
+
+      <FloatingSettings
+        currentExam={'MRCEM Intermediate SBA' as const}
+        currentCount={questions.length}
+        currentTopic={sessionState?.topic || 'All areas'}
+        currentDifficulty="medium"
+        onUpdate={(settings) => {
+          // Navigate back to practice config with new settings
+          navigate('/exams/practice', { 
+            state: settings,
+            replace: false 
+          });
+        }}
+      />
     </div>
   );
 }
