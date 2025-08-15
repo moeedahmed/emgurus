@@ -3,6 +3,8 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { BookOpen, ArrowLeft, ArrowRight } from "lucide-react";
 import QuestionCard from "@/components/exams/QuestionCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +26,8 @@ interface Question {
   explanation?: string;
 }
 
+const FEEDBACK_TAGS = ["Wrong answer", "Ambiguous", "Outdated", "Typo", "Too easy", "Too hard"] as const;
+
 export default function PracticeSession() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,6 +41,10 @@ export default function PracticeSession() {
   const [showExplanations, setShowExplanations] = useState<{ [key: string]: boolean }>({});
   const [loading, setLoading] = useState(true);
   const [attemptId, setAttemptId] = useState<string>("");
+  const [feedbackType, setFeedbackType] = useState<{ [key: string]: 'good' | 'improvement' | null }>({});
+  const [issueTypes, setIssueTypes] = useState<{ [key: string]: string[] }>({});
+  const [feedbackNotes, setFeedbackNotes] = useState<{ [key: string]: string }>({});
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     document.title = "Practice Session • EM Gurus";
@@ -194,6 +202,68 @@ export default function PracticeSession() {
     }
   };
 
+  const handleFeedbackTypeChange = (questionId: string, type: 'good' | 'improvement') => {
+    setFeedbackType(prev => ({ ...prev, [questionId]: type }));
+    if (type === 'good') {
+      // Clear any improvement feedback when selecting "good"
+      setIssueTypes(prev => ({ ...prev, [questionId]: [] }));
+      setFeedbackNotes(prev => ({ ...prev, [questionId]: '' }));
+    }
+  };
+
+  const handleToggleFeedbackTag = (questionId: string, tag: string) => {
+    setIssueTypes(prev => ({
+      ...prev,
+      [questionId]: prev[questionId]?.includes(tag) 
+        ? prev[questionId].filter(t => t !== tag)
+        : [...(prev[questionId] || []), tag]
+    }));
+  };
+
+  const handleFeedbackNotesChange = (questionId: string, notes: string) => {
+    setFeedbackNotes(prev => ({ ...prev, [questionId]: notes }));
+  };
+
+  const submitFeedback = async (questionId: string) => {
+    const type = feedbackType[questionId];
+    if (!type) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      let comment = '';
+      if (type === 'good') {
+        comment = 'Looks good';
+      } else {
+        const issues = issueTypes[questionId] || [];
+        const notes = feedbackNotes[questionId] || '';
+        comment = `[${issues.join(', ')}] ${notes}`.trim();
+      }
+
+      await supabase.from('exam_question_flags').insert({
+        question_id: questionId,
+        flagged_by: user.id,
+        question_source: 'reviewed_questions',
+        comment: comment
+      });
+
+      setFeedbackSubmitted(prev => ({ ...prev, [questionId]: true }));
+      
+      toast({
+        title: 'Feedback submitted',
+        description: 'Thank you for helping us improve!',
+      });
+    } catch (err) {
+      console.error('Feedback submission failed:', err);
+      toast({
+        title: 'Feedback failed',
+        description: 'Please try again later.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const currentQuestion = questions[currentIndex];
   const answeredCount = Object.keys(answers).length;
 
@@ -277,6 +347,85 @@ export default function PracticeSession() {
                 source={currentQuestion.source}
                 questionId={currentQuestion.id}
               />
+
+              {/* Feedback Card */}
+              {showExplanations[currentQuestion.id] && (
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle className="text-base">Question Feedback</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!feedbackSubmitted[currentQuestion.id] ? (
+                      <>
+                        <div className="mb-4">
+                          <div className="flex gap-3 mb-3">
+                            <Button
+                              variant={feedbackType[currentQuestion.id] === 'good' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => handleFeedbackTypeChange(currentQuestion.id, 'good')}
+                            >
+                              👍 Looks good
+                            </Button>
+                            <Button
+                              variant={feedbackType[currentQuestion.id] === 'improvement' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => handleFeedbackTypeChange(currentQuestion.id, 'improvement')}
+                            >
+                              👎 Needs improvement
+                            </Button>
+                          </div>
+
+                          {feedbackType[currentQuestion.id] === 'improvement' && (
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-sm font-medium">What's the issue? (select all that apply)</Label>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {FEEDBACK_TAGS.map(tag => (
+                                    <Button
+                                      key={tag}
+                                      variant={issueTypes[currentQuestion.id]?.includes(tag) ? 'default' : 'outline'}
+                                      size="sm"
+                                      onClick={() => handleToggleFeedbackTag(currentQuestion.id, tag)}
+                                    >
+                                      {tag}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <Label htmlFor={`feedback-notes-${currentQuestion.id}`} className="text-sm">Additional details (optional)</Label>
+                                <Textarea
+                                  id={`feedback-notes-${currentQuestion.id}`}
+                                  value={feedbackNotes[currentQuestion.id] || ''}
+                                  onChange={(e) => handleFeedbackNotesChange(currentQuestion.id, e.target.value)}
+                                  placeholder="Describe the issue in more detail..."
+                                  className="mt-1"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {feedbackType[currentQuestion.id] && (
+                            <div className="mt-3">
+                              <Button
+                                size="sm"
+                                onClick={() => submitFeedback(currentQuestion.id)}
+                                disabled={feedbackType[currentQuestion.id] === 'improvement' && (!issueTypes[currentQuestion.id]?.length)}
+                              >
+                                Submit Feedback
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        ✅ Feedback submitted. Thank you for helping us improve!
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               <div className="flex items-center justify-between pt-4">
                 <Button 
