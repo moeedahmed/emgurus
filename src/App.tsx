@@ -22,6 +22,7 @@ import PricingPage from "./pages/Pricing";
 const DashboardUser = lazy(() => import("./pages/DashboardUser"));
 const DashboardGuru = lazy(() => import("./pages/DashboardGuru"));
 const DashboardAdmin = lazy(() => import("./pages/DashboardAdmin"));
+const DashboardNew = lazy(() => import("./pages/DashboardNew"));
 const Forums = lazy(() => import("./pages/Forums"));
 const Consultations = lazy(() => import("./pages/Consultations"));
 
@@ -257,6 +258,16 @@ const App = () => (
                         <DashboardAdmin />
                       </Suspense>
                     </RoleProtectedRoute>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard-new"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<PageLoadingFallback />}>
+                      <DashboardNew />
+                    </Suspense>
                   </ProtectedRoute>
                 }
               />
