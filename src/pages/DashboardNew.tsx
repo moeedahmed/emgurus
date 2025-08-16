@@ -30,17 +30,9 @@ const ExamsAttempts = React.lazy(() => import('@/components/dashboard/exams/Exam
 const ExamsFeedbackList = React.lazy(() => import('@/components/dashboard/exams/ExamsFeedbackList'));
 const ExamsProgressMatrix = React.lazy(() => import('@/components/dashboard/exams/ExamsProgressMatrix'));
 const ConsultationsOverview = React.lazy(() => import('@/components/dashboard/consultations/ConsultationsOverview'));
+const Bookings = React.lazy(() => import('@/pages/Bookings'));
 const ForumsOverview = React.lazy(() => import('@/components/dashboard/forums/ForumsOverview'));
 const MyThreadsWithChips = React.lazy(() => import('@/components/dashboard/forums/MyThreadsWithChips'));
-const ForumsModerationQueue = React.lazy(() => import('@/components/dashboard/forums/ForumsModerationQueue'));
-
-// Placeholder component for missing implementations
-const ComingSoonPanel = () => (
-  <Card className="p-8 text-center">
-    <p className="text-muted-foreground mb-2">Coming soon</p>
-    <p className="text-xs text-muted-foreground">This feature is under development.</p>
-  </Card>
-);
 
 // Tab registry with role-based access control
 const tabRegistry: Record<string, SectionConfig> = {
@@ -99,6 +91,12 @@ const tabRegistry: Record<string, SectionConfig> = {
         roles: ['user', 'guru', 'admin'],
         description: 'Consultation bookings and session management.',
       },
+      bookings: {
+        label: 'Bookings',
+        component: Bookings,
+        roles: ['user', 'guru', 'admin'],
+        description: 'View and manage your consultation bookings.',
+      },
     },
   },
   forums: {
@@ -115,12 +113,6 @@ const tabRegistry: Record<string, SectionConfig> = {
         component: MyThreadsWithChips,
         roles: ['user', 'guru', 'admin'],
         description: 'Questions and discussions you\'ve created.',
-      },
-      moderation: {
-        label: 'Moderation',
-        component: ForumsModerationQueue,
-        roles: ['guru', 'admin'],
-        description: 'Review flagged posts and manage forum content.',
       },
     },
   },
