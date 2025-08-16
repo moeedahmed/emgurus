@@ -132,6 +132,25 @@ function PanelErrorFallback({ error, resetError }: { error: Error; resetError: (
   );
 }
 
+function SafeTabWrapper({ children }: { children: React.ReactNode }) {
+  try {
+    return <>{children}</>;
+  } catch (error) {
+    console.error('Tab render error:', error);
+    return (
+      <Card className="p-6 text-center">
+        <h3 className="text-sm font-medium mb-2">Something went wrong</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          This tab encountered an error. Try refreshing or switching tabs.
+        </p>
+        <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+          Refresh Page
+        </Button>
+      </Card>
+    );
+  }
+}
+
 function LoadingSkeleton() {
   return (
     <div className="p-4 space-y-4">
@@ -275,26 +294,49 @@ export default function DashboardNew() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Header */}
-      <div className="lg:hidden border-b bg-card">
-        <div className="flex items-center justify-between p-4">
-          <h1 className="font-semibold">Dashboard</h1>
-          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <Menu className="h-4 w-4" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-64">
-              <Sidebar
-                availableSections={availableSections}
-                currentView={currentView}
-                currentTab={currentTab}
-                onNavigate={handleNavigate}
-              />
-            </SheetContent>
-          </Sheet>
+      {/* Mobile Header with Tab Navigation */}
+      <div className="lg:hidden">
+        <div className="border-b bg-card">
+          <div className="flex items-center justify-between p-4">
+            <h1 className="font-semibold">Dashboard</h1>
+            <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-64">
+                <Sidebar
+                  availableSections={availableSections}
+                  currentView={currentView}
+                  currentTab={currentTab}
+                  onNavigate={handleNavigate}
+                />
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
+        
+        {/* Mobile Tab Navigation */}
+        {currentSection && (
+          <div className="sticky top-0 z-10 bg-background border-b">
+            <div className="px-4 py-2">
+              <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
+                {Object.entries(currentSection.config.tabs).map(([tabKey, tabConfig]) => (
+                  <Button
+                    key={tabKey}
+                    variant={currentTab === tabKey ? "default" : "ghost"}
+                    size="sm"
+                    className="whitespace-nowrap flex-shrink-0"
+                    onClick={() => handleNavigate(currentView, tabKey)}
+                  >
+                    {tabConfig.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex">
@@ -311,20 +353,50 @@ export default function DashboardNew() {
         <div className="flex-1 min-h-screen">
           {currentTabConfig ? (
             <div className="p-4">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold mb-1">
-                  {currentSection?.config.label} › {currentTabConfig.label}
-                </h1>
+              {/* Desktop Tab Navigation */}
+              <div className="hidden lg:block mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h1 className="text-2xl font-bold">
+                    {currentSection?.config.label} › {currentTabConfig.label}
+                  </h1>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {currentTabConfig.description}
+                </p>
+                
+                {/* Desktop Tab Bar */}
+                {currentSection && (
+                  <div className="flex space-x-1 border-b pb-2 mb-6">
+                    {Object.entries(currentSection.config.tabs).map(([tabKey, tabConfig]) => (
+                      <Button
+                        key={tabKey}
+                        variant={currentTab === tabKey ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => handleNavigate(currentView, tabKey)}
+                      >
+                        {tabConfig.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile Content Header */}
+              <div className="lg:hidden mb-4">
+                <h2 className="text-lg font-semibold mb-1">{currentTabConfig.label}</h2>
                 <p className="text-sm text-muted-foreground">
                   {currentTabConfig.description}
                 </p>
               </div>
 
-              <ErrorBoundary>
-                <Suspense fallback={<LoadingSkeleton />}>
-                  <currentTabConfig.component />
-                </Suspense>
-              </ErrorBoundary>
+              {/* Tab Content with Error Isolation */}
+              <SafeTabWrapper>
+                <ErrorBoundary>
+                  <Suspense fallback={<LoadingSkeleton />}>
+                    <currentTabConfig.component />
+                  </Suspense>
+                </ErrorBoundary>
+              </SafeTabWrapper>
             </div>
           ) : (
             <EmptyState />
