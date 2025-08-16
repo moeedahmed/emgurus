@@ -25,95 +25,77 @@ interface SectionConfig {
 // Lazy load components for better performance
 const BlogsOverview = React.lazy(() => import('@/components/dashboard/blogs/BlogsOverview'));
 const MyBlogs = React.lazy(() => import('@/components/dashboard/blogs/MyBlogs'));
+const BlogReviewQueue = React.lazy(() => import('@/components/dashboard/blogs/BlogReviewQueue'));
+const BlogAnalytics = React.lazy(() => import('@/components/dashboard/blogs/BlogAnalytics'));
 const ExamsOverview = React.lazy(() => import('@/components/dashboard/exams/ExamsOverview'));
 const ExamsAttempts = React.lazy(() => import('@/components/dashboard/exams/ExamsAttempts'));
 const ExamsFeedbackList = React.lazy(() => import('@/components/dashboard/exams/ExamsFeedbackList'));
 const ExamsProgressMatrix = React.lazy(() => import('@/components/dashboard/exams/ExamsProgressMatrix'));
+const ExamReviewQueue = React.lazy(() => import('@/components/dashboard/exams/ExamReviewQueue'));
+const ExamGenerator = React.lazy(() => import('@/components/dashboard/exams/ExamGenerator'));
 const ConsultationsOverview = React.lazy(() => import('@/components/dashboard/consultations/ConsultationsOverview'));
 const Bookings = React.lazy(() => import('@/pages/Bookings'));
+const GuruAvailability = React.lazy(() => import('@/components/dashboard/consultations/GuruAvailability'));
+const ConsultationPricing = React.lazy(() => import('@/components/dashboard/consultations/ConsultationPricing'));
+const ConsultAnalytics = React.lazy(() => import('@/components/dashboard/consultations/ConsultAnalytics'));
 const ForumsOverview = React.lazy(() => import('@/components/dashboard/forums/ForumsOverview'));
 const MyThreadsWithChips = React.lazy(() => import('@/components/dashboard/forums/MyThreadsWithChips'));
+const ForumsModerationQueue = React.lazy(() => import('@/components/dashboard/forums/ForumsModerationQueue'));
+const GuruApprovals = React.lazy(() => import('@/components/dashboard/users/GuruApprovals'));
+const UserDirectory = React.lazy(() => import('@/components/dashboard/users/UserDirectory'));
+const SiteSettings = React.lazy(() => import('@/components/dashboard/settings/SiteSettings'));
 
 // Tab registry with role-based access control
 const tabRegistry: Record<string, SectionConfig> = {
   blogs: {
     label: 'Blogs',
     tabs: {
-      overview: {
-        label: 'Overview',
-        component: BlogsOverview,
-        roles: ['user', 'guru', 'admin'],
-        description: 'Quick stats and shortcuts for writing and reviewing blogs.',
-      },
-      posts: {
-        label: 'Posts',
-        component: MyBlogs,
-        roles: ['guru', 'admin'],
-        description: 'Manage your published and draft blog posts.',
-      },
+      overview: { label: 'Overview', component: BlogsOverview, roles: ['user', 'guru', 'admin'], description: 'Quick stats and shortcuts for writing and reviewing blogs.' },
+      posts: { label: 'Posts', component: MyBlogs, roles: ['user', 'guru', 'admin'], description: 'Manage your published and draft blog posts.' },
+      reviews: { label: 'Reviews', component: BlogReviewQueue, roles: ['guru', 'admin'], description: 'Review pending blog submissions.' },
+      analytics: { label: 'Analytics', component: BlogAnalytics, roles: ['admin'], description: 'Blog performance metrics and insights.' },
     },
   },
   exams: {
     label: 'Exams',
     tabs: {
-      overview: {
-        label: 'Overview',
-        component: ExamsOverview,
-        roles: ['user', 'guru', 'admin'],
-        description: 'Summary of your exam activity and performance.',
-      },
-      attempts: {
-        label: 'Attempts',
-        component: ExamsAttempts,
-        roles: ['user', 'guru', 'admin'],
-        description: 'Track your exam attempts by score, date, and mode.',
-      },
-      feedback: {
-        label: 'Feedback',
-        component: ExamsFeedbackList,
-        roles: ['user', 'guru', 'admin'],
-        description: 'Questions you\'ve flagged and admin responses.',
-      },
-      progress: {
-        label: 'Progress',
-        component: ExamsProgressMatrix,
-        roles: ['user', 'guru', 'admin'],
-        description: 'Visual breakdown of your performance by topic.',
-      },
+      overview: { label: 'Overview', component: ExamsOverview, roles: ['user', 'guru', 'admin'], description: 'Summary of your exam activity and performance.' },
+      attempts: { label: 'Attempts', component: ExamsAttempts, roles: ['user', 'guru', 'admin'], description: 'Track your exam attempts by score, date, and mode.' },
+      feedback: { label: 'Feedback', component: ExamsFeedbackList, roles: ['user', 'guru', 'admin'], description: 'Questions you\'ve flagged and admin responses.' },
+      progress: { label: 'Progress', component: ExamsProgressMatrix, roles: ['user', 'guru', 'admin'], description: 'Visual breakdown of your performance by topic.' },
+      reviews: { label: 'Reviews', component: ExamReviewQueue, roles: ['guru', 'admin'], description: 'Review pending exam questions.' },
+      generate: { label: 'Generate', component: ExamGenerator, roles: ['admin'], description: 'AI-powered question generation tools.' },
     },
   },
   consultations: {
     label: 'Consults',
     tabs: {
-      overview: {
-        label: 'Overview',
-        component: ConsultationsOverview,
-        roles: ['guru', 'admin'],
-        description: 'Consultation bookings and session management.',
-      },
-      bookings: {
-        label: 'Bookings',
-        component: Bookings,
-        roles: ['guru', 'admin'],
-        description: 'Track and manage your bookings.',
-      },
+      overview: { label: 'Overview', component: ConsultationsOverview, roles: ['user', 'guru', 'admin'], description: 'Consultation bookings and session management.' },
+      bookings: { label: 'Bookings', component: Bookings, roles: ['user', 'guru', 'admin'], description: 'Track and manage your bookings.' },
+      slots: { label: 'Availability', component: GuruAvailability, roles: ['guru', 'admin'], description: 'Manage your consultation time slots.' },
+      pricing: { label: 'Pricing', component: ConsultationPricing, roles: ['guru', 'admin'], description: 'Set your consultation rates.' },
+      analytics: { label: 'Analytics', component: ConsultAnalytics, roles: ['admin'], description: 'Consultation performance metrics.' },
     },
   },
   forums: {
     label: 'Forums',
     tabs: {
-      overview: {
-        label: 'Overview',
-        component: ForumsOverview,
-        roles: ['user', 'guru', 'admin'],
-        description: 'Explore forum categories and trending topics.',
-      },
-      threads: {
-        label: 'Threads',
-        component: MyThreadsWithChips,
-        roles: ['user', 'guru', 'admin'],
-        description: 'Questions and discussions you\'ve created.',
-      },
+      overview: { label: 'Overview', component: ForumsOverview, roles: ['user', 'guru', 'admin'], description: 'Explore forum categories and trending topics.' },
+      threads: { label: 'Threads', component: MyThreadsWithChips, roles: ['user', 'guru', 'admin'], description: 'Questions and discussions you\'ve created.' },
+      moderation: { label: 'Moderation', component: ForumsModerationQueue, roles: ['guru', 'admin'], description: 'Review flagged forum content.' },
+    },
+  },
+  users: {
+    label: 'Users',
+    tabs: {
+      approvals: { label: 'Approvals', component: GuruApprovals, roles: ['admin'], description: 'Review and approve guru applications.' },
+      directory: { label: 'Directory', component: UserDirectory, roles: ['admin'], description: 'View all platform users and their roles.' },
+    },
+  },
+  settings: {
+    label: 'Settings',
+    tabs: {
+      site: { label: 'Site', component: SiteSettings, roles: ['admin'], description: 'Configure global platform settings.' },
     },
   },
 };
