@@ -13,8 +13,13 @@ export default function ExamsOverview() {
   const [attempts, setAttempts] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Guard against loading states and invalid user
   if (userLoading) {
     return <div className="p-4">Loading overview…</div>;
+  }
+
+  if (!user) {
+    return <div className="p-4">Please sign in to view your exam overview.</div>;
   }
 
   useEffect(() => {

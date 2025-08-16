@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import ErrorBoundary from "@/components/ErrorBoundary";
+import { ErrorBoundary } from "react-error-boundary";
 
 type AppRole = 'admin' | 'guru' | 'user';
 
@@ -132,23 +132,18 @@ function PanelErrorFallback({ error, resetError }: { error: Error; resetError: (
   );
 }
 
-function SafeTabWrapper({ children }: { children: React.ReactNode }) {
-  try {
-    return <>{children}</>;
-  } catch (error) {
-    console.error('Tab render error:', error);
-    return (
-      <Card className="p-6 text-center">
-        <h3 className="text-sm font-medium mb-2">Something went wrong</h3>
-        <p className="text-xs text-muted-foreground mb-4">
-          This tab encountered an error. Try refreshing or switching tabs.
-        </p>
-        <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
-          Refresh Page
-        </Button>
-      </Card>
-    );
-  }
+function TabErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  return (
+    <Card className="p-6 text-center">
+      <h3 className="text-sm font-medium mb-2">This section failed to load</h3>
+      <p className="text-xs text-muted-foreground mb-4">
+        {error.message || 'An unexpected error occurred in this tab'}
+      </p>
+      <Button size="sm" variant="outline" onClick={resetErrorBoundary}>
+        Retry
+      </Button>
+    </Card>
+  );
 }
 
 function LoadingSkeleton() {
@@ -394,14 +389,18 @@ export default function DashboardNew() {
                 </p>
               </div>
 
-              {/* Tab Content with Error Isolation */}
-              <SafeTabWrapper>
-                <ErrorBoundary>
-                  <Suspense fallback={<LoadingSkeleton />}>
-                    <currentTabConfig.component />
-                  </Suspense>
-                </ErrorBoundary>
-              </SafeTabWrapper>
+              {/* Tab Content with Isolated Error Boundary */}
+              <ErrorBoundary
+                FallbackComponent={TabErrorFallback}
+                resetKeys={[currentView, currentTab]}
+                onError={(error, errorInfo) => {
+                  console.error('Dashboard tab error:', error, errorInfo);
+                }}
+              >
+                <Suspense fallback={<LoadingSkeleton />}>
+                  <currentTabConfig.component />
+                </Suspense>
+              </ErrorBoundary>
             </div>
           ) : (
             <EmptyState />
