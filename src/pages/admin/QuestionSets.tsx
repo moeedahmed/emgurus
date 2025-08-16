@@ -13,15 +13,15 @@ import { Label } from "@/components/ui/label";
 import { 
   ChevronDown, 
   ChevronRight, 
-  GraduationCap, 
-  BookOpen, 
-  Tag, 
-  Link,
   Plus,
   Trash2,
-  Edit2
+  Save,
+  Upload,
+  FileText,
+  BookOpen,
+  Tag,
+  Link
 } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { EXAMS } from "@/lib/curricula";
 
 interface TreeNode {
@@ -55,6 +55,17 @@ export default function QuestionSetsAdmin() {
   const [formLinkedCurriculum, setFormLinkedCurriculum] = useState("");
   const [formLinkUrl, setFormLinkUrl] = useState("");
   const [formReference, setFormReference] = useState("");
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (!selectedNode) return;
+    
+    const timeoutId = setTimeout(() => {
+      saveNodeChanges();
+    }, 1000); // Auto-save after 1 second of inactivity
+
+    return () => clearTimeout(timeoutId);
+  }, [formTitle, formDescription, formExamEnum, formTags, formLinkedExam, formLinkedCurriculum, formLinkUrl, formReference]);
 
   useEffect(() => {
     document.title = "Database | Admin | EMGurus";
@@ -125,10 +136,10 @@ export default function QuestionSetsAdmin() {
 
   const getNodeIcon = (type: string) => {
     switch (type) {
-      case 'exam': return <GraduationCap className="h-4 w-4" />;
-      case 'curriculum': return <BookOpen className="h-4 w-4" />;
-      case 'topic': return <Tag className="h-4 w-4" />;
-      case 'kb_item': return <Link className="h-4 w-4" />;
+      case 'exam': return <span className="text-lg">🎓</span>;
+      case 'curriculum': return <span className="text-lg">📚</span>;
+      case 'topic': return <span className="text-lg">🏷️</span>;
+      case 'kb_item': return <span className="text-lg">🔗</span>;
       default: return null;
     }
   };
@@ -163,20 +174,31 @@ export default function QuestionSetsAdmin() {
   const saveNodeChanges = async () => {
     if (!selectedNode) return;
     
+    // Validation guards
+    if (!formTitle.trim()) {
+      toast({ title: 'Error', description: 'Title is required', variant: 'destructive' });
+      return;
+    }
+    
+    if (selectedNode.type === 'kb_item' && !formReference.trim()) {
+      toast({ title: 'Error', description: 'Reference is required for KB items', variant: 'destructive' });
+      return;
+    }
+    
     // Update the node in the tree
     const updateNode = (nodes: TreeNode[]): TreeNode[] => {
       return nodes.map(node => {
         if (node.id === selectedNode.id) {
           return {
             ...node,
-            title: formTitle,
-            description: formDescription,
-            exam_enum: formExamEnum,
-            tags: formTags.split(",").map(t => t.trim()).filter(Boolean),
-            linked_exam: formLinkedExam,
-            linked_curriculum: formLinkedCurriculum,
-            link_url: formLinkUrl,
-            reference: formReference
+            title: formTitle.trim(),
+            description: formDescription.trim() || undefined,
+            exam_enum: formExamEnum || undefined,
+            tags: formTags ? formTags.split(",").map(t => t.trim()).filter(Boolean) : undefined,
+            linked_exam: formLinkedExam === "none" ? undefined : formLinkedExam,
+            linked_curriculum: formLinkedCurriculum === "none" ? undefined : formLinkedCurriculum,
+            link_url: formLinkUrl.trim() || undefined,
+            reference: formReference.trim() || undefined
           };
         }
         if (node.children.length > 0) {
@@ -187,6 +209,7 @@ export default function QuestionSetsAdmin() {
     };
     
     setTreeData(updateNode(treeData));
+    setSelectedNode(prev => prev ? { ...prev, title: formTitle.trim() } : null);
     toast({ title: 'Saved', description: 'Changes saved successfully.' });
   };
 
@@ -337,12 +360,13 @@ export default function QuestionSetsAdmin() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
           {/* Left Panel - Tree Editor */}
           <Card className="p-4 space-y-4 overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <h2 className="text-lg font-semibold">Curriculum Tree</h2>
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => addNewNode(null, 'exam')}>
                   <Plus className="h-4 w-4 mr-1" />
-                  Add Exam
+                  <span className="hidden sm:inline">Add Exam</span>
+                  <span className="sm:hidden">Exam</span>
                 </Button>
               </div>
             </div>
@@ -477,9 +501,9 @@ export default function QuestionSetsAdmin() {
                   )}
                 </div>
 
-                <div className="flex gap-2 pt-4">
+                 <div className="flex gap-2 pt-4">
                   <Button onClick={saveNodeChanges} className="flex-1">
-                    <Edit2 className="h-4 w-4 mr-2" />
+                    <Save className="h-4 w-4 mr-2" />
                     Save Changes
                   </Button>
                   {selectedNode.type !== 'kb_item' && (
