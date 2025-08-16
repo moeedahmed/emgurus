@@ -59,24 +59,6 @@ const tabRegistry: Record<string, SectionConfig> = {
         roles: ['user', 'guru', 'admin'],
         description: 'Manage your published and draft blog posts.',
       },
-      reviews: {
-        label: 'Reviews',
-        component: ComingSoonPanel,
-        roles: ['guru'],
-        description: 'Review blog posts submitted by users.',
-      },
-      queue: {
-        label: 'Queue',
-        component: ComingSoonPanel,
-        roles: ['admin'],
-        description: 'Moderate blog posts awaiting approval.',
-      },
-      analytics: {
-        label: 'Analytics',
-        component: ComingSoonPanel,
-        roles: ['admin'],
-        description: 'Blog performance and engagement metrics.',
-      },
     },
   },
   exams: {
@@ -106,18 +88,6 @@ const tabRegistry: Record<string, SectionConfig> = {
         roles: ['user', 'guru', 'admin'],
         description: 'Visual breakdown of your performance by topic.',
       },
-      reviews: {
-        label: 'Reviews',
-        component: ComingSoonPanel,
-        roles: ['guru', 'admin'],
-        description: 'Review and validate exam questions.',
-      },
-      generate: {
-        label: 'Generate',
-        component: ComingSoonPanel,
-        roles: ['admin'],
-        description: 'AI-powered question generation and curation.',
-      },
     },
   },
   consultations: {
@@ -128,30 +98,6 @@ const tabRegistry: Record<string, SectionConfig> = {
         component: ConsultationsOverview,
         roles: ['user', 'guru', 'admin'],
         description: 'Consultation bookings and session management.',
-      },
-      bookings: {
-        label: 'Bookings',
-        component: ComingSoonPanel,
-        roles: ['user', 'guru', 'admin'],
-        description: 'View and manage your consultation bookings.',
-      },
-      slots: {
-        label: 'Slots',
-        component: ComingSoonPanel,
-        roles: ['guru'],
-        description: 'Set your availability for consultations.',
-      },
-      pricing: {
-        label: 'Pricing',
-        component: ComingSoonPanel,
-        roles: ['guru'],
-        description: 'Configure your consultation rates.',
-      },
-      analytics: {
-        label: 'Analytics',
-        component: ComingSoonPanel,
-        roles: ['admin'],
-        description: 'Consultation metrics and revenue tracking.',
       },
     },
   },
@@ -175,34 +121,6 @@ const tabRegistry: Record<string, SectionConfig> = {
         component: ForumsModerationQueue,
         roles: ['guru', 'admin'],
         description: 'Review flagged posts and manage forum content.',
-      },
-    },
-  },
-  users: {
-    label: 'Users',
-    tabs: {
-      approvals: {
-        label: 'Approvals',
-        component: ComingSoonPanel,
-        roles: ['admin'],
-        description: 'Review and approve guru applications.',
-      },
-      directory: {
-        label: 'Directory',
-        component: ComingSoonPanel,
-        roles: ['admin'],
-        description: 'Manage user accounts and permissions.',
-      },
-    },
-  },
-  settings: {
-    label: 'Settings',
-    tabs: {
-      site: {
-        label: 'Site',
-        component: ComingSoonPanel,
-        roles: ['admin'],
-        description: 'Configure site-wide settings and preferences.',
       },
     },
   },
