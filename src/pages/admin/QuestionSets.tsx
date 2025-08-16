@@ -1,64 +1,119 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { 
+  ChevronDown, 
+  ChevronRight, 
+  GraduationCap, 
+  BookOpen, 
+  Tag, 
+  Link,
+  Plus,
+  Trash2,
+  Edit2
+} from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { EXAMS } from "@/lib/curricula";
 
-interface QuestionSet {
+interface TreeNode {
   id: string;
   title: string;
-  description?: string | null;
-  tags: string[];
-  currency: 'USD' | 'GBP' | 'PKR';
-  price_cents: number;
-  status: 'draft' | 'published' | 'archived';
-  created_at: string;
-  updated_at: string;
+  type: 'exam' | 'curriculum' | 'topic' | 'kb_item';
+  description?: string;
+  children: TreeNode[];
+  expanded?: boolean;
+  exam_enum?: string;
+  tags?: string[];
+  linked_exam?: string;
+  linked_curriculum?: string;
+  link_url?: string;
+  reference?: string;
 }
 
 export default function QuestionSetsAdmin() {
   const { toast } = useToast();
-  const [sets, setSets] = useState<QuestionSet[]>([]);
+  const [treeData, setTreeData] = useState<TreeNode[]>([]);
+  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [tags, setTags] = useState("");
-  const [currency, setCurrency] = useState<'USD'|'GBP'|'PKR'>('USD');
-  const [price, setPrice] = useState<string>("0");
-  const [isFree, setIsFree] = useState<boolean>(true);
-  const [priceFilter, setPriceFilter] = useState<'all' | 'free' | 'paid'>('all');
-
-  const [activeSet, setActiveSet] = useState<QuestionSet | null>(null);
-  const [newQuestionId, setNewQuestionId] = useState("");
-
-  const visibleSets = useMemo(() => {
-    if (priceFilter === 'free') return sets.filter((s) => (s.price_cents ?? 0) === 0);
-    if (priceFilter === 'paid') return sets.filter((s) => (s.price_cents ?? 0) > 0);
-    return sets;
-  }, [sets, priceFilter]);
+  // Form states for the details panel
+  const [formTitle, setFormTitle] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+  const [formExamEnum, setFormExamEnum] = useState("");
+  const [formTags, setFormTags] = useState("");
+  const [formLinkedExam, setFormLinkedExam] = useState("");
+  const [formLinkedCurriculum, setFormLinkedCurriculum] = useState("");
+  const [formLinkUrl, setFormLinkUrl] = useState("");
+  const [formReference, setFormReference] = useState("");
 
   useEffect(() => {
-    document.title = "Question Sets | Admin | EMGurus";
+    document.title = "Database | Admin | EMGurus";
     const meta = document.querySelector("meta[name='description']");
-    if (meta) meta.setAttribute("content", "Create and publish question sets for the reviewed bank.");
+    if (meta) meta.setAttribute("content", "Manage curriculum tree structure for exams, SLOs, topics, and knowledge base.");
   }, []);
 
-  const load = async () => {
+  const loadTreeData = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('question_sets').select('*').order('updated_at', { ascending: false });
-      if (error) throw error;
-      setSets((data as any) || []);
+      // For now, we'll create a mock tree structure
+      // In a real implementation, this would fetch from multiple tables and build the hierarchy
+      const mockData: TreeNode[] = [
+        {
+          id: "exam-1",
+          title: "MRCEM Primary",
+          type: "exam",
+          exam_enum: "MRCEM_PRIMARY",
+          expanded: true,
+          children: [
+            {
+              id: "curriculum-1",
+              title: "Basic Sciences",
+              type: "curriculum",
+              description: "Fundamental medical sciences",
+              linked_exam: "MRCEM_PRIMARY",
+              expanded: false,
+              children: [
+                {
+                  id: "topic-1",
+                  title: "Anatomy",
+                  type: "topic",
+                  tags: ["anatomy", "basic-sciences"],
+                  linked_curriculum: "curriculum-1",
+                  children: [
+                    {
+                      id: "kb-1",
+                      title: "Gray's Anatomy Reference",
+                      type: "kb_item",
+                      link_url: "https://example.com/grays-anatomy",
+                      reference: "Gray's Anatomy Ch. 1-5",
+                      children: []
+                    }
+                  ]
+                },
+                {
+                  id: "topic-2",
+                  title: "Physiology",
+                  type: "topic",
+                  tags: ["physiology", "basic-sciences"],
+                  linked_curriculum: "curriculum-1",
+                  children: []
+                }
+              ]
+            }
+          ]
+        }
+      ];
+      setTreeData(mockData);
     } catch (e: any) {
       toast({ title: 'Failed to load', description: e.message, variant: 'destructive' });
     } finally {
@@ -66,162 +121,388 @@ export default function QuestionSetsAdmin() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadTreeData(); }, []);
 
-  const createSet = async () => {
-    if (!title.trim()) return;
-    try {
-      const { data: u } = await supabase.auth.getUser();
-      const uid = u.user?.id;
-      const { error } = await supabase.from('question_sets').insert({
-        title: title.trim(),
-        description: description.trim() || null,
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-        currency,
-        price_cents: isFree ? 0 : Math.round(parseFloat(price || '0') * 100) || 0,
-        created_by: uid,
+  const getNodeIcon = (type: string) => {
+    switch (type) {
+      case 'exam': return <GraduationCap className="h-4 w-4" />;
+      case 'curriculum': return <BookOpen className="h-4 w-4" />;
+      case 'topic': return <Tag className="h-4 w-4" />;
+      case 'kb_item': return <Link className="h-4 w-4" />;
+      default: return null;
+    }
+  };
+
+  const toggleNodeExpansion = (nodeId: string) => {
+    const updateNode = (nodes: TreeNode[]): TreeNode[] => {
+      return nodes.map(node => {
+        if (node.id === nodeId) {
+          return { ...node, expanded: !node.expanded };
+        }
+        if (node.children.length > 0) {
+          return { ...node, children: updateNode(node.children) };
+        }
+        return node;
       });
-      if (error) throw error;
-      setTitle(""); setDescription(""); setTags(""); setCurrency('USD'); setPrice("0"); setIsFree(true);
-      toast({ title: 'Created', description: 'Question set created.' });
-      await load();
-    } catch (e: any) {
-      toast({ title: 'Create failed', description: e.message, variant: 'destructive' });
-    }
+    };
+    setTreeData(updateNode(treeData));
   };
 
-  const publish = async (id: string, publish: boolean) => {
-    try {
-      const { error } = await supabase.from('question_sets').update({ status: publish ? 'published' : 'draft' }).eq('id', id);
-      if (error) throw error;
-      toast({ title: publish ? 'Published' : 'Unpublished' });
-      await load();
-    } catch (e: any) {
-      toast({ title: 'Update failed', description: e.message, variant: 'destructive' });
-    }
+  const selectNode = (node: TreeNode) => {
+    setSelectedNode(node);
+    setFormTitle(node.title);
+    setFormDescription(node.description || "");
+    setFormExamEnum(node.exam_enum || "");
+    setFormTags(node.tags?.join(", ") || "");
+    setFormLinkedExam(node.linked_exam || "");
+    setFormLinkedCurriculum(node.linked_curriculum || "");
+    setFormLinkUrl(node.link_url || "");
+    setFormReference(node.reference || "");
   };
 
-  const addQuestion = async () => {
-    if (!activeSet || !newQuestionId.trim()) return;
-    try {
-      const { error } = await supabase.from('question_set_items').insert({ set_id: activeSet.id, question_id: newQuestionId.trim() });
-      if (error) throw error;
-      toast({ title: 'Added', description: 'Question added to set.' });
-      setNewQuestionId("");
-    } catch (e: any) {
-      toast({ title: 'Add failed', description: e.message, variant: 'destructive' });
-    }
+  const saveNodeChanges = async () => {
+    if (!selectedNode) return;
+    
+    // Update the node in the tree
+    const updateNode = (nodes: TreeNode[]): TreeNode[] => {
+      return nodes.map(node => {
+        if (node.id === selectedNode.id) {
+          return {
+            ...node,
+            title: formTitle,
+            description: formDescription,
+            exam_enum: formExamEnum,
+            tags: formTags.split(",").map(t => t.trim()).filter(Boolean),
+            linked_exam: formLinkedExam,
+            linked_curriculum: formLinkedCurriculum,
+            link_url: formLinkUrl,
+            reference: formReference
+          };
+        }
+        if (node.children.length > 0) {
+          return { ...node, children: updateNode(node.children) };
+        }
+        return node;
+      });
+    };
+    
+    setTreeData(updateNode(treeData));
+    toast({ title: 'Saved', description: 'Changes saved successfully.' });
   };
 
-  const removeQuestion = async (qid: string) => {
-    if (!activeSet) return;
-    try {
-      const { error } = await supabase.from('question_set_items').delete().match({ set_id: activeSet.id, question_id: qid });
-      if (error) throw error;
-      toast({ title: 'Removed', description: 'Question removed from set.' });
-    } catch (e: any) {
-      toast({ title: 'Remove failed', description: e.message, variant: 'destructive' });
+  const addNewNode = (parentId: string | null, type: 'exam' | 'curriculum' | 'topic' | 'kb_item') => {
+    const newNode: TreeNode = {
+      id: `${type}-${Date.now()}`,
+      title: `New ${type}`,
+      type,
+      children: [],
+      expanded: false
+    };
+
+    if (parentId === null) {
+      // Add as root level
+      setTreeData([...treeData, newNode]);
+    } else {
+      // Add to parent
+      const addToParent = (nodes: TreeNode[]): TreeNode[] => {
+        return nodes.map(node => {
+          if (node.id === parentId) {
+            return { ...node, children: [...node.children, newNode], expanded: true };
+          }
+          if (node.children.length > 0) {
+            return { ...node, children: addToParent(node.children) };
+          }
+          return node;
+        });
+      };
+      setTreeData(addToParent(treeData));
     }
+    
+    setSelectedNode(newNode);
+    setFormTitle(newNode.title);
+    setFormDescription("");
+    setFormExamEnum("");
+    setFormTags("");
+    setFormLinkedExam("");
+    setFormLinkedCurriculum("");
+    setFormLinkUrl("");
+    setFormReference("");
   };
+
+  const deleteNode = (nodeId: string) => {
+    const removeNode = (nodes: TreeNode[]): TreeNode[] => {
+      return nodes.filter(node => node.id !== nodeId).map(node => ({
+        ...node,
+        children: removeNode(node.children)
+      }));
+    };
+    
+    setTreeData(removeNode(treeData));
+    if (selectedNode?.id === nodeId) {
+      setSelectedNode(null);
+    }
+    toast({ title: 'Deleted', description: 'Node deleted successfully.' });
+  };
+
+  const renderTreeNode = (node: TreeNode, level = 0): React.ReactNode => {
+    const hasChildren = node.children.length > 0;
+    const isExpanded = node.expanded;
+    const isSelected = selectedNode?.id === node.id;
+
+    return (
+      <div key={node.id} className="w-full">
+        <div 
+          className={`flex items-center gap-2 py-2 px-3 rounded cursor-pointer hover:bg-accent/50 ${
+            isSelected ? 'bg-accent' : ''
+          }`}
+          style={{ paddingLeft: `${12 + level * 20}px` }}
+          onClick={() => selectNode(node)}
+        >
+          {hasChildren ? (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleNodeExpansion(node.id);
+              }}
+              className="p-0.5 hover:bg-accent rounded"
+            >
+              {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            </button>
+          ) : (
+            <div className="w-4" />
+          )}
+          {getNodeIcon(node.type)}
+          <span className="text-sm font-medium">{node.title}</span>
+          <div className="ml-auto flex gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 w-6 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (node.type !== 'kb_item') addNewNode(node.id, 'topic');
+              }}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 w-6 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteNode(node.id);
+              }}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+        {isExpanded && hasChildren && (
+          <div>
+            {node.children.map(child => renderTreeNode(child, level + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const filterTree = (nodes: TreeNode[], term: string): TreeNode[] => {
+    if (!term) return nodes;
+    
+    return nodes.filter(node => {
+      const matchesTitle = node.title.toLowerCase().includes(term.toLowerCase());
+      const hasMatchingChildren = node.children.length > 0 && filterTree(node.children, term).length > 0;
+      return matchesTitle || hasMatchingChildren;
+    }).map(node => ({
+      ...node,
+      children: filterTree(node.children, term),
+      expanded: true // Expand matching nodes
+    }));
+  };
+
+  const filteredTree = filterTree(treeData, searchTerm);
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Question Sets</h1>
-          <Button variant="outline" onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh'}</Button>
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">Curriculum Database</h1>
+          <Button variant="outline" onClick={loadTreeData} disabled={loading}>
+            {loading ? 'Loading…' : 'Refresh'}
+          </Button>
         </div>
 
-        <Card className="p-6 space-y-4">
-          <h2 className="text-xl font-semibold">Create new set</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-            <Select value={currency} onValueChange={(v) => setCurrency(v as any)}>
-              <SelectTrigger disabled={isFree}>
-                <SelectValue placeholder="Currency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USD">USD</SelectItem>
-                <SelectItem value="GBP">GBP</SelectItem>
-                <SelectItem value="PKR">PKR</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input type="number" step="0.01" min="0" placeholder="Price" value={isFree ? "0" : price} onChange={(e) => setPrice(e.target.value)} disabled={isFree} />
-          </div>
-          <div className="flex items-center gap-2">
-            <Checkbox id="free-set" checked={isFree} onCheckedChange={(v) => { const c = Boolean(v); setIsFree(c); if (c) setPrice("0"); }} />
-            <Label htmlFor="free-set">Free set</Label>
-          </div>
-          <Textarea placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
-          <Input placeholder="Tags (comma-separated)" value={tags} onChange={(e) => setTags(e.target.value)} />
-          <div>
-            <Button onClick={createSet}>Create</Button>
-          </div>
-        </Card>
-
-        <Card className="p-0 overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b">
-            <div className="text-sm font-medium">Sets</div>
-            <div className="flex gap-2">
-              <Button size="sm" variant={priceFilter==='all' ? 'secondary' : 'outline'} onClick={() => setPriceFilter('all')}>All</Button>
-              <Button size="sm" variant={priceFilter==='free' ? 'secondary' : 'outline'} onClick={() => setPriceFilter('free')}>Free</Button>
-              <Button size="sm" variant={priceFilter==='paid' ? 'secondary' : 'outline'} onClick={() => setPriceFilter('paid')}>Paid</Button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
+          {/* Left Panel - Tree Editor */}
+          <Card className="p-4 space-y-4 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Curriculum Tree</h2>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => addNewNode(null, 'exam')}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Exam
+                </Button>
+              </div>
             </div>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Tags</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleSets.map((s) => (
-                <TableRow key={s.id} className={activeSet?.id === s.id ? 'bg-accent/30' : ''}>
-                  <TableCell>
-                    <button className="text-left hover:underline" onClick={() => setActiveSet(s)}>{s.title}</button>
-                  </TableCell>
-                  <TableCell>{s.price_cents === 0 ? (<Badge variant="secondary">Free</Badge>) : (<span>{s.currency} {(s.price_cents / 100).toFixed(2)}</span>)}</TableCell>
-                  <TableCell className="max-w-[360px] truncate" title={(s.tags || []).join(', ')}>{(s.tags || []).join(', ') || '—'}</TableCell>
-                  <TableCell>
-                    <Badge variant={s.status === 'published' ? 'default' : 'secondary'}>{s.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    {s.status === 'published' ? (
-                      <Button variant="outline" size="sm" onClick={() => publish(s.id, false)}>Unpublish</Button>
-                    ) : (
-                      <Button size="sm" onClick={() => publish(s.id, true)}>Publish</Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {visibleSets.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-6">No sets found</TableCell>
-                </TableRow>
+            
+            <Input
+              placeholder="Search curriculum..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full"
+            />
+
+            <div className="flex-1 overflow-y-auto border rounded p-2">
+              {filteredTree.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  No curriculum structure found. Start by adding an Exam node.
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filteredTree.map(node => renderTreeNode(node))}
+                </div>
               )}
-            </TableBody>
-          </Table>
-        </Card>
-
-        {activeSet && (
-          <Card className="p-6 space-y-4">
-            <h3 className="text-lg font-semibold">Manage set: {activeSet.title}</h3>
-            <div className="flex items-center gap-2">
-              <Input placeholder="Add question by ID" value={newQuestionId} onChange={(e) => setNewQuestionId(e.target.value)} className="max-w-sm" />
-              <Button onClick={addQuestion}>Add</Button>
             </div>
-            {/* In a future pass, we can fetch and list the actual items with join data */}
-            <p className="text-sm text-muted-foreground">Tip: Paste a question ID from the Reviewed Question Bank to add it to this set.</p>
           </Card>
-        )}
+
+          {/* Right Panel - Details */}
+          <Card className="p-4 space-y-4 overflow-hidden flex flex-col">
+            <h2 className="text-lg font-semibold">
+              {selectedNode ? `Edit ${selectedNode.type}` : 'Select a node to edit'}
+            </h2>
+
+            {selectedNode ? (
+              <div className="flex-1 overflow-y-auto space-y-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  {getNodeIcon(selectedNode.type)}
+                  <Badge variant="outline">{selectedNode.type}</Badge>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="node-title">Title</Label>
+                    <Input
+                      id="node-title"
+                      value={formTitle}
+                      onChange={(e) => setFormTitle(e.target.value)}
+                      placeholder="Enter title"
+                    />
+                  </div>
+
+                  {selectedNode.type !== 'kb_item' && (
+                    <div>
+                      <Label htmlFor="node-description">Description</Label>
+                      <Textarea
+                        id="node-description"
+                        value={formDescription}
+                        onChange={(e) => setFormDescription(e.target.value)}
+                        placeholder="Enter description"
+                        rows={3}
+                      />
+                    </div>
+                  )}
+
+                  {selectedNode.type === 'exam' && (
+                    <div>
+                      <Label htmlFor="exam-enum">Exam Type</Label>
+                      <Select value={formExamEnum} onValueChange={setFormExamEnum}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select exam type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EXAMS.map(exam => (
+                            <SelectItem key={exam} value={exam.replace(' ', '_').toUpperCase()}>
+                              {exam}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {selectedNode.type === 'topic' && (
+                    <div>
+                      <Label htmlFor="topic-tags">Tags (comma-separated)</Label>
+                      <Input
+                        id="topic-tags"
+                        value={formTags}
+                        onChange={(e) => setFormTags(e.target.value)}
+                        placeholder="anatomy, basic-sciences, mrcem"
+                      />
+                    </div>
+                  )}
+
+                  {selectedNode.type === 'curriculum' && (
+                    <div>
+                      <Label htmlFor="linked-exam">Linked Exam</Label>
+                      <Select value={formLinkedExam} onValueChange={setFormLinkedExam}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select linked exam" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {EXAMS.map(exam => (
+                            <SelectItem key={exam} value={exam.replace(' ', '_').toUpperCase()}>
+                              {exam}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {selectedNode.type === 'kb_item' && (
+                    <>
+                      <div>
+                        <Label htmlFor="kb-url">Link URL</Label>
+                        <Input
+                          id="kb-url"
+                          value={formLinkUrl}
+                          onChange={(e) => setFormLinkUrl(e.target.value)}
+                          placeholder="https://example.com/resource"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="kb-reference">Reference (for Generator)</Label>
+                        <Input
+                          id="kb-reference"
+                          value={formReference}
+                          onChange={(e) => setFormReference(e.target.value)}
+                          placeholder="Gray's Anatomy Ch. 1-5"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button onClick={saveNodeChanges} className="flex-1">
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </Button>
+                  {selectedNode.type !== 'kb_item' && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => addNewNode(selectedNode.id, 'kb_item')}
+                    >
+                      <Link className="h-4 w-4 mr-2" />
+                      Add KB Item
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                Select a node from the tree to view and edit its details.
+              </div>
+            )}
+          </Card>
+        </div>
       </main>
       <Footer />
-      <link rel="canonical" href={`${window.location.origin}/admin/question-sets`} />
+      <link rel="canonical" href={`${window.location.origin}/admin/database`} />
     </div>
   );
 }
