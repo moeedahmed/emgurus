@@ -7,38 +7,63 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 export default function ExamsOverview() {
-  const { user } = useAuth();
+  const { user, loading: userLoading } = useAuth();
   const [range, setRange] = useState<30 | 90>(30);
   const [loading, setLoading] = useState(false);
   const [attempts, setAttempts] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  if (userLoading) {
+    return <div className="p-4">Loading overview…</div>;
+  }
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user) { setAttempts([]); return; }
+      if (!user) { 
+        setAttempts([]);
+        setError(null);
+        return; 
+      }
       setLoading(true);
+      setError(null);
       try {
         const since = new Date(Date.now() - range * 24 * 60 * 60 * 1000).toISOString();
-        const { data } = await (supabase as any)
+        const { data, error: supabaseError } = await supabase
           .from('exam_attempts')
           .select('*')
           .eq('user_id', user.id)
           .gte('started_at', since)
           .order('started_at', { ascending: false })
           .limit(500);
+        
+        if (supabaseError) throw supabaseError;
         if (!cancelled) setAttempts((data as any[]) || []);
-      } finally { if (!cancelled) setLoading(false); }
+      } catch (err) {
+        console.error('Failed to load exam attempts:', err);
+        if (!cancelled) {
+          setError('Failed to load exam data');
+          setAttempts([]);
+        }
+      } finally { 
+        if (!cancelled) setLoading(false); 
+      }
     })();
     return () => { cancelled = true; };
   }, [user?.id, range]);
 
   const totals = useMemo(() => {
-    const totalSessions = attempts.length;
-    const examOnly = attempts.filter(a => a.mode === 'exam');
-    const avgScore = examOnly.length ? Math.round(examOnly.reduce((s, a) => s + (a.correct_count || 0) / Math.max(1, a.total_attempted || a.total_questions || 1), 0) / examOnly.length * 100) : 0;
-    const questionsAttempted = attempts.reduce((s, a) => s + (a.total_attempted || a.total_questions || 0), 0);
-    const timeSpent = attempts.reduce((s, a) => s + (a.duration_sec || 0), 0);
-    return { totalSessions, avgScore, questionsAttempted, timeSpent };
+    try {
+      const safeAttempts = Array.isArray(attempts) ? attempts : [];
+      const totalSessions = safeAttempts.length;
+      const examOnly = safeAttempts.filter(a => a && a.mode === 'exam');
+      const avgScore = examOnly.length ? Math.round(examOnly.reduce((s, a) => s + (Number(a.correct_count) || 0) / Math.max(1, Number(a.total_attempted) || Number(a.total_questions) || 1), 0) / examOnly.length * 100) : 0;
+      const questionsAttempted = safeAttempts.reduce((s, a) => s + (Number(a.total_attempted) || Number(a.total_questions) || 0), 0);
+      const timeSpent = safeAttempts.reduce((s, a) => s + (Number(a.duration_sec) || 0), 0);
+      return { totalSessions, avgScore, questionsAttempted, timeSpent };
+    } catch {
+      return { totalSessions: 0, avgScore: 0, questionsAttempted: 0, timeSpent: 0 };
+    }
   }, [attempts]);
 
   const series = useMemo(() => {
@@ -100,6 +125,19 @@ export default function ExamsOverview() {
     const scored = Object.entries(agg).map(([t, v]) => ({ topic: t, acc: v.total ? Math.round((v.correct/v.total)*100) : 0, total: v.total }));
     return scored.sort((a,b)=>a.acc-b.acc).slice(0,3);
   }, [attempts]);
+
+  if (error) {
+    return (
+      <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+        <p className="text-amber-800 dark:text-amber-200">
+          Overview currently unavailable. Please retry or reload.
+        </p>
+        <Button size="sm" variant="outline" className="mt-2" onClick={() => window.location.reload()}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 grid gap-4">

@@ -356,9 +356,14 @@ export default function DashboardNew() {
               {/* Desktop Tab Navigation */}
               <div className="hidden lg:block mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h1 className="text-2xl font-bold">
-                    {currentSection?.config.label} › {currentTabConfig.label}
-                  </h1>
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">
+                      Dashboard › {currentSection?.config.label}
+                    </div>
+                    <h1 className="text-2xl font-bold">
+                      {currentSection?.config.label} › {currentTabConfig.label}
+                    </h1>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
                   {currentTabConfig.description}
