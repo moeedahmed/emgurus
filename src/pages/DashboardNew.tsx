@@ -1,4 +1,4 @@
-import { useEffect, useState, Suspense, useMemo } from "react";
+import React, { useEffect, useState, Suspense, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useRoles } from "@/hooks/useRoles";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,6 @@ import { Card } from "@/components/ui/card";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import BlogsOverview from "@/components/dashboard/blogs/BlogsOverview";
-import ExamsAttempts from "@/components/dashboard/exams/ExamsAttempts";
 
 type AppRole = 'admin' | 'guru' | 'user';
 
@@ -24,6 +22,26 @@ interface SectionConfig {
   tabs: Record<string, TabConfig>;
 }
 
+// Lazy load components for better performance
+const BlogsOverview = React.lazy(() => import('@/components/dashboard/blogs/BlogsOverview'));
+const MyBlogs = React.lazy(() => import('@/components/dashboard/blogs/MyBlogs'));
+const ExamsOverview = React.lazy(() => import('@/components/dashboard/exams/ExamsOverview'));
+const ExamsAttempts = React.lazy(() => import('@/components/dashboard/exams/ExamsAttempts'));
+const ExamsFeedbackList = React.lazy(() => import('@/components/dashboard/exams/ExamsFeedbackList'));
+const ExamsProgressMatrix = React.lazy(() => import('@/components/dashboard/exams/ExamsProgressMatrix'));
+const ConsultationsOverview = React.lazy(() => import('@/components/dashboard/consultations/ConsultationsOverview'));
+const ForumsOverview = React.lazy(() => import('@/components/dashboard/forums/ForumsOverview'));
+const MyThreadsWithChips = React.lazy(() => import('@/components/dashboard/forums/MyThreadsWithChips'));
+const ForumsModerationQueue = React.lazy(() => import('@/components/dashboard/forums/ForumsModerationQueue'));
+
+// Placeholder component for missing implementations
+const ComingSoonPanel = () => (
+  <Card className="p-8 text-center">
+    <p className="text-muted-foreground mb-2">Coming soon</p>
+    <p className="text-xs text-muted-foreground">This feature is under development.</p>
+  </Card>
+);
+
 // Tab registry with role-based access control
 const tabRegistry: Record<string, SectionConfig> = {
   blogs: {
@@ -35,16 +53,156 @@ const tabRegistry: Record<string, SectionConfig> = {
         roles: ['user', 'guru', 'admin'],
         description: 'Quick stats and shortcuts for writing and reviewing blogs.',
       },
+      posts: {
+        label: 'Posts',
+        component: MyBlogs,
+        roles: ['user', 'guru', 'admin'],
+        description: 'Manage your published and draft blog posts.',
+      },
+      reviews: {
+        label: 'Reviews',
+        component: ComingSoonPanel,
+        roles: ['guru'],
+        description: 'Review blog posts submitted by users.',
+      },
+      queue: {
+        label: 'Queue',
+        component: ComingSoonPanel,
+        roles: ['admin'],
+        description: 'Moderate blog posts awaiting approval.',
+      },
+      analytics: {
+        label: 'Analytics',
+        component: ComingSoonPanel,
+        roles: ['admin'],
+        description: 'Blog performance and engagement metrics.',
+      },
     },
   },
   exams: {
     label: 'Exams',
     tabs: {
+      overview: {
+        label: 'Overview',
+        component: ExamsOverview,
+        roles: ['user', 'guru', 'admin'],
+        description: 'Exam statistics and quick access to practice sessions.',
+      },
       attempts: {
         label: 'Attempts',
         component: ExamsAttempts,
         roles: ['user', 'guru', 'admin'],
         description: 'Track your exam attempts by score, date, and mode.',
+      },
+      feedback: {
+        label: 'Feedback',
+        component: ExamsFeedbackList,
+        roles: ['user', 'guru', 'admin'],
+        description: 'Questions you\'ve flagged and admin responses.',
+      },
+      progress: {
+        label: 'Progress',
+        component: ExamsProgressMatrix,
+        roles: ['user', 'guru', 'admin'],
+        description: 'Visual breakdown of your performance by topic.',
+      },
+      reviews: {
+        label: 'Reviews',
+        component: ComingSoonPanel,
+        roles: ['guru', 'admin'],
+        description: 'Review and validate exam questions.',
+      },
+      generate: {
+        label: 'Generate',
+        component: ComingSoonPanel,
+        roles: ['admin'],
+        description: 'AI-powered question generation and curation.',
+      },
+    },
+  },
+  consultations: {
+    label: 'Consults',
+    tabs: {
+      overview: {
+        label: 'Overview',
+        component: ConsultationsOverview,
+        roles: ['user', 'guru', 'admin'],
+        description: 'Consultation bookings and session management.',
+      },
+      bookings: {
+        label: 'Bookings',
+        component: ComingSoonPanel,
+        roles: ['user', 'guru', 'admin'],
+        description: 'View and manage your consultation bookings.',
+      },
+      slots: {
+        label: 'Slots',
+        component: ComingSoonPanel,
+        roles: ['guru'],
+        description: 'Set your availability for consultations.',
+      },
+      pricing: {
+        label: 'Pricing',
+        component: ComingSoonPanel,
+        roles: ['guru'],
+        description: 'Configure your consultation rates.',
+      },
+      analytics: {
+        label: 'Analytics',
+        component: ComingSoonPanel,
+        roles: ['admin'],
+        description: 'Consultation metrics and revenue tracking.',
+      },
+    },
+  },
+  forums: {
+    label: 'Forums',
+    tabs: {
+      overview: {
+        label: 'Overview',
+        component: ForumsOverview,
+        roles: ['user', 'guru', 'admin'],
+        description: 'Forum activity and discussion insights.',
+      },
+      threads: {
+        label: 'Threads',
+        component: MyThreadsWithChips,
+        roles: ['user', 'guru', 'admin'],
+        description: 'Questions and discussions you\'ve created.',
+      },
+      moderation: {
+        label: 'Moderation',
+        component: ForumsModerationQueue,
+        roles: ['guru', 'admin'],
+        description: 'Review flagged posts and manage forum content.',
+      },
+    },
+  },
+  users: {
+    label: 'Users',
+    tabs: {
+      approvals: {
+        label: 'Approvals',
+        component: ComingSoonPanel,
+        roles: ['admin'],
+        description: 'Review and approve guru applications.',
+      },
+      directory: {
+        label: 'Directory',
+        component: ComingSoonPanel,
+        roles: ['admin'],
+        description: 'Manage user accounts and permissions.',
+      },
+    },
+  },
+  settings: {
+    label: 'Settings',
+    tabs: {
+      site: {
+        label: 'Site',
+        component: ComingSoonPanel,
+        roles: ['admin'],
+        description: 'Configure site-wide settings and preferences.',
       },
     },
   },
