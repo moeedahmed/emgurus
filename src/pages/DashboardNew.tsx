@@ -48,7 +48,7 @@ const tabRegistry: Record<string, SectionConfig> = {
       posts: {
         label: 'Posts',
         component: MyBlogs,
-        roles: ['user', 'guru', 'admin'],
+        roles: ['guru', 'admin'],
         description: 'Manage your published and draft blog posts.',
       },
     },
@@ -60,7 +60,7 @@ const tabRegistry: Record<string, SectionConfig> = {
         label: 'Overview',
         component: ExamsOverview,
         roles: ['user', 'guru', 'admin'],
-        description: 'Exam statistics and quick access to practice sessions.',
+        description: 'Summary of your exam activity and performance.',
       },
       attempts: {
         label: 'Attempts',
@@ -88,14 +88,14 @@ const tabRegistry: Record<string, SectionConfig> = {
       overview: {
         label: 'Overview',
         component: ConsultationsOverview,
-        roles: ['user', 'guru', 'admin'],
+        roles: ['guru', 'admin'],
         description: 'Consultation bookings and session management.',
       },
       bookings: {
         label: 'Bookings',
         component: Bookings,
-        roles: ['user', 'guru', 'admin'],
-        description: 'View and manage your consultation bookings.',
+        roles: ['guru', 'admin'],
+        description: 'Track and manage your bookings.',
       },
     },
   },
@@ -106,7 +106,7 @@ const tabRegistry: Record<string, SectionConfig> = {
         label: 'Overview',
         component: ForumsOverview,
         roles: ['user', 'guru', 'admin'],
-        description: 'Forum activity and discussion insights.',
+        description: 'Explore forum categories and trending topics.',
       },
       threads: {
         label: 'Threads',
