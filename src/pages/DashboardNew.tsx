@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Suspense, useMemo } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useRoles } from "@/hooks/useRoles";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,123 +22,214 @@ interface SectionConfig {
   tabs: Record<string, TabConfig>;
 }
 
-// Lazy load components for better performance
+// Lazy load all dashboard components
 const BlogsOverview = React.lazy(() => import('@/components/dashboard/blogs/BlogsOverview'));
 const MyBlogs = React.lazy(() => import('@/components/dashboard/blogs/MyBlogs'));
 const BlogReviewQueue = React.lazy(() => import('@/components/dashboard/blogs/BlogReviewQueue'));
-const BlogAnalytics = React.lazy(() => import('@/components/dashboard/blogs/BlogAnalytics'));
+const AdminBlogQueue = React.lazy(() => import('@/components/dashboard/blogs/AdminBlogQueue'));
+
 const ExamsOverview = React.lazy(() => import('@/components/dashboard/exams/ExamsOverview'));
 const ExamsAttempts = React.lazy(() => import('@/components/dashboard/exams/ExamsAttempts'));
 const ExamsFeedbackList = React.lazy(() => import('@/components/dashboard/exams/ExamsFeedbackList'));
 const ExamsProgressMatrix = React.lazy(() => import('@/components/dashboard/exams/ExamsProgressMatrix'));
 const ExamReviewQueue = React.lazy(() => import('@/components/dashboard/exams/ExamReviewQueue'));
 const ExamGenerator = React.lazy(() => import('@/components/dashboard/exams/ExamGenerator'));
+
 const ConsultationsOverview = React.lazy(() => import('@/components/dashboard/consultations/ConsultationsOverview'));
 const Bookings = React.lazy(() => import('@/pages/Bookings'));
 const GuruAvailability = React.lazy(() => import('@/components/dashboard/consultations/GuruAvailability'));
 const ConsultationPricing = React.lazy(() => import('@/components/dashboard/consultations/ConsultationPricing'));
-const ConsultAnalytics = React.lazy(() => import('@/components/dashboard/consultations/ConsultAnalytics'));
+
 const ForumsOverview = React.lazy(() => import('@/components/dashboard/forums/ForumsOverview'));
 const MyThreadsWithChips = React.lazy(() => import('@/components/dashboard/forums/MyThreadsWithChips'));
 const ForumsModerationQueue = React.lazy(() => import('@/components/dashboard/forums/ForumsModerationQueue'));
+
 const GuruApprovals = React.lazy(() => import('@/components/dashboard/users/GuruApprovals'));
 const UserDirectory = React.lazy(() => import('@/components/dashboard/users/UserDirectory'));
+
 const SiteSettings = React.lazy(() => import('@/components/dashboard/settings/SiteSettings'));
-
-// Additional components from old dashboards
 const AdminDatabaseManager = React.lazy(() => import('@/components/admin/database/DatabaseManager'));
-const AdminGeneration = React.lazy(() => import('@/components/admin/AdminGeneration'));
-const AdminBlogQueue = React.lazy(() => import('@/components/dashboard/blogs/AdminBlogQueue'));
 
-// Lazy load additional components for comprehensive role-based tabs
-const BlogDrafts = React.lazy(() => Promise.resolve({ default: () => <MyBlogs filter="draft" /> }));
-const BlogSubmitted = React.lazy(() => Promise.resolve({ default: () => <MyBlogs filter="in_review" /> }));
-const BlogPublished = React.lazy(() => Promise.resolve({ default: () => <MyBlogs filter="published" /> }));
-const BlogRejected = React.lazy(() => Promise.resolve({ default: () => <MyBlogs filter="rejected" /> }));
-const ExamAttempts = React.lazy(() => import('@/components/dashboard/exams/ExamsAttempts'));
-const ExamFeedback = React.lazy(() => import('@/components/dashboard/exams/ExamsFeedbackList'));
-const ExamProgress = React.lazy(() => import('@/components/dashboard/exams/ExamsProgressMatrix'));
-const ForumModerationAdmin = React.lazy(() => Promise.resolve({ 
-  default: () => <ForumsModerationQueue isAdmin={true} /> 
+// Create filtered blog components for different statuses
+const BlogDrafts = React.lazy(() => Promise.resolve({ 
+  default: () => <MyBlogs filter="draft" /> 
+}));
+const BlogSubmitted = React.lazy(() => Promise.resolve({ 
+  default: () => <MyBlogs filter="in_review" /> 
+}));
+const BlogPublished = React.lazy(() => Promise.resolve({ 
+  default: () => <MyBlogs filter="published" /> 
+}));
+const BlogRejected = React.lazy(() => Promise.resolve({ 
+  default: () => <MyBlogs filter="rejected" /> 
 }));
 
-// Tab registry with complete role-based access control
+// Complete tab registry with role-based access control
 const tabRegistry: Record<string, SectionConfig> = {
   blogs: {
     label: 'Blogs',
     tabs: {
-      overview: { label: 'Overview', component: BlogsOverview, roles: ['user', 'guru', 'admin'], description: 'Your blog activity at a glance.' },
-      posts: { label: 'Posts', component: MyBlogs, roles: ['user', 'guru', 'admin'], description: 'Your blog posts by status.' },
-      reviews: { label: 'Reviews', component: BlogReviewQueue, roles: ['guru', 'admin'], description: 'Edit and approve assigned blog posts.' },
-      queue: { label: 'Queue', component: AdminBlogQueue, roles: ['admin'], description: 'All blog submissions for review.' },
-      analytics: { label: 'Analytics', component: BlogAnalytics, roles: ['admin'], description: 'Blog performance metrics and insights.' },
+      overview: { 
+        label: 'Overview', 
+        component: BlogsOverview, 
+        roles: ['user', 'guru', 'admin'], 
+        description: 'Recent posts summary and performance insights.' 
+      },
+      posts: { 
+        label: 'Posts', 
+        component: MyBlogs, 
+        roles: ['user', 'guru', 'admin'], 
+        description: 'Your blog posts filtered by status.' 
+      },
+      reviews: { 
+        label: 'Reviews', 
+        component: BlogReviewQueue, 
+        roles: ['guru', 'admin'], 
+        description: 'Assigned blogs for review and approval.' 
+      },
+      queue: { 
+        label: 'Queue', 
+        component: AdminBlogQueue, 
+        roles: ['admin'], 
+        description: 'All blog submissions for management.' 
+      },
     },
   },
   exams: {
     label: 'Exams',
     tabs: {
-      overview: { label: 'Overview', component: ExamsOverview, roles: ['user', 'guru', 'admin'], description: 'Summary of your exam activity and performance.' },
-      attempts: { label: 'Attempts', component: ExamsAttempts, roles: ['user', 'guru', 'admin'], description: 'Your recent practice and exam sessions.' },
-      feedback: { label: 'Feedback', component: ExamsFeedbackList, roles: ['user', 'guru', 'admin'], description: 'Questions you flagged and your notes.' },
-      progress: { label: 'Progress', component: ExamsProgressMatrix, roles: ['user', 'guru', 'admin'], description: 'Where you\'re strong or need work.' },
-      reviews: { label: 'Reviews', component: ExamReviewQueue, roles: ['guru', 'admin'], description: 'Review pending exam questions.' },
-      generate: { label: 'Generate', component: ExamGenerator, roles: ['admin'], description: 'AI-powered question generation tools.' },
+      overview: { 
+        label: 'Overview', 
+        component: ExamsOverview, 
+        roles: ['user', 'guru', 'admin'], 
+        description: 'Exam attempt stats, scores, and accuracy.' 
+      },
+      attempts: { 
+        label: 'Attempts', 
+        component: ExamsAttempts, 
+        roles: ['user', 'guru', 'admin'], 
+        description: 'Your recent practice and exam sessions.' 
+      },
+      feedback: { 
+        label: 'Feedback', 
+        component: ExamsFeedbackList, 
+        roles: ['user', 'guru', 'admin'], 
+        description: 'Questions you flagged and your notes.' 
+      },
+      progress: { 
+        label: 'Progress', 
+        component: ExamsProgressMatrix, 
+        roles: ['user', 'guru', 'admin'], 
+        description: 'Skill matrix showing strengths and weak areas.' 
+      },
+      reviews: { 
+        label: 'Reviews', 
+        component: ExamReviewQueue, 
+        roles: ['guru', 'admin'], 
+        description: 'Pending exam questions for review.' 
+      },
+      generate: { 
+        label: 'Generate', 
+        component: ExamGenerator, 
+        roles: ['admin'], 
+        description: 'AI-powered question generation tools.' 
+      },
     },
   },
   consultations: {
-    label: 'Consults',
+    label: 'Consultations',
     tabs: {
-      overview: { label: 'Overview', component: ConsultationsOverview, roles: ['user', 'guru', 'admin'], description: 'Consultation bookings and session management.' },
-      bookings: { label: 'Bookings', component: Bookings, roles: ['user', 'guru', 'admin'], description: 'Your consultation history and upcoming sessions.' },
-      slots: { label: 'Availability', component: GuruAvailability, roles: ['guru', 'admin'], description: 'Define your available slots.' },
-      pricing: { label: 'Pricing', component: ConsultationPricing, roles: ['guru', 'admin'], description: 'Set your hourly rate.' },
-      analytics: { label: 'Analytics', component: ConsultAnalytics, roles: ['admin'], description: 'Consultation performance metrics.' },
+      overview: { 
+        label: 'Overview', 
+        component: ConsultationsOverview, 
+        roles: ['user', 'guru', 'admin'], 
+        description: 'Upcoming sessions and consultation stats.' 
+      },
+      bookings: { 
+        label: 'Bookings', 
+        component: Bookings, 
+        roles: ['user', 'guru', 'admin'], 
+        description: 'Your consultation history and upcoming sessions.' 
+      },
+      availability: { 
+        label: 'Availability', 
+        component: GuruAvailability, 
+        roles: ['guru', 'admin'], 
+        description: 'Configure your weekly availability slots.' 
+      },
+      pricing: { 
+        label: 'Pricing', 
+        component: ConsultationPricing, 
+        roles: ['guru', 'admin'], 
+        description: 'Set your consultation hourly rate.' 
+      },
     },
   },
   forums: {
     label: 'Forums',
     tabs: {
-      overview: { label: 'Overview', component: ForumsOverview, roles: ['user', 'guru', 'admin'], description: 'Your forum activity at a glance.' },
-      threads: { label: 'Threads', component: MyThreadsWithChips, roles: ['user', 'guru', 'admin'], description: 'Your questions and answers.' },
-      moderation: { label: 'Moderation', component: ForumsModerationQueue, roles: ['guru', 'admin'], description: 'Review and resolve flagged posts.' },
+      overview: { 
+        label: 'Overview', 
+        component: ForumsOverview, 
+        roles: ['user', 'guru', 'admin'], 
+        description: 'Your forum activity at a glance.' 
+      },
+      threads: { 
+        label: 'Threads', 
+        component: MyThreadsWithChips, 
+        roles: ['user', 'guru', 'admin'], 
+        description: 'Your questions and answers with filters.' 
+      },
+      moderation: { 
+        label: 'Moderation', 
+        component: ForumsModerationQueue, 
+        roles: ['guru', 'admin'], 
+        description: 'Review and resolve flagged posts.' 
+      },
     },
   },
   users: {
     label: 'Users',
     tabs: {
-      approvals: { label: 'Approvals', component: GuruApprovals, roles: ['admin'], description: 'Review and approve guru applications.' },
-      directory: { label: 'Directory', component: UserDirectory, roles: ['admin'], description: 'View all platform users and their roles.' },
+      approvals: { 
+        label: 'Approvals', 
+        component: GuruApprovals, 
+        roles: ['admin'], 
+        description: 'Review and approve guru applications.' 
+      },
+      directory: { 
+        label: 'Directory', 
+        component: UserDirectory, 
+        roles: ['admin'], 
+        description: 'Searchable list of all platform users.' 
+      },
     },
   },
   settings: {
     label: 'Settings',
     tabs: {
-      site: { label: 'Site', component: SiteSettings, roles: ['admin'], description: 'Configure global platform settings.' },
-      database: { label: 'Database', component: AdminDatabaseManager, roles: ['admin'], description: 'Manage curriculum, exams, and knowledge base.' },
+      site: { 
+        label: 'Site', 
+        component: SiteSettings, 
+        roles: ['admin'], 
+        description: 'Configure global platform settings.' 
+      },
+      database: { 
+        label: 'Database', 
+        component: AdminDatabaseManager, 
+        roles: ['admin'], 
+        description: 'Manage curriculum, exams, and knowledge base.' 
+      },
     },
   },
 };
-
-function PanelErrorFallback({ error, resetError }: { error: Error; resetError: () => void }) {
-  return (
-    <Card className="p-6 text-center">
-      <h3 className="text-sm font-medium mb-2">This panel failed to load</h3>
-      <p className="text-xs text-muted-foreground mb-4">
-        {error.message || 'An unexpected error occurred'}
-      </p>
-      <Button size="sm" variant="outline" onClick={resetError}>
-        Retry
-      </Button>
-    </Card>
-  );
-}
 
 function TabErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   return (
     <Card className="p-6 text-center">
       <h3 className="text-sm font-medium mb-2">This section failed to load</h3>
       <p className="text-xs text-muted-foreground mb-4">
-        {error.message || 'An unexpected error occurred in this tab'}
+        {error.message || 'An unexpected error occurred'}
       </p>
       <Button size="sm" variant="outline" onClick={resetErrorBoundary}>
         Retry
@@ -215,7 +306,6 @@ function Sidebar({
 
 export default function DashboardNew() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { roles, isLoading: rolesLoading } = useRoles();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -349,17 +439,15 @@ export default function DashboardNew() {
         <div className="flex-1 min-h-screen">
           {currentTabConfig ? (
             <div className="p-4">
-              {/* Desktop Tab Navigation */}
+              {/* Desktop Header */}
               <div className="hidden lg:block mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-1">
-                      Dashboard › {currentSection?.config.label}
-                    </div>
-                    <h1 className="text-2xl font-bold">
-                      {currentSection?.config.label} › {currentTabConfig.label}
-                    </h1>
+                <div className="mb-4">
+                  <div className="text-sm text-muted-foreground mb-1">
+                    Dashboard › {currentSection?.config.label}
                   </div>
+                  <h1 className="text-2xl font-bold">
+                    {currentSection?.config.label} › {currentTabConfig.label}
+                  </h1>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
                   {currentTabConfig.description}
@@ -390,7 +478,7 @@ export default function DashboardNew() {
                 </p>
               </div>
 
-              {/* Tab Content with Isolated Error Boundary */}
+              {/* Tab Content with Error Boundary */}
               <ErrorBoundary
                 FallbackComponent={TabErrorFallback}
                 resetKeys={[currentView, currentTab]}
