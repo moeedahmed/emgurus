@@ -14,7 +14,7 @@ const ComingSoon = () => {
               <a href="/exams">Start Exams</a>
             </Button>
             <Button variant="outline" asChild>
-              <a href="/consultations">Book Consultation</a>
+              <a href="/consultations">Book Consult</a>
             </Button>
             <Button variant="ghost" asChild>
               <a href="/blogs">Explore Blogs</a>

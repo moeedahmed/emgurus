@@ -134,7 +134,7 @@ export default function Bookings({ embedded = false }: { embedded?: boolean }) {
         <header className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold">{title}</h1>
-            <p className="text-muted-foreground">Your upcoming and past consultations.</p>
+            <p className="text-muted-foreground">Your upcoming and past consults.</p>
           </div>
         </header>
       )}

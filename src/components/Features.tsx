@@ -28,7 +28,7 @@ const Features = () => {
     },
     {
       icon: Video,
-      title: "Expert Consultations",
+      title: "Expert Consults",
       description: "1:1 mentoring sessions with verified medical professionals",
       image: mentoringImage,
       highlights: ["Verified gurus (in review)", "Flexible scheduling", "All specialties"],

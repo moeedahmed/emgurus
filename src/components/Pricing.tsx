@@ -48,7 +48,7 @@ const Pricing = () => {
       ],
       notIncluded: [
         "Exam practice",
-        "Expert consultations",
+        "Expert consults",
         "Advanced AI features",
         "Premium content",
       ],
@@ -72,7 +72,7 @@ const Pricing = () => {
         "Progress tracking",
       ],
       notIncluded: [
-        "Expert consultations",
+        "Expert consults",
         "Priority support",
       ],
       buttonText: "Start Exam Prep",
@@ -86,7 +86,7 @@ const Pricing = () => {
       description: "Full access including expert mentorship",
       features: [
         "Everything in Exams plan",
-        "1:1 expert consultations",
+        "1:1 expert consults",
         "Guru profile access",
         "Priority booking",
         "Video call sessions",
@@ -95,7 +95,7 @@ const Pricing = () => {
         "Priority support",
       ],
       notIncluded: [],
-      buttonText: "Book Consultations",
+      buttonText: "Book Consults",
       buttonVariant: "accent" as const,
       popular: false,
     },

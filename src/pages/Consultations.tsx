@@ -199,7 +199,7 @@ const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
     <main>
       {!embedded && (
         <PageHero
-          title="EMGurus Consultations"
+          title="EMGurus Consults"
           subtitle="Filter by specialty, country, or exam to find the right mentor."
           align="center"
           ctas={[{ label: "Consultation monthly membership", href: "/pricing", variant: "outline" }]}
