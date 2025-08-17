@@ -27,6 +27,7 @@ const BlogsOverview = React.lazy(() => import('@/components/dashboard/blogs/Blog
 const MyBlogs = React.lazy(() => import('@/components/dashboard/blogs/MyBlogs'));
 const BlogReviewQueue = React.lazy(() => import('@/components/dashboard/blogs/BlogReviewQueue'));
 const AdminBlogQueue = React.lazy(() => import('@/components/dashboard/blogs/AdminBlogQueue'));
+const BlogAnalytics = React.lazy(() => import('@/components/dashboard/blogs/BlogAnalytics'));
 
 const ExamsOverview = React.lazy(() => import('@/components/dashboard/exams/ExamsOverview'));
 const ExamsAttempts = React.lazy(() => import('@/components/dashboard/exams/ExamsAttempts'));
@@ -39,6 +40,7 @@ const ConsultationsOverview = React.lazy(() => import('@/components/dashboard/co
 const Bookings = React.lazy(() => import('@/pages/Bookings'));
 const GuruAvailability = React.lazy(() => import('@/components/dashboard/consultations/GuruAvailability'));
 const ConsultationPricing = React.lazy(() => import('@/components/dashboard/consultations/ConsultationPricing'));
+const ConsultAnalytics = React.lazy(() => import('@/components/dashboard/consultations/ConsultAnalytics'));
 
 const ForumsOverview = React.lazy(() => import('@/components/dashboard/forums/ForumsOverview'));
 const MyThreadsWithChips = React.lazy(() => import('@/components/dashboard/forums/MyThreadsWithChips'));
@@ -50,21 +52,7 @@ const UserDirectory = React.lazy(() => import('@/components/dashboard/users/User
 const SiteSettings = React.lazy(() => import('@/components/dashboard/settings/SiteSettings'));
 const AdminDatabaseManager = React.lazy(() => import('@/components/admin/database/DatabaseManager'));
 
-// Create filtered blog components for different statuses
-const BlogDrafts = React.lazy(() => Promise.resolve({ 
-  default: () => <MyBlogs filter="draft" /> 
-}));
-const BlogSubmitted = React.lazy(() => Promise.resolve({ 
-  default: () => <MyBlogs filter="in_review" /> 
-}));
-const BlogPublished = React.lazy(() => Promise.resolve({ 
-  default: () => <MyBlogs filter="published" /> 
-}));
-const BlogRejected = React.lazy(() => Promise.resolve({ 
-  default: () => <MyBlogs filter="rejected" /> 
-}));
-
-// Complete tab registry with role-based access control
+// Complete tab registry with role-based access control following exact specifications
 const tabRegistry: Record<string, SectionConfig> = {
   blogs: {
     label: 'Blogs',
@@ -92,6 +80,12 @@ const tabRegistry: Record<string, SectionConfig> = {
         component: AdminBlogQueue, 
         roles: ['admin'], 
         description: 'All blog submissions for management.' 
+      },
+      analytics: { 
+        label: 'Analytics', 
+        component: BlogAnalytics, 
+        roles: ['admin'], 
+        description: 'Blog performance and review analytics.' 
       },
     },
   },
@@ -137,7 +131,7 @@ const tabRegistry: Record<string, SectionConfig> = {
     },
   },
   consultations: {
-    label: 'Consultations',
+    label: 'Consults',
     tabs: {
       overview: { 
         label: 'Overview', 
@@ -154,14 +148,20 @@ const tabRegistry: Record<string, SectionConfig> = {
       availability: { 
         label: 'Availability', 
         component: GuruAvailability, 
-        roles: ['guru', 'admin'], 
+        roles: ['guru'], 
         description: 'Configure your weekly availability slots.' 
       },
       pricing: { 
         label: 'Pricing', 
         component: ConsultationPricing, 
-        roles: ['guru', 'admin'], 
+        roles: ['guru'], 
         description: 'Set your consultation hourly rate.' 
+      },
+      analytics: { 
+        label: 'Analytics', 
+        component: ConsultAnalytics, 
+        roles: ['admin'], 
+        description: 'Consultation performance and metrics.' 
       },
     },
   },
