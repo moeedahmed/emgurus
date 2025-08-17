@@ -45,14 +45,30 @@ const GuruApprovals = React.lazy(() => import('@/components/dashboard/users/Guru
 const UserDirectory = React.lazy(() => import('@/components/dashboard/users/UserDirectory'));
 const SiteSettings = React.lazy(() => import('@/components/dashboard/settings/SiteSettings'));
 
-// Tab registry with role-based access control
+// Lazy load additional components for comprehensive role-based tabs
+const BlogDrafts = React.lazy(() => Promise.resolve({ default: () => <MyBlogs filter="draft" /> }));
+const BlogSubmitted = React.lazy(() => Promise.resolve({ default: () => <MyBlogs filter="in_review" /> }));
+const BlogPublished = React.lazy(() => Promise.resolve({ default: () => <MyBlogs filter="published" /> }));
+const BlogRejected = React.lazy(() => Promise.resolve({ default: () => <MyBlogs filter="rejected" /> }));
+const ExamAttempts = React.lazy(() => import('@/components/dashboard/exams/ExamsAttempts'));
+const ExamFeedback = React.lazy(() => import('@/components/dashboard/exams/ExamsFeedbackList'));
+const ExamProgress = React.lazy(() => import('@/components/dashboard/exams/ExamsProgressMatrix'));
+const ForumModerationAdmin = React.lazy(() => Promise.resolve({ 
+  default: () => <ForumsModerationQueue isAdmin={true} /> 
+}));
+const DatabaseManager = React.lazy(() => import('@/components/admin/database/DatabaseManager'));
+
+// Tab registry with complete role-based access control
 const tabRegistry: Record<string, SectionConfig> = {
   blogs: {
     label: 'Blogs',
     tabs: {
-      overview: { label: 'Overview', component: BlogsOverview, roles: ['user', 'guru', 'admin'], description: 'Quick stats and shortcuts for writing and reviewing blogs.' },
-      posts: { label: 'Posts', component: MyBlogs, roles: ['user', 'guru', 'admin'], description: 'Manage your published and draft blog posts.' },
-      reviews: { label: 'Reviews', component: BlogReviewQueue, roles: ['guru', 'admin'], description: 'Review pending blog submissions.' },
+      overview: { label: 'Overview', component: BlogsOverview, roles: ['user', 'guru', 'admin'], description: 'Your blog activity at a glance.' },
+      draft: { label: 'Draft', component: BlogDrafts, roles: ['user', 'guru', 'admin'], description: 'Private posts you\'re still working on.' },
+      submitted: { label: 'Submitted', component: BlogSubmitted, roles: ['user', 'guru', 'admin'], description: 'Posts awaiting review by the team.' },
+      published: { label: 'Published', component: BlogPublished, roles: ['user', 'guru', 'admin'], description: 'Your posts that are live on EMGurus.' },
+      rejected: { label: 'Rejected', component: BlogRejected, roles: ['user', 'guru', 'admin'], description: 'Changes requested. Edit and resubmit when ready.' },
+      reviews: { label: 'Reviews', component: BlogReviewQueue, roles: ['guru', 'admin'], description: 'Edit and approve assigned blog posts.' },
       analytics: { label: 'Analytics', component: BlogAnalytics, roles: ['admin'], description: 'Blog performance metrics and insights.' },
     },
   },
@@ -60,9 +76,9 @@ const tabRegistry: Record<string, SectionConfig> = {
     label: 'Exams',
     tabs: {
       overview: { label: 'Overview', component: ExamsOverview, roles: ['user', 'guru', 'admin'], description: 'Summary of your exam activity and performance.' },
-      attempts: { label: 'Attempts', component: ExamsAttempts, roles: ['user', 'guru', 'admin'], description: 'Track your exam attempts by score, date, and mode.' },
-      feedback: { label: 'Feedback', component: ExamsFeedbackList, roles: ['user', 'guru', 'admin'], description: 'Questions you\'ve flagged and admin responses.' },
-      progress: { label: 'Progress', component: ExamsProgressMatrix, roles: ['user', 'guru', 'admin'], description: 'Visual breakdown of your performance by topic.' },
+      attempts: { label: 'Attempts', component: ExamAttempts, roles: ['user', 'guru', 'admin'], description: 'Your recent practice and exam sessions.' },
+      progress: { label: 'Progress', component: ExamProgress, roles: ['user', 'guru', 'admin'], description: 'Where you\'re strong or need work.' },
+      feedback: { label: 'Feedback', component: ExamFeedback, roles: ['user', 'guru', 'admin'], description: 'Questions you flagged and your notes.' },
       reviews: { label: 'Reviews', component: ExamReviewQueue, roles: ['guru', 'admin'], description: 'Review pending exam questions.' },
       generate: { label: 'Generate', component: ExamGenerator, roles: ['admin'], description: 'AI-powered question generation tools.' },
     },
@@ -71,18 +87,18 @@ const tabRegistry: Record<string, SectionConfig> = {
     label: 'Consults',
     tabs: {
       overview: { label: 'Overview', component: ConsultationsOverview, roles: ['user', 'guru', 'admin'], description: 'Consultation bookings and session management.' },
-      bookings: { label: 'Bookings', component: Bookings, roles: ['user', 'guru', 'admin'], description: 'Track and manage your bookings.' },
-      slots: { label: 'Availability', component: GuruAvailability, roles: ['guru', 'admin'], description: 'Manage your consultation time slots.' },
-      pricing: { label: 'Pricing', component: ConsultationPricing, roles: ['guru', 'admin'], description: 'Set your consultation rates.' },
+      bookings: { label: 'Bookings', component: Bookings, roles: ['user', 'guru', 'admin'], description: 'Your consultation history and upcoming sessions.' },
+      slots: { label: 'Availability', component: GuruAvailability, roles: ['guru', 'admin'], description: 'Define your available slots.' },
+      pricing: { label: 'Pricing', component: ConsultationPricing, roles: ['guru', 'admin'], description: 'Set your hourly rate.' },
       analytics: { label: 'Analytics', component: ConsultAnalytics, roles: ['admin'], description: 'Consultation performance metrics.' },
     },
   },
   forums: {
     label: 'Forums',
     tabs: {
-      overview: { label: 'Overview', component: ForumsOverview, roles: ['user', 'guru', 'admin'], description: 'Explore forum categories and trending topics.' },
-      threads: { label: 'Threads', component: MyThreadsWithChips, roles: ['user', 'guru', 'admin'], description: 'Questions and discussions you\'ve created.' },
-      moderation: { label: 'Moderation', component: ForumsModerationQueue, roles: ['guru', 'admin'], description: 'Review flagged forum content.' },
+      overview: { label: 'Overview', component: ForumsOverview, roles: ['user', 'guru', 'admin'], description: 'Your forum activity at a glance.' },
+      threads: { label: 'My Threads', component: MyThreadsWithChips, roles: ['user', 'guru', 'admin'], description: 'Your questions and answers.' },
+      moderation: { label: 'Moderation', component: ForumModerationAdmin, roles: ['guru', 'admin'], description: 'Review and resolve flagged posts.' },
     },
   },
   users: {
@@ -96,6 +112,7 @@ const tabRegistry: Record<string, SectionConfig> = {
     label: 'Settings',
     tabs: {
       site: { label: 'Site', component: SiteSettings, roles: ['admin'], description: 'Configure global platform settings.' },
+      database: { label: 'Database', component: DatabaseManager, roles: ['admin'], description: 'Manage curriculum, exams, and knowledge base.' },
     },
   },
 };
