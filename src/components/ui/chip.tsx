@@ -16,7 +16,7 @@ export type ChipProps = {
 } & VariantProps<typeof chipVariants>;
 
 const chipVariants = cva(
-  "inline-flex items-center gap-1 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 select-none disabled:opacity-50 disabled:pointer-events-none",
+  "inline-flex items-center gap-1 rounded-full border transition-interactive focus-ring select-none disabled:opacity-50 disabled:pointer-events-none",
   {
     variants: {
       variant: {
