@@ -18,6 +18,9 @@ const EXAM_CODE_MAP: Record<ExamName, string> = {
   "MRCEM Primary": "MRCEM_Primary",
   "MRCEM Intermediate SBA": "MRCEM_SBA",
   "FRCEM SBA": "FRCEM_SBA",
+  "FCPS Part 1 – Pakistan": "FCPS_PART1",
+  "FCPS IMM – Pakistan": "FCPS_IMM",
+  "FCPS Part 2 – Pakistan": "FCPS_PART2",
 };
 
 const TIME_OPTIONS = [

@@ -12,11 +12,14 @@ import { Badge } from "@/components/ui/badge";
 import { Chip } from "@/components/ui/chip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-type ExamCode = "MRCEM_Primary" | "MRCEM_SBA" | "FRCEM_SBA";
+type ExamCode = "MRCEM_Primary" | "MRCEM_SBA" | "FRCEM_SBA" | "FCPS_PART1" | "FCPS_IMM" | "FCPS_PART2";
 const EXAM_LABELS: Record<ExamCode, string> = {
   MRCEM_Primary: "MRCEM Primary",
-  MRCEM_SBA: "MRCEM SBA",
+  MRCEM_SBA: "MRCEM SBA", 
   FRCEM_SBA: "FRCEM SBA",
+  FCPS_PART1: "FCPS Part 1 – Pakistan",
+  FCPS_IMM: "FCPS IMM – Pakistan",
+  FCPS_PART2: "FCPS Part 2 – Pakistan",
 };
 
 interface ReviewedRow {
@@ -289,6 +292,9 @@ export default function ReviewedQuestionBank({ embedded = false }: { embedded?: 
                     <SelectItem value="MRCEM_Primary">MRCEM Primary</SelectItem>
                     <SelectItem value="MRCEM_SBA">MRCEM SBA</SelectItem>
                     <SelectItem value="FRCEM_SBA">FRCEM SBA</SelectItem>
+                    <SelectItem value="FCPS_PART1">FCPS Part 1 – Pakistan</SelectItem>
+                    <SelectItem value="FCPS_IMM">FCPS IMM – Pakistan</SelectItem>
+                    <SelectItem value="FCPS_PART2">FCPS Part 2 – Pakistan</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={topicFilter || "ALL"} onValueChange={(v)=>{ setTopicFilter(v === "ALL" ? "" : v); setPage(1); }}>

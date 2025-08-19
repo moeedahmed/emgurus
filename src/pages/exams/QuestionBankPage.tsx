@@ -23,11 +23,14 @@ const demo: ReviewedQuestionRow[] = Array.from({ length: 5 }).map((_, i) => ({
 // Map human-readable exam names to backend enum codes
 // This aligns the UI selection with the review_exam_questions.exam_type values
 // Keep the literal types so Supabase types infer correctly
-export type ExamCode = "MRCEM_PRIMARY" | "MRCEM_SBA" | "FRCEM_SBA";
+export type ExamCode = "MRCEM_PRIMARY" | "MRCEM_SBA" | "FRCEM_SBA" | "FCPS_PART1" | "FCPS_IMM" | "FCPS_PART2";
 export const EXAM_CODE_MAP: Record<ExamName, ExamCode> = {
   "MRCEM Primary": "MRCEM_PRIMARY",
   "MRCEM Intermediate SBA": "MRCEM_SBA",
   "FRCEM SBA": "FRCEM_SBA",
+  "FCPS Part 1 – Pakistan": "FCPS_PART1",
+  "FCPS IMM – Pakistan": "FCPS_IMM",
+  "FCPS Part 2 – Pakistan": "FCPS_PART2",
 };
 
 function toReviewedRow(d: unknown): ReviewedQuestionRow {

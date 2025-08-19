@@ -99,7 +99,7 @@ export default function SubmitQuestionNew() {
   const loadDropdownData = async () => {
     try {
       // Load exam types from enum
-      const examTypesData = ['MRCEM_PRIMARY', 'MRCEM_SBA', 'FRCEM_SBA'];
+      const examTypesData = ['MRCEM_PRIMARY', 'MRCEM_SBA', 'FRCEM_SBA', 'FCPS_PART1', 'FCPS_IMM', 'FCPS_PART2'];
       setExamTypes(examTypesData);
 
       // Load topics and curricula from curriculum_map

@@ -75,7 +75,7 @@ export default function QuestionBankNew() {
   const loadDropdownData = async () => {
     try {
       // Load exam types
-      const examTypesData = ['MRCEM_PRIMARY', 'MRCEM_SBA', 'FRCEM_SBA'];
+      const examTypesData = ['MRCEM_PRIMARY', 'MRCEM_SBA', 'FRCEM_SBA', 'FCPS_PART1', 'FCPS_IMM', 'FCPS_PART2'];
       setExamTypes(examTypesData);
 
       // Load all topics
