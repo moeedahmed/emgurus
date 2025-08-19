@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
-import { BookOpen, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings, Stethoscope } from "lucide-react";
+import { BookOpen, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings, Stethoscope, Brain } from "lucide-react";
 import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
 import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
 import ForumsModerationQueue from "@/components/dashboard/forums/ForumsModerationQueue";
@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
@@ -57,6 +58,12 @@ const AdminExamShortcutsBar: React.FC = () => (
     <Button asChild size="sm" variant="outline"><a href="/admin/exams-curation">AI Curation & Assign</a></Button>
     <Button asChild size="sm" variant="outline"><a href="/admin/question-sets">Question Sets</a></Button>
     <Button asChild size="sm" variant="outline"><a href="/admin/marked-questions">Marked Questions</a></Button>
+    <Button asChild variant="outline" size="sm">
+      <Link to="/admin/QuestionGenerator" className="flex items-center">
+        <Brain className="w-4 h-4 mr-2" />
+        Question Generator <Badge variant="secondary" className="ml-2 text-xs">🧪 Experimental</Badge>
+      </Link>
+    </Button>
   </div>
 );
 
