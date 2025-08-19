@@ -72,8 +72,9 @@ const Footer = () => {
         <div className="grid lg:grid-cols-5 gap-4 md:gap-6 mb-6 md:mb-8">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <div className="flex items-center mb-4">
-              <Logo />
+            <div className="flex items-center gap-3 mb-4">
+              <Logo variant="mark" size={32} />
+              <span className="logo-text">EM Gurus</span>
             </div>
             <p className="hidden sm:block text-muted-foreground mb-6 max-w-md">
               Empowering medical professionals with AI-powered learning, 

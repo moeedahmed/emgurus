@@ -9,8 +9,8 @@ export default function Exams() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = "Exams | EM Gurus";
-    const desc = "Targeted MCQs and practice questions with explanations. Learn smarter, score higher, wherever you are.";
+    document.title = "EMGurus Exam Practice • EM Gurus";
+    const desc = "Targeted MCQs for MRCEM Primary, MRCEM SBA, and FRCEM. Learn smarter, score higher.";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { 
       meta = document.createElement('meta'); 
@@ -25,10 +25,10 @@ export default function Exams() {
       {/* Canonical tag for SEO */}
       <link rel="canonical" href={typeof window !== 'undefined' ? window.location.origin + '/exams' : '/exams'} />
       <PageHero 
-        title="Exams" 
-        subtitle="Targeted MCQs and practice questions with explanations. Learn smarter, score higher, wherever you are." 
+        title="EMGurus Exam Practice" 
+        subtitle="Targeted MCQs for MRCEM Primary, MRCEM SBA, and FRCEM. Learn smarter, score higher." 
         align="center" 
-        ctas={[{ label: "Exams Membership", href: "/pricing", variant: "default" }]} 
+        ctas={[{ label: "Exam Membership", href: "/pricing", variant: "outline" }]} 
       />
       <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mx-auto max-w-5xl grid items-stretch gap-6 md:grid-cols-3">
