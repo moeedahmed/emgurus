@@ -84,9 +84,9 @@ const Quiz = () => {
                       onClick={() => setSelectedOption('realtime')}
                     >
                       <div className="text-center mb-6">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Zap className="w-8 h-8 text-white" />
-                        </div>
+                         <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                           <Zap className="w-8 h-8 text-primary-foreground" />
+                         </div>
                         <h3 className="text-xl font-semibold mb-2">AI Real-time Questions</h3>
                         <p className="text-muted-foreground">
                           Fresh questions generated instantly by AI based on your selected topics
@@ -109,7 +109,7 @@ const Quiz = () => {
                       </div>
 
                       <div className="mb-6">
-                        <Badge variant="outline" className="text-amber-600 border-amber-600">
+                        <Badge variant="outline" className="text-orange-600 border-orange-600">
                           <Clock className="w-3 h-3 mr-1" />
                           Not Guru-reviewed
                         </Badge>
@@ -122,9 +122,9 @@ const Quiz = () => {
                       onClick={() => setSelectedOption('reviewed')}
                     >
                       <div className="text-center mb-6">
-                        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <CheckCircle className="w-8 h-8 text-white" />
-                        </div>
+                         <div className="w-16 h-16 bg-gradient-accent rounded-full flex items-center justify-center mx-auto mb-4">
+                           <CheckCircle className="w-8 h-8 text-accent-foreground" />
+                         </div>
                         <h3 className="text-xl font-semibold mb-2">Guru-Reviewed Questions</h3>
                         <p className="text-muted-foreground">
                           Curated question bank reviewed and approved by medical experts

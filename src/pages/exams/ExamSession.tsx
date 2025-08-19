@@ -317,7 +317,7 @@ export default function ExamSession() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className="text-sm text-muted-foreground">Time Remaining</div>
-              <div className={`text-lg font-mono font-semibold ${timeLeft < 300 ? 'text-destructive' : ''}`}>
+              <div className={`text-lg font-semibold ${timeLeft < 300 ? 'text-destructive' : ''}`}>
                 {formatTime(timeLeft)}
               </div>
             </div>
@@ -330,7 +330,7 @@ export default function ExamSession() {
             {markedCount > 0 && (
               <div className="text-right">
                 <div className="text-sm text-muted-foreground">Marked</div>
-                <div className="text-lg font-semibold text-orange-600">
+                <div className="text-lg font-semibold text-orange-600 dark:text-orange-400">
                   {markedCount}
                 </div>
               </div>
@@ -387,11 +387,11 @@ export default function ExamSession() {
                     <ArrowLeft className="h-4 w-4" />
                     Back to Config
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={finishExam}
-                    className="text-orange-600"
-                  >
+                   <Button 
+                     variant="outline" 
+                     onClick={finishExam}
+                     className="text-orange-600 dark:text-orange-400"
+                   >
                     Finish Early
                   </Button>
                 </div>

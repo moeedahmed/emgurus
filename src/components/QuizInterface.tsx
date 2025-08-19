@@ -180,7 +180,7 @@ const QuizInterface = ({ config, onBack }: QuizInterfaceProps) => {
             </h2>
             
             {currentQuestion.is_ai_generated && (
-              <Badge variant="outline" className="text-amber-600 border-amber-600 mb-4">
+              <Badge variant="outline" className="text-orange-600 border-orange-600 mb-4">
                 AI Generated {currentQuestion.reviewed_by ? '• Guru Reviewed' : '• Not Reviewed'}
               </Badge>
             )}
@@ -237,12 +237,12 @@ const QuizInterface = ({ config, onBack }: QuizInterfaceProps) => {
           {/* Explanation */}
           {showExplanation && (
             <div className="space-y-4">
-              <div className={`p-4 rounded-lg border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+              <div className={`p-4 rounded-lg border ${isCorrect ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'}`}>
                 <div className="flex items-center gap-2 mb-2">
                   {isCorrect ? (
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-600" />
+                   <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                 ) : (
+                   <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
                   )}
                   <span className="font-medium">
                     {isCorrect ? 'Correct!' : 'Incorrect'}

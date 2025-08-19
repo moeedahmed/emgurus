@@ -462,7 +462,7 @@ export default function PracticeSession() {
             {markedCount > 0 && (
               <div className="text-right">
                 <div className="text-sm text-muted-foreground">Marked</div>
-                <div className="text-lg font-semibold text-orange-600">
+                <div className="text-lg font-semibold text-orange-600 dark:text-orange-400">
                   {markedCount}
                 </div>
               </div>

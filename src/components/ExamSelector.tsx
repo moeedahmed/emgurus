@@ -53,7 +53,7 @@ const ExamSelector = ({ onStartQuiz, type }: ExamSelectorProps) => {
             </h2>
           </div>
           {type === 'realtime' ? (
-            <Badge variant="outline" className="text-amber-600 border-amber-600">
+            <Badge variant="outline" className="text-orange-600 border-orange-600">
               Not Guru-reviewed
             </Badge>
           ) : (

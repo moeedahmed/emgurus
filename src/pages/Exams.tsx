@@ -39,7 +39,7 @@ export default function Exams() {
               <div className="flex items-center gap-2 mb-2">
                 <Zap className="h-5 w-5 text-primary" />
                 <h3 className="text-xl font-semibold">AI Mode</h3>
-                <span className="ml-2 align-middle text-xs px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700">Beta</span>
+                <span className="ml-2 align-middle text-xs px-2 py-0.5 rounded-full border bg-primary/10 text-primary">Beta</span>
               </div>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• AI-generated questions on demand</li>
