@@ -21,7 +21,7 @@ const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const [attemptedSeed, setAttemptedSeed] = useState(false);
   
   useEffect(() => {
-    const title = "Book a Guru for Career Guidance | EMGurus";
+    const title = "Consults | EM Gurus";
     document.title = title;
     // meta description
     let meta = document.querySelector('meta[name="description"]');

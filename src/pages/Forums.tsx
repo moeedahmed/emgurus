@@ -45,7 +45,7 @@ const Forums = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const [topic, setTopic] = useState<string>(searchParams.get('topic') || "");
 
   useEffect(() => {
-    document.title = "Forums | EMGurus";
+    document.title = "Forums | EM Gurus";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name','description'); document.head.appendChild(meta); }
     meta.setAttribute('content','Browse all EMGurus forum threads. Filter by section.');
@@ -195,7 +195,7 @@ const Forums = ({ embedded = false }: { embedded?: boolean } = {}) => {
               <section className="space-y-4">
                 {filtered.map((t) => (
                   <Link key={t.id} to={`/threads/${t.id}`} className="block group">
-                    <Card className="p-5 border-2 transition hover:shadow-md hover:border-primary/20 rounded-xl">
+                    <Card className="p-5 transition hover:shadow-md hover:border-primary/20 rounded-xl">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
                           <h2 className="text-lg font-semibold group-hover:text-primary transition-colors">{t.title}</h2>
