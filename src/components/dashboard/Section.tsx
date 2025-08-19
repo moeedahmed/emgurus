@@ -13,7 +13,7 @@ const Section: React.FC<SectionProps> = ({ id, title, subtitle, actions, childre
     <section id={id} className="mb-8">
       <div className="flex items-end justify-between gap-3 mb-3">
         <div>
-          <h2 className="text-2xl font-semibold">{title}</h2>
+          <h2 className="heading-md">{title}</h2>
           {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}

@@ -239,4 +239,65 @@ All colors MUST be HSL.
   .text-balance {
     text-wrap: balance;
   }
+
+/* ============= TYPOGRAPHY SYSTEM ============= */
+
+/* Modern Typography Scale */
+.heading-display {
+  @apply font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground;
+}
+
+.heading-xl {
+  @apply font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground;
+}
+
+.heading-lg {
+  @apply font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground;
+}
+
+.heading-md {
+  @apply font-display text-xl sm:text-2xl font-semibold tracking-tight text-foreground;
+}
+
+.heading-sm {
+  @apply font-sans text-lg font-semibold tracking-tight text-foreground;
+}
+
+.heading-xs {
+  @apply font-sans text-base font-semibold tracking-tight text-foreground;
+}
+
+/* Body Typography */
+.body-lg {
+  @apply font-sans text-lg leading-relaxed text-foreground;
+}
+
+.body-md {
+  @apply font-sans text-base leading-relaxed text-foreground;
+}
+
+.body-sm {
+  @apply font-sans text-sm leading-relaxed text-muted-foreground;
+}
+
+.body-xs {
+  @apply font-sans text-xs leading-relaxed text-muted-foreground;
+}
+
+/* Interactive Typography */
+.text-button {
+  @apply font-sans text-sm font-medium tracking-wide text-foreground;
+}
+
+.text-link {
+  @apply font-sans text-sm font-medium text-primary hover:text-primary-glow transition-interactive;
+}
+
+.text-caption {
+  @apply font-sans text-xs font-medium tracking-wide uppercase text-muted-foreground;
+}
+
+/* Logo Typography */
+.logo-text {
+  @apply font-display font-bold text-xl tracking-tight text-foreground;
 }

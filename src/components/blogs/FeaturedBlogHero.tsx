@@ -42,7 +42,7 @@ export default function FeaturedBlogHero({ post }: FeaturedBlogHeroProps) {
             )}
             {date && <span className="text-xs text-muted-foreground">{date}</span>}
           </div>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold max-w-3xl">
+          <h2 className="heading-lg max-w-3xl">
             {post.title}
           </h2>
           {post.excerpt && (

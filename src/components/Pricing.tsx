@@ -127,7 +127,7 @@ const Pricing = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
+          <h2 className="heading-xl mb-6">
             Choose Your
             <span className="text-transparent bg-clip-text bg-gradient-hero block">
               Learning Path
@@ -171,7 +171,7 @@ const Pricing = () => {
                 <div className="text-center mb-6">
                   <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
                   <div className="mb-2">
-                    <span className="text-3xl font-bold">{plan.price}</span>
+                    <span className="heading-lg">{plan.price}</span>
                     <span className="text-muted-foreground">/{plan.period}</span>
                   </div>
                   <p className="text-sm text-muted-foreground">{plan.description}</p>

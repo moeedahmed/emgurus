@@ -14,7 +14,7 @@ const Hero = () => {
           {/* Content */}
           <div className="animate-fade-in">
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
+            <h1 className="heading-display mb-6">
               Master EM Exams.
               <span className="text-transparent bg-clip-text bg-gradient-hero block">
                 Get Mentored.

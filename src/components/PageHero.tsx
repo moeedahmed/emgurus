@@ -35,7 +35,7 @@ const PageHero = ({ title, subtitle, align = "left", eyebrow, ctas = [], classNa
         )}
         <h1
           className={cn(
-            "font-display text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight",
+            "heading-xl",
             isCenter ? "text-center" : "text-left"
           )}
         >

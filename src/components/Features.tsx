@@ -67,7 +67,7 @@ const Features = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
+          <h2 className="heading-xl mb-6">
             Everything You Need to
             <span className="text-transparent bg-clip-text bg-gradient-hero block">
               Excel in Medicine

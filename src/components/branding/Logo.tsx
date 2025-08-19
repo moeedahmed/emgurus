@@ -54,7 +54,7 @@ export default function Logo({ variant = "wordmark", className, size = 32 }: Log
   return (
     <div className={cn("inline-flex items-center gap-3", className)}>
       {Mark}
-      <span className="font-display font-bold text-xl text-foreground tracking-tight">
+      <span className="logo-text">
         EM Gurus
       </span>
     </div>

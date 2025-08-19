@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BookOpen, Mail, Twitter, Linkedin, Youtube, Instagram, Link as LinkIcon, PlaySquare } from "lucide-react";
+import Logo from "@/components/branding/Logo";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
@@ -71,12 +72,7 @@ const Footer = () => {
         <div className="grid lg:grid-cols-5 gap-4 md:gap-6 mb-6 md:mb-8">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold text-foreground">EM Gurus</span>
-            </div>
+            <Logo className="mb-4" />
             <p className="hidden sm:block text-muted-foreground mb-6 max-w-md">
               Empowering medical professionals with AI-powered learning, 
               expert mentorship, and collaborative education.

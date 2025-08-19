@@ -73,8 +73,8 @@ export default {
 				}
 			},
 			fontFamily: { 
-				sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica", "Arial", "Noto Sans", "Segoe UI Emoji"],
-				display: ["Playfair Display", "serif"],
+				sans: ["Inter", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+				display: ["Inter", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
