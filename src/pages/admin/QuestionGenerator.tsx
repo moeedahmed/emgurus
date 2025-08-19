@@ -113,7 +113,7 @@ const QuestionGenerator: React.FC = () => {
     const loadTopics = async () => {
       setLoadingTopics(true);
       try {
-        // Enhanced exam slug to enum mapping
+        // Enhanced exam slug to enum mapping - centralized source of truth
         const examTypeMap: Record<string, string> = {
           'mrcem-primary': 'MRCEM_PRIMARY',
           'mrcem-sba': 'MRCEM_SBA', 
@@ -124,7 +124,7 @@ const QuestionGenerator: React.FC = () => {
           'fcps-part2-pk': 'FCPS_PART2',
           'fcps-imm': 'FCPS_IMM',
           'fcps-imm-pk': 'FCPS_IMM',
-          'fcps-em-pk': 'FCPS_IMM', // Emergency Medicine maps to IMM
+          'fcps-em-pk': 'FCPS_IMM', // Emergency Medicine maps to IMM for curriculum
           'fcps-emergency-medicine': 'FCPS_IMM'
         };
 
@@ -190,7 +190,7 @@ const QuestionGenerator: React.FC = () => {
       ? ` on ${topics.find(t => t.value === config.topic)?.label || config.topic}`
       : '';
     
-    let prompt = `Generate ${config.count} ${config.difficulty}-level MCQs${topicText} for the ${examTitle} exam using the mapped curriculum.`;
+    let prompt = `Generate ${config.count} ${config.difficulty}-level MCQs${topicText} for the ${examTitle} exam using the latest curriculum guidelines.`;
     
     if (config.prompt) {
       prompt += `\n\nAdditional instructions: ${config.prompt}`;
@@ -537,10 +537,17 @@ const QuestionGenerator: React.FC = () => {
                   ) : (
                     <>
                       <Brain className="w-4 h-4 mr-2" />
-                      Generate Questions
+                      Generate Questions (Beta)
                     </>
                   )}
                 </Button>
+                
+                {/* Analytics logging note */}
+                {config.exam && config.difficulty && config.count && (
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Request will be logged: {config.exam} | {config.topic || 'All Topics'} | {config.difficulty}
+                  </div>
+                )}
               </div>
             </Card>
 

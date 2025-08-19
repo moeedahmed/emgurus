@@ -51,26 +51,35 @@ const DatabaseManager = () => {
         }
       }
 
-      // Legacy FCPS EM entry for backwards compatibility
-      const { data: existingExam } = await supabase
-        .from('taxonomy_terms')
-        .select('id')
-        .eq('slug', 'fcps-em-pk')
-        .eq('kind', 'exam')
-        .maybeSingle();
+      // Additional MRCEM/FRCEM entries for completeness
+      const additionalExams = [
+        { slug: 'fcps-em-pk', title: 'FCPS Emergency Medicine (Pakistan)', description: 'Fellowship of College of Physicians and Surgeons Emergency Medicine program (Pakistan)' },
+        { slug: 'mrcem-primary', title: 'MRCEM Primary', description: 'Membership of Royal College of Emergency Medicine Primary exam' },
+        { slug: 'mrcem-sba', title: 'MRCEM SBA', description: 'Membership of Royal College of Emergency Medicine Single Best Answer exam' },
+        { slug: 'frcem-sba', title: 'FRCEM SBA', description: 'Fellowship of Royal College of Emergency Medicine Single Best Answer exam' }
+      ];
 
-      if (!existingExam) {
-        await supabase
+      for (const examData of additionalExams) {
+        const { data: existingExam } = await supabase
           .from('taxonomy_terms')
-          .insert({
-            slug: 'fcps-em-pk',
-            title: 'FCPS Emergency Medicine (Pakistan)',
-            kind: 'exam',
-            description: 'Fellowship of College of Physicians and Surgeons Emergency Medicine program (Pakistan)'
-          });
-        newRows++;
-      } else {
-        skippedRows++;
+          .select('id')
+          .eq('slug', examData.slug)
+          .eq('kind', 'exam')
+          .maybeSingle();
+
+        if (!existingExam) {
+          await supabase
+            .from('taxonomy_terms')
+            .insert({
+              slug: examData.slug,
+              title: examData.title,
+              kind: 'exam',
+              description: examData.description
+            });
+          newRows++;
+        } else {
+          skippedRows++;
+        }
       }
 
       // B) Curriculum entries
@@ -92,27 +101,32 @@ const DatabaseManager = () => {
       let sloNumber = 1;
       for (const { domain, capabilities } of curriculumData) {
         for (const capability of capabilities) {
-          const { data: existingSlo } = await supabase
-            .from('curriculum_map')
-            .select('id')
-            .eq('exam_type', 'OTHER')
-            .eq('slo_title', capability)
-            .eq('key_capability_title', domain)
-            .maybeSingle();
-
-          if (!existingSlo) {
-            await supabase
+          // Create curriculum entries for multiple exam types
+          const examTypes: ('FCPS_IMM' | 'FCPS_PART2' | 'OTHER')[] = ['FCPS_IMM', 'FCPS_PART2', 'OTHER'];
+          
+          for (const examType of examTypes) {
+            const { data: existingSlo } = await supabase
               .from('curriculum_map')
-              .insert({
-                exam_type: 'OTHER' as const,
-                slo_number: sloNumber,
-                slo_title: capability,
-                key_capability_number: Math.ceil(sloNumber / 4), // Group by domain
-                key_capability_title: domain
-              });
-            newRows++;
-          } else {
-            skippedRows++;
+              .select('id')
+              .eq('exam_type', examType)
+              .eq('slo_title', capability)
+              .eq('key_capability_title', domain)
+              .maybeSingle();
+
+            if (!existingSlo) {
+              await supabase
+                .from('curriculum_map')
+                .insert({
+                  exam_type: examType,
+                  slo_number: sloNumber,
+                  slo_title: capability,
+                  key_capability_number: Math.ceil(sloNumber / 4), // Group by domain
+                  key_capability_title: domain
+                });
+              newRows++;
+            } else {
+              skippedRows++;
+            }
           }
           sloNumber++;
         }
