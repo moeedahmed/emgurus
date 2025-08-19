@@ -166,7 +166,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
       {!embedded && (
         <PageHero
           title="Blogs"
-          subtitle="Evidence-based articles, exam guidance, and clinical pearls."
+          subtitle="Read and share insights from the EM community."
           align="center"
           ctas={[{ label: "Write Blog", href: "/blogs/editor/new", variant: "default" }]}
         />

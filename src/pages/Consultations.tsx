@@ -200,9 +200,9 @@ const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
       {!embedded && (
         <PageHero
           title="Consults"
-          subtitle="Filter by specialty, country, or exam to find the right mentor."
+          subtitle="Get guidance and expert support when you need it most."
           align="center"
-          ctas={[{ label: "Consultation monthly membership", href: "/pricing", variant: "outline" }]}
+          ctas={[{ label: "Consults Membership", href: "/pricing", variant: "default" }]}
         />
       )}
 

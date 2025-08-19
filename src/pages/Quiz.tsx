@@ -56,9 +56,9 @@ const Quiz = () => {
     <div className="min-h-screen bg-background">
       <PageHero
         title="Exams"
-        subtitle="Practice with AI-generated or Guru-reviewed questions — pick your mode below."
+        subtitle="Prepare, practice, and succeed with structured exam resources."
         align="center"
-        ctas={[{ label: "Back to Home", href: "/", variant: "outline" }]}
+        ctas={[{ label: "Exams Membership", href: "/pricing", variant: "default" }]}
       />
 
           {/* Main Content */}

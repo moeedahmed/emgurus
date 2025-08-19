@@ -105,9 +105,9 @@ const Forums = ({ embedded = false }: { embedded?: boolean } = {}) => {
       {!embedded && (
         <PageHero
           title="Forums"
-          subtitle="All threads. Filter by section, or start a new discussion."
+          subtitle="Start discussions and connect with peers in EM."
           align="center"
-          ctas={[{ label: "Start a Thread", href: "?new=1", variant: "outline" }]}
+          ctas={[{ label: "Start Thread", href: "?new=1", variant: "default" }]}
         />
       )}
 

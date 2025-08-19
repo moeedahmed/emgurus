@@ -14,9 +14,9 @@ const Pricing = () => {
     }
 
     const tierMap: Record<string, 'exam' | 'consultation' | 'premium'> = {
-      Exams: 'exam',
-      Consultation: 'consultation',
-      Premium: 'premium',
+      "Exams Membership": 'exam',
+      "Consults Membership": 'consultation',
+      "Premium Membership": 'premium',
     };
     const tier = tierMap[planName as keyof typeof tierMap];
     if (!tier) return;
@@ -57,7 +57,7 @@ const Pricing = () => {
       popular: false,
     },
     {
-      name: "Exams",
+      name: "Exams Membership",
       price: "$29",
       period: "month",
       description: "Comprehensive exam preparation with AI assistance",
@@ -75,17 +75,17 @@ const Pricing = () => {
         "Expert consults",
         "Priority support",
       ],
-      buttonText: "Start Exam Prep",
+      buttonText: "Exams Membership",
       buttonVariant: "default" as const,
       popular: true,
     },
     {
-      name: "Consultation",
+      name: "Consults Membership",
       price: "$79",
       period: "month",
       description: "Full access including expert mentorship",
       features: [
-        "Everything in Exams plan",
+        "Everything in Exams Membership",
         "1:1 expert consults",
         "Guru profile access",
         "Priority booking",
@@ -95,17 +95,17 @@ const Pricing = () => {
         "Priority support",
       ],
       notIncluded: [],
-      buttonText: "Book Consults",
+      buttonText: "Consults Membership",
       buttonVariant: "accent" as const,
       popular: false,
     },
     {
-      name: "Premium",
+      name: "Premium Membership",
       price: "$149",
       period: "month",
       description: "Complete platform access with unlimited features",
       features: [
-        "Everything in Consultation plan",
+        "Everything in Consults Membership",
         "Unlimited expert sessions",
         "Advanced AI features",
         "Custom study materials",
@@ -115,7 +115,7 @@ const Pricing = () => {
         "24/7 premium support",
       ],
       notIncluded: [],
-      buttonText: "Go Premium",
+      buttonText: "Premium Membership",
       buttonVariant: "hero" as const,
       popular: false,
       premium: true,

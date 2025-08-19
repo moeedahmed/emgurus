@@ -8,21 +8,24 @@ const Hero = () => {
   
   const navigate = useNavigate();
   return (
-    <section className="section-spacing relative overflow-hidden bg-gradient-to-br from-background via-secondary/20 to-accent/10">
+    <section className="relative overflow-hidden bg-gradient-to-br from-background via-secondary/20 to-accent/10 py-16 lg:py-20">
       <div className="page-container">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content */}
           <div className="animate-fade-in content-spacing text-center lg:text-left">
+            {/* Hero title with grey background like other sections */}
+            <div className="relative mb-6">
+              <span className="pointer-events-none absolute -top-10 right-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+              <h1 className="heading-display">
+                Master EM Exams.
+                <span className="text-transparent bg-clip-text bg-gradient-hero block">
+                  Get Mentored.
+                </span>
+              </h1>
+            </div>
 
-            <h1 className="heading-display mb-6">
-              Master EM Exams.
-              <span className="text-transparent bg-clip-text bg-gradient-hero block">
-                Get Mentored.
-              </span>
-            </h1>
-
-            <p className="body-lg text-muted-foreground mb-8">
-              AI practice, guru‑reviewed questions, and 1:1 mentorship built for emergency medicine clinicians.
+            <p className="body-lg text-muted-foreground mb-8 max-w-2xl mx-auto lg:mx-0">
+              Prepare, practice, and succeed with structured exam resources and expert guidance.
             </p>
 
             <div className="flex-responsive justify-center lg:justify-start">
