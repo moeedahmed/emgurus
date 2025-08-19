@@ -28,7 +28,7 @@ const Hero = () => {
               Prepare, practice, and succeed with structured exam resources and expert guidance.
             </p>
 
-            <div className="flex-responsive justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
                 variant="default"
                 size="lg"
