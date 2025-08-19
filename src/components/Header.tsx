@@ -13,6 +13,7 @@ import { listBlogs } from "@/lib/blogsApi";
 import { supabase } from "@/integrations/supabase/client";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
 import GlobalSearch from "@/components/GlobalSearch";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -100,16 +101,16 @@ const Header = () => {
           </nav>
 
           {/* Desktop User Menu */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-2">
+            {/* Theme toggle */}
+            <ThemeToggle />
             {/* Search trigger */}
             <Button variant="ghost" size="icon" aria-label="Search" onClick={() => setSearchOpen(true)}>
               <SearchIcon className="h-5 w-5" />
             </Button>
             {/* Notifications */}
             {user && (
-              <div className="mr-1">
-                <NotificationsBell />
-              </div>
+              <NotificationsBell />
             )}
             {user ? (
               <DropdownMenu>
@@ -151,13 +152,12 @@ const Header = () => {
 
           {/* Mobile quick actions + Menu */}
           <div className="md:hidden flex items-center gap-1">
+            <ThemeToggle />
             <Button variant="ghost" size="icon" aria-label="Search" onClick={() => setSearchOpen(true)}>
               <SearchIcon className="h-5 w-5" />
             </Button>
             {user && (
-              <div className="-mr-1">
-                <NotificationsBell />
-              </div>
+              <NotificationsBell />
             )}
             <button
               aria-label="Toggle menu"

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import AIGuru from "@/components/ai/AIGuru";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 function needsOnboarding(profile: any): boolean {
   if (!profile) return true;
@@ -81,17 +82,18 @@ const SiteLayout = () => {
   }, [user?.id]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col transition-colors duration-300">
       <Header />
       {showReminderBanner && (
-        <div className="bg-primary/10 border-b border-primary/20 px-4 py-3 text-sm">
+        <div className="bg-accent/10 border-b border-accent/20 px-4 py-3 text-sm animate-slide-up">
           <div className="container mx-auto flex items-center justify-between gap-4">
-            <div>
+            <div className="text-foreground">
               Complete your profile to get the best experience (about 2 minutes).
             </div>
             <div className="flex items-center gap-2">
               <Button size="sm" onClick={() => navigate('/profile')}>Complete now</Button>
               <Button variant="ghost" size="sm" onClick={dismissBanner}>Dismiss</Button>
+              <ThemeToggle />
             </div>
           </div>
         </div>

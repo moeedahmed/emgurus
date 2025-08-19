@@ -86,13 +86,13 @@ All colors MUST be HSL.
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 224 71% 4%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 224 71% 4%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
+    --primary: 213 89% 55%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -101,15 +101,15 @@ All colors MUST be HSL.
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 178 85% 45%;
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --ring: 213 89% 55%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -137,6 +137,31 @@ All colors MUST be HSL.
 }
 
 @layer components {
+  /* Typography scale */
+  .heading-xl {
+    @apply text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground;
+  }
+
+  .heading-lg {
+    @apply text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-foreground;
+  }
+
+  .heading-md {
+    @apply text-xl md:text-2xl font-semibold tracking-tight text-foreground;
+  }
+
+  .body-lg {
+    @apply text-lg text-foreground leading-relaxed;
+  }
+
+  .body-md {
+    @apply text-base text-foreground leading-relaxed;
+  }
+
+  .caption {
+    @apply text-sm text-muted-foreground;
+  }
+
   /* Motion defaults */
   .animate-fade-in {
     animation: fade-in 0.3s ease-out;
@@ -160,12 +185,12 @@ All colors MUST be HSL.
   }
 
   .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background;
   }
 
   /* Card variants */
   .card-elevated {
-    @apply bg-card border shadow-medium;
+    @apply bg-card border shadow-medium animate-fade-in;
   }
 
   .card-ghost {
@@ -175,6 +200,15 @@ All colors MUST be HSL.
   /* Loading states */
   .skeleton-pulse {
     @apply animate-pulse bg-muted;
+  }
+
+  /* Responsive design utilities */
+  .grid-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6;
+  }
+
+  .flex-responsive {
+    @apply flex flex-col sm:flex-row gap-4;
   }
 }
 
