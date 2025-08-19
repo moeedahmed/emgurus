@@ -94,6 +94,7 @@ All colors MUST be HSL.
 
     --primary: 213 89% 55%;
     --primary-foreground: 222.2 47.4% 11.2%;
+    --primary-glow: 213 89% 65%;
 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -104,12 +105,20 @@ All colors MUST be HSL.
     --accent: 178 85% 45%;
     --accent-foreground: 210 40% 98%;
 
+    --success: 142 76% 45%;
+    --success-foreground: 222.2 84% 4.9%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 222.2 84% 4.9%;
+
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 213 89% 55%;
+
+    /* Sidebar dark mode */
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -240,65 +249,122 @@ All colors MUST be HSL.
     text-wrap: balance;
   }
 
-  /* ============= TYPOGRAPHY SYSTEM ============= */
+  /* ============= REFINED TYPOGRAPHY SYSTEM ============= */
 
-  /* Modern Typography Scale */
+  /* Display Typography - For hero sections and major headings */
   .heading-display {
     @apply font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
   }
 
+  /* Large Headings - Main page headings */
   .heading-xl {
     @apply font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
   }
 
+  /* Medium Headings - Section headings */
   .heading-lg {
     @apply font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
   }
 
+  /* Small Headings - Subsection headings */
   .heading-md {
     @apply font-display text-xl sm:text-2xl font-semibold tracking-tight text-foreground;
+    line-height: 1.4;
+    letter-spacing: -0.005em;
   }
 
+  /* Mini Headings */
   .heading-sm {
     @apply font-sans text-lg font-semibold tracking-tight text-foreground;
+    line-height: 1.5;
   }
 
   .heading-xs {
     @apply font-sans text-base font-semibold tracking-tight text-foreground;
+    line-height: 1.5;
   }
 
-  /* Body Typography */
+  /* Body Typography - Optimized for readability */
   .body-lg {
     @apply font-sans text-lg leading-relaxed text-foreground;
+    line-height: 1.7;
   }
 
   .body-md {
     @apply font-sans text-base leading-relaxed text-foreground;
+    line-height: 1.6;
   }
 
   .body-sm {
     @apply font-sans text-sm leading-relaxed text-muted-foreground;
+    line-height: 1.5;
   }
 
   .body-xs {
     @apply font-sans text-xs leading-relaxed text-muted-foreground;
+    line-height: 1.4;
   }
 
   /* Interactive Typography */
   .text-button {
     @apply font-sans text-sm font-medium tracking-wide text-foreground;
+    letter-spacing: 0.025em;
   }
 
   .text-link {
-    @apply font-sans text-sm font-medium text-primary hover:text-primary-glow transition-interactive;
+    @apply font-sans text-sm font-medium text-primary hover:text-primary-glow transition-interactive focus-ring;
+    text-decoration-line: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 3px;
+    transition: text-decoration-color 200ms ease;
+  }
+
+  .text-link:hover {
+    text-decoration-color: currentColor;
   }
 
   .text-caption {
     @apply font-sans text-xs font-medium tracking-wide uppercase text-muted-foreground;
+    letter-spacing: 0.05em;
   }
 
-  /* Logo Typography */
+  /* Logo Typography - Optimized for brand recognition */
   .logo-text {
     @apply font-display font-bold text-xl tracking-tight text-foreground;
+    letter-spacing: -0.01em;
+  }
+
+  /* ============= RESPONSIVE LAYOUT UTILITIES ============= */
+
+  /* Flexbox utilities */
+  .flex-responsive {
+    @apply flex flex-col sm:flex-row gap-4;
+  }
+
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+
+  /* Animation utilities */
+  .animate-in {
+    @apply animate-fade-in;
+  }
+
+  .hover-lift {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+
+  .hover-glow {
+    @apply transition-shadow duration-200 hover:shadow-medium;
   }
 }

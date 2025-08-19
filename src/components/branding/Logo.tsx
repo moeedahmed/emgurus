@@ -16,9 +16,10 @@ export default function Logo({ variant = "wordmark", className, size = 32 }: Log
       height={size}
       viewBox="0 0 32 32"
       className={cn("shrink-0", className)}
+      style={{ imageRendering: 'auto' }}
     >
       <defs>
-        <linearGradient id="em-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={`em-gradient-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" className="[stop-color:hsl(var(--primary))]" />
           <stop offset="100%" className="[stop-color:hsl(var(--primary-glow))]" />
         </linearGradient>
@@ -29,7 +30,7 @@ export default function Logo({ variant = "wordmark", className, size = 32 }: Log
         cx="16" 
         cy="16" 
         r="15" 
-        fill="url(#em-gradient)"
+        fill={`url(#em-gradient-${size})`}
         className="drop-shadow-soft"
       />
       

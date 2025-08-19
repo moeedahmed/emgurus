@@ -8,11 +8,11 @@ const Hero = () => {
   
   const navigate = useNavigate();
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-background via-secondary/20 to-accent/10 pt-6 md:pt-10 pb-16 lg:pb-24">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="section-spacing relative overflow-hidden bg-gradient-to-br from-background via-secondary/20 to-accent/10">
+      <div className="page-container">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content */}
-          <div className="animate-fade-in">
+          <div className="animate-fade-in content-spacing">
 
             <h1 className="heading-display mb-6">
               Master EM Exams.
@@ -21,15 +21,15 @@ const Hero = () => {
               </span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-muted-foreground mb-8 leading-relaxed">
+            <p className="body-lg text-muted-foreground mb-8">
               AI practice, guru‑reviewed questions, and 1:1 mentorship built for emergency medicine clinicians.
             </p>
 
-            <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center sm:justify-start">
+            <div className="flex-responsive justify-center sm:justify-start">
               <Button
                 variant="default"
                 size="lg"
-                className="group w-full sm:w-auto max-w-[320px] mx-auto sm:mx-0"
+                className="group w-full sm:w-auto max-w-[320px] hover-lift focus-ring touch-target"
                 onClick={() => navigate('/exams')}
                 role="button"
                 aria-label="Start exam preparation"
@@ -40,7 +40,7 @@ const Hero = () => {
               <Button
                 variant="outline"
                 size="lg"
-                className="group w-full sm:w-auto max-w-[320px] mx-auto sm:mx-0"
+                className="group w-full sm:w-auto max-w-[320px] hover-lift focus-ring touch-target"
                 onClick={() => navigate('/consultations')}
                 role="button"
                 aria-label="Book a Guru consultation"
@@ -51,12 +51,12 @@ const Hero = () => {
                 asChild
                 variant="ghost"
                 size="lg"
-                className="group w-full sm:w-auto max-w-[320px] mx-auto sm:mx-0"
+                className="group w-full sm:w-auto max-w-[320px] hover-lift focus-ring touch-target"
               >
                 <a href="/#pricing" role="button" aria-label="See pricing">See Pricing</a>
               </Button>
             </div>
-            </div>
+          </div>
 
           {/* Hero Image */}
           <div className="relative animate-slide-in">
@@ -73,15 +73,15 @@ const Hero = () => {
             {/* Floating Cards */}
             <div className="absolute -top-4 -right-4 bg-card rounded-lg shadow-medium p-4 border border-border">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-success rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium">AI Tutor Active</span>
+                <div className="w-3 h-3 bg-success rounded-full animate-pulse" aria-hidden="true"></div>
+                <span className="body-sm font-medium">AI Tutor Active</span>
               </div>
             </div>
 
             <div className="absolute -bottom-4 -left-4 bg-card rounded-lg shadow-medium p-4 border border-border">
               <div className="flex items-center space-x-2">
-                <Users className="w-4 h-4 text-accent" />
-                <span className="text-sm font-medium">1,247 online</span>
+                <Users className="w-4 h-4 text-accent" aria-hidden="true" />
+                <span className="body-sm font-medium">1,247 online</span>
               </div>
             </div>
           </div>
