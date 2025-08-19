@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Brain, FileText, Flag, Edit, Trash2, RotateCcw, Save, Users } from 'lucide-react';
+import { Brain, FileText, Flag, Edit, Trash2, RotateCcw, Save, Users, AlertCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 // Mock data for demonstration
 const mockGeneratedQuestions = [
@@ -69,6 +70,12 @@ const QuestionGenerator: React.FC = () => {
   const [drafts, setDrafts] = useState(mockDrafts);
   const [markedQuestions] = useState(mockMarkedQuestions);
   
+  // Database data
+  const [exams, setExams] = useState<Array<{value: string, label: string}>>([]);
+  const [topics, setTopics] = useState<Array<{value: string, label: string}>>([]);
+  const [loadingExams, setLoadingExams] = useState(true);
+  const [loadingTopics, setLoadingTopics] = useState(false);
+  
   // Generate tab state
   const [config, setConfig] = useState({
     exam: '',
@@ -82,6 +89,79 @@ const QuestionGenerator: React.FC = () => {
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
   const [editingDraft, setEditingDraft] = useState<any>(null);
 
+  // Load exams from database
+  useEffect(() => {
+    const loadExams = async () => {
+      setLoadingExams(true);
+      try {
+        const { data, error } = await supabase
+          .from('curriculum_map')
+          .select('exam_type')
+          .not('exam_type', 'is', null);
+        
+        if (error) throw error;
+        
+        // Get unique exam types and map to select options
+        const uniqueExams = [...new Set(data?.map(item => item.exam_type))];
+        const examOptions = uniqueExams.map(exam => ({
+          value: exam || '',
+          label: exam?.replace(/_/g, ' ') || 'Unknown'
+        }));
+        
+        setExams(examOptions);
+      } catch (error) {
+        console.error('Error loading exams:', error);
+        setExams([]);
+      } finally {
+        setLoadingExams(false);
+      }
+    };
+    
+    loadExams();
+  }, []);
+
+  // Load topics when exam changes
+  useEffect(() => {
+    const loadTopics = async () => {
+      if (!config.exam) {
+        setTopics([]);
+        return;
+      }
+      
+      setLoadingTopics(true);
+      try {
+        const { data, error } = await supabase
+          .from('curriculum_map')
+          .select('key_capability_title, slo_title')
+          .eq('exam_type', config.exam as any);
+        
+        if (error) throw error;
+        
+        // Combine key capabilities and SLOs as topic options
+        const topicOptions = [
+          ...new Set([
+            ...data?.map(item => item.key_capability_title),
+            ...data?.map(item => item.slo_title)
+          ])
+        ].filter(Boolean).map(topic => ({
+          value: topic,
+          label: topic
+        }));
+        
+        setTopics(topicOptions);
+      } catch (error) {
+        console.error('Error loading topics:', error);
+        setTopics([]);
+      } finally {
+        setLoadingTopics(false);
+      }
+    };
+    
+    loadTopics();
+    // Reset topic when exam changes
+    setConfig(prev => ({ ...prev, topic: '' }));
+  }, [config.exam]);
+
   // Construct prompt for preview and generation
   const constructPrompt = () => {
     const { exam, topic, difficulty, count, prompt } = config;
@@ -90,13 +170,15 @@ const QuestionGenerator: React.FC = () => {
       return "Please fill in all required fields to see the prompt preview.";
     }
     
-    const examNames = {
-      mrcem: 'MRCEM',
-      frcem: 'FRCEM',
-      other: 'Other'
-    };
+    const examLabel = exams.find(e => e.value === exam)?.label || exam;
+    let basePrompt = `Generate ${count} ${difficulty}-level MCQs on ${topic} for the ${examLabel} exam`;
     
-    let basePrompt = `Generate ${count} ${difficulty}-level MCQs on ${topic} for the ${examNames[exam as keyof typeof examNames] || exam} exam.`;
+    // Add contextual phrase if both exam and topic are selected
+    if (exam && topic) {
+      basePrompt += ` using the knowledge base associated with ${examLabel}`;
+    }
+    
+    basePrompt += '.';
     
     if (prompt.trim()) {
       basePrompt += ` ${prompt.trim()}`;
@@ -186,23 +268,66 @@ const QuestionGenerator: React.FC = () => {
                 <label className="text-sm font-medium mb-2 block">Exam Type</label>
                 <Select value={config.exam} onValueChange={(value) => setConfig(prev => ({ ...prev, exam: value }))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select exam" />
+                    <SelectValue placeholder={loadingExams ? "Loading exams..." : "Select exam"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="mrcem">MRCEM</SelectItem>
-                    <SelectItem value="frcem">FRCEM</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    {loadingExams ? (
+                      <SelectItem value="" disabled>Loading...</SelectItem>
+                    ) : exams.length === 0 ? (
+                      <SelectItem value="" disabled>
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" />
+                          No exams available — please seed the exams database
+                        </div>
+                      </SelectItem>
+                    ) : (
+                      exams.map(exam => (
+                        <SelectItem key={exam.value} value={exam.value}>
+                          {exam.label}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
               
               <div>
                 <label className="text-sm font-medium mb-2 block">Topic</label>
-                <Input 
-                  placeholder="e.g., Cardiology"
-                  value={config.topic}
-                  onChange={(e) => setConfig(prev => ({ ...prev, topic: e.target.value }))}
-                />
+                <Select 
+                  value={config.topic} 
+                  onValueChange={(value) => setConfig(prev => ({ ...prev, topic: value }))}
+                  disabled={!config.exam}
+                >
+                  <SelectTrigger>
+                    <SelectValue 
+                      placeholder={
+                        !config.exam 
+                          ? "Select an exam first"
+                          : loadingTopics 
+                          ? "Loading topics..." 
+                          : "Select topic"
+                      } 
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {loadingTopics ? (
+                      <SelectItem value="" disabled>Loading...</SelectItem>
+                    ) : topics.length === 0 && config.exam ? (
+                      <SelectItem value="" disabled>
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" />
+                          No topics available for this exam
+                        </div>
+                      </SelectItem>
+                    ) : (
+                      topics.map(topic => (
+                        <SelectItem key={topic.value} value={topic.value}>
+                          {topic.label}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div>
