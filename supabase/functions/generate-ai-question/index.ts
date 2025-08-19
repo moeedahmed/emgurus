@@ -35,6 +35,18 @@ serve(async (req) => {
   try {
     console.log('Question generation request received');
     
+    // Validate OpenAI API key first
+    if (!openAIApiKey || openAIApiKey.trim() === '') {
+      console.error('OpenAI API key is missing or empty');
+      return new Response(JSON.stringify({ 
+        error: 'OpenAI API key not configured. Please set OPENAI_API_KEY in Supabase secrets.',
+        success: false 
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { exam, topic, difficulty, count, customPrompt }: GenerationRequest = await req.json();
 
@@ -99,31 +111,62 @@ Requirements:
 
     console.log('Making OpenAI API call...');
 
+    const requestBody = {
+      model: 'gpt-4-turbo',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: basePrompt }
+      ],
+      max_tokens: 4000,
+      temperature: 0.7,
+    };
+
+    console.log('OpenAI request:', JSON.stringify(requestBody, null, 2));
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'gpt-4.1-2025-04-14',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: basePrompt }
-        ],
-        max_completion_tokens: 4000,
-        temperature: 0.7,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('OpenAI API error:', response.status, errorText);
-      throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+      
+      // Propagate OpenAI errors with proper status codes
+      let status = 500;
+      let errorMessage = `OpenAI API error: ${response.status} ${errorText}`;
+      
+      if (response.status === 400) {
+        status = 400;
+        errorMessage = 'Invalid request to OpenAI API. Please check your parameters.';
+      } else if (response.status === 401) {
+        status = 401;
+        errorMessage = 'OpenAI API authentication failed. Please check your API key.';
+      } else if (response.status === 404) {
+        status = 404;
+        errorMessage = 'OpenAI model not found. Please check the model name.';
+      } else if (response.status === 429) {
+        status = 429;
+        errorMessage = 'OpenAI API rate limit exceeded. Please try again later.';
+      }
+      
+      return new Response(JSON.stringify({ 
+        error: errorMessage,
+        success: false,
+        openai_status: response.status 
+      }), {
+        status: status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const data = await response.json();
-    console.log('OpenAI response received');
+    console.log('OpenAI response received successfully');
+    console.log('OpenAI response data:', JSON.stringify(data, null, 2));
 
     const generatedContent = data.choices[0].message.content;
     console.log('Generated content:', generatedContent);
@@ -152,7 +195,7 @@ Requirements:
         exam: exam,
         count: questions.length,
         success: true,
-        model_used: 'gpt-4.1-2025-04-14'
+        model_used: 'gpt-4-turbo'
       });
     } catch (logError) {
       console.error('Failed to log generation:', logError);
@@ -184,7 +227,7 @@ Requirements:
             source: 'admin-question-generator',
             success: false,
             error_code: error.message,
-            model_used: 'gpt-4.1-2025-04-14'
+            model_used: 'gpt-4-turbo'
           });
         }
       }
