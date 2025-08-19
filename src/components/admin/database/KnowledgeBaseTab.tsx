@@ -56,7 +56,7 @@ const KnowledgeBaseTab = () => {
     linked_slos: [] as string[]
   });
 
-  const examTypes = ["MRCEM_PRIMARY", "MRCEM_SBA", "FRCEM_SBA", "OTHER"];
+  const examTypes = ["MRCEM_PRIMARY", "MRCEM_SBA", "FRCEM_SBA", "FCPS_PART1", "FCPS_IMM", "FCPS_PART2", "OTHER"];
 
   useEffect(() => {
     loadData();

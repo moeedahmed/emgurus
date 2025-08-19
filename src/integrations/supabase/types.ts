@@ -3326,7 +3326,14 @@ export type Database = {
         | "MRCEM_PRIMARY"
         | "MRCEM_SBA"
         | "FRCEM_SBA"
-      exam_type_enum: "MRCEM_PRIMARY" | "MRCEM_SBA" | "FRCEM_SBA" | "OTHER"
+      exam_type_enum:
+        | "MRCEM_PRIMARY"
+        | "MRCEM_SBA"
+        | "FRCEM_SBA"
+        | "OTHER"
+        | "FCPS_PART1"
+        | "FCPS_IMM"
+        | "FCPS_PART2"
       flag_status: "open" | "assigned" | "resolved" | "removed" | "archived"
       forum_flag_status: "open" | "in_review" | "resolved" | "dismissed"
       guru_application_status: "pending" | "approved" | "rejected"
@@ -3521,7 +3528,15 @@ export const Constants = {
         "MRCEM_SBA",
         "FRCEM_SBA",
       ],
-      exam_type_enum: ["MRCEM_PRIMARY", "MRCEM_SBA", "FRCEM_SBA", "OTHER"],
+      exam_type_enum: [
+        "MRCEM_PRIMARY",
+        "MRCEM_SBA",
+        "FRCEM_SBA",
+        "OTHER",
+        "FCPS_PART1",
+        "FCPS_IMM",
+        "FCPS_PART2",
+      ],
       flag_status: ["open", "assigned", "resolved", "removed", "archived"],
       forum_flag_status: ["open", "in_review", "resolved", "dismissed"],
       guru_application_status: ["pending", "approved", "rejected"],

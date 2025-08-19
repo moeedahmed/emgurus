@@ -12,7 +12,7 @@ const DatabaseManager = () => {
   const [isSeeding, setIsSeeding] = useState(false);
 
   const seedFcpsEm = async () => {
-    if (!confirm("Seed FCPS EM (Pakistan) exam, curriculum, and knowledge-base entries? (safe to run repeatedly)")) {
+    if (!confirm("Seed FCPS (Pakistan) exam types, curriculum, and knowledge-base entries? (safe to run repeatedly)")) {
       return;
     }
 
@@ -21,7 +21,37 @@ const DatabaseManager = () => {
       let newRows = 0;
       let skippedRows = 0;
 
-      // A) Exam entry - check and insert taxonomy term
+      // A) FCPS Exam entries - check and insert taxonomy terms
+      const fcpsExams = [
+        { slug: 'fcps-part1-pk', title: 'FCPS Part 1 – Pakistan', description: 'Fellowship of College of Physicians and Surgeons Part 1 (Pakistan)' },
+        { slug: 'fcps-imm-pk', title: 'FCPS IMM – Pakistan', description: 'Fellowship of College of Physicians and Surgeons Intermediate (Pakistan)' },
+        { slug: 'fcps-part2-pk', title: 'FCPS Part 2 – Pakistan', description: 'Fellowship of College of Physicians and Surgeons Part 2 (Pakistan)' }
+      ];
+
+      for (const examData of fcpsExams) {
+        const { data: existingExam } = await supabase
+          .from('taxonomy_terms')
+          .select('id')
+          .eq('slug', examData.slug)
+          .eq('kind', 'exam')
+          .maybeSingle();
+
+        if (!existingExam) {
+          await supabase
+            .from('taxonomy_terms')
+            .insert({
+              slug: examData.slug,
+              title: examData.title,
+              kind: 'exam',
+              description: examData.description
+            });
+          newRows++;
+        } else {
+          skippedRows++;
+        }
+      }
+
+      // Legacy FCPS EM entry for backwards compatibility
       const { data: existingExam } = await supabase
         .from('taxonomy_terms')
         .select('id')
@@ -135,7 +165,7 @@ const DatabaseManager = () => {
           variant="outline"
           size="sm"
         >
-          {isSeeding ? 'Seeding...' : 'Seed: FCPS Emergency Medicine (Pakistan)'}
+          {isSeeding ? 'Seeding...' : 'Seed: FCPS (Pakistan) Exams'}
         </Button>
       </div>
       

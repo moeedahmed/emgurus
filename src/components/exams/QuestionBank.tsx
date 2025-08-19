@@ -83,6 +83,9 @@ export default function QuestionBank() {
               <SelectItem value="MRCEM_PRIMARY">MRCEM Primary</SelectItem>
               <SelectItem value="MRCEM_SBA">MRCEM Intermediate SBA</SelectItem>
               <SelectItem value="FRCEM_SBA">FRCEM SBA</SelectItem>
+              <SelectItem value="FCPS_PART1">FCPS Part 1 – Pakistan</SelectItem>
+              <SelectItem value="FCPS_IMM">FCPS IMM – Pakistan</SelectItem>
+              <SelectItem value="FCPS_PART2">FCPS Part 2 – Pakistan</SelectItem>
             </SelectContent>
           </Select>
           <Select value={difficulty} onValueChange={setDifficulty}>
