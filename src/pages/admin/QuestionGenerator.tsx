@@ -118,9 +118,13 @@ const QuestionGenerator: React.FC = () => {
           'mrcem-primary': 'MRCEM_PRIMARY',
           'mrcem-sba': 'MRCEM_SBA', 
           'frcem-sba': 'FRCEM_SBA',
+          'fcps-part1': 'FCPS_PART1',
           'fcps-part1-pk': 'FCPS_PART1',
+          'fcps-imm': 'FCPS_IMM',
           'fcps-imm-pk': 'FCPS_IMM',
-          'fcps-part2-pk': 'FCPS_PART2'
+          'fcps-part2': 'FCPS_PART2',
+          'fcps-part2-pk': 'FCPS_PART2',
+          'fcps-emergency-medicine': 'FCPS_IMM'
         };
 
         const examType = examTypeMap[config.exam];
@@ -190,10 +194,19 @@ const QuestionGenerator: React.FC = () => {
 
   // Generate questions via OpenAI
   const generateQuestions = async () => {
-    if (!config.exam || !config.difficulty) {
-      toast.error('Please select exam and difficulty');
+    if (!config.exam || !config.difficulty || !config.count) {
+      toast.error('Please select exam, difficulty, and count');
       return;
     }
+
+    // Log for analytics/debugging
+    console.log('Generation request:', {
+      exam: config.exam,
+      topic: config.topic,
+      difficulty: config.difficulty,
+      count: config.count,
+      timestamp: new Date().toISOString()
+    });
 
     setGenerating(true);
     try {
@@ -213,7 +226,7 @@ const QuestionGenerator: React.FC = () => {
       if (error) throw error;
 
       if (!data.success) {
-        throw new Error(data.error || 'Generation failed');
+        throw new Error(data.error || 'Generation failed. Please verify exam-topic mapping and try again.');
       }
 
       const questions: GeneratedQuestion[] = data.questions.map((q: any, index: number) => ({
@@ -230,6 +243,7 @@ const QuestionGenerator: React.FC = () => {
       toast.success(`Generated ${questions.length} questions successfully!`);
       
       console.log('Final prompt used:', data.prompt);
+      console.log('Generated questions:', questions.length);
       
     } catch (error: any) {
       console.error('Generation error:', error);
@@ -378,6 +392,7 @@ const QuestionGenerator: React.FC = () => {
           <h1 className="text-2xl font-bold">AI Question Generator</h1>
           <p className="text-sm text-muted-foreground">Generate high-quality MCQs using AI</p>
         </div>
+        <Badge variant="outline" className="ml-auto">Beta</Badge>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -494,7 +509,7 @@ const QuestionGenerator: React.FC = () => {
 
                 <Button 
                   onClick={generateQuestions} 
-                  disabled={!config.exam || !config.difficulty || generating}
+                  disabled={!config.exam || !config.difficulty || !config.count || generating}
                   className="w-full"
                 >
                   {generating ? (
