@@ -7,56 +7,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Brain, FileText, Flag, Edit, Trash2, RotateCcw, Save, Users, AlertCircle } from 'lucide-react';
+import { Brain, FileText, Flag, Edit, Trash2, RotateCcw, Save, Users, AlertCircle, Loader2, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-// Mock data for demonstration
-const mockGeneratedQuestions = [
-  {
-    id: 1,
-    stem: "A 35-year-old patient presents with chest pain and shortness of breath. ECG shows ST elevation in leads II, III, and aVF. What is the most likely diagnosis?",
-    options: [
-      "Anterior STEMI",
-      "Inferior STEMI", 
-      "Lateral STEMI",
-      "Posterior STEMI",
-      "NSTEMI"
-    ],
-    correctIndex: 1,
-    explanation: "ST elevation in leads II, III, and aVF indicates inferior wall myocardial infarction, typically caused by occlusion of the right coronary artery.",
-    reference: "Thygesen K, et al. Fourth Universal Definition of Myocardial Infarction. Circulation. 2018.",
-    status: 'generated'
-  }
-];
+interface ExamOption {
+  slug: string;
+  title: string;
+}
 
-const mockDrafts = [
-  {
-    id: 1,
-    stem: "A 28-year-old presents with sudden onset severe headache described as 'worst headache of my life'. What is the most appropriate immediate investigation?",
-    options: [
-      "CT head without contrast",
-      "MRI brain with contrast",
-      "Lumbar puncture",
-      "CT angiogram head and neck",
-      "Carotid doppler ultrasound"
-    ],
-    correctIndex: 0,
-    explanation: "CT head without contrast is the first-line investigation for suspected subarachnoid hemorrhage.",
-    reference: "van Gijn J, et al. Subarachnoid hemorrhage. Lancet. 2007.",
-    assignedTo: null,
-    createdAt: '2024-01-15'
-  }
-];
+interface TopicOption {
+  value: string;
+  label: string;
+}
 
-const mockMarkedQuestions = [
-  {
-    id: 1,
-    stem: "In cardiogenic shock, which medication should be avoided?",
-    feedback: "This question seems too vague - there are multiple medications that should be avoided in cardiogenic shock. Could be more specific about the clinical scenario.",
-    flaggedBy: "Dr. Smith",
-    flaggedAt: "2024-01-14"
-  }
-];
+interface GeneratedQuestion {
+  id?: string;
+  stem: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  reference?: string;
+  status: 'generated' | 'kept' | 'draft';
+}
+
+interface DraftQuestion extends GeneratedQuestion {
+  id: string;
+  assignedTo?: string;
+  createdAt: string;
+}
 
 const mockGurus = [
   { id: 1, name: "Dr. Sarah Johnson" },
@@ -66,13 +45,10 @@ const mockGurus = [
 
 const QuestionGenerator: React.FC = () => {
   const [activeTab, setActiveTab] = useState('generate');
-  const [generatedQuestions, setGeneratedQuestions] = useState(mockGeneratedQuestions);
-  const [drafts, setDrafts] = useState(mockDrafts);
-  const [markedQuestions] = useState(mockMarkedQuestions);
   
   // Database data
-  const [exams, setExams] = useState<Array<{value: string, label: string}>>([]);
-  const [topics, setTopics] = useState<Array<{value: string, label: string}>>([]);
+  const [exams, setExams] = useState<ExamOption[]>([]);
+  const [topics, setTopics] = useState<TopicOption[]>([]);
   const [loadingExams, setLoadingExams] = useState(true);
   const [loadingTopics, setLoadingTopics] = useState(false);
   
@@ -84,511 +60,534 @@ const QuestionGenerator: React.FC = () => {
     count: '5',
     prompt: ''
   });
-
+  
+  // Generated questions state
+  const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
+  const [generating, setGenerating] = useState(false);
+  
+  // Draft state
+  const [drafts, setDrafts] = useState<DraftQuestion[]>([]);
+  const [committingDrafts, setCommittingDrafts] = useState(false);
+  
   // Edit states
-  const [editingQuestion, setEditingQuestion] = useState<any>(null);
-  const [editingDraft, setEditingDraft] = useState<any>(null);
+  const [editingQuestion, setEditingQuestion] = useState<GeneratedQuestion | null>(null);
+  const [editingDraft, setEditingDraft] = useState<DraftQuestion | null>(null);
 
-  // Load exams from database
+  // Load exams from taxonomy terms
   useEffect(() => {
     const loadExams = async () => {
       setLoadingExams(true);
       try {
         const { data, error } = await supabase
-          .from('curriculum_map')
-          .select('exam_type')
-          .not('exam_type', 'is', null);
-        
+          .from('taxonomy_terms')
+          .select('slug, title')
+          .eq('kind', 'exam')
+          .order('title');
+
         if (error) throw error;
-        
-        // Get unique exam types and map to select options
-        const uniqueExams = [...new Set(data?.map(item => item.exam_type))];
-        const examOptions = uniqueExams.map(exam => ({
-          value: exam || '',
-          label: exam?.replace(/_/g, ' ') || 'Unknown'
-        }));
-        
+
+        const examOptions = data?.map(item => ({
+          slug: item.slug,
+          title: item.title
+        })) || [];
+
         setExams(examOptions);
       } catch (error) {
         console.error('Error loading exams:', error);
-        setExams([]);
+        toast.error('Failed to load exams');
       } finally {
         setLoadingExams(false);
       }
     };
-    
+
     loadExams();
   }, []);
 
   // Load topics when exam changes
   useEffect(() => {
+    if (!config.exam) {
+      setTopics([]);
+      return;
+    }
+
     const loadTopics = async () => {
-      if (!config.exam) {
-        setTopics([]);
-        return;
-      }
-      
       setLoadingTopics(true);
       try {
-        const { data, error } = await supabase
-          .from('curriculum_map')
-          .select('key_capability_title, slo_title')
-          .eq('exam_type', config.exam as any);
+        // Map exam slug to exam_type enum for curriculum lookup
+        const examTypeMap: Record<string, string> = {
+          'mrcem-primary': 'MRCEM_PRIMARY',
+          'mrcem-sba': 'MRCEM_SBA', 
+          'frcem-sba': 'FRCEM_SBA',
+          'fcps-part1-pk': 'FCPS_PART1',
+          'fcps-imm-pk': 'FCPS_IMM',
+          'fcps-part2-pk': 'FCPS_PART2'
+        };
+
+        const examType = examTypeMap[config.exam];
         
-        if (error) throw error;
-        
-        // Combine key capabilities and SLOs as topic options
-        const topicOptions = [
-          ...new Set([
-            ...data?.map(item => item.key_capability_title),
-            ...data?.map(item => item.slo_title)
-          ])
-        ].filter(Boolean).map(topic => ({
-          value: topic,
-          label: topic
-        }));
-        
-        setTopics(topicOptions);
+        if (examType) {
+          const { data, error } = await supabase
+            .from('curriculum_map')
+            .select('slo_title, key_capability_title')
+            .eq('exam_type', examType as any)
+            .order('slo_title');
+
+          if (error) throw error;
+
+          const topicOptions = data?.map(item => ({
+            value: item.slo_title,
+            label: `${item.key_capability_title}: ${item.slo_title}`
+          })) || [];
+
+          // Remove duplicates and add "All Topics" option
+          const uniqueTopics = Array.from(
+            new Map(topicOptions.map(t => [t.value, t])).values()
+          );
+
+          setTopics([
+            { value: 'all', label: 'All Topics' },
+            ...uniqueTopics
+          ]);
+        } else {
+          setTopics([{ value: 'all', label: 'All Topics' }]);
+        }
       } catch (error) {
         console.error('Error loading topics:', error);
+        toast.error('Failed to load topics');
         setTopics([]);
       } finally {
         setLoadingTopics(false);
       }
     };
-    
+
     loadTopics();
-    // Reset topic when exam changes
+  }, [config.exam]);
+
+  // Reset topic when exam changes
+  useEffect(() => {
     setConfig(prev => ({ ...prev, topic: '' }));
   }, [config.exam]);
 
-  // Construct prompt for preview and generation
-  const constructPrompt = () => {
-    const { exam, topic, difficulty, count, prompt } = config;
+  // Generate live prompt preview
+  const getPromptPreview = () => {
+    if (!config.exam || !config.difficulty || !config.count) {
+      return 'Please select exam, difficulty, and count to see prompt preview...';
+    }
+
+    const examTitle = exams.find(e => e.slug === config.exam)?.title || config.exam;
+    const topicText = config.topic && config.topic !== 'all' 
+      ? ` on ${topics.find(t => t.value === config.topic)?.label || config.topic}`
+      : '';
     
-    if (!exam || !topic || !difficulty || !count) {
-      return "Please fill in all required fields to see the prompt preview.";
+    let prompt = `Generate ${config.count} ${config.difficulty}-level MCQs${topicText} for the ${examTitle} exam using the knowledge base associated with ${examTitle}.`;
+    
+    if (config.prompt) {
+      prompt += ` ${config.prompt}`;
     }
     
-    const examLabel = exams.find(e => e.value === exam)?.label || exam;
-    let basePrompt = `Generate ${count} ${difficulty}-level MCQs on ${topic} for the ${examLabel} exam`;
-    
-    // Add contextual phrase if both exam and topic are selected
-    if (exam && topic) {
-      basePrompt += ` using the knowledge base associated with ${examLabel}`;
-    }
-    
-    basePrompt += '.';
-    
-    if (prompt.trim()) {
-      basePrompt += ` ${prompt.trim()}`;
-    }
-    
-    return basePrompt;
+    return prompt;
   };
 
-  const handleGenerate = () => {
-    const fullPrompt = constructPrompt();
-    console.log('Generating questions with config:', config);
-    console.log('Constructed prompt:', fullPrompt);
-    
-    // Simulate generation with mock data
-    const newQuestions = Array.from({ length: parseInt(config.count) || 1 }, (_, index) => ({
-      id: Date.now() + index,
-      stem: `Sample question ${index + 1} about ${config.topic || 'medical topics'} for ${config.exam?.toUpperCase() || 'exam'} at ${config.difficulty || 'medium'} level.`,
-      options: [
-        "Option A - Sample answer",
-        "Option B - Correct answer", 
-        "Option C - Alternative option",
-        "Option D - Another possibility",
-        "Option E - Final option"
-      ],
-      correctIndex: 1,
-      explanation: `This is a sample explanation for the ${config.difficulty || 'medium'} level question about ${config.topic || 'medical topics'}.`,
-      reference: "Sample Reference. Medical Journal. 2024.",
-      status: 'generated'
-    }));
-    
-    setGeneratedQuestions(newQuestions);
-  };
+  // Generate questions via OpenAI
+  const generateQuestions = async () => {
+    if (!config.exam || !config.difficulty) {
+      toast.error('Please select exam and difficulty');
+      return;
+    }
 
-  const handleKeep = (questionId: number) => {
-    const question = generatedQuestions.find(q => q.id === questionId);
-    if (question) {
-      setGeneratedQuestions(prev => prev.filter(q => q.id !== questionId));
-      // Would add to drafts in real implementation
+    setGenerating(true);
+    try {
+      const examTitle = exams.find(e => e.slug === config.exam)?.title || config.exam;
+      const topicValue = config.topic === 'all' ? undefined : config.topic;
+
+      const { data, error } = await supabase.functions.invoke('generate-ai-question', {
+        body: {
+          exam: examTitle,
+          topic: topicValue,
+          difficulty: config.difficulty,
+          count: parseInt(config.count),
+          customPrompt: config.prompt || undefined
+        }
+      });
+
+      if (error) throw error;
+
+      if (!data.success) {
+        throw new Error(data.error || 'Generation failed');
+      }
+
+      const questions: GeneratedQuestion[] = data.questions.map((q: any, index: number) => ({
+        id: `gen_${Date.now()}_${index}`,
+        stem: q.stem,
+        options: q.options,
+        correctIndex: q.correctIndex,
+        explanation: q.explanation,
+        reference: q.reference,
+        status: 'generated' as const
+      }));
+
+      setGeneratedQuestions(questions);
+      toast.success(`Generated ${questions.length} questions successfully!`);
+      
+      console.log('Final prompt used:', data.prompt);
+      
+    } catch (error: any) {
+      console.error('Generation error:', error);
+      toast.error(`Generation failed: ${error.message}`);
+    } finally {
+      setGenerating(false);
     }
   };
 
-  const handleDiscard = (questionId: number) => {
+  // Keep question as draft
+  const keepQuestion = (question: GeneratedQuestion) => {
+    const draftQuestion: DraftQuestion = {
+      ...question,
+      id: question.id || `draft_${Date.now()}`,
+      status: 'draft',
+      createdAt: new Date().toISOString()
+    };
+    
+    setDrafts(prev => [...prev, draftQuestion]);
+    setGeneratedQuestions(prev => prev.filter(q => q.id !== question.id));
+    toast.success('Question moved to drafts');
+  };
+
+  // Discard question
+  const discardQuestion = (questionId: string) => {
     setGeneratedQuestions(prev => prev.filter(q => q.id !== questionId));
+    toast.success('Question discarded');
   };
 
-  const handleCommitDrafts = () => {
-    // Mock commit - would save to database
-    console.log('Committing selected drafts');
+  // Commit all drafts to database
+  const commitAllDrafts = async () => {
+    if (drafts.length === 0) {
+      toast.error('No drafts to commit');
+      return;
+    }
+
+    setCommittingDrafts(true);
+    try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Authentication required');
+      }
+
+      // Convert drafts to review_exam_questions format
+      const questionsToInsert = drafts.map(draft => ({
+        question: draft.stem,
+        options: draft.options,
+        correct_answer: draft.options[draft.correctIndex],
+        explanation: draft.explanation,
+        exam_type: 'OTHER' as const,
+        status: 'draft' as const,
+        created_by: user.id
+      }));
+
+      const { error } = await supabase
+        .from('review_exam_questions')
+        .insert(questionsToInsert);
+
+      if (error) throw error;
+
+      toast.success(`Successfully committed ${drafts.length} questions to database`);
+      setDrafts([]);
+      
+    } catch (error: any) {
+      console.error('Commit error:', error);
+      toast.error(`Failed to commit drafts: ${error.message}`);
+    } finally {
+      setCommittingDrafts(false);
+    }
   };
 
-  const handleSaveDraft = (draft: any) => {
-    setDrafts(prev => prev.map(d => d.id === draft.id ? draft : d));
-    setEditingDraft(null);
+  // Remove draft
+  const removeDraft = (draftId: string) => {
+    setDrafts(prev => prev.filter(d => d.id !== draftId));
+    toast.success('Draft removed');
   };
+
+  const QuestionCard = ({ question, showActions = true, onKeep, onDiscard, onEdit }: {
+    question: GeneratedQuestion;
+    showActions?: boolean;
+    onKeep?: () => void;
+    onDiscard?: () => void;
+    onEdit?: () => void;
+  }) => (
+    <Card className="p-4 space-y-4">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="font-medium text-sm mb-3">{question.stem}</p>
+          <div className="space-y-2">
+            {question.options.map((option, index) => (
+              <div key={index} className={`p-2 rounded border text-sm ${
+                index === question.correctIndex 
+                  ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' 
+                  : 'bg-gray-50 border-gray-200 dark:bg-gray-900 dark:border-gray-700'
+              }`}>
+                <span className="font-medium">{String.fromCharCode(65 + index)}.</span> {option}
+              </div>
+            ))}
+          </div>
+          
+          {question.explanation && (
+            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800">
+              <p className="text-sm"><strong>Explanation:</strong> {question.explanation}</p>
+            </div>
+          )}
+          
+          {question.reference && (
+            <div className="mt-2">
+              <p className="text-xs text-muted-foreground"><strong>Reference:</strong> {question.reference}</p>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {showActions && (
+        <div className="flex gap-2 pt-2 border-t">
+          {onKeep && (
+            <Button size="sm" onClick={onKeep} className="text-xs">
+              <Check className="w-3 h-3 mr-1" />
+              Keep
+            </Button>
+          )}
+          {onDiscard && (
+            <Button size="sm" variant="outline" onClick={onDiscard} className="text-xs">
+              <X className="w-3 h-3 mr-1" />
+              Discard
+            </Button>
+          )}
+          {onEdit && (
+            <Button size="sm" variant="ghost" onClick={onEdit} className="text-xs">
+              <Edit className="w-3 h-3 mr-1" />
+              Edit
+            </Button>
+          )}
+        </div>
+      )}
+    </Card>
+  );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Question Generator</h1>
-        <p className="text-muted-foreground">Generate, curate, and manage exam questions with AI assistance</p>
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <div className="flex items-center gap-3">
+        <Brain className="w-6 h-6 text-primary" />
+        <div>
+          <h1 className="text-2xl font-bold">AI Question Generator</h1>
+          <p className="text-sm text-muted-foreground">Generate high-quality MCQs using AI</p>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="generate" className="flex items-center gap-2">
-            <Brain className="w-4 h-4" />
-            <span className="hidden sm:inline">Generate</span>
+          <TabsTrigger value="generate">Generate</TabsTrigger>
+          <TabsTrigger value="drafts">
+            Drafts {drafts.length > 0 && <Badge variant="secondary" className="ml-2">{drafts.length}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="drafts" className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">Drafts</span>
-            {drafts.length > 0 && <Badge variant="secondary">{drafts.length}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="marked" className="flex items-center gap-2">
-            <Flag className="w-4 h-4" />
-            <span className="hidden sm:inline">Marked</span>
-            {markedQuestions.length > 0 && <Badge variant="destructive">{markedQuestions.length}</Badge>}
-          </TabsTrigger>
+          <TabsTrigger value="marked">Marked Questions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="generate" className="space-y-6">
-          {/* Configuration Panel */}
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Generation Config</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Exam Type</label>
-                <Select value={config.exam} onValueChange={(value) => setConfig(prev => ({ ...prev, exam: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={loadingExams ? "Loading exams..." : "Select exam"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {loadingExams ? (
-                      <SelectItem value="loading" disabled>Loading...</SelectItem>
-                    ) : exams.length === 0 ? (
-                      <SelectItem value="no-exams" disabled>
-                        <div className="flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4" />
-                          No exams available — please seed the exams database
-                        </div>
-                      </SelectItem>
-                    ) : (
-                      exams.map(exam => (
-                        <SelectItem key={exam.value} value={exam.value}>
-                          {exam.label}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Configuration Panel */}
+            <Card className="p-6 space-y-4">
+              <h3 className="text-lg font-semibold">Generation Configuration</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Exam Type</label>
+                  <Select value={config.exam} onValueChange={(value) => setConfig(prev => ({ ...prev, exam: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select exam type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {loadingExams ? (
+                        <SelectItem value="loading" disabled>Loading...</SelectItem>
+                      ) : exams.length === 0 ? (
+                        <SelectItem value="no-exams" disabled>
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4" />
+                            No exams available — please seed the exams database
+                          </div>
                         </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium mb-2 block">Topic</label>
-                <Select 
-                  value={config.topic} 
-                  onValueChange={(value) => setConfig(prev => ({ ...prev, topic: value }))}
-                  disabled={!config.exam}
-                >
-                  <SelectTrigger>
-                    <SelectValue 
-                      placeholder={
-                        !config.exam 
-                          ? "Select an exam first"
-                          : loadingTopics 
-                          ? "Loading topics..." 
-                          : "Select topic"
-                      } 
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {loadingTopics ? (
-                      <SelectItem value="loading" disabled>Loading...</SelectItem>
-                    ) : topics.length === 0 && config.exam ? (
-                      <SelectItem value="no-topics" disabled>
-                        <div className="flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4" />
-                          No topics available for this exam
-                        </div>
-                      </SelectItem>
-                    ) : (
-                      topics.map(topic => (
-                        <SelectItem key={topic.value} value={topic.value}>
-                          {topic.label}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium mb-2 block">Difficulty</label>
-                <Select value={config.difficulty} onValueChange={(value) => setConfig(prev => ({ ...prev, difficulty: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select difficulty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="easy">Easy</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="hard">Hard</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium mb-2 block">Count</label>
-                <Input 
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={config.count}
-                  onChange={(e) => setConfig(prev => ({ ...prev, count: e.target.value }))}
-                />
-              </div>
-            </div>
-            
-            <div className="mb-4">
-              <label className="text-sm font-medium mb-2 block">Additional Prompt (Optional)</label>
-              <Textarea 
-                placeholder="Any specific requirements or focus areas..."
-                value={config.prompt}
-                onChange={(e) => setConfig(prev => ({ ...prev, prompt: e.target.value }))}
-                rows={3}
-              />
-            </div>
-            
-            <Button 
-              onClick={handleGenerate} 
-              className="w-full sm:w-auto"
-              disabled={!config.exam || !config.topic || !config.difficulty || !config.count}
-            >
-              <Brain className="w-4 h-4 mr-2" />
-              Generate Questions
-            </Button>
-          </Card>
+                      ) : (
+                        exams.map((exam) => (
+                          <SelectItem key={exam.slug} value={exam.slug}>
+                            {exam.title}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          {/* Prompt Preview */}
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Prompt Preview</h3>
-            <div className="bg-muted/50 border border-border p-4 rounded-lg">
-              <p className="text-sm font-mono text-foreground whitespace-pre-wrap">
-                {constructPrompt()}
-              </p>
-            </div>
-          </Card>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Topic</label>
+                  <Select 
+                    value={config.topic} 
+                    onValueChange={(value) => setConfig(prev => ({ ...prev, topic: value }))}
+                    disabled={!config.exam}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={config.exam ? "Select topic" : "Select exam first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {loadingTopics ? (
+                        <SelectItem value="loading" disabled>Loading...</SelectItem>
+                      ) : topics.length === 0 && config.exam ? (
+                        <SelectItem value="no-topics" disabled>
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4" />
+                            No topics available for this exam
+                          </div>
+                        </SelectItem>
+                      ) : (
+                        topics.map((topic) => (
+                          <SelectItem key={topic.value} value={topic.value}>
+                            {topic.label}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Difficulty</label>
+                    <Select value={config.difficulty} onValueChange={(value) => setConfig(prev => ({ ...prev, difficulty: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select difficulty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="easy">Easy</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="hard">Hard</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Count</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={config.count}
+                      onChange={(e) => setConfig(prev => ({ ...prev, count: e.target.value }))}
+                      placeholder="Number of questions"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Additional Instructions (Optional)</label>
+                  <Textarea
+                    value={config.prompt}
+                    onChange={(e) => setConfig(prev => ({ ...prev, prompt: e.target.value }))}
+                    placeholder="e.g., Focus on differential diagnosis, include recent guidelines..."
+                    rows={3}
+                  />
+                </div>
+
+                <Button 
+                  onClick={generateQuestions} 
+                  disabled={!config.exam || !config.difficulty || generating}
+                  className="w-full"
+                >
+                  {generating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating Questions...
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="w-4 h-4 mr-2" />
+                      Generate Questions
+                    </>
+                  )}
+                </Button>
+              </div>
+            </Card>
+
+            {/* Prompt Preview */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Prompt Preview</h3>
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="text-sm whitespace-pre-wrap">{getPromptPreview()}</p>
+              </div>
+            </Card>
+          </div>
 
           {/* Generated Questions */}
           {generatedQuestions.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Generated Questions</h3>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setGeneratedQuestions([])}>
-                    Discard All
-                  </Button>
-                  <Button size="sm" onClick={handleCommitDrafts}>
-                    Commit {generatedQuestions.length} Drafts
-                  </Button>
-                </div>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Generated Questions</h3>
+              <div className="space-y-4">
+                {generatedQuestions.map((question) => (
+                  <QuestionCard
+                    key={question.id}
+                    question={question}
+                    onKeep={() => keepQuestion(question)}
+                    onDiscard={() => discardQuestion(question.id!)}
+                    onEdit={() => setEditingQuestion(question)}
+                  />
+                ))}
               </div>
-              
-              {generatedQuestions.map((question) => (
-                <Card key={question.id} className="p-6">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Question</h4>
-                      <p className="text-sm">{question.stem}</p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium mb-2">Options</h4>
-                      <div className="space-y-1">
-                        {question.options.map((option, index) => (
-                          <div key={index} className={`text-sm p-2 rounded ${index === question.correctIndex ? 'bg-success/10 border border-success/20' : 'bg-muted/50'}`}>
-                            <span className="font-mono mr-2">{String.fromCharCode(65 + index)}.</span>
-                            {option}
-                            {index === question.correctIndex && <Badge variant="default" className="ml-2 text-xs">Correct</Badge>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium mb-2">Explanation</h4>
-                      <p className="text-sm text-muted-foreground">{question.explanation}</p>
-                    </div>
-                    
-                    {question.reference && (
-                      <div>
-                        <h4 className="font-medium mb-2">Reference</h4>
-                        <p className="text-xs text-muted-foreground">{question.reference}</p>
-                      </div>
-                    )}
-                    
-                    <Separator />
-                    
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="default" size="sm" onClick={() => handleKeep(question.id)}>
-                        Keep
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => setEditingQuestion(question)}>
-                        <Edit className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <RotateCcw className="w-4 h-4 mr-1" />
-                        Regenerate
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDiscard(question.id)}>
-                        <Trash2 className="w-4 h-4 mr-1" />
-                        Discard
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+            </Card>
           )}
         </TabsContent>
 
         <TabsContent value="drafts" className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Question Drafts</h3>
-            <Badge variant="secondary">{drafts.length} drafts</Badge>
+            <h3 className="text-lg font-semibold">Draft Questions ({drafts.length})</h3>
+            {drafts.length > 0 && (
+              <Button onClick={commitAllDrafts} disabled={committingDrafts}>
+                {committingDrafts ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Committing...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Commit All Drafts
+                  </>
+                )}
+              </Button>
+            )}
           </div>
-          
+
           {drafts.length === 0 ? (
             <Card className="p-8 text-center">
-              <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">No drafts available. Generate some questions first!</p>
+              <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No draft questions yet. Generate some questions and keep them as drafts.</p>
             </Card>
           ) : (
             <div className="space-y-4">
               {drafts.map((draft) => (
-                <Card key={draft.id} className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{draft.stem}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Created: {draft.createdAt}</p>
-                      </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button variant="outline" size="sm" onClick={() => setEditingDraft(draft)}>
-                          <Edit className="w-4 h-4 mr-1" />
-                          Edit
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {draft.assignedTo && (
-                      <Badge variant="secondary">Assigned to: {draft.assignedTo}</Badge>
-                    )}
-                  </div>
-                </Card>
+                <QuestionCard
+                  key={draft.id}
+                  question={draft}
+                  showActions={true}
+                  onDiscard={() => removeDraft(draft.id)}
+                  onEdit={() => setEditingDraft(draft)}
+                />
               ))}
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="marked" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Flagged Questions</h3>
-            <Badge variant="destructive">{markedQuestions.length} flagged</Badge>
-          </div>
-          
-          {markedQuestions.length === 0 ? (
-            <Card className="p-8 text-center">
-              <Flag className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">No flagged questions. Great job!</p>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {markedQuestions.map((question) => (
-                <Card key={question.id} className="p-6">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Question</h4>
-                      <p className="text-sm">{question.stem}</p>
-                    </div>
-                    
-                    <div className="bg-destructive/10 border border-destructive/20 p-4 rounded">
-                      <h4 className="font-medium mb-2 text-destructive">User Feedback</h4>
-                      <p className="text-sm">{question.feedback}</p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Flagged by {question.flaggedBy} on {question.flaggedAt}
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Admin Response</label>
-                      <Textarea placeholder="Add your response..." rows={3} />
-                      <Button size="sm" className="mt-2">Send Response</Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
+          <h3 className="text-lg font-semibold">Marked Questions</h3>
+          <Card className="p-8 text-center">
+            <Flag className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No marked questions yet. This feature will show questions flagged for review.</p>
+          </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Edit Draft Modal (simplified inline for now) */}
-      {editingDraft && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Edit Draft</h3>
-                <Button variant="outline" size="sm" onClick={() => setEditingDraft(null)}>
-                  Cancel
-                </Button>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium mb-2 block">Question</label>
-                <Textarea 
-                  value={editingDraft.stem}
-                  onChange={(e) => setEditingDraft(prev => ({ ...prev, stem: e.target.value }))}
-                  rows={3}
-                />
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium mb-2 block">Assign to Guru</label>
-                <Select 
-                  value={editingDraft.assignedTo || ''} 
-                  onValueChange={(value) => setEditingDraft(prev => ({ ...prev, assignedTo: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select guru (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockGurus.map(guru => (
-                      <SelectItem key={guru.id} value={guru.name}>{guru.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button onClick={() => handleSaveDraft(editingDraft)}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save & Assign
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
     </div>
   );
 };

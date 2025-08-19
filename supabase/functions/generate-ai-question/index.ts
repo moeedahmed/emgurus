@@ -1,208 +1,203 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
-function parseAllowlist() {
-  const raw = Deno.env.get('ORIGIN_ALLOWLIST') || '*';
-  return raw.split(',').map(s => s.trim()).filter(Boolean);
-}
-function allowOrigin(origin: string | null) {
-  const list = parseAllowlist();
-  if (!origin) return '';
-  if (list.includes('*')) return origin;
-  return list.includes(origin) ? origin : '';
-}
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-const baseCors = {
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-} as const;
+};
 
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-);
-
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
-const OPENAI_MODEL_EXAM = Deno.env.get('OPENAI_MODEL_EXAM') ?? 'gpt-5.0-pro';
-const OPENAI_CHAT_TIMEOUT_MS = Number(Deno.env.get('OPENAI_CHAT_TIMEOUT_MS') ?? '60000');
-
-function resolveModel(label: string): string {
-  if (label === 'gpt-5.0-pro') return 'gpt-4o';
-  if (label === 'gpt-5.0-nano') return 'gpt-4o-mini';
-  return label;
+interface GenerationRequest {
+  exam: string;
+  topic?: string;
+  difficulty: string;
+  count: number;
+  customPrompt?: string;
 }
 
-function withTimeout(input: RequestInfo | URL, init: RequestInit, ms: number): Promise<Response> {
-  const ctrl = new AbortController();
-  const id = setTimeout(() => ctrl.abort(), ms);
-  return fetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(id));
+interface GeneratedQuestion {
+  stem: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  reference?: string;
 }
 
 serve(async (req) => {
-  const origin = req.headers.get('Origin');
-  const allowed = allowOrigin(origin);
-
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    if (!allowed) return new Response(null, { status: 403, headers: { ...baseCors } });
-    return new Response(null, { headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed } });
+    return new Response(null, { headers: corsHeaders });
   }
 
-  if (!allowed) return new Response('Forbidden', { status: 403, headers: { ...baseCors } });
-
   try {
-    if (!OPENAI_API_KEY) {
-      return new Response(JSON.stringify({ error: 'Missing OPENAI_API_KEY in Supabase secrets.' }), {
-        status: 500,
-        headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No authorization header found' }), {
-        status: 401,
-        headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' },
-      });
-    }
+    console.log('Question generation request received');
     
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabase.auth.getUser(token);
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { exam, topic, difficulty, count, customPrompt }: GenerationRequest = await req.json();
 
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'User not authenticated' }), {
+    console.log('Generation parameters:', { exam, topic, difficulty, count, customPrompt });
+
+    // Get user from auth header
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
         status: 401,
-        headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const requestBody = await req.json();
-    const { examType, difficulty, topic } = requestBody || {};
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'Authentication failed' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    // Get user's previous questions to avoid duplicates
-    const { data: previousQuestions } = await supabase
-      .from('quiz_attempts')
-      .select('questions(question_text)')
-      .eq('user_id', user.id);
+    console.log('User authenticated:', user.id);
 
-    const previousTexts = previousQuestions?.map((q: any) => q.questions?.question_text).filter(Boolean) || [];
+    // Construct the generation prompt
+    let basePrompt = `Generate ${count} ${difficulty}-level multiple choice questions (MCQs) for the ${exam} exam`;
+    if (topic) {
+      basePrompt += ` on the topic of ${topic}`;
+    }
+    basePrompt += '.';
 
-    const prompt = `Generate a multiple choice question for medical exam preparation.
+    if (customPrompt) {
+      basePrompt += ` ${customPrompt}`;
+    }
+
+    const systemPrompt = `You are an expert medical educator creating high-quality multiple choice questions for medical examinations. 
+
+Generate exactly ${count} questions in the following JSON format:
+{
+  "questions": [
+    {
+      "stem": "The question text here...",
+      "options": ["Option A", "Option B", "Option C", "Option D", "Option E"],
+      "correctIndex": 0,
+      "explanation": "Detailed explanation of why the correct answer is right and others are wrong...",
+      "reference": "Citation or reference (optional)"
+    }
+  ]
+}
 
 Requirements:
-- Exam type: ${examType}
-- Difficulty: ${difficulty}
-- Topic: ${topic}
-- Format: Medical education style question
-- Include 4 options (A, B, C, D)
-- Provide detailed explanation
-- Do not generate any of these previous questions: ${previousTexts.slice(0, 10).join(', ')}
+- Each question must be clinically relevant and accurate
+- Provide 5 options (A-E) per question
+- Include comprehensive explanations
+- Use appropriate medical terminology
+- Ensure questions are at the specified difficulty level
+- Questions should be suitable for ${exam} examination level
+- Return valid JSON only, no additional text`;
 
-Return ONLY a JSON object with this exact structure:
-{
-  "question_text": "Your question here",
-  "option_a": "Option A text",
-  "option_b": "Option B text", 
-  "option_c": "Option C text",
-  "option_d": "Option D text",
-  "correct_answer": "A", 
-  "explanation": "Detailed explanation here",
-  "topic": "${topic}",
-  "subtopic": "specific subtopic",
-  "keywords": ["keyword1", "keyword2", "keyword3"]
-}`;
+    console.log('Making OpenAI API call...');
 
-    const model = resolveModel(OPENAI_MODEL_EXAM);
-
-    const response = await withTimeout('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model,
+        model: 'gpt-4.1-2025-04-14',
         messages: [
-          { role: 'system', content: 'You are a medical education expert. Return only valid JSON.' },
-          { role: 'user', content: prompt }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: basePrompt }
         ],
+        max_tokens: 4000,
         temperature: 0.7,
       }),
-    }, OPENAI_CHAT_TIMEOUT_MS);
+    });
 
     if (!response.ok) {
-      const bodyTxt = await response.text().catch(() => 'OpenAI error');
-      return new Response(JSON.stringify({ error: `OpenAI API error: ${response.status} ${response.statusText}`, body: bodyTxt.slice(0,300) }), {
-        status: 500,
-        headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json', 'x-model-used': model },
-      });
+      const errorText = await response.text();
+      console.error('OpenAI API error:', response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('OpenAI response received');
 
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      return new Response(JSON.stringify({ error: 'Invalid response from OpenAI API' }), {
-        status: 500,
-        headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json', 'x-model-used': model },
-      });
-    }
+    const generatedContent = data.choices[0].message.content;
+    console.log('Generated content:', generatedContent);
 
-    const generatedText = data.choices[0].message.content as string;
-
-    let questionData: any;
+    let questions: GeneratedQuestion[];
     try {
-      questionData = JSON.parse(generatedText);
-    } catch (e) {
-      return new Response(JSON.stringify({ error: 'Failed to parse AI response' }), {
-        status: 500,
-        headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json', 'x-model-used': model },
-      });
+      const parsed = JSON.parse(generatedContent);
+      questions = parsed.questions;
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Content:', generatedContent);
+      throw new Error('Failed to parse generated questions');
     }
 
-    // Save question to database
-    const { data: savedQuestion, error } = await supabase
-      .from('questions')
-      .insert({
-        question_text: questionData.question_text,
-        option_a: questionData.option_a,
-        option_b: questionData.option_b,
-        option_c: questionData.option_c,
-        option_d: questionData.option_d,
-        correct_answer: questionData.correct_answer,
-        explanation: questionData.explanation,
-        exam_type: String(examType || '').toLowerCase(),
-        difficulty_level: String(difficulty || '').toLowerCase(),
-        topic: questionData.topic,
-        subtopic: questionData.subtopic,
-        keywords: questionData.keywords,
-        is_ai_generated: true,
-        status: 'pending',
-        created_by: user.id
-      })
-      .select()
-      .single();
-
-    if (error) {
-      return new Response(JSON.stringify({ error: String(error?.message || error) }), {
-        status: 500,
-        headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json', 'x-model-used': model },
-      });
+    if (!questions || !Array.isArray(questions)) {
+      throw new Error('Invalid questions format received from AI');
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      question: savedQuestion,
-      disclaimer: 'This AI-generated question has not been reviewed by medical experts.'
+    console.log(`Generated ${questions.length} questions successfully`);
+
+    // Log the generation for analytics
+    try {
+      await supabase.from('ai_gen_logs').insert({
+        user_id: user.id,
+        source: 'admin-question-generator',
+        exam: exam,
+        count: questions.length,
+        success: true,
+        model_used: 'gpt-4.1-2025-04-14'
+      });
+    } catch (logError) {
+      console.error('Failed to log generation:', logError);
+      // Don't fail the request if logging fails
+    }
+
+    return new Response(JSON.stringify({ 
+      questions,
+      prompt: basePrompt,
+      success: true 
     }), {
-      headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json', 'x-model-used': model },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in generate-ai-question function:', String((error as Error).message || error));
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
+    console.error('Error in generate-ai-question function:', error);
+    
+    // Try to log the error
+    try {
+      const authHeader = req.headers.get('authorization');
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '');
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        const { data: { user } } = await supabase.auth.getUser(token);
+        
+        if (user) {
+          await supabase.from('ai_gen_logs').insert({
+            user_id: user.id,
+            source: 'admin-question-generator',
+            success: false,
+            error_code: error.message,
+            model_used: 'gpt-4.1-2025-04-14'
+          });
+        }
+      }
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
+
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      success: false 
+    }), {
       status: 500,
-      headers: { ...baseCors, 'Access-Control-Allow-Origin': allowOrigin(req.headers.get('Origin')), 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
