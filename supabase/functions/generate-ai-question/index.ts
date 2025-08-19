@@ -111,7 +111,7 @@ Requirements:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: basePrompt }
         ],
-        max_tokens: 4000,
+        max_completion_tokens: 4000,
         temperature: 0.7,
       }),
     });

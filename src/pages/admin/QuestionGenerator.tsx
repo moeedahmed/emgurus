@@ -113,17 +113,18 @@ const QuestionGenerator: React.FC = () => {
     const loadTopics = async () => {
       setLoadingTopics(true);
       try {
-        // Map exam slug to exam_type enum for curriculum lookup
+        // Enhanced exam slug to enum mapping
         const examTypeMap: Record<string, string> = {
           'mrcem-primary': 'MRCEM_PRIMARY',
           'mrcem-sba': 'MRCEM_SBA', 
           'frcem-sba': 'FRCEM_SBA',
           'fcps-part1': 'FCPS_PART1',
           'fcps-part1-pk': 'FCPS_PART1',
-          'fcps-imm': 'FCPS_IMM',
-          'fcps-imm-pk': 'FCPS_IMM',
           'fcps-part2': 'FCPS_PART2',
           'fcps-part2-pk': 'FCPS_PART2',
+          'fcps-imm': 'FCPS_IMM',
+          'fcps-imm-pk': 'FCPS_IMM',
+          'fcps-em-pk': 'FCPS_IMM', // Emergency Medicine maps to IMM
           'fcps-emergency-medicine': 'FCPS_IMM'
         };
 
@@ -138,27 +139,33 @@ const QuestionGenerator: React.FC = () => {
 
           if (error) throw error;
 
-          const topicOptions = data?.map(item => ({
-            value: item.slo_title,
-            label: `${item.key_capability_title}: ${item.slo_title}`
-          })) || [];
+          if (data && data.length > 0) {
+            const topicOptions = data.map(item => ({
+              value: item.slo_title,
+              label: `${item.key_capability_title}: ${item.slo_title}`
+            }));
 
-          // Remove duplicates and add "All Topics" option
-          const uniqueTopics = Array.from(
-            new Map(topicOptions.map(t => [t.value, t])).values()
-          );
+            // Remove duplicates and add "All Topics" option
+            const uniqueTopics = Array.from(
+              new Map(topicOptions.map(t => [t.value, t])).values()
+            );
 
-          setTopics([
-            { value: 'all', label: 'All Topics' },
-            ...uniqueTopics
-          ]);
+            setTopics([
+              { value: 'all', label: 'All Topics' },
+              ...uniqueTopics
+            ]);
+          } else {
+            console.warn(`No curriculum topics found for exam type: ${examType}`);
+            setTopics([{ value: 'all', label: 'All Topics' }]);
+          }
         } else {
+          console.warn(`No mapping found for exam slug: ${config.exam}`);
           setTopics([{ value: 'all', label: 'All Topics' }]);
         }
       } catch (error) {
         console.error('Error loading topics:', error);
         toast.error('Failed to load topics');
-        setTopics([]);
+        setTopics([{ value: 'all', label: 'All Topics' }]);
       } finally {
         setLoadingTopics(false);
       }
@@ -183,10 +190,10 @@ const QuestionGenerator: React.FC = () => {
       ? ` on ${topics.find(t => t.value === config.topic)?.label || config.topic}`
       : '';
     
-    let prompt = `Generate ${config.count} ${config.difficulty}-level MCQs${topicText} for the ${examTitle} exam using the knowledge base associated with ${examTitle}.`;
+    let prompt = `Generate ${config.count} ${config.difficulty}-level MCQs${topicText} for the ${examTitle} exam using the mapped curriculum.`;
     
     if (config.prompt) {
-      prompt += ` ${config.prompt}`;
+      prompt += `\n\nAdditional instructions: ${config.prompt}`;
     }
     
     return prompt;
@@ -509,13 +516,23 @@ const QuestionGenerator: React.FC = () => {
 
                 <Button 
                   onClick={generateQuestions} 
-                  disabled={!config.exam || !config.difficulty || !config.count || generating}
+                  disabled={!config.exam || !config.difficulty || !config.count || generating || exams.length === 0}
                   className="w-full"
                 >
                   {generating ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Generating Questions...
+                    </>
+                  ) : exams.length === 0 ? (
+                    <>
+                      <AlertCircle className="w-4 h-4 mr-2" />
+                      No Exams Available
+                    </>
+                  ) : !config.exam || !config.difficulty || !config.count ? (
+                    <>
+                      <AlertCircle className="w-4 h-4 mr-2" />
+                      Please Complete Configuration
                     </>
                   ) : (
                     <>
