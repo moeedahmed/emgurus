@@ -6,33 +6,78 @@ interface LogoProps {
   size?: number; // height in px for the mark
 }
 
-// Simple, token-driven logo: a primary-colored EM monogram mark + wordmark text
-export default function Logo({ variant = "wordmark", className, size = 28 }: LogoProps) {
+// Modern logo combining book/learning with digital mentorship symbolism
+export default function Logo({ variant = "wordmark", className, size = 32 }: LogoProps) {
   const Mark = (
     <svg
       role="img"
-      aria-label="EM Gurus logo mark"
+      aria-label="EM Gurus - Medical Education & Mentorship Platform"
       width={size}
       height={size}
-      viewBox="0 0 24 24"
-      className={cn("shrink-0 text-primary", className)}
+      viewBox="0 0 32 32"
+      className={cn("shrink-0", className)}
     >
-      <rect x="1.5" y="1.5" width="21" height="21" rx="5" className="fill-primary/10 stroke-primary/30" />
-      {/* E */}
-      <path d="M6 8h5M6 12h5M6 16h5" className="stroke-primary" strokeWidth="1.7" strokeLinecap="round" />
-      {/* stylized M */}
-      <path d="M13 16V8l3 4 3-4v8" className="stroke-primary" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Background circle with gradient */}
+      <defs>
+        <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" className="[stop-color:hsl(var(--primary))]" />
+          <stop offset="100%" className="[stop-color:hsl(var(--primary-glow))]" />
+        </linearGradient>
+      </defs>
+      
+      {/* Main container circle */}
+      <circle 
+        cx="16" 
+        cy="16" 
+        r="15" 
+        fill="url(#logo-gradient)"
+        className="drop-shadow-sm"
+      />
+      
+      {/* Book/Knowledge symbol - stylized open book */}
+      <path 
+        d="M8 12c0-1 1-2 2-2h4c1 0 2 1 2 2M18 12c0-1 1-2 2-2h2c1 0 2 1 2 2"
+        className="stroke-white/90"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path 
+        d="M8 12v8c0 1 1 2 2 2h4c1 0 2-1 2-2v-8M18 12v8c0 1 1 2 2 2h2c1 0 2-1 2-2v-8"
+        className="stroke-white/90"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        fill="none"
+      />
+      
+      {/* Digital/Mentorship element - connection dots */}
+      <circle cx="11" cy="16" r="1" className="fill-white/80" />
+      <circle cx="16" cy="16" r="1.5" className="fill-white" />
+      <circle cx="21" cy="16" r="1" className="fill-white/80" />
+      
+      {/* Connection lines for mentorship */}
+      <path 
+        d="M12 16h3M17.5 16h2.5"
+        className="stroke-white/60"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
     </svg>
   );
 
   if (variant === "mark") return Mark;
 
   return (
-    <span className={cn("inline-flex items-center gap-2", className)}>
+    <div className={cn("inline-flex items-center gap-3", className)}>
       {Mark}
-      <span className="font-display font-bold text-lg sm:text-xl text-foreground tracking-tight">
-        EM Gurus
-      </span>
-    </span>
+      <div className="flex flex-col">
+        <span className="font-display font-bold text-xl text-foreground tracking-tight leading-none">
+          EM Gurus
+        </span>
+        <span className="text-xs text-muted-foreground font-medium tracking-wide uppercase leading-none mt-0.5">
+          Medical Education
+        </span>
+      </div>
+    </div>
   );
 }
