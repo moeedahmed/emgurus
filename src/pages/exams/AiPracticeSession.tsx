@@ -471,7 +471,7 @@ export default function AiPracticeSession() {
           
           {q && (
             <>
-              <div className="p-3 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300 text-sm mb-4">
+              <div className="p-3 rounded-md bg-warning/10 border border-warning/20 text-warning text-sm mb-4">
                 <div className="font-medium mb-1">⚠️ AI Generated Content - Experimental</div>
                 <div>This content is AI-generated and may not always be accurate. Please exercise your judgment and provide feedback if you notice any issues.</div>
               </div>
@@ -557,7 +557,7 @@ export default function AiPracticeSession() {
               )}
 
               {feedbackSubmitted[idx] && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-800 text-sm">
+                <div className="mt-4 p-3 bg-success/10 border border-success/20 rounded-md text-success text-sm">
                   ✓ Thank you for your feedback!
                 </div>
               )}
@@ -571,7 +571,7 @@ export default function AiPracticeSession() {
           <div className="flex items-center gap-2 justify-between">
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={() => navigate('/exams/ai-practice')}>Edit selection</Button>
-              <Button variant="outline" onClick={showFinalScore} className="text-orange-600">
+              <Button variant="outline" onClick={showFinalScore} className="text-warning">
                 End Early
               </Button>
               {error && (

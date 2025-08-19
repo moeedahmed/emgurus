@@ -180,9 +180,9 @@ const QuizInterface = ({ config, onBack }: QuizInterfaceProps) => {
             </h2>
             
             {currentQuestion.is_ai_generated && (
-              <Badge variant="outline" className="text-orange-600 border-orange-600 mb-4">
-                AI Generated {currentQuestion.reviewed_by ? '• Guru Reviewed' : '• Not Reviewed'}
-              </Badge>
+            <Badge variant="outline" className="text-warning border-warning mb-4">
+              AI Generated {currentQuestion.reviewed_by ? '• Guru Reviewed' : '• Not Reviewed'}
+            </Badge>
             )}
           </div>
 
@@ -195,10 +195,10 @@ const QuizInterface = ({ config, onBack }: QuizInterfaceProps) => {
               if (showExplanation) {
                 if (option.key === currentQuestion.correct_answer) {
                   buttonVariant = 'default';
-                  icon = <CheckCircle className="w-4 h-4 text-green-500" />;
+                  icon = <CheckCircle className="w-4 h-4 text-success" />;
                 } else if (option.key === selectedAnswer && selectedAnswer !== currentQuestion.correct_answer) {
                   buttonVariant = 'destructive';
-                  icon = <XCircle className="w-4 h-4 text-red-500" />;
+                  icon = <XCircle className="w-4 h-4 text-destructive" />;
                 }
               } else if (option.key === selectedAnswer) {
                 buttonVariant = 'secondary';
@@ -237,12 +237,12 @@ const QuizInterface = ({ config, onBack }: QuizInterfaceProps) => {
           {/* Explanation */}
           {showExplanation && (
             <div className="space-y-4">
-              <div className={`p-4 rounded-lg border ${isCorrect ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'}`}>
+              <div className={`p-4 rounded-lg border ${isCorrect ? 'bg-success/10 border-success/20' : 'bg-destructive/10 border-destructive/20'}`}>
                 <div className="flex items-center gap-2 mb-2">
                   {isCorrect ? (
-                   <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                   <CheckCircle className="w-5 h-5 text-success" />
                  ) : (
-                   <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                   <XCircle className="w-5 h-5 text-destructive" />
                   )}
                   <span className="font-medium">
                     {isCorrect ? 'Correct!' : 'Incorrect'}

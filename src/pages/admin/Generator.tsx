@@ -382,7 +382,7 @@ Format as strict JSON with: stem, options, correct_index, explanation, reference
                 ) : (
                   <div className="space-y-6">
                     {results.map((question, index) => (
-                      <Card key={question.id} className={`border-2 ${question.kept ? 'border-green-600' : 'border-border'}`}>
+                      <Card key={question.id} className={`border-2 ${question.kept ? 'border-success' : 'border-border'}`}>
                         <CardContent className="pt-6">
                           <div className="flex items-start justify-between mb-4">
                             <Badge variant="outline">Q{index + 1}</Badge>
@@ -419,14 +419,14 @@ Format as strict JSON with: stem, options, correct_index, explanation, reference
                               <div className="font-medium mb-2">Options</div>
                               <div className="space-y-1">
                                 {question.options.map((option, optIndex) => (
-                                  <div 
-                                    key={optIndex}
-                                     className={`text-sm p-2 rounded ${
-                                       optIndex === question.correct_index 
-                                         ? 'bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800' 
-                                         : 'bg-muted'
-                                     }`}
-                                  >
+                                   <div 
+                                     key={optIndex}
+                                      className={`text-sm p-2 rounded ${
+                                        optIndex === question.correct_index 
+                                          ? 'bg-success/10 border border-success/20' 
+                                          : 'bg-muted'
+                                      }`}
+                                   >
                                     <span className="font-medium">{String.fromCharCode(65 + optIndex)}.</span> {option}
                                   </div>
                                 ))}

@@ -44,20 +44,20 @@ const ExamSelector = ({ onStartQuiz, type }: ExamSelectorProps) => {
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             {type === 'realtime' ? (
-              <Sparkles className="w-6 h-6 text-blue-500" />
+              <Sparkles className="w-6 h-6 text-primary" />
             ) : (
-              <CheckCircle className="w-6 h-6 text-green-500" />
+              <CheckCircle className="w-6 h-6 text-success" />
             )}
             <h2 className="text-xl font-semibold">
               {type === 'realtime' ? 'AI Real-time Questions' : 'Guru-Reviewed Questions'}
             </h2>
           </div>
           {type === 'realtime' ? (
-            <Badge variant="outline" className="text-orange-600 border-orange-600">
+            <Badge variant="outline" className="text-warning border-warning">
               Not Guru-reviewed
             </Badge>
           ) : (
-            <Badge variant="outline" className="text-green-600 border-green-600">
+            <Badge variant="outline" className="text-success border-success">
               Guru-approved
             </Badge>
           )}

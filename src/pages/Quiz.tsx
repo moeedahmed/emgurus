@@ -109,7 +109,7 @@ const Quiz = () => {
                       </div>
 
                       <div className="mb-6">
-                        <Badge variant="outline" className="text-orange-600 border-orange-600">
+                        <Badge variant="outline" className="text-warning border-warning">
                           <Clock className="w-3 h-3 mr-1" />
                           Not Guru-reviewed
                         </Badge>
@@ -147,7 +147,7 @@ const Quiz = () => {
                       </div>
 
                       <div className="mb-6">
-                        <Badge variant="outline" className="text-green-600 border-green-600">
+                        <Badge variant="outline" className="text-success border-success">
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Guru-approved
                         </Badge>

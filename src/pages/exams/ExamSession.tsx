@@ -330,7 +330,7 @@ export default function ExamSession() {
             {markedCount > 0 && (
               <div className="text-right">
                 <div className="text-sm text-muted-foreground">Marked</div>
-                <div className="text-lg font-semibold text-orange-600 dark:text-orange-400">
+                <div className="text-lg font-semibold text-warning">
                   {markedCount}
                 </div>
               </div>
@@ -351,7 +351,7 @@ export default function ExamSession() {
             <span>Question {currentIndex + 1} of {questions.length}</span>
             <div className="flex items-center gap-2">
               {markedCount > 0 && (
-                <Badge variant="outline" className="text-orange-600">
+                <Badge variant="outline" className="text-warning">
                   <Flag className="h-3 w-3 mr-1" />
                   {markedCount} marked
                 </Badge>
@@ -390,7 +390,7 @@ export default function ExamSession() {
                    <Button 
                      variant="outline" 
                      onClick={finishExam}
-                     className="text-orange-600 dark:text-orange-400"
+                     className="text-warning"
                    >
                     Finish Early
                   </Button>

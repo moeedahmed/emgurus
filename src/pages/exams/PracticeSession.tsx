@@ -462,7 +462,7 @@ export default function PracticeSession() {
             {markedCount > 0 && (
               <div className="text-right">
                 <div className="text-sm text-muted-foreground">Marked</div>
-                <div className="text-lg font-semibold text-orange-600 dark:text-orange-400">
+                <div className="text-lg font-semibold text-warning">
                   {markedCount}
                 </div>
               </div>
@@ -492,7 +492,7 @@ export default function PracticeSession() {
                         if (isCurrent) {
                           buttonClass += "bg-primary text-primary-foreground ring-2 ring-primary";
                         } else if (isAnswered) {
-                          buttonClass += isCorrect ? "bg-green-100 border-green-300 text-green-700" : "bg-red-100 border-red-300 text-red-700";
+                          buttonClass += isCorrect ? "bg-success/10 border-success/20 text-success" : "bg-destructive/10 border-destructive/20 text-destructive";
                         } else {
                           buttonClass += "bg-muted border-muted-foreground/20";
                         }
@@ -508,7 +508,7 @@ export default function PracticeSession() {
                             variant="ghost"
                             size="sm"
                           >
-                            {isMarked && <Flag className="h-3 w-3 text-orange-500 absolute -top-1 -right-1" />}
+                    {isMarked && <Flag className="h-3 w-3 text-warning absolute -top-1 -right-1" />}
                             {i + 1}
                           </Button>
                         );
@@ -530,7 +530,7 @@ export default function PracticeSession() {
                 <span>Question {currentIndex + 1} of {questions.length}</span>
                 <div className="flex items-center gap-2">
                   {markedCount > 0 && (
-                    <Badge variant="outline" className="text-orange-600">
+                    <Badge variant="outline" className="text-warning">
                       <Flag className="h-3 w-3 mr-1" />
                       {markedCount} marked
                     </Badge>
@@ -649,8 +649,8 @@ export default function PracticeSession() {
                   </Button>
                   <Button 
                     variant="outline" 
-                    onClick={endPractice}
-                    className="text-orange-600"
+                  onClick={endPractice}
+                  className="text-warning"
                   >
                     End Practice
                   </Button>
@@ -704,7 +704,7 @@ export default function PracticeSession() {
                 if (isCurrent) {
                   buttonClass += "bg-primary text-primary-foreground ring-2 ring-primary";
                 } else if (isAnswered) {
-                  buttonClass += isCorrect ? "bg-green-100 border-green-300 text-green-700" : "bg-red-100 border-red-300 text-red-700";
+                  buttonClass += isCorrect ? "bg-success/10 border-success/20 text-success" : "bg-destructive/10 border-destructive/20 text-destructive";
                 } else {
                   buttonClass += "bg-muted border-muted-foreground/20 hover:bg-accent";
                 }
@@ -717,7 +717,7 @@ export default function PracticeSession() {
                     variant="ghost"
                     size="sm"
                   >
-                    {isMarked && <Flag className="h-3 w-3 text-orange-500 absolute -top-1 -right-1" />}
+                    {isMarked && <Flag className="h-3 w-3 text-warning absolute -top-1 -right-1" />}
                     {i + 1}
                   </Button>
                 );
