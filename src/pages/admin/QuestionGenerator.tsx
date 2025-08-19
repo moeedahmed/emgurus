@@ -83,9 +83,52 @@ const QuestionGenerator: React.FC = () => {
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
   const [editingDraft, setEditingDraft] = useState<any>(null);
 
+  // Construct prompt for preview and generation
+  const constructPrompt = () => {
+    const { exam, topic, difficulty, count, prompt } = config;
+    
+    if (!exam || !topic || !difficulty || !count) {
+      return "Please fill in all required fields to see the prompt preview.";
+    }
+    
+    const examNames = {
+      mrcem: 'MRCEM',
+      frcem: 'FRCEM',
+      other: 'Other'
+    };
+    
+    let basePrompt = `Generate ${count} ${difficulty}-level MCQs on ${topic} for the ${examNames[exam as keyof typeof examNames] || exam} exam.`;
+    
+    if (prompt.trim()) {
+      basePrompt += ` ${prompt.trim()}`;
+    }
+    
+    return basePrompt;
+  };
+
   const handleGenerate = () => {
-    // Mock generation - in real implementation, this would call an API
+    const fullPrompt = constructPrompt();
     console.log('Generating questions with config:', config);
+    console.log('Constructed prompt:', fullPrompt);
+    
+    // Simulate generation with mock data
+    const newQuestions = Array.from({ length: parseInt(config.count) || 1 }, (_, index) => ({
+      id: Date.now() + index,
+      stem: `Sample question ${index + 1} about ${config.topic || 'medical topics'} for ${config.exam?.toUpperCase() || 'exam'} at ${config.difficulty || 'medium'} level.`,
+      options: [
+        "Option A - Sample answer",
+        "Option B - Correct answer", 
+        "Option C - Alternative option",
+        "Option D - Another possibility",
+        "Option E - Final option"
+      ],
+      correctIndex: 1,
+      explanation: `This is a sample explanation for the ${config.difficulty || 'medium'} level question about ${config.topic || 'medical topics'}.`,
+      reference: "Sample Reference. Medical Journal. 2024.",
+      status: 'generated'
+    }));
+    
+    setGeneratedQuestions(newQuestions);
   };
 
   const handleKeep = (questionId: number) => {
@@ -200,10 +243,24 @@ const QuestionGenerator: React.FC = () => {
                 />
               </div>
               
-              <Button onClick={handleGenerate} className="w-full sm:w-auto">
+              <Button 
+                onClick={handleGenerate} 
+                className="w-full sm:w-auto"
+                disabled={!config.exam || !config.topic || !config.difficulty || !config.count}
+              >
                 <Brain className="w-4 h-4 mr-2" />
                 Generate Questions
               </Button>
+            </Card>
+
+            {/* Prompt Preview */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Prompt Preview</h3>
+              <div className="bg-muted/50 border border-border p-4 rounded-lg">
+                <p className="text-sm font-mono text-foreground whitespace-pre-wrap">
+                  {constructPrompt()}
+                </p>
+              </div>
             </Card>
 
             {/* Generated Questions */}

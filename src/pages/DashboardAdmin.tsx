@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import QuestionGenerator from "@/pages/admin/QuestionGenerator";
 
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
@@ -1318,22 +1319,7 @@ export default function DashboardAdmin() {
           id: "question-generator", 
           title: "Question Generator 🧠", 
           description: "Modern AI question generation interface (Beta).", 
-          render: (
-            <div className="p-4">
-              <Card className="p-6 text-center">
-                <Brain className="w-12 h-12 mx-auto mb-4 text-primary" />
-                <h3 className="font-semibold mb-2">Question Generator</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Modern interface for AI question generation, curation, and guru assignment.
-                </p>
-                <Button asChild>
-                  <Link to="/dashboard/admin/question-generator">
-                    Open Question Generator
-                  </Link>
-                </Button>
-              </Card>
-            </div>
-          )
+          render: <QuestionGenerator />
         },
       ],
     },
