@@ -55,7 +55,7 @@ const Quiz = () => {
   return (
     <div className="min-h-screen bg-background">
       <PageHero
-        title="EMGurus Exams"
+        title="Exams"
         subtitle="Practice with AI-generated or Guru-reviewed questions — pick your mode below."
         align="center"
         ctas={[{ label: "Back to Home", href: "/", variant: "outline" }]}

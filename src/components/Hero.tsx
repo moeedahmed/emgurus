@@ -12,7 +12,7 @@ const Hero = () => {
       <div className="page-container">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content */}
-          <div className="animate-fade-in content-spacing">
+          <div className="animate-fade-in content-spacing text-center lg:text-left">
 
             <h1 className="heading-display mb-6">
               Master EM Exams.
@@ -25,7 +25,7 @@ const Hero = () => {
               AI practice, guru‑reviewed questions, and 1:1 mentorship built for emergency medicine clinicians.
             </p>
 
-            <div className="flex-responsive justify-center sm:justify-start">
+            <div className="flex-responsive justify-center lg:justify-start">
               <Button
                 variant="default"
                 size="lg"

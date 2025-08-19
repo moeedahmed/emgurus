@@ -476,10 +476,10 @@ Format as strict JSON with: stem, options, correct_index, explanation, reference
                 <div>
                   <Label>Injected Variables</Label>
                   <div className="mt-2 space-y-1 text-xs">
-                    <div><span className="font-mono">exam:</span> {exam || "Not selected"}</div>
-                    <div><span className="font-mono">topic:</span> {topic && topic !== "all" ? topic : "All"}</div>
-                    <div><span className="font-mono">difficulty:</span> {difficulty}</div>
-                    <div><span className="font-mono">count:</span> {count}</div>
+                    <div><span className="font-medium">exam:</span> {exam || "Not selected"}</div>
+                    <div><span className="font-medium">topic:</span> {topic && topic !== "all" ? topic : "All"}</div>
+                    <div><span className="font-medium">difficulty:</span> {difficulty}</div>
+                    <div><span className="font-medium">count:</span> {count}</div>
                   </div>
                 </div>
 

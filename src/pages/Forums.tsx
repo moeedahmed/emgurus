@@ -104,7 +104,7 @@ const Forums = ({ embedded = false }: { embedded?: boolean } = {}) => {
     <main>
       {!embedded && (
         <PageHero
-          title="EMGurus Forums"
+          title="Forums"
           subtitle="All threads. Filter by section, or start a new discussion."
           align="center"
           ctas={[{ label: "Start a Thread", href: "?new=1", variant: "outline" }]}
