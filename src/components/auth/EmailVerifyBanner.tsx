@@ -43,11 +43,11 @@ const EmailVerifyBanner: React.FC<EmailVerifyBannerProps> = ({ className }) => {
   };
 
   return (
-    <Card className={`border-warning/20 bg-warning/5 ${className}`}>
+    <Card className={`border-warning/20 bg-warning/5 animate-slide-up ${className}`}>
       <div className="p-3 flex items-center gap-3">
         <AlertCircle className="w-4 h-4 text-warning shrink-0" />
-        <div className="flex-1 text-sm">
-          <span className="font-medium">Verify your email</span> to enable publishing & comments
+        <div className="flex-1 caption">
+          <span className="font-medium text-foreground">Verify your email</span> to enable publishing & comments
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -55,7 +55,8 @@ const EmailVerifyBanner: React.FC<EmailVerifyBannerProps> = ({ className }) => {
             size="sm"
             onClick={handleResendVerification}
             disabled={isResending}
-            className="text-warning hover:text-warning h-auto py-1 px-2"
+            className="text-warning hover:text-warning h-auto py-1 px-2 transition-interactive focus-ring"
+            aria-label="Resend verification email"
           >
             <Mail className="w-3 h-3 mr-1" />
             {isResending ? 'Sending...' : 'Resend'}
@@ -64,7 +65,8 @@ const EmailVerifyBanner: React.FC<EmailVerifyBannerProps> = ({ className }) => {
             variant="ghost"
             size="sm"
             onClick={() => setIsDismissed(true)}
-            className="h-auto py-1 px-1 text-muted-foreground hover:text-foreground"
+            className="h-auto py-1 px-1 text-muted-foreground hover:text-foreground transition-interactive focus-ring"
+            aria-label="Dismiss notification"
           >
             <X className="w-3 h-3" />
           </Button>

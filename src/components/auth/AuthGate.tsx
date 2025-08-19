@@ -25,19 +25,20 @@ const AuthGate: React.FC<AuthGateProps> = ({ children, fallback, className }) =>
     }
 
     return (
-      <Card className={`p-4 text-center ${className}`}>
+      <Card className={`p-4 text-center card-elevated animate-fade-in ${className}`}>
         <div className="flex flex-col items-center gap-3">
           <LogIn className="w-8 h-8 text-muted-foreground" />
           <div>
-            <p className="font-medium mb-1">Sign in to continue</p>
-            <p className="text-sm text-muted-foreground mb-3">
+            <p className="font-medium mb-1 text-foreground">Sign in to continue</p>
+            <p className="caption mb-3">
               This action requires authentication
             </p>
           </div>
           <Button 
             size="sm" 
             onClick={() => navigate('/auth')}
-            className="w-full max-w-xs"
+            className="w-full max-w-xs transition-interactive focus-ring"
+            aria-label="Go to sign in page"
           >
             Sign In
           </Button>

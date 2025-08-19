@@ -151,9 +151,9 @@ const Auth = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
+        <div className="text-center animate-fade-in">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-sm text-muted-foreground">Checking authentication...</p>
+          <p className="caption">Checking authentication...</p>
         </div>
       </div>
     );
@@ -161,7 +161,7 @@ const Auth = () => {
 
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background transition-colors duration-300">
       {/* Header */}
       <div className="border-b border-border">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -169,33 +169,38 @@ const Auth = () => {
             <Button
               variant="ghost"
               onClick={() => navigate('/')}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 focus-ring"
+              aria-label="Back to home"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Home
+              <span className="hidden sm:inline">Back to Home</span>
             </Button>
-            <div></div>
-            <div></div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4">
-        <Card className="w-full max-w-md p-8">
+        <Card className="w-full max-w-md p-8 card-elevated animate-scale-in">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4 shadow-medium">
               <Brain className="w-8 h-8 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold mb-2">Welcome to EM Gurus</h1>
-            <p className="text-muted-foreground">
+            <h1 className="heading-md mb-2">Welcome to EM Gurus</h1>
+            <p className="caption">
               Sign in to access AI-powered exam preparation and expert mentorship
             </p>
           </div>
 
           <div className="space-y-6">
-            <Button onClick={handleGoogleSignIn} className="w-full" size="lg" variant="secondary">
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+            <Button 
+              onClick={handleGoogleSignIn} 
+              className="w-full transition-interactive hover-lift focus-ring" 
+              size="lg" 
+              variant="secondary"
+              aria-label="Sign in with Google"
+            >
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                 <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -205,71 +210,155 @@ const Auth = () => {
             </Button>
 
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="w-full grid grid-cols-3">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                <TabsTrigger value="reset">Reset</TabsTrigger>
+              <TabsList className="w-full grid grid-cols-3 bg-muted">
+                <TabsTrigger value="signin" className="transition-interactive">Sign In</TabsTrigger>
+                <TabsTrigger value="signup" className="transition-interactive">Sign Up</TabsTrigger>
+                <TabsTrigger value="reset" className="transition-interactive">Reset</TabsTrigger>
               </TabsList>
-              <TabsContent value="signin">
+              <TabsContent value="signin" className="animate-fade-in">
                 <div className="space-y-4 pt-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+                    <Label htmlFor="email" className="text-foreground">Email</Label>
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)} 
+                      placeholder="you@example.com"
+                      className="transition-interactive focus-ring"
+                      aria-required="true"
+                      autoComplete="email"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" />
+                    <Label htmlFor="password" className="text-foreground">Password</Label>
+                    <Input 
+                      id="password" 
+                      type="password" 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      placeholder="Your password"
+                      className="transition-interactive focus-ring"
+                      aria-required="true"
+                      autoComplete="current-password"
+                    />
                   </div>
-                  <Button className="w-full" onClick={handleEmailSignIn} disabled={submitting}>
+                  <Button 
+                    className="w-full transition-interactive focus-ring" 
+                    onClick={handleEmailSignIn} 
+                    disabled={submitting || !email || !password}
+                  >
                     {submitting ? 'Signing in...' : 'Sign In'}
                   </Button>
                 </div>
               </TabsContent>
-              <TabsContent value="signup">
+              <TabsContent value="signup" className="animate-fade-in">
                 <div className="space-y-4 pt-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full name</Label>
-                    <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" />
+                    <Label htmlFor="name" className="text-foreground">Full name</Label>
+                    <Input 
+                      id="name" 
+                      value={fullName} 
+                      onChange={(e) => setFullName(e.target.value)} 
+                      placeholder="Jane Doe"
+                      className="transition-interactive focus-ring"
+                      aria-required="true"
+                      autoComplete="name"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email2">Email</Label>
-                    <Input id="email2" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+                    <Label htmlFor="email2" className="text-foreground">Email</Label>
+                    <Input 
+                      id="email2" 
+                      type="email" 
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)} 
+                      placeholder="you@example.com"
+                      className="transition-interactive focus-ring"
+                      aria-required="true"
+                      autoComplete="email"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password2">Password</Label>
-                    <Input id="password2" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a password" />
-                    <p className="text-xs text-muted-foreground">Password is set after verifying your email.</p>
+                    <Label htmlFor="password2" className="text-foreground">Password</Label>
+                    <Input 
+                      id="password2" 
+                      type="password" 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      placeholder="Create a password"
+                      className="transition-interactive focus-ring"
+                      aria-required="true"
+                      autoComplete="new-password"
+                    />
+                    <p className="caption">Password is set after verifying your email.</p>
                   </div>
 
                   {!signupOtpSent ? (
-                    <Button className="w-full" onClick={handleEmailSignUp} disabled={submitting || !email || !fullName}>
+                    <Button 
+                      className="w-full transition-interactive focus-ring" 
+                      onClick={handleEmailSignUp} 
+                      disabled={submitting || !email || !fullName}
+                    >
                       {submitting ? 'Sending code…' : 'Send verification code'}
                     </Button>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-3 animate-slide-up">
                       <div className="space-y-2">
-                        <Label htmlFor="signupCode">Enter email code</Label>
-                        <Input id="signupCode" value={signupOtpCode} onChange={(e) => setSignupOtpCode(e.target.value)} placeholder="6-digit code" />
+                        <Label htmlFor="signupCode" className="text-foreground">Enter email code</Label>
+                        <Input 
+                          id="signupCode" 
+                          value={signupOtpCode} 
+                          onChange={(e) => setSignupOtpCode(e.target.value)} 
+                          placeholder="6-digit code"
+                          className="transition-interactive focus-ring"
+                          aria-required="true"
+                          autoComplete="one-time-code"
+                        />
                       </div>
                       <div className="flex gap-2">
-                        <Button className="flex-1" onClick={handleVerifySignupOtp} disabled={submitting || signupOtpCode.length < 4}>
+                        <Button 
+                          className="flex-1 transition-interactive focus-ring" 
+                          onClick={handleVerifySignupOtp} 
+                          disabled={submitting || signupOtpCode.length < 4}
+                        >
                           {submitting ? 'Verifying…' : 'Verify & Create Account'}
                         </Button>
-                        <Button variant="outline" onClick={handleEmailSignUp} disabled={submitting}>Resend</Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={handleEmailSignUp} 
+                          disabled={submitting}
+                          className="transition-interactive focus-ring"
+                        >
+                          Resend
+                        </Button>
                       </div>
                     </div>
                   )}
 
-                  <p className="text-xs text-muted-foreground text-center">We use an email OTP to confirm your account.</p>
+                  <p className="caption text-center">We use an email OTP to confirm your account.</p>
                 </div>
               </TabsContent>
-              <TabsContent value="reset">
+              <TabsContent value="reset" className="animate-fade-in">
                 <div className="space-y-4 pt-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email3">Email</Label>
-                    <Input id="email3" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+                    <Label htmlFor="email3" className="text-foreground">Email</Label>
+                    <Input 
+                      id="email3" 
+                      type="email" 
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)} 
+                      placeholder="you@example.com"
+                      className="transition-interactive focus-ring"
+                      aria-required="true"
+                      autoComplete="email"
+                    />
                   </div>
-                  <Button className="w-full" onClick={handleResetPassword} disabled={submitting}>
+                  <Button 
+                    className="w-full transition-interactive focus-ring" 
+                    onClick={handleResetPassword} 
+                    disabled={submitting || !email}
+                  >
                     {submitting ? 'Sending reset...' : 'Send reset link'}
                   </Button>
                 </div>
@@ -277,7 +366,7 @@ const Auth = () => {
 
             </Tabs>
 
-            <div className="text-center text-sm text-muted-foreground">
+            <div className="text-center caption">
               By signing in, you agree to our Terms of Service and Privacy Policy
             </div>
           </div>

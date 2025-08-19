@@ -31,12 +31,12 @@ const RoleGate: React.FC<RoleGateProps> = ({ roles, children, fallback, classNam
     }
 
     return (
-      <Card className={`p-4 text-center ${className}`}>
+      <Card className={`p-4 text-center card-elevated animate-fade-in ${className}`}>
         <div className="flex flex-col items-center gap-3">
           <Shield className="w-8 h-8 text-muted-foreground" />
           <div>
-            <p className="font-medium mb-1">Access Restricted</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="font-medium mb-1 text-foreground">Access Restricted</p>
+            <p className="caption">
               This action requires {roles.length === 1 ? `${roles[0]} role` : `one of: ${roles.join(', ')}`}
             </p>
           </div>
