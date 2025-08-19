@@ -272,9 +272,9 @@ const QuestionGenerator: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {loadingExams ? (
-                      <SelectItem value="" disabled>Loading...</SelectItem>
+                      <SelectItem value="loading" disabled>Loading...</SelectItem>
                     ) : exams.length === 0 ? (
-                      <SelectItem value="" disabled>
+                      <SelectItem value="no-exams" disabled>
                         <div className="flex items-center gap-2">
                           <AlertCircle className="w-4 h-4" />
                           No exams available — please seed the exams database
@@ -311,9 +311,9 @@ const QuestionGenerator: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {loadingTopics ? (
-                      <SelectItem value="" disabled>Loading...</SelectItem>
+                      <SelectItem value="loading" disabled>Loading...</SelectItem>
                     ) : topics.length === 0 && config.exam ? (
-                      <SelectItem value="" disabled>
+                      <SelectItem value="no-topics" disabled>
                         <div className="flex items-center gap-2">
                           <AlertCircle className="w-4 h-4" />
                           No topics available for this exam
