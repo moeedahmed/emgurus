@@ -52,6 +52,7 @@ const AssignReviews = lazy(() => import("./pages/admin/AssignReviews"));
 const Taxonomy = lazy(() => import("./pages/admin/Taxonomy"));
 const MarkedQuestionsAdmin = lazy(() => import("./pages/admin/MarkedQuestions"));
 const QuestionSetsAdmin = lazy(() => import("./pages/admin/QuestionSets"));
+const QuestionGenerator = lazy(() => import("./pages/admin/QuestionGenerator"));
 
 // Guru pages - lazy loaded
 const GuruQuestions = lazy(() => import("./pages/guru/Questions"));
@@ -427,6 +428,13 @@ const App = () => (
                 <RoleProtectedRoute roles={["admin"]}>
                   <Suspense fallback={<PageLoadingFallback />}>
                     <ExamsAICuration />
+                  </Suspense>
+                </RoleProtectedRoute>
+              } />
+              <Route path="/dashboard/admin/question-generator" element={
+                <RoleProtectedRoute roles={["admin"]}>
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <QuestionGenerator />
                   </Suspense>
                 </RoleProtectedRoute>
               } />

@@ -58,12 +58,6 @@ const AdminExamShortcutsBar: React.FC = () => (
     <Button asChild size="sm" variant="outline"><a href="/admin/exams-curation">AI Curation & Assign</a></Button>
     <Button asChild size="sm" variant="outline"><a href="/admin/question-sets">Question Sets</a></Button>
     <Button asChild size="sm" variant="outline"><a href="/admin/marked-questions">Marked Questions</a></Button>
-    <Button asChild variant="outline" size="sm">
-      <Link to="/admin/QuestionGenerator" className="flex items-center">
-        <Brain className="w-4 h-4 mr-2" />
-        Question Generator <Badge variant="secondary" className="ml-2 text-xs">🧪 Experimental</Badge>
-      </Link>
-    </Button>
   </div>
 );
 
@@ -1312,6 +1306,34 @@ export default function DashboardAdmin() {
           title: "Feature Flags / Branding", 
           description: "Admin toggles and customization.", 
           render: <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">Feature flags coming soon.</Card></div> 
+        },
+      ],
+    },
+    {
+      id: "experimental",
+      title: "🧪 Experimental",
+      icon: Brain,
+      tabs: [
+        { 
+          id: "question-generator", 
+          title: "Question Generator 🧠", 
+          description: "Modern AI question generation interface (Beta).", 
+          render: (
+            <div className="p-4">
+              <Card className="p-6 text-center">
+                <Brain className="w-12 h-12 mx-auto mb-4 text-primary" />
+                <h3 className="font-semibold mb-2">Question Generator</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Modern interface for AI question generation, curation, and guru assignment.
+                </p>
+                <Button asChild>
+                  <Link to="/dashboard/admin/question-generator">
+                    Open Question Generator
+                  </Link>
+                </Button>
+              </Card>
+            </div>
+          )
         },
       ],
     },
