@@ -21,7 +21,7 @@ interface GenerationRequest {
 
 interface GeneratedQuestion {
   stem: string;
-  options: string[];
+  options: { text: string; explanation: string }[];
   correctIndex: number;
   explanation: string;
   reference?: string;
@@ -92,9 +92,15 @@ Generate exactly ${count} questions in the following JSON format:
   "questions": [
     {
       "stem": "The question text here...",
-      "options": ["Option A", "Option B", "Option C", "Option D", "Option E"],
-      "correctIndex": 0,
-      "explanation": "Detailed explanation of why the correct answer is right and others are wrong...",
+      "options": [
+        { "text": "Option A text", "explanation": "Why this option is incorrect..." },
+        { "text": "Option B text", "explanation": "Why this option is correct..." },
+        { "text": "Option C text", "explanation": "Why this option is incorrect..." },
+        { "text": "Option D text", "explanation": "Why this option is incorrect..." },
+        { "text": "Option E text", "explanation": "Why this option is incorrect..." }
+      ],
+      "correctIndex": 1,
+      "explanation": "Overall explanation summarizing the concept...",
       "reference": "Citation or reference (optional)"
     }
   ]
@@ -102,8 +108,9 @@ Generate exactly ${count} questions in the following JSON format:
 
 Requirements:
 - Each question must be clinically relevant and accurate
-- Provide 5 options (A-E) per question
-- Include comprehensive explanations
+- Provide 5 options (A-E) per question with individual explanations
+- Each option should have its own explanation (why it's correct or incorrect)
+- Include comprehensive overall explanations
 - Use appropriate medical terminology
 - Ensure questions are at the specified difficulty level
 - Questions should be suitable for ${exam} examination level

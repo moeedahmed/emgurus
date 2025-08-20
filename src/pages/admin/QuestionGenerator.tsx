@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Brain, FileText, Flag, Edit, Trash2, RotateCcw, Save, Users, AlertCircle, Loader2, Check, X } from 'lucide-react';
+import { Brain, FileText, Flag, Edit, Trash2, RotateCcw, Save, Users, AlertCircle, Loader2, Check, X, UserPlus, CheckSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { DraftEditModal } from '@/components/DraftEditModal';
 
 interface ExamOption {
   slug: string;
@@ -24,7 +25,7 @@ interface TopicOption {
 interface GeneratedQuestion {
   id?: string;
   stem: string;
-  options: string[];
+  options: { text: string; explanation: string }[];
   correctIndex: number;
   explanation: string;
   reference?: string;
@@ -34,14 +35,14 @@ interface GeneratedQuestion {
 interface DraftQuestion extends GeneratedQuestion {
   id: string;
   assignedTo?: string;
+  assignedGuruName?: string;
   createdAt: string;
 }
 
-const mockGurus = [
-  { id: 1, name: "Dr. Sarah Johnson" },
-  { id: 2, name: "Dr. Michael Chen" },
-  { id: 3, name: "Dr. Emma Wilson" }
-];
+interface Guru {
+  id: string;
+  name: string;
+}
 
 const QuestionGenerator: React.FC = () => {
   const [activeTab, setActiveTab] = useState('generate');
@@ -49,6 +50,7 @@ const QuestionGenerator: React.FC = () => {
   // Database data
   const [exams, setExams] = useState<ExamOption[]>([]);
   const [topics, setTopics] = useState<TopicOption[]>([]);
+  const [gurus, setGurus] = useState<Guru[]>([]);
   const [loadingExams, setLoadingExams] = useState(true);
   const [loadingTopics, setLoadingTopics] = useState(false);
   
@@ -72,35 +74,54 @@ const QuestionGenerator: React.FC = () => {
   // Edit states
   const [editingQuestion, setEditingQuestion] = useState<GeneratedQuestion | null>(null);
   const [editingDraft, setEditingDraft] = useState<DraftQuestion | null>(null);
+  const [editForm, setEditForm] = useState<DraftQuestion | null>(null);
+  const [bulkAssignMode, setBulkAssignMode] = useState(false);
+  const [selectedDrafts, setSelectedDrafts] = useState<string[]>([]);
 
-  // Load exams from taxonomy terms
+  // Load exams and gurus
   useEffect(() => {
-    const loadExams = async () => {
+    const loadData = async () => {
       setLoadingExams(true);
       try {
-        const { data, error } = await supabase
+        // Load exams
+        const { data: examData, error: examError } = await supabase
           .from('taxonomy_terms')
           .select('slug, title')
           .eq('kind', 'exam')
           .order('title');
 
-        if (error) throw error;
+        if (examError) throw examError;
 
-        const examOptions = data?.map(item => ({
+        const examOptions = examData?.map(item => ({
           slug: item.slug,
           title: item.title
         })) || [];
 
         setExams(examOptions);
+
+        // Load gurus
+        const { data: guruData, error: guruError } = await supabase
+          .from('user_roles')
+          .select('user_id, profiles!inner(full_name)')
+          .eq('role', 'guru');
+
+        if (guruError) throw guruError;
+
+        const guruList = guruData?.map((r: any) => ({
+          id: r.user_id,
+          name: r.profiles?.full_name || 'Unknown Guru'
+        })) || [];
+
+        setGurus(guruList);
       } catch (error) {
-        console.error('Error loading exams:', error);
-        toast.error('Failed to load exams');
+        console.error('Error loading data:', error);
+        toast.error('Failed to load data');
       } finally {
         setLoadingExams(false);
       }
     };
 
-    loadExams();
+    loadData();
   }, []);
 
   // Load topics when exam changes
@@ -298,8 +319,8 @@ const QuestionGenerator: React.FC = () => {
       // Convert drafts to review_exam_questions format
       const questionsToInsert = drafts.map(draft => ({
         question: draft.stem,
-        options: draft.options,
-        correct_answer: draft.options[draft.correctIndex],
+        options: draft.options.map(opt => opt.text),
+        correct_answer: draft.options[draft.correctIndex].text,
         explanation: draft.explanation,
         exam_type: 'OTHER' as const,
         status: 'draft' as const,
@@ -329,6 +350,60 @@ const QuestionGenerator: React.FC = () => {
     toast.success('Draft removed');
   };
 
+  // Edit draft functionality
+  const startEditDraft = (draft: DraftQuestion) => {
+    setEditForm({ ...draft });
+    setEditingDraft(draft);
+  };
+
+  const saveEditDraft = () => {
+    if (!editForm || !editingDraft) return;
+    
+    setDrafts(prev => prev.map(d => 
+      d.id === editingDraft.id ? editForm : d
+    ));
+    setEditForm(null);
+    setEditingDraft(null);
+    toast.success('Draft updated');
+  };
+
+  const cancelEditDraft = () => {
+    setEditForm(null);
+    setEditingDraft(null);
+  };
+
+  // Assign guru to draft
+  const assignGuru = (draftId: string, guruId: string) => {
+    const guru = gurus.find(g => g.id === guruId);
+    setDrafts(prev => prev.map(d => 
+      d.id === draftId 
+        ? { ...d, assignedTo: guruId, assignedGuruName: guru?.name }
+        : d
+    ));
+    toast.success('Guru assigned');
+  };
+
+  // Bulk assign functionality
+  const bulkAssignGuru = (guruId: string) => {
+    const guru = gurus.find(g => g.id === guruId);
+    setDrafts(prev => prev.map(d => 
+      selectedDrafts.includes(d.id)
+        ? { ...d, assignedTo: guruId, assignedGuruName: guru?.name }
+        : d
+    ));
+    setSelectedDrafts([]);
+    setBulkAssignMode(false);
+    toast.success(`Assigned ${selectedDrafts.length} drafts to ${guru?.name}`);
+  };
+
+  const toggleDraftSelection = (draftId: string) => {
+    setSelectedDrafts(prev => 
+      prev.includes(draftId)
+        ? prev.filter(id => id !== draftId)
+        : [...prev, draftId]
+    );
+  };
+
   const QuestionCard = ({ question, showActions = true, onKeep, onDiscard, onEdit }: {
     question: GeneratedQuestion;
     showActions?: boolean;
@@ -342,12 +417,19 @@ const QuestionGenerator: React.FC = () => {
           <p className="font-medium text-sm mb-3">{question.stem}</p>
           <div className="space-y-2">
             {question.options.map((option, index) => (
-              <div key={index} className={`p-2 rounded border text-sm ${
+              <div key={index} className={`p-3 rounded border text-sm ${
                 index === question.correctIndex 
                   ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' 
                   : 'bg-gray-50 border-gray-200 dark:bg-gray-900 dark:border-gray-700'
               }`}>
-                <span className="font-medium">{String.fromCharCode(65 + index)}.</span> {option}
+                <div className="font-medium mb-1">
+                  <span className="font-bold">{String.fromCharCode(65 + index)}.</span> {typeof option === 'string' ? option : option.text}
+                </div>
+                {typeof option === 'object' && option.explanation && (
+                  <div className="text-xs text-muted-foreground italic">
+                    {option.explanation}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -408,7 +490,7 @@ const QuestionGenerator: React.FC = () => {
           <TabsTrigger value="drafts">
             Drafts {drafts.length > 0 && <Badge variant="secondary" className="ml-2">{drafts.length}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="marked">Marked Questions</TabsTrigger>
+          <TabsTrigger value="marked">Marked</TabsTrigger>
         </TabsList>
 
         <TabsContent value="generate" className="space-y-6">
@@ -579,11 +661,44 @@ const QuestionGenerator: React.FC = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="drafts" className="space-y-6">
+        <TabsContent value="drafts" className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Draft Questions ({drafts.length})</h3>
-            {drafts.length > 0 && (
-              <Button onClick={commitAllDrafts} disabled={committingDrafts}>
+            <div className="flex gap-2">
+              {drafts.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setBulkAssignMode(!bulkAssignMode);
+                    setSelectedDrafts([]);
+                  }}
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  {bulkAssignMode ? 'Cancel Bulk' : 'Bulk Assign'}
+                </Button>
+              )}
+              
+              {bulkAssignMode && selectedDrafts.length > 0 && (
+                <Select onValueChange={bulkAssignGuru}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Assign to guru" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gurus.map(guru => (
+                      <SelectItem key={guru.id} value={guru.id}>
+                        {guru.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
+              <Button 
+                onClick={commitAllDrafts} 
+                disabled={drafts.length === 0 || committingDrafts}
+                className="text-sm"
+              >
                 {committingDrafts ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -592,41 +707,128 @@ const QuestionGenerator: React.FC = () => {
                 ) : (
                   <>
                     <Save className="w-4 h-4 mr-2" />
-                    Commit All Drafts
+                    Commit All ({drafts.length})
                   </>
                 )}
               </Button>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            {drafts.length === 0 ? (
+              <Card className="p-8 text-center">
+                <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground">No draft questions yet. Generate some questions and keep them as drafts.</p>
+              </Card>
+            ) : (
+              drafts.map((draft) => (
+                <Card key={draft.id} className="p-4 space-y-4">
+                  <div className="flex items-start justify-between">
+                    {bulkAssignMode && (
+                      <div className="flex items-center mr-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedDrafts.includes(draft.id)}
+                          onChange={() => toggleDraftSelection(draft.id)}
+                          className="w-4 h-4"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="flex-1">
+                      <p className="font-medium text-sm mb-3">{draft.stem}</p>
+                      <div className="space-y-2">
+                        {draft.options.map((option, index) => (
+                          <div key={index} className={`p-3 rounded border text-sm ${
+                            index === draft.correctIndex 
+                              ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' 
+                              : 'bg-gray-50 border-gray-200 dark:bg-gray-900 dark:border-gray-700'
+                          }`}>
+                            <div className="font-medium mb-1">
+                              <span className="font-bold">{String.fromCharCode(65 + index)}.</span> {typeof option === 'string' ? option : option.text}
+                            </div>
+                            {typeof option === 'object' && option.explanation && (
+                              <div className="text-xs text-muted-foreground italic">
+                                {option.explanation}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {draft.explanation && (
+                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800">
+                          <p className="text-sm"><strong>Overall Explanation:</strong> {draft.explanation}</p>
+                        </div>
+                      )}
+                      
+                      {draft.reference && (
+                        <div className="mt-2">
+                          <p className="text-xs text-muted-foreground"><strong>Reference:</strong> {draft.reference}</p>
+                        </div>
+                      )}
+                      
+                      <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>Created: {new Date(draft.createdAt).toLocaleString()}</span>
+                        {draft.assignedGuruName ? (
+                          <Badge variant="default">Assigned to {draft.assignedGuruName}</Badge>
+                        ) : (
+                          <Badge variant="outline">Unassigned</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 pt-2 border-t">
+                    <Button size="sm" variant="ghost" onClick={() => startEditDraft(draft)} className="text-xs">
+                      <Edit className="w-3 h-3 mr-1" />
+                      Edit
+                    </Button>
+                    
+                    {!draft.assignedTo && (
+                      <Select onValueChange={(guruId) => assignGuru(draft.id, guruId)}>
+                        <SelectTrigger className="w-32 h-8 text-xs">
+                          <SelectValue placeholder="Assign" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {gurus.map(guru => (
+                            <SelectItem key={guru.id} value={guru.id}>
+                              {guru.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    
+                    <Button size="sm" variant="outline" onClick={() => removeDraft(draft.id)} className="text-xs">
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      Remove
+                    </Button>
+                  </div>
+                </Card>
+              ))
             )}
           </div>
-
-          {drafts.length === 0 ? (
-            <Card className="p-8 text-center">
-              <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No draft questions yet. Generate some questions and keep them as drafts.</p>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {drafts.map((draft) => (
-                <QuestionCard
-                  key={draft.id}
-                  question={draft}
-                  showActions={true}
-                  onDiscard={() => removeDraft(draft.id)}
-                  onEdit={() => setEditingDraft(draft)}
-                />
-              ))}
-            </div>
-          )}
         </TabsContent>
 
-        <TabsContent value="marked" className="space-y-6">
-          <h3 className="text-lg font-semibold">Marked Questions</h3>
+        <TabsContent value="marked" className="space-y-4">
           <Card className="p-8 text-center">
-            <Flag className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No marked questions yet. This feature will show questions flagged for review.</p>
+            <Flag className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">Marked questions functionality coming soon.</p>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Draft Edit Modal */}
+      <DraftEditModal
+        open={!!editingDraft}
+        draft={editingDraft}
+        gurus={gurus}
+        onSave={saveEditDraft}
+        onCancel={cancelEditDraft}
+        formData={editForm}
+        setFormData={setEditForm}
+      />
     </div>
   );
 };
