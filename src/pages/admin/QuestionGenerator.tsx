@@ -92,10 +92,15 @@ const QuestionGenerator: React.FC = () => {
 
         if (examError) throw examError;
 
-        const examOptions = examData?.map(item => ({
-          slug: item.slug,
-          title: item.title
-        })) || [];
+        // Client-side deduplication as fallback
+        const uniqueExams = examData?.reduce((acc, exam) => {
+          if (!acc.find(existing => existing.slug === exam.slug)) {
+            acc.push({ slug: exam.slug, title: exam.title });
+          }
+          return acc;
+        }, [] as ExamOption[]) || [];
+
+        const examOptions = uniqueExams;
 
         setExams(examOptions);
 
