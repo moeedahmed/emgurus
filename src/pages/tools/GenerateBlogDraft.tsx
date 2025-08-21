@@ -114,6 +114,7 @@ export default function GenerateBlogDraft() {
           topic: formData.topic,
           keywords: formData.keywords,
           instructions: formData.additional_instructions,
+          category: formData.category_id,
           messages: [
             {
               role: 'system',
