@@ -119,6 +119,92 @@ export default function GenerateBlogDraft() {
     return Array.from(enriched);
   };
 
+  const handleUploadImage = async (blockIndex: number, file: File) => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const path = `blog-generator/${user.id}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('blog-covers')
+        .upload(path, file, { upsert: false });
+        
+      if (uploadError) throw uploadError;
+      
+      const { data } = supabase.storage.from('blog-covers').getPublicUrl(path);
+      
+      // Update the block with the uploaded image
+      setGeneratedDraft(prev => {
+        if (!prev) return prev;
+        const newBlocks = [...prev.blocks];
+        newBlocks[blockIndex] = {
+          type: 'text',
+          content: `![${newBlocks[blockIndex].description || 'Medical illustration'}](${data.publicUrl})`
+        };
+        return { ...prev, blocks: newBlocks };
+      });
+
+      toast({
+        title: "Image Uploaded",
+        description: "Image has been uploaded successfully.",
+      });
+    } catch (error) {
+      console.error('Upload failed:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Unable to upload image. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerateImage = async (blockIndex: number, description: string) => {
+    try {
+      setLoading(true);
+      const response = await supabase.functions.invoke('ai-route', {
+        body: {
+          purpose: 'image_generation',
+          description: description
+        }
+      });
+
+      if (response.error) throw new Error(response.error.message || 'Image generation failed');
+
+      const result = response.data;
+      if (result.success && (result.image_url || result.image_data)) {
+        // Update the block with the generated image
+        setGeneratedDraft(prev => {
+          if (!prev) return prev;
+          const newBlocks = [...prev.blocks];
+          const imageUrl = result.image_url || `data:image/png;base64,${result.image_data}`;
+          newBlocks[blockIndex] = {
+            type: 'text',
+            content: `![${description}](${imageUrl})`
+          };
+          return { ...prev, blocks: newBlocks };
+        });
+
+        toast({
+          title: "Image Generated",
+          description: "AI image has been generated successfully.",
+        });
+      } else {
+        throw new Error('No image data received');
+      }
+    } catch (error) {
+      console.error('Image generation failed:', error);
+      toast({
+        title: "Generation Failed",
+        description: "Unable to generate image. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!formData.topic.trim()) {
       toast({
@@ -144,7 +230,7 @@ export default function GenerateBlogDraft() {
 
       let result: any = response.data;
       
-      // Ensure we have a valid JSON object
+      // Parse the JSON response from AI
       if (typeof result === 'string') {
         try {
           result = JSON.parse(result);
@@ -153,26 +239,26 @@ export default function GenerateBlogDraft() {
           // Fallback: structure plain text
           const paragraphs = result.split('\n\n').filter(p => p.trim()).slice(0, 5);
           result = {
-            title: `${formData.topic} - Clinical Overview`,
+            title: `Blog on ${formData.topic}`,
             blocks: paragraphs.length > 0 ? paragraphs.map(p => ({ type: 'text', content: p.trim() })) : [{ type: 'text', content: result }],
             tags: formData.keywords ? formData.keywords.split(',').map(k => k.trim()).filter(Boolean) : []
           };
         }
       }
 
-      // Validate structure
+      // Validate structure and extract AI-generated content
       if (!result || typeof result !== 'object') {
         throw new Error('Invalid response format');
       }
 
-      // Extract and validate fields
-      const title = result.title || `${formData.topic} - Clinical Overview`;
+      // Use AI-generated title and tags, not user input
+      const title = result.title || `Blog on ${formData.topic}`;
       const blocks = Array.isArray(result.blocks) ? result.blocks : [{ type: 'text', content: 'No content generated' }];
-      const aiTags = Array.isArray(result.tags) ? result.tags : 
-        (formData.keywords ? formData.keywords.split(',').map(k => k.trim()).filter(Boolean) : []);
+      const aiTags = Array.isArray(result.tags) ? result.tags : [];
 
-      // Enrich tags with medical context
-      const enrichedTags = enrichTags(aiTags);
+      // Enrich tags with medical context if they exist
+      const enrichedTags = aiTags.length > 0 ? enrichTags(aiTags) : 
+        (formData.keywords ? enrichTags(formData.keywords.split(',').map(k => k.trim()).filter(Boolean)) : []);
 
       setGeneratedDraft({
         title,
@@ -417,10 +503,31 @@ export default function GenerateBlogDraft() {
                                 {block.description || 'Medical illustration needed'}
                               </p>
                               <div className="flex gap-2 justify-center">
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  disabled={loading}
+                                  onClick={() => {
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.accept = 'image/*';
+                                    input.onchange = (e) => {
+                                      const file = (e.target as HTMLInputElement).files?.[0];
+                                      if (file) handleUploadImage(index, file);
+                                    };
+                                    input.click();
+                                  }}
+                                >
                                   Upload Image
                                 </Button>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  disabled={loading}
+                                  onClick={() => handleGenerateImage(index, block.description || 'Medical illustration')}
+                                >
                                   Generate with AI
                                 </Button>
                               </div>
@@ -449,9 +556,7 @@ export default function GenerateBlogDraft() {
                 <div>
                   <Label className="text-sm font-medium">Suggested Tags</Label>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {(generatedDraft.tags.length > 0 ? generatedDraft.tags : 
-                      formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : []
-                    ).map((tag, index) => (
+                    {generatedDraft.tags.map((tag, index) => (
                       <span 
                         key={index}
                         className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
@@ -483,7 +588,7 @@ export default function GenerateBlogDraft() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col gap-3 pt-2">
+                <div className="flex gap-3 pt-2">
                   <Button 
                     onClick={handleSaveDraft} 
                     disabled={loading}

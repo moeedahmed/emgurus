@@ -108,94 +108,66 @@ serve(async (req) => {
 
     // Handle blog generation purpose
     if (purpose === 'blog_generation') {
-      const topic = body.topic || 'Medical Topic';
-      const keywords = body.keywords || '';
-      const instructions = body.instructions || '';
-      
-      const blogSystemPrompt = 'You are an expert medical writer specializing in Emergency Medicine. Generate structured, evidence-based blog posts for clinicians. Always respond in strict JSON format with keys: "title" (string), "tags" (string[]), "blocks" (array of objects with { type: "text" | "image_request" | "video_placeholder", content?: string, description?: string }). No prose, no markdown, no explanation outside the JSON structure.';
-      
-      const exampleJson = `Example JSON output:
-{
-  "title": "Acute Myocardial Infarction Management in the Emergency Department",
-  "tags": ["cardiology", "STEMI", "chest-pain", "emergency-medicine"],
-  "blocks": [
-    { "type": "text", "content": "Acute myocardial infarction (AMI) is a critical emergency..." },
-    { "type": "image_request", "description": "ECG showing ST-elevation in leads II, III, aVF" },
-    { "type": "text", "content": "Treatment protocols focus on rapid reperfusion..." },
-    { "type": "video_placeholder", "description": "Demonstration of proper cardiac catheterization technique" }
-  ]
-}`;
-      
-      const blogUserPrompt = `Generate a structured blog post about "${topic}". Focus areas: ${keywords}. Additional instructions: ${instructions}. 
-
-${exampleJson}
-
-Return only valid JSON in the exact format shown above.`;
+      const { topic, keywords, instructions } = body;
+      if (!topic) {
+        return new Response(JSON.stringify({ error: 'Topic is required for blog generation' }), {
+          status: 400,
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
+      }
 
       try {
         const apiKey = getOpenAI();
+        const blogPrompt = `Generate a structured blog post about "${topic}" with the following requirements:
+
+ALWAYS respond in **strict JSON** format with these keys:
+- "title": A compelling, clinical title (string)
+- "tags": Array of relevant medical tags (string[])
+- "blocks": Array of content blocks (object[])
+
+Each block should have:
+- "type": Either "text", "image_request", or "video_placeholder"
+- "content": For text blocks, the paragraph content
+- "description": For image/video blocks, what is needed
+
+Keywords to incorporate: ${keywords || 'N/A'}
+Additional instructions: ${instructions || 'None'}
+
+Example JSON format:
+{
+  "title": "Acute STEMI Management: Current Evidence and Best Practices",
+  "tags": ["stemi", "cardiology", "emergency", "door-to-balloon"],
+  "blocks": [
+    { "type": "text", "content": "Introduction paragraph about STEMI..." },
+    { "type": "image_request", "description": "ECG showing ST elevation in leads V2-V5" },
+    { "type": "text", "content": "Next section about treatment protocols..." }
+  ]
+}
+
+Generate comprehensive, evidence-based content appropriate for emergency medicine professionals.`;
+
         const res = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: model,
+            model: 'gpt-4o',
             temperature: 0.3,
-            max_tokens: 2048,
-            messages: [
-              { role: 'system', content: blogSystemPrompt },
-              { role: 'user', content: blogUserPrompt }
-            ],
-          }),
+            max_tokens: 2000,
+            messages: [{ role: 'user', content: blogPrompt }]
+          })
         });
 
-        if (!res.ok) {
-          const errTxt = await res.text().catch(() => 'OpenAI error');
-          throw new Error(errTxt);
-        }
-
-        const data = await res.json();
-        let content = data.choices?.[0]?.message?.content || '';
+        if (!res.ok) throw new Error('Blog generation failed');
         
-        // Clean up response - remove markdown code blocks if present
-        content = content.replace(/```json\s*|\s*```/g, '').trim();
+        const result = await res.json();
+        const content = result.choices?.[0]?.message?.content;
         
-        // Try to parse as JSON
-        try {
-          const parsed = JSON.parse(content);
-          if (parsed.title && Array.isArray(parsed.blocks)) {
-            // Ensure tags is an array
-            if (!Array.isArray(parsed.tags)) {
-              parsed.tags = keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [];
-            }
-            return new Response(JSON.stringify(parsed), {
-              headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
-            });
-          }
-        } catch (parseError) {
-          console.error('JSON parse error:', parseError, 'Content:', content);
-        }
-        
-        // Fallback: structure plain text response
-        const paragraphs = content.split('\n\n').filter(p => p.trim()).slice(0, 5);
-        const fallback = {
-          title: `${topic} - Clinical Overview`,
-          tags: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [topic.toLowerCase().replace(/\s+/g, '-')],
-          blocks: paragraphs.length > 0 ? paragraphs.map(p => ({ type: 'text', content: p.trim() })) : [{ type: 'text', content: content }]
-        };
-        
-        return new Response(JSON.stringify(fallback), {
+        return new Response(JSON.stringify(content), {
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
         });
-
-      } catch (error: any) {
+      } catch (error) {
         console.error('Blog generation error:', error);
-        const fallback = {
-          title: `${topic} - Clinical Overview`,
-          tags: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [topic.toLowerCase().replace(/\s+/g, '-')],
-          blocks: [{ type: 'text', content: `Unable to generate comprehensive content for ${topic}. Please try again with more specific keywords or instructions.` }]
-        };
-        
-        return new Response(JSON.stringify(fallback), {
+        return new Response(JSON.stringify({ error: 'Blog generation failed' }), {
           status: 500,
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
         });
@@ -204,6 +176,50 @@ Return only valid JSON in the exact format shown above.`;
 
     const systemPrompt = `You are AI Guru, a helpful assistant for EM Gurus. Provide concise, friendly answers using EM Gurus content first. Never give medical advice; include a short disclaimer when medical questions arise.${pageContext?.text ? ` CONTEXT: ${pageContext.text.slice(0, 3000)}` : ''}`;
     console.log('AI Route - model:', model, 'messages:', messages.length, 'browsing:', browsing, 'purpose:', purpose);
+
+    // Handle image generation purpose
+    if (purpose === 'image_generation') {
+      const { description } = body;
+      if (!description) {
+        return new Response(JSON.stringify({ error: 'Description is required for image generation' }), {
+          status: 400,
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
+      }
+
+      try {
+        const apiKey = getOpenAI();
+        const res = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'gpt-image-1',
+            prompt: `Medical illustration: ${description}. Professional, clinical style suitable for medical education.`,
+            size: '1024x1024',
+            quality: 'high'
+          })
+        });
+
+        if (!res.ok) throw new Error('Image generation failed');
+        
+        const result = await res.json();
+        const imageData = result.data?.[0];
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          image_url: imageData?.url,
+          image_data: imageData?.b64_json 
+        }), {
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        console.error('Image generation error:', error);
+        return new Response(JSON.stringify({ error: 'Image generation failed' }), {
+          status: 500,
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
+      }
+    }
 
     // Validate secrets early to surface clear errors
     try {
