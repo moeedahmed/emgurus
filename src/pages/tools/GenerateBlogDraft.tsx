@@ -229,8 +229,8 @@ export default function GenerateBlogDraft() {
       } else {
         console.error('Unexpected response format:', result);
         toast({
-          title: "Generation Failed",
-          description: "Unexpected response format. Please try again.",
+          title: "Generation Failed", 
+          description: "Unexpected response from server. Please try again.",
           variant: "destructive"
         });
       }
@@ -389,8 +389,12 @@ export default function GenerateBlogDraft() {
 
       if (response.error) throw new Error(response.error.message || 'Generation failed');
 
-      // Backend now returns clean structured data - no parsing needed
       const result = response.data;
+      
+      // Check for backend success flag
+      if (result.success === false) {
+        throw new Error(result.error || 'Blog generation failed');
+      }
       
       // Validate that backend returned expected structure
       if (!result || typeof result !== 'object' || !result.title) {

@@ -110,14 +110,14 @@ serve(async (req) => {
     if (purpose === 'blog_generation') {
       const { topic, instructions_text, source_links, source_files } = body;
       if (!topic) {
-        return new Response(JSON.stringify({ error: 'Topic is required for blog generation' }), {
+        return new Response(JSON.stringify({ success: false, error: 'Topic is required for blog generation' }), {
           status: 400,
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
         });
       }
       
       if (!instructions_text) {
-        return new Response(JSON.stringify({ error: 'Instructions text is required for blog generation' }), {
+        return new Response(JSON.stringify({ success: false, error: 'Instructions text is required for blog generation' }), {
           status: 400,
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
         });
@@ -131,12 +131,22 @@ serve(async (req) => {
         const hasUrls = Array.isArray(source_links) && source_links.length > 0;
         const hasFiles = Array.isArray(source_files) && source_files.length > 0;
         
-        // Process source files - only include files with content (client-parsed .txt/.md files)
+        // Process source files - support .pdf, .docx, .pptx, .txt, .md
         let sourceTexts: string[] = [];
         if (hasFiles) {
-          sourceTexts = source_files
-            .filter((file: any) => file.content && file.content.trim())
-            .map((file: any) => file.content);
+          for (const file of source_files) {
+            if (file.content && file.content.trim()) {
+              // Client-parsed .txt/.md files
+              sourceTexts.push(file.content);
+            } else if (file.name && !file.content) {
+              // Files that need server-side processing (.pdf, .docx, .pptx)
+              // For now, just add a placeholder - future enhancement could implement actual parsing
+              const fileName = file.name.toLowerCase();
+              if (fileName.endsWith('.pdf') || fileName.endsWith('.docx') || fileName.endsWith('.pptx')) {
+                sourceTexts.push(`[Document: ${file.name} - content parsing not yet implemented]`);
+              }
+            }
+          }
         }
         
         if (hasUrls || sourceTexts.length > 0) {
@@ -161,36 +171,31 @@ serve(async (req) => {
         }
         
         // Build system prompt with grounding instructions
-        let systemPrompt = `Generate a structured blog post about "${topic}" with the following requirements:
+        let systemPrompt = `Generate a structured blog post about "${topic}" following these requirements:
 
-ALWAYS respond in **strict JSON** format with these keys:
-- "title": A compelling, clinical title (string)
-- "tags": Array of relevant medical tags (string[])
-- "blocks": Array of content blocks (object[])
+Topic: ${topic}
+Instructions: ${instructions_text}
 
-Each block should have:
-- "type": Either "text", "image_request", or "video_placeholder"
-- "content": For text blocks, the paragraph content
-- "description": For image/video blocks, what is needed`;
-
-        if (hasUrls) {
-          systemPrompt += `\n\nIMPORTANT: Ground your content in the provided sources and cite them inline using bracketed numbers [1], [2], etc. that correspond to the numbered source URLs provided.`;
-        }
-
-        systemPrompt += `\n\nInstructions: ${instructions_text}
-
-Example JSON format:
+RESPOND ONLY with valid JSON in this exact format:
 {
-  "title": "Acute STEMI Management: Current Evidence and Best Practices",
-  "tags": ["stemi", "cardiology", "emergency", "door-to-balloon"],
+  "success": true,
+  "title": "Compelling clinical title",
+  "tags": ["tag1", "tag2", "tag3"],
   "blocks": [
-    { "type": "text", "content": "Introduction paragraph about STEMI..." },
-    { "type": "image_request", "description": "ECG showing ST elevation in leads V2-V5" },
-    { "type": "text", "content": "Next section about treatment protocols..." }
+    { "type": "paragraph", "content": "Full paragraph text..." },
+    { "type": "image_request", "description": "Specific image description" }
   ]
 }
 
-Generate comprehensive, evidence-based content appropriate for emergency medicine professionals.${contextBlock}`;
+Block types allowed: "paragraph", "image_request", "video_placeholder"
+- paragraph blocks need "content" field with full text
+- image_request/video_placeholder blocks need "description" field`;
+
+        if (hasUrls) {
+          systemPrompt += `\n\nIMPORTANT: Ground your content in the provided sources and cite them inline using bracketed numbers [1], [2], etc. that correspond to the numbered source URLs.`;
+        }
+
+        systemPrompt += `\n\nGenerate comprehensive, evidence-based content appropriate for emergency medicine professionals.${contextBlock}`;
 
         const res = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -203,12 +208,20 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
           })
         });
 
-        if (!res.ok) throw new Error('Blog generation failed');
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('OpenAI API error:', errorText);
+          throw new Error('OpenAI API request failed');
+        }
         
         const result = await res.json();
         const content = result.choices?.[0]?.message?.content;
         
-        // Parse and validate JSON response on backend
+        if (!content) {
+          throw new Error('No content returned from OpenAI');
+        }
+        
+        // Parse and validate JSON response
         let structuredData;
         try {
           // Remove any markdown formatting if present
@@ -222,22 +235,22 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
         } catch (parseError) {
           console.error('Failed to parse AI JSON response:', parseError, 'Raw content:', content);
           
-          // Build fallback structure
-          const paragraphs = content.split('\n\n').filter(p => p.trim()).slice(0, 5);
-          structuredData = {
-            title: `Blog on ${topic}`,
-            tags: [],
-            blocks: paragraphs.length > 0 
-              ? paragraphs.map(p => ({ type: 'text', content: p.trim() }))
-              : [{ type: 'text', content: 'No content generated' }]
-          };
+          // Return error instead of fallback to maintain contract
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'AI returned invalid JSON format' 
+          }), {
+            status: 500,
+            headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+          });
         }
 
-        // Ensure required fields exist with defaults
+        // Ensure required fields exist with defaults and return success format
         const finalData = {
+          success: true,
           title: structuredData.title || `Blog on ${topic}`,
           tags: Array.isArray(structuredData.tags) ? structuredData.tags : [],
-          blocks: Array.isArray(structuredData.blocks) ? structuredData.blocks : [{ type: 'text', content: 'No content generated' }]
+          blocks: Array.isArray(structuredData.blocks) ? structuredData.blocks : [{ type: 'paragraph', content: 'No content generated' }]
         };
 
         return new Response(JSON.stringify(finalData), {
@@ -245,7 +258,10 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
         });
       } catch (error) {
         console.error('Blog generation error:', error);
-        return new Response(JSON.stringify({ error: 'Blog generation failed' }), {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Blog generation failed' 
+        }), {
           status: 500,
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
         });
@@ -278,33 +294,29 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
           body: JSON.stringify({
             model: 'gpt-image-1',
             prompt: `Medical illustration: ${description}. Professional, clinical style suitable for medical education.`,
-            size: '1024x1024',
-            response_format: 'url'
+            size: '512x512'
           })
         });
 
         if (!res.ok) {
           const errorText = await res.text();
-          console.error('Image generation error:', `OpenAI API error: ${errorText}`);
+          console.error('Image generation OpenAI API error:', errorText);
           throw new Error(`OpenAI API error: ${errorText}`);
         }
         
         const result = await res.json();
         const imageData = result.data?.[0];
         
-        // Check if we have either URL or base64 data
-        const hasImageUrl = imageData?.url;
-        const hasImageData = imageData?.b64_json;
-        
-        if (!hasImageUrl && !hasImageData) {
-          console.error('Image generation error: No image data returned');
-          throw new Error('Image generation returned no data');
+        // Check if we have a valid image URL
+        if (!imageData?.url) {
+          console.error('Image generation error: No image URL returned', result);
+          throw new Error('Image generation returned no URL');
         }
         
         return new Response(JSON.stringify({ 
           success: true, 
-          image_url: hasImageUrl ? imageData.url : null,
-          image_data: hasImageData ? imageData.b64_json : null,
+          image_url: imageData.url,
+          image_data: null,
           error: null 
         }), {
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
@@ -315,7 +327,7 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
           success: false, 
           image_url: null, 
           image_data: null,
-          error: error.message 
+          error: error instanceof Error ? error.message : 'Image generation failed'
         }), {
           status: 500,
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
