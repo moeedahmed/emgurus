@@ -216,6 +216,7 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
         return new Response(JSON.stringify({ 
           success: false, 
           image_url: null, 
+          image_data: null, 
           error: 'Missing image description' 
         }), {
           status: 400,
@@ -231,20 +232,33 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
           body: JSON.stringify({
             model: 'gpt-image-1',
             prompt: `Medical illustration: ${description}. Professional, clinical style suitable for medical education.`,
-            size: '512x512'
+            size: '1024x1024',
+            response_format: 'url'
           })
         });
 
         if (!res.ok) {
           const errorText = await res.text();
+          console.error('Image generation error:', `OpenAI API error: ${errorText}`);
           throw new Error(`OpenAI API error: ${errorText}`);
         }
         
         const result = await res.json();
+        const imageData = result.data?.[0];
+        
+        // Check if we have either URL or base64 data
+        const hasImageUrl = imageData?.url;
+        const hasImageData = imageData?.b64_json;
+        
+        if (!hasImageUrl && !hasImageData) {
+          console.error('Image generation error: No image data returned');
+          throw new Error('Image generation returned no data');
+        }
         
         return new Response(JSON.stringify({ 
           success: true, 
-          image_url: result.data[0].url, 
+          image_url: hasImageUrl ? imageData.url : null,
+          image_data: hasImageData ? imageData.b64_json : null,
           error: null 
         }), {
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
@@ -254,6 +268,7 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
         return new Response(JSON.stringify({ 
           success: false, 
           image_url: null, 
+          image_data: null,
           error: error.message 
         }), {
           status: 500,

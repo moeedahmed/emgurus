@@ -174,14 +174,26 @@ export default function GenerateBlogDraft() {
 
       const result = response.data;
       
-      if (result.success === true && result.image_url) {
+      if (result.success === true) {
+        let imageMarkdown = '';
+        
+        // Handle both URL and base64 responses
+        if (result.image_url) {
+          imageMarkdown = `![${description}](${result.image_url})`;
+        } else if (result.image_data) {
+          imageMarkdown = `![${description}](data:image/png;base64,${result.image_data})`;
+        } else {
+          console.error('Image generation failed: No image data returned', result);
+          throw new Error('Image generation returned no data');
+        }
+
         // Update the block with the generated image
         setGeneratedDraft(prev => {
           if (!prev) return prev;
           const newBlocks = [...prev.blocks];
           newBlocks[blockIndex] = {
             type: 'text',
-            content: `![${description}](${result.image_url})`
+            content: imageMarkdown
           };
           return { ...prev, blocks: newBlocks };
         });
@@ -191,7 +203,7 @@ export default function GenerateBlogDraft() {
           description: "AI image has been generated successfully.",
         });
       } else if (result.success === false) {
-        console.error('Image generation failed:', result.error);
+        console.error('Image generation failed:', result);
         toast({
           title: "Generation Failed",
           description: result.error || "Unable to generate image. Please try again.",
