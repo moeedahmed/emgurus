@@ -213,7 +213,11 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
     if (purpose === 'image_generation') {
       const { description } = body;
       if (!description) {
-        return new Response(JSON.stringify({ error: 'Description is required for image generation' }), {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          image_url: null, 
+          error: 'Missing image description' 
+        }), {
           status: 400,
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
         });
@@ -227,26 +231,31 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
           body: JSON.stringify({
             model: 'gpt-image-1',
             prompt: `Medical illustration: ${description}. Professional, clinical style suitable for medical education.`,
-            size: '1024x1024',
-            quality: 'high'
+            size: '512x512'
           })
         });
 
-        if (!res.ok) throw new Error('Image generation failed');
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`OpenAI API error: ${errorText}`);
+        }
         
         const result = await res.json();
-        const imageData = result.data?.[0];
         
         return new Response(JSON.stringify({ 
           success: true, 
-          image_url: imageData?.url,
-          image_data: imageData?.b64_json 
+          image_url: result.data[0].url, 
+          error: null 
         }), {
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
         });
       } catch (error) {
         console.error('Image generation error:', error);
-        return new Response(JSON.stringify({ error: 'Image generation failed' }), {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          image_url: null, 
+          error: error.message 
+        }), {
           status: 500,
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
         });

@@ -172,31 +172,16 @@ export default function GenerateBlogDraft() {
 
       if (response.error) throw new Error(response.error.message || 'Image generation failed');
 
-      let result = response.data;
+      const result = response.data;
       
-      // Parse response if it's a JSON string
-      if (typeof result === 'string') {
-        try {
-          // Remove any JSON markdown formatting if present
-          const cleanJson = result.replace(/```json\n?/, '').replace(/\n?```/, '').trim();
-          result = JSON.parse(cleanJson);
-        } catch (parseError) {
-          console.error('Failed to parse image generation response:', parseError);
-          throw new Error('Invalid response format');
-        }
-      }
-
-      // Check for image data in response
-      const imageUrl = result.image_url || (result.image_data ? `data:image/png;base64,${result.image_data}` : null);
-      
-      if (imageUrl) {
+      if (result.success === true && result.image_url) {
         // Update the block with the generated image
         setGeneratedDraft(prev => {
           if (!prev) return prev;
           const newBlocks = [...prev.blocks];
           newBlocks[blockIndex] = {
             type: 'text',
-            content: `![${description}](${imageUrl})`
+            content: `![${description}](${result.image_url})`
           };
           return { ...prev, blocks: newBlocks };
         });
@@ -205,11 +190,18 @@ export default function GenerateBlogDraft() {
           title: "Image Generated",
           description: "AI image has been generated successfully.",
         });
-      } else {
-        console.error('No image data in response:', result);
+      } else if (result.success === false) {
+        console.error('Image generation failed:', result.error);
         toast({
           title: "Generation Failed",
-          description: "No image was generated. Please try again.",
+          description: result.error || "Unable to generate image. Please try again.",
+          variant: "destructive"
+        });
+      } else {
+        console.error('Unexpected response format:', result);
+        toast({
+          title: "Generation Failed",
+          description: "Unexpected response format. Please try again.",
           variant: "destructive"
         });
       }
@@ -217,7 +209,7 @@ export default function GenerateBlogDraft() {
       console.error('Image generation failed:', error);
       toast({
         title: "Generation Failed",
-        description: "Unable to generate image. Please try again.",
+        description: error.message || "Unable to generate image. Please try again.",
         variant: "destructive"
       });
     } finally {
