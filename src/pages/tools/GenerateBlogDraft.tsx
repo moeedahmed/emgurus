@@ -96,6 +96,29 @@ export default function GenerateBlogDraft() {
     return <div className="p-4">Please sign in to use the blog generator.</div>;
   }
 
+  const enrichTags = (baseTags: string[]): string[] => {
+    const enrichments: Record<string, string[]> = {
+      'sepsis': ['infection', 'critical care', 'antimicrobials'],
+      'mi': ['cardiology', 'chest pain', 'ecg'],
+      'stroke': ['neurology', 'tpa', 'imaging'],
+      'trauma': ['emergency', 'resuscitation', 'surgery'],
+      'copd': ['respiratory', 'nebulizer', 'steroids'],
+      'asthma': ['bronchodilator', 'respiratory', 'allergy']
+    };
+
+    const enriched = new Set(baseTags);
+    baseTags.forEach(tag => {
+      const lower = tag.toLowerCase();
+      Object.keys(enrichments).forEach(key => {
+        if (lower.includes(key)) {
+          enrichments[key].forEach(enrichTag => enriched.add(enrichTag));
+        }
+      });
+    });
+
+    return Array.from(enriched);
+  };
+
   const handleGenerate = async () => {
     if (!formData.topic.trim()) {
       toast({
@@ -121,19 +144,22 @@ export default function GenerateBlogDraft() {
 
       let result: any;
       
-      // Parse the response data
+      // Parse the response data with better error handling
       if (response.data && typeof response.data === 'object' && response.data.title && response.data.blocks) {
-        // Already structured correctly
         result = response.data;
       } else {
         // Try to parse as JSON string
         try {
           const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
           result = JSON.parse(content);
+          
+          // Validate parsed JSON structure
+          if (!result.title || !Array.isArray(result.blocks)) {
+            throw new Error('Invalid JSON structure');
+          }
         } catch {
           // Fallback: treat as plain text and structure it
           const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-          // Split content into paragraphs and create text blocks
           const paragraphs = content.split('\n\n').filter(p => p.trim());
           const blocks: ContentBlock[] = paragraphs.map(paragraph => ({
             type: 'text',
@@ -141,18 +167,23 @@ export default function GenerateBlogDraft() {
           }));
           
           result = {
-            title: formData.topic,
-            blocks: blocks,
+            title: `Blog on ${formData.topic}`,
+            blocks: blocks.length > 0 ? blocks : [{ type: 'text', content: content }],
             tags: formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : []
           };
         }
       }
 
+      // Generate enriched tags
+      const baseTags = Array.isArray(result.tags) ? result.tags : 
+        (formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : []);
+      const enrichedTags = enrichTags(baseTags);
+
       // Ensure we have valid structure
       setGeneratedDraft({
-        title: result.title || formData.topic,
+        title: result.title || `Blog on ${formData.topic}`,
         blocks: Array.isArray(result.blocks) ? result.blocks : [{ type: 'text', content: result.content || 'No content generated' }],
-        tags: Array.isArray(result.tags) ? result.tags : (formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : [])
+        tags: enrichedTags
       });
 
       toast({
@@ -374,58 +405,62 @@ export default function GenerateBlogDraft() {
                   <Label className="text-sm font-medium">Content Blocks</Label>
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {generatedDraft.blocks.map((block, index) => (
-                      <div key={index} className="p-3 bg-muted rounded-md">
-                        {block.type === 'text' && (
-                          <p className="text-sm whitespace-pre-wrap">
-                            {block.content}
-                          </p>
-                        )}
-                        {block.type === 'image_request' && (
-                          <div className="border-2 border-dashed border-primary/30 p-4 rounded-md text-center">
-                            <div className="text-sm font-medium text-primary mb-2">
-                              📸 Image Request
+                      <Card key={index} className="border-l-4 border-l-primary/20">
+                        <CardContent className="p-4">
+                          {block.type === 'text' && (
+                            <div className="prose prose-sm max-w-none">
+                              <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+                                {block.content}
+                              </p>
                             </div>
-                            <p className="text-xs text-muted-foreground mb-3">
-                              {block.description || 'Medical illustration needed'}
-                            </p>
-                            <div className="flex gap-2 justify-center">
-                              <Button size="sm" variant="outline">
-                                Upload Image
-                              </Button>
-                              <Button size="sm" variant="outline">
-                                Generate with AI
-                              </Button>
+                          )}
+                          {block.type === 'image_request' && (
+                            <div className="border-2 border-dashed border-primary/30 p-4 rounded-lg text-center bg-primary/5">
+                              <div className="text-sm font-medium text-primary mb-2 flex items-center justify-center gap-2">
+                                📸 Image Request
+                              </div>
+                              <p className="text-xs text-muted-foreground mb-3">
+                                {block.description || 'Medical illustration needed'}
+                              </p>
+                              <div className="flex gap-2 justify-center">
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Upload Image
+                                </Button>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Generate with AI
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        {block.type === 'video_placeholder' && (
-                          <div className="border-2 border-dashed border-secondary/30 p-4 rounded-md">
-                            <div className="text-sm font-medium text-secondary mb-2">
-                              🎥 Video Placeholder
+                          )}
+                          {block.type === 'video_placeholder' && (
+                            <div className="border-2 border-dashed border-secondary/30 p-4 rounded-lg bg-secondary/5">
+                              <div className="text-sm font-medium text-secondary mb-2 flex items-center justify-center gap-2">
+                                🎥 Video Placeholder
+                              </div>
+                              <p className="text-xs text-muted-foreground mb-3">
+                                {block.description || 'Educational video content'}
+                              </p>
+                              <Input 
+                                placeholder="Paste YouTube URL here..."
+                                className="text-xs"
+                              />
                             </div>
-                            <p className="text-xs text-muted-foreground mb-3">
-                              {block.description || 'Educational video content'}
-                            </p>
-                            <Input 
-                              placeholder="Paste YouTube URL here..."
-                              className="text-xs"
-                            />
-                          </div>
-                        )}
-                      </div>
+                          )}
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
                 </div>
 
                 <div>
                   <Label className="text-sm font-medium">Suggested Tags</Label>
-                  <div className="flex flex-wrap gap-2 mt-1">
+                  <div className="flex flex-wrap gap-2 mt-2">
                     {(generatedDraft.tags.length > 0 ? generatedDraft.tags : 
                       formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : []
                     ).map((tag, index) => (
                       <span 
                         key={index}
-                        className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-md"
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
                       >
                         {tag}
                       </span>
@@ -454,12 +489,12 @@ export default function GenerateBlogDraft() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2 pt-2">
                   <Button 
                     onClick={handleSaveDraft} 
                     disabled={loading}
                     variant="outline"
-                    className="w-full"
+                    size="sm"
                   >
                     {loading ? "Saving..." : "Save Draft"}
                   </Button>
@@ -467,7 +502,7 @@ export default function GenerateBlogDraft() {
                   <Button 
                     onClick={handleAssignToGuru} 
                     disabled={loading || !assignedGuru}
-                    className="w-full"
+                    size="sm"
                   >
                     Assign to Guru
                   </Button>
@@ -476,7 +511,7 @@ export default function GenerateBlogDraft() {
                     onClick={handleEditDraft} 
                     disabled={loading}
                     variant="secondary"
-                    className="w-full"
+                    size="sm"
                   >
                     Edit Draft
                   </Button>
