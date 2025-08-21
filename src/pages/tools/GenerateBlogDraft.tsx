@@ -172,13 +172,28 @@ export default function GenerateBlogDraft() {
 
       if (response.error) throw new Error(response.error.message || 'Image generation failed');
 
-      const result = response.data;
-      if (result.success && (result.image_url || result.image_data)) {
+      let result = response.data;
+      
+      // Parse response if it's a JSON string
+      if (typeof result === 'string') {
+        try {
+          // Remove any JSON markdown formatting if present
+          const cleanJson = result.replace(/```json\n?/, '').replace(/\n?```/, '').trim();
+          result = JSON.parse(cleanJson);
+        } catch (parseError) {
+          console.error('Failed to parse image generation response:', parseError);
+          throw new Error('Invalid response format');
+        }
+      }
+
+      // Check for image data in response
+      const imageUrl = result.image_url || (result.image_data ? `data:image/png;base64,${result.image_data}` : null);
+      
+      if (imageUrl) {
         // Update the block with the generated image
         setGeneratedDraft(prev => {
           if (!prev) return prev;
           const newBlocks = [...prev.blocks];
-          const imageUrl = result.image_url || `data:image/png;base64,${result.image_data}`;
           newBlocks[blockIndex] = {
             type: 'text',
             content: `![${description}](${imageUrl})`
@@ -191,7 +206,12 @@ export default function GenerateBlogDraft() {
           description: "AI image has been generated successfully.",
         });
       } else {
-        throw new Error('No image data received');
+        console.error('No image data in response:', result);
+        toast({
+          title: "Generation Failed",
+          description: "No image was generated. Please try again.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Image generation failed:', error);
@@ -365,7 +385,7 @@ export default function GenerateBlogDraft() {
       const draftId = await handleSaveDraft();
       if (draftId) {
         // Navigate to editor with the draft ID
-        window.open(`/blogs/editor/edit/${draftId}`, '_blank');
+        window.open(`/blogs/editor/${draftId}`, '_blank');
       }
     } catch (error) {
       // Error already handled in handleSaveDraft
