@@ -142,47 +142,41 @@ export default function GenerateBlogDraft() {
 
       if (response.error) throw new Error(response.error.message || 'Generation failed');
 
-      let result: any;
+      let result: any = response.data;
       
-      // Parse the response data with better error handling
-      if (response.data && typeof response.data === 'object' && response.data.title && response.data.blocks) {
-        result = response.data;
-      } else {
-        // Try to parse as JSON string
+      // Ensure we have a valid JSON object
+      if (typeof result === 'string') {
         try {
-          const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-          result = JSON.parse(content);
-          
-          // Validate parsed JSON structure
-          if (!result.title || !Array.isArray(result.blocks)) {
-            throw new Error('Invalid JSON structure');
-          }
-        } catch {
-          // Fallback: treat as plain text and structure it
-          const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-          const paragraphs = content.split('\n\n').filter(p => p.trim());
-          const blocks: ContentBlock[] = paragraphs.map(paragraph => ({
-            type: 'text',
-            content: paragraph.trim()
-          }));
-          
+          result = JSON.parse(result);
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', parseError);
+          // Fallback: structure plain text
+          const paragraphs = result.split('\n\n').filter(p => p.trim()).slice(0, 5);
           result = {
-            title: `Blog on ${formData.topic}`,
-            blocks: blocks.length > 0 ? blocks : [{ type: 'text', content: content }],
-            tags: formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : []
+            title: `${formData.topic} - Clinical Overview`,
+            blocks: paragraphs.length > 0 ? paragraphs.map(p => ({ type: 'text', content: p.trim() })) : [{ type: 'text', content: result }],
+            tags: formData.keywords ? formData.keywords.split(',').map(k => k.trim()).filter(Boolean) : []
           };
         }
       }
 
-      // Generate enriched tags
-      const baseTags = Array.isArray(result.tags) ? result.tags : 
-        (formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : []);
-      const enrichedTags = enrichTags(baseTags);
+      // Validate structure
+      if (!result || typeof result !== 'object') {
+        throw new Error('Invalid response format');
+      }
 
-      // Ensure we have valid structure
+      // Extract and validate fields
+      const title = result.title || `${formData.topic} - Clinical Overview`;
+      const blocks = Array.isArray(result.blocks) ? result.blocks : [{ type: 'text', content: 'No content generated' }];
+      const aiTags = Array.isArray(result.tags) ? result.tags : 
+        (formData.keywords ? formData.keywords.split(',').map(k => k.trim()).filter(Boolean) : []);
+
+      // Enrich tags with medical context
+      const enrichedTags = enrichTags(aiTags);
+
       setGeneratedDraft({
-        title: result.title || `Blog on ${formData.topic}`,
-        blocks: Array.isArray(result.blocks) ? result.blocks : [{ type: 'text', content: result.content || 'No content generated' }],
+        title,
+        blocks,
         tags: enrichedTags
       });
 
@@ -489,7 +483,7 @@ export default function GenerateBlogDraft() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-wrap gap-2 pt-2">
+                <div className="flex flex-col gap-3 pt-2">
                   <Button 
                     onClick={handleSaveDraft} 
                     disabled={loading}

@@ -112,9 +112,25 @@ serve(async (req) => {
       const keywords = body.keywords || '';
       const instructions = body.instructions || '';
       
-      const blogSystemPrompt = 'You are an expert medical writer specializing in Emergency Medicine. Generate structured, evidence-based blog posts for clinicians. Return JSON with title, tags, and blocks array. Each block has type ("text", "image_request", "video_placeholder") and content/description fields.';
+      const blogSystemPrompt = 'You are an expert medical writer specializing in Emergency Medicine. Generate structured, evidence-based blog posts for clinicians. Always respond in strict JSON format with keys: "title" (string), "tags" (string[]), "blocks" (array of objects with { type: "text" | "image_request" | "video_placeholder", content?: string, description?: string }). No prose, no markdown, no explanation outside the JSON structure.';
       
-      const blogUserPrompt = `Generate a structured blog post about "${topic}". Use these focus areas: ${keywords}. Additional instructions: ${instructions}. Return JSON: { "title": string, "tags": string[], "blocks": [ { "type": "text"|"image_request"|"video_placeholder", "content"?: string, "description"?: string } ] }`;
+      const exampleJson = `Example JSON output:
+{
+  "title": "Acute Myocardial Infarction Management in the Emergency Department",
+  "tags": ["cardiology", "STEMI", "chest-pain", "emergency-medicine"],
+  "blocks": [
+    { "type": "text", "content": "Acute myocardial infarction (AMI) is a critical emergency..." },
+    { "type": "image_request", "description": "ECG showing ST-elevation in leads II, III, aVF" },
+    { "type": "text", "content": "Treatment protocols focus on rapid reperfusion..." },
+    { "type": "video_placeholder", "description": "Demonstration of proper cardiac catheterization technique" }
+  ]
+}`;
+      
+      const blogUserPrompt = `Generate a structured blog post about "${topic}". Focus areas: ${keywords}. Additional instructions: ${instructions}. 
+
+${exampleJson}
+
+Return only valid JSON in the exact format shown above.`;
 
       try {
         const apiKey = getOpenAI();
@@ -138,25 +154,33 @@ serve(async (req) => {
         }
 
         const data = await res.json();
-        const content = data.choices?.[0]?.message?.content || '';
+        let content = data.choices?.[0]?.message?.content || '';
         
-        // Try to parse as JSON, fallback to plain text structure
+        // Clean up response - remove markdown code blocks if present
+        content = content.replace(/```json\s*|\s*```/g, '').trim();
+        
+        // Try to parse as JSON
         try {
           const parsed = JSON.parse(content);
-          if (parsed.title && parsed.blocks) {
+          if (parsed.title && Array.isArray(parsed.blocks)) {
+            // Ensure tags is an array
+            if (!Array.isArray(parsed.tags)) {
+              parsed.tags = keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [];
+            }
             return new Response(JSON.stringify(parsed), {
               headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
             });
           }
-        } catch (_) {
-          // Fallback for non-JSON response
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError, 'Content:', content);
         }
         
         // Fallback: structure plain text response
+        const paragraphs = content.split('\n\n').filter(p => p.trim()).slice(0, 5);
         const fallback = {
-          title: topic,
-          tags: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [],
-          blocks: [{ type: 'text', content: content }]
+          title: `${topic} - Clinical Overview`,
+          tags: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [topic.toLowerCase().replace(/\s+/g, '-')],
+          blocks: paragraphs.length > 0 ? paragraphs.map(p => ({ type: 'text', content: p.trim() })) : [{ type: 'text', content: content }]
         };
         
         return new Response(JSON.stringify(fallback), {
@@ -164,10 +188,11 @@ serve(async (req) => {
         });
 
       } catch (error: any) {
+        console.error('Blog generation error:', error);
         const fallback = {
-          title: topic,
-          tags: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [],
-          blocks: [{ type: 'text', content: `Error generating content: ${error.message}` }]
+          title: `${topic} - Clinical Overview`,
+          tags: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [topic.toLowerCase().replace(/\s+/g, '-')],
+          blocks: [{ type: 'text', content: `Unable to generate comprehensive content for ${topic}. Please try again with more specific keywords or instructions.` }]
         };
         
         return new Response(JSON.stringify(fallback), {
