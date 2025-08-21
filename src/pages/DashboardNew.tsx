@@ -28,6 +28,7 @@ const MyBlogs = React.lazy(() => import('@/components/dashboard/blogs/MyBlogs'))
 const BlogReviewQueue = React.lazy(() => import('@/components/dashboard/blogs/BlogReviewQueue'));
 const AdminBlogQueue = React.lazy(() => import('@/components/dashboard/blogs/AdminBlogQueue'));
 const BlogAnalytics = React.lazy(() => import('@/components/dashboard/blogs/BlogAnalytics'));
+const BlogGenerator = React.lazy(() => import('@/components/dashboard/blogs/BlogGenerator'));
 
 const ExamsOverview = React.lazy(() => import('@/components/dashboard/exams/ExamsOverview'));
 const ExamsAttempts = React.lazy(() => import('@/components/dashboard/exams/ExamsAttempts'));
@@ -86,6 +87,12 @@ const tabRegistry: Record<string, SectionConfig> = {
         component: BlogAnalytics, 
         roles: ['admin'], 
         description: 'Blog performance and review analytics.' 
+      },
+      generate: { 
+        label: 'Generate', 
+        component: BlogGenerator, 
+        roles: ['admin'], 
+        description: 'AI-powered blog post generation tools.' 
       },
     },
   },
