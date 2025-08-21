@@ -67,7 +67,7 @@ serve(async (req) => {
     const purpose: string = typeof body.purpose === 'string' ? body.purpose : 'chatbot';
     // Map requested purpose to real OpenAI models compatible with Chat Completions
     // "gpt-5.0-nano/pro" are project-level labels; route to OpenAI equivalents
-    const requested = purpose === 'exam-generation' ? 'gpt-5.0-pro' : 'gpt-5.0-nano';
+    const requested = (purpose === 'exam-generation' || purpose === 'blog_generation') ? 'gpt-5.0-pro' : 'gpt-5.0-nano';
     const model: string = requested === 'gpt-5.0-pro' ? 'gpt-4o' : 'gpt-4o-mini';
 
     const now = new Date().toISOString();
@@ -106,8 +106,79 @@ serve(async (req) => {
       }
     }
 
+    // Handle blog generation purpose
+    if (purpose === 'blog_generation') {
+      const topic = body.topic || 'Medical Topic';
+      const keywords = body.keywords || '';
+      const instructions = body.instructions || '';
+      
+      const blogSystemPrompt = 'You are an expert medical writer specializing in Emergency Medicine. Generate structured, evidence-based blog posts for clinicians. Return JSON with title, tags, and blocks array. Each block has type ("text", "image_request", "video_placeholder") and content/description fields.';
+      
+      const blogUserPrompt = `Generate a structured blog post about "${topic}". Use these focus areas: ${keywords}. Additional instructions: ${instructions}. Return JSON: { "title": string, "tags": string[], "blocks": [ { "type": "text"|"image_request"|"video_placeholder", "content"?: string, "description"?: string } ] }`;
+
+      try {
+        const apiKey = getOpenAI();
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: model,
+            temperature: 0.3,
+            max_tokens: 2048,
+            messages: [
+              { role: 'system', content: blogSystemPrompt },
+              { role: 'user', content: blogUserPrompt }
+            ],
+          }),
+        });
+
+        if (!res.ok) {
+          const errTxt = await res.text().catch(() => 'OpenAI error');
+          throw new Error(errTxt);
+        }
+
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content || '';
+        
+        // Try to parse as JSON, fallback to plain text structure
+        try {
+          const parsed = JSON.parse(content);
+          if (parsed.title && parsed.blocks) {
+            return new Response(JSON.stringify(parsed), {
+              headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+            });
+          }
+        } catch (_) {
+          // Fallback for non-JSON response
+        }
+        
+        // Fallback: structure plain text response
+        const fallback = {
+          title: topic,
+          tags: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [],
+          blocks: [{ type: 'text', content: content }]
+        };
+        
+        return new Response(JSON.stringify(fallback), {
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
+
+      } catch (error: any) {
+        const fallback = {
+          title: topic,
+          tags: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [],
+          blocks: [{ type: 'text', content: `Error generating content: ${error.message}` }]
+        };
+        
+        return new Response(JSON.stringify(fallback), {
+          status: 500,
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     const systemPrompt = `You are AI Guru, a helpful assistant for EM Gurus. Provide concise, friendly answers using EM Gurus content first. Never give medical advice; include a short disclaimer when medical questions arise.${pageContext?.text ? ` CONTEXT: ${pageContext.text.slice(0, 3000)}` : ''}`;
-    console.log('AI Route - model:', model, 'messages:', messages.length, 'browsing:', browsing);
+    console.log('AI Route - model:', model, 'messages:', messages.length, 'browsing:', browsing, 'purpose:', purpose);
 
     // Validate secrets early to surface clear errors
     try {
