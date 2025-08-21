@@ -1321,6 +1321,24 @@ export default function DashboardAdmin() {
           description: "Modern AI question generation interface (Beta).", 
           render: <QuestionGenerator />
         },
+        { 
+          id: "blog-generator", 
+          title: "Blog Generator 🤖", 
+          description: "AI-powered blog generation and assignment tool (Experimental).", 
+          render: <div className="p-4">
+            <div className="mb-4">
+              <Button asChild>
+                <a href="/tools/generate-blog-draft">Launch Blog Generator</a>
+              </Button>
+            </div>
+            <Card className="p-4">
+              <p className="text-sm text-muted-foreground">
+                Generate AI-written blog drafts and assign them to Gurus for review. 
+                This experimental tool helps admins create high-quality content efficiently.
+              </p>
+            </Card>
+          </div>
+        },
       ],
     },
   ];

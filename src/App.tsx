@@ -75,6 +75,7 @@ const ThreadView = lazy(() => import("@/pages/ThreadView"));
 const GenerateExamQuestion = lazy(() => import("@/pages/tools/GenerateExamQuestion"));
 const MyExamDrafts = lazy(() => import("@/pages/tools/MyExamDrafts"));
 const SubmitQuestionNew = lazy(() => import("@/pages/tools/SubmitQuestionNew"));
+const GenerateBlogDraft = lazy(() => import("@/pages/tools/GenerateBlogDraft"));
 
 // Components and utilities - loaded immediately
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -449,6 +450,13 @@ const App = () => (
                 <Suspense fallback={<PageLoadingFallback />}>
                   <MyExamDrafts />
                 </Suspense>
+              } />
+              <Route path="/tools/generate-blog-draft" element={
+                <RoleProtectedRoute roles={["admin"]}>
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <GenerateBlogDraft />
+                  </Suspense>
+                </RoleProtectedRoute>
               } />
             </Route>
 
