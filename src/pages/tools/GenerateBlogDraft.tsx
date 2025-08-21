@@ -6,9 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createDraft } from "@/lib/blogsApi";
+import { ChevronDown, X, Plus, FileText, ExternalLink, History } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Guru {
   user_id: string;
@@ -33,6 +36,23 @@ interface GeneratedDraft {
   tags: string[];
 }
 
+interface SourceFile {
+  name: string;
+  content: string;
+  size: number;
+}
+
+interface GenerationLog {
+  ts: string;
+  topic: string;
+  keywords: string;
+  urlCount: number;
+  fileCount: number;
+  contentChars?: number;
+  success: boolean;
+  error?: string;
+}
+
 export default function GenerateBlogDraft() {
   const { user, loading: userLoading } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -47,6 +67,14 @@ export default function GenerateBlogDraft() {
     additional_instructions: ''
   });
   const [assignedGuru, setAssignedGuru] = useState('');
+  
+  // New source-related state
+  const [sourceUrls, setSourceUrls] = useState<string[]>([]);
+  const [newUrl, setNewUrl] = useState('');
+  const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([]);
+  const [contextText, setContextText] = useState('');
+  const [sourcesCollapsed, setSourcesCollapsed] = useState(false);
+  
   const { toast } = useToast();
 
   // Load gurus and categories
@@ -229,6 +257,92 @@ export default function GenerateBlogDraft() {
     }
   };
 
+  // Source management functions
+  const addUrl = () => {
+    if (newUrl.trim() && !sourceUrls.includes(newUrl.trim())) {
+      setSourceUrls([...sourceUrls, newUrl.trim()]);
+      setNewUrl('');
+    }
+  };
+
+  const removeUrl = (index: number) => {
+    setSourceUrls(sourceUrls.filter((_, i) => i !== index));
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    
+    for (const file of files) {
+      // Validate file type
+      if (!file.name.toLowerCase().endsWith('.txt') && !file.name.toLowerCase().endsWith('.md')) {
+        toast({
+          title: "Invalid File Type",
+          description: `${file.name} is not supported. Only .txt and .md files are allowed.`,
+          variant: "destructive"
+        });
+        continue;
+      }
+
+      // Validate file size (200KB limit)
+      if (file.size > 200 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: `${file.name} exceeds 200KB limit.`,
+          variant: "destructive"
+        });
+        continue;
+      }
+
+      // Check if already have 10 files
+      if (sourceFiles.length >= 10) {
+        toast({
+          title: "Too Many Files",
+          description: "Maximum 10 files allowed.",
+          variant: "destructive"
+        });
+        break;
+      }
+
+      // Parse file content
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        setSourceFiles(prev => [...prev, {
+          name: file.name,
+          content: content,
+          size: file.size
+        }]);
+      };
+      reader.readAsText(file);
+    }
+
+    // Reset input
+    event.target.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    setSourceFiles(sourceFiles.filter((_, i) => i !== index));
+  };
+
+  // Local logging functions
+  const saveGenerationLog = (logEntry: GenerationLog) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('blogGen:history') || '[]');
+      const updated = [logEntry, ...existing].slice(0, 5); // Keep only last 5
+      localStorage.setItem('blogGen:history', JSON.stringify(updated));
+    } catch (error) {
+      console.error('Failed to save generation log:', error);
+    }
+  };
+
+  const getGenerationHistory = (): GenerationLog[] => {
+    try {
+      return JSON.parse(localStorage.getItem('blogGen:history') || '[]');
+    } catch {
+      return [];
+    }
+  };
+
   const handleGenerate = async () => {
     if (!formData.topic.trim()) {
       toast({
@@ -240,13 +354,21 @@ export default function GenerateBlogDraft() {
     }
 
     setGenerating(true);
+    const startTime = new Date().toISOString();
+    
     try {
+      // Prepare source data
+      const source_texts = sourceFiles.map(f => f.content);
+      
       const response = await supabase.functions.invoke('ai-route', {
         body: {
           purpose: 'blog_generation',
           topic: formData.topic,
           keywords: formData.keywords,
-          instructions: formData.additional_instructions
+          instructions: formData.additional_instructions,
+          source_urls: sourceUrls,
+          source_texts: source_texts,
+          context_text: contextText
         }
       });
 
@@ -265,10 +387,26 @@ export default function GenerateBlogDraft() {
         ? enrichTags(result.tags) 
         : [];
 
-      setGeneratedDraft({
+      const generatedContent = {
         title: result.title,
         blocks: result.blocks,
         tags: enrichedTags
+      };
+
+      setGeneratedDraft(generatedContent);
+
+      // Log successful generation
+      const contentChars = result.blocks.reduce((acc: number, block: ContentBlock) => 
+        acc + (block.content?.length || 0), 0);
+      
+      saveGenerationLog({
+        ts: startTime,
+        topic: formData.topic,
+        keywords: formData.keywords,
+        urlCount: sourceUrls.length,
+        fileCount: sourceFiles.length,
+        contentChars,
+        success: true
       });
 
       toast({
@@ -277,6 +415,18 @@ export default function GenerateBlogDraft() {
       });
     } catch (error) {
       console.error('Error generating blog:', error);
+      
+      // Log failed generation
+      saveGenerationLog({
+        ts: startTime,
+        topic: formData.topic,
+        keywords: formData.keywords,
+        urlCount: sourceUrls.length,
+        fileCount: sourceFiles.length,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+
       toast({
         title: "Generation Failed",
         description: "Unable to generate blog draft. Please try again.",
@@ -328,6 +478,9 @@ export default function GenerateBlogDraft() {
       });
       setGeneratedDraft(null);
       setAssignedGuru('');
+      setSourceUrls([]);
+      setSourceFiles([]);
+      setContextText('');
       
       return id;
     } catch (error) {
@@ -399,8 +552,8 @@ export default function GenerateBlogDraft() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">AI Blog Generator</h1>
-        <p className="text-muted-foreground">Generate AI-powered blog drafts and assign them to Gurus for review.</p>
+        <h1 className="text-2xl font-bold mb-2">AI Blog Generator (Experimental)</h1>
+        <p className="text-muted-foreground">Generate AI-powered blog drafts with optional source grounding and assign them to Gurus for review.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -449,7 +602,6 @@ export default function GenerateBlogDraft() {
               </Select>
             </div>
 
-
             <div>
               <Label htmlFor="instructions">Additional Instructions</Label>
               <Textarea
@@ -461,33 +613,226 @@ export default function GenerateBlogDraft() {
               />
             </div>
 
+            {/* Sources Section */}
+            <Collapsible open={!sourcesCollapsed} onOpenChange={setSourcesCollapsed}>
+              <CollapsibleTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-between p-0 h-auto font-semibold"
+                >
+                  Sources (optional)
+                  <ChevronDown className={`h-4 w-4 transition-transform ${sourcesCollapsed ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="space-y-4 mt-4">
+                {/* URLs */}
+                <div>
+                  <Label className="text-sm font-medium">Links</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      value={newUrl}
+                      onChange={(e) => setNewUrl(e.target.value)}
+                      placeholder="https://example.com/article"
+                      onKeyPress={(e) => e.key === 'Enter' && addUrl()}
+                    />
+                    <Button onClick={addUrl} size="sm" disabled={!newUrl.trim()}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {sourceUrls.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {sourceUrls.map((url, index) => (
+                        <div key={index} className="flex items-center gap-1 bg-secondary rounded-md px-2 py-1 text-sm">
+                          <ExternalLink className="h-3 w-3" />
+                          <span className="truncate max-w-32">{url}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 p-0"
+                            onClick={() => removeUrl(index)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* File Upload */}
+                <div>
+                  <Label className="text-sm font-medium">Files (.txt, .md only)</Label>
+                  <div className="mt-1">
+                    <input
+                      type="file"
+                      multiple
+                      accept=".txt,.md"
+                      onChange={handleFileUpload}
+                      className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Max 200KB per file, up to 10 files
+                    </p>
+                  </div>
+                  
+                  {sourceFiles.length > 0 && (
+                    <div className="space-y-1 mt-2">
+                      {sourceFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-secondary rounded-md px-2 py-1 text-sm">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3 w-3" />
+                            <span className="truncate">{file.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({Math.round(file.size / 1024)}KB)
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 p-0"
+                            onClick={() => removeFile(index)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Context Text */}
+                <div>
+                  <Label htmlFor="context" className="text-sm font-medium">Notes/Context</Label>
+                  <Textarea
+                    id="context"
+                    value={contextText}
+                    onChange={(e) => setContextText(e.target.value)}
+                    placeholder="Paste key excerpts, bullet points, or additional context..."
+                    rows={3}
+                    className="mt-1"
+                  />
+                </div>
+
+                {/* Generation History Link */}
+                <div className="flex justify-end">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="link" size="sm" className="h-auto p-0 text-xs">
+                        <History className="h-3 w-3 mr-1" />
+                        View last 5 runs
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Generation History</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {getGenerationHistory().map((log, index) => (
+                          <div key={index} className="p-3 border rounded-md text-sm">
+                            <div className="flex justify-between items-start mb-2">
+                              <span className={`px-2 py-1 rounded text-xs ${log.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                {log.success ? 'Success' : 'Failed'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(log.ts).toLocaleString()}
+                              </span>
+                            </div>
+                            <div>
+                              <strong>Topic:</strong> {log.topic}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              URLs: {log.urlCount} | Files: {log.fileCount} 
+                              {log.contentChars && ` | Generated: ${log.contentChars} chars`}
+                              {log.error && (
+                                <div className="text-red-600 mt-1">Error: {log.error}</div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {getGenerationHistory().length === 0 && (
+                          <div className="text-center text-muted-foreground py-4">
+                            No generation history yet
+                          </div>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
             <Button 
               onClick={handleGenerate} 
-              disabled={generating || !formData.topic.trim()} 
+              disabled={generating || !formData.topic.trim()}
               className="w-full"
             >
-              {generating ? "Generating..." : "Generate Blog Draft"}
+              {generating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Generating...
+                </>
+              ) : (
+                'Generate Blog Draft'
+              )}
             </Button>
           </CardContent>
         </Card>
 
-        {/* Generated Content Preview */}
+        {/* Preview/Results */}
         <Card>
           <CardHeader>
-            <CardTitle>Generated Draft</CardTitle>
+            <CardTitle>Generated Draft Preview</CardTitle>
           </CardHeader>
           <CardContent>
             {generatedDraft ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Title */}
                 <div>
-                  <Label className="text-sm font-medium">Title</Label>
-                  <div className="p-3 bg-muted rounded-md">
-                    <p className="font-medium">{generatedDraft.title}</p>
-                  </div>
+                  <h2 className="text-xl font-semibold">{generatedDraft.title}</h2>
                 </div>
 
+                {/* Suggested Tags */}
+                {generatedDraft.tags.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Suggested Tags</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {generatedDraft.tags.map((tag, index) => (
+                        <span key={index} className="bg-primary/10 text-primary px-2 py-1 rounded-md text-sm">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sources Used */}
                 <div>
-                  <Label className="text-sm font-medium">Content Blocks</Label>
+                  <h4 className="text-sm font-medium mb-2">Sources Used</h4>
+                  {sourceUrls.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {sourceUrls.map((url, index) => (
+                        <a 
+                          key={index}
+                          href={url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 bg-secondary hover:bg-secondary/80 rounded-md px-2 py-1 text-sm transition-colors"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          <span className="truncate max-w-32">{url}</span>
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No sources provided.</p>
+                  )}
+                </div>
+
+                {/* Content Blocks */}
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Content Blocks</h4>
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {generatedDraft.blocks.map((block, index) => (
                       <Card key={index} className="border-l-4 border-l-primary/20">
@@ -554,20 +899,6 @@ export default function GenerateBlogDraft() {
                           )}
                         </CardContent>
                       </Card>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium">Suggested Tags</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {generatedDraft.tags.map((tag, index) => (
-                      <span 
-                        key={index}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
-                      >
-                        {tag}
-                      </span>
                     ))}
                   </div>
                 </div>

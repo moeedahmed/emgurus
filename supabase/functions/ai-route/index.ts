@@ -108,7 +108,7 @@ serve(async (req) => {
 
     // Handle blog generation purpose
     if (purpose === 'blog_generation') {
-      const { topic, keywords, instructions } = body;
+      const { topic, keywords, instructions, source_urls, source_texts, context_text } = body;
       if (!topic) {
         return new Response(JSON.stringify({ error: 'Topic is required for blog generation' }), {
           status: 400,
@@ -118,7 +118,43 @@ serve(async (req) => {
 
       try {
         const apiKey = getOpenAI();
-        const blogPrompt = `Generate a structured blog post about "${topic}" with the following requirements:
+        
+        // Build context from sources
+        let contextBlock = '';
+        const hasUrls = Array.isArray(source_urls) && source_urls.length > 0;
+        const hasTexts = Array.isArray(source_texts) && source_texts.length > 0;
+        const hasContext = typeof context_text === 'string' && context_text.trim().length > 0;
+        
+        if (hasUrls || hasTexts || hasContext) {
+          contextBlock = '\n\nContext to ground your response:\n';
+          
+          // Add source texts and context text (truncate to 3000 chars total)
+          let combinedText = '';
+          if (hasTexts) {
+            combinedText += source_texts.join('\n\n');
+          }
+          if (hasContext) {
+            combinedText += (combinedText ? '\n\n' : '') + context_text.trim();
+          }
+          
+          if (combinedText) {
+            contextBlock += combinedText.slice(0, 3000);
+            if (combinedText.length > 3000) {
+              contextBlock += '\n[Content truncated for length]';
+            }
+          }
+          
+          // Add numbered URL list for citations
+          if (hasUrls) {
+            contextBlock += '\n\nSource URLs for citation:\n';
+            source_urls.forEach((url: string, index: number) => {
+              contextBlock += `[${index + 1}] ${url}\n`;
+            });
+          }
+        }
+        
+        // Build system prompt with grounding instructions
+        let systemPrompt = `Generate a structured blog post about "${topic}" with the following requirements:
 
 ALWAYS respond in **strict JSON** format with these keys:
 - "title": A compelling, clinical title (string)
@@ -128,9 +164,13 @@ ALWAYS respond in **strict JSON** format with these keys:
 Each block should have:
 - "type": Either "text", "image_request", or "video_placeholder"
 - "content": For text blocks, the paragraph content
-- "description": For image/video blocks, what is needed
+- "description": For image/video blocks, what is needed`;
 
-Keywords to incorporate: ${keywords || 'N/A'}
+        if (hasUrls) {
+          systemPrompt += `\n\nIMPORTANT: Ground your content in the provided sources and cite them inline using bracketed numbers [1], [2], etc. that correspond to the numbered source URLs provided.`;
+        }
+
+        systemPrompt += `\n\nKeywords to incorporate: ${keywords || 'N/A'}
 Additional instructions: ${instructions || 'None'}
 
 Example JSON format:
@@ -144,7 +184,7 @@ Example JSON format:
   ]
 }
 
-Generate comprehensive, evidence-based content appropriate for emergency medicine professionals.`;
+Generate comprehensive, evidence-based content appropriate for emergency medicine professionals.${contextBlock}`;
 
         const res = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -153,7 +193,7 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
             model: 'gpt-4o',
             temperature: 0.3,
             max_tokens: 2000,
-            messages: [{ role: 'user', content: blogPrompt }]
+            messages: [{ role: 'user', content: systemPrompt }]
           })
         });
 
