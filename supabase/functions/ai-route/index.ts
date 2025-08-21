@@ -162,8 +162,39 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
         const result = await res.json();
         const content = result.choices?.[0]?.message?.content;
         
-        // Return the raw JSON string from AI (frontend will parse it)
-        return new Response(content, {
+        // Parse and validate JSON response on backend
+        let structuredData;
+        try {
+          // Remove any markdown formatting if present
+          const cleanJson = content.replace(/```json\n?/, '').replace(/\n?```/, '').trim();
+          structuredData = JSON.parse(cleanJson);
+          
+          // Validate structure
+          if (!structuredData || typeof structuredData !== 'object') {
+            throw new Error('Invalid JSON structure');
+          }
+        } catch (parseError) {
+          console.error('Failed to parse AI JSON response:', parseError, 'Raw content:', content);
+          
+          // Build fallback structure
+          const paragraphs = content.split('\n\n').filter(p => p.trim()).slice(0, 5);
+          structuredData = {
+            title: `Blog on ${topic}`,
+            tags: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [],
+            blocks: paragraphs.length > 0 
+              ? paragraphs.map(p => ({ type: 'text', content: p.trim() }))
+              : [{ type: 'text', content: 'No content generated' }]
+          };
+        }
+
+        // Ensure required fields exist with defaults
+        const finalData = {
+          title: structuredData.title || `Blog on ${topic}`,
+          tags: Array.isArray(structuredData.tags) ? structuredData.tags : [],
+          blocks: Array.isArray(structuredData.blocks) ? structuredData.blocks : [{ type: 'text', content: 'No content generated' }]
+        };
+
+        return new Response(JSON.stringify(finalData), {
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
         });
       } catch (error) {

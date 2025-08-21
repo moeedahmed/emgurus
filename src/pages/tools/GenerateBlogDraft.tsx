@@ -228,42 +228,22 @@ export default function GenerateBlogDraft() {
 
       if (response.error) throw new Error(response.error.message || 'Generation failed');
 
-      let result: any = response.data;
+      // Backend now returns clean structured data - no parsing needed
+      const result = response.data;
       
-      // Parse the JSON response from AI - it comes as a JSON string
-      if (typeof result === 'string') {
-        try {
-          // Remove any JSON markdown formatting if present
-          const cleanJson = result.replace(/```json\n?/, '').replace(/\n?```/, '').trim();
-          result = JSON.parse(cleanJson);
-        } catch (parseError) {
-          console.error('Failed to parse JSON response:', parseError, 'Raw response:', result);
-          // Fallback: structure plain text
-          const paragraphs = result.split('\n\n').filter(p => p.trim()).slice(0, 5);
-          result = {
-            title: `Blog on ${formData.topic}`,
-            blocks: paragraphs.length > 0 ? paragraphs.map(p => ({ type: 'text', content: p.trim() })) : [{ type: 'text', content: result }],
-            tags: formData.keywords ? formData.keywords.split(',').map(k => k.trim()).filter(Boolean) : []
-          };
-        }
+      // Validate that backend returned expected structure
+      if (!result || typeof result !== 'object' || !result.title) {
+        throw new Error('Invalid response format from backend');
       }
 
-      // Validate structure and extract AI-generated content
-      if (!result || typeof result !== 'object') {
-        throw new Error('Invalid response format');
-      }
-
-      // ALWAYS use AI-generated title and tags, not user input
-      const title = result.title || `Blog: ${formData.topic}`;
-      const blocks = Array.isArray(result.blocks) ? result.blocks : [{ type: 'text', content: 'No content generated' }];
-      const aiTags = Array.isArray(result.tags) ? result.tags : [];
-
-      // Enrich AI tags with medical context
-      const enrichedTags = aiTags.length > 0 ? enrichTags(aiTags) : [];
+      // Enrich AI-generated tags with medical context
+      const enrichedTags = Array.isArray(result.tags) && result.tags.length > 0 
+        ? enrichTags(result.tags) 
+        : [];
 
       setGeneratedDraft({
-        title,
-        blocks,
+        title: result.title,
+        blocks: result.blocks,
         tags: enrichedTags
       });
 
