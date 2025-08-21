@@ -230,12 +230,14 @@ export default function GenerateBlogDraft() {
 
       let result: any = response.data;
       
-      // Parse the JSON response from AI
+      // Parse the JSON response from AI - it comes as a JSON string
       if (typeof result === 'string') {
         try {
-          result = JSON.parse(result);
+          // Remove any JSON markdown formatting if present
+          const cleanJson = result.replace(/```json\n?/, '').replace(/\n?```/, '').trim();
+          result = JSON.parse(cleanJson);
         } catch (parseError) {
-          console.error('Failed to parse JSON response:', parseError);
+          console.error('Failed to parse JSON response:', parseError, 'Raw response:', result);
           // Fallback: structure plain text
           const paragraphs = result.split('\n\n').filter(p => p.trim()).slice(0, 5);
           result = {
@@ -251,14 +253,13 @@ export default function GenerateBlogDraft() {
         throw new Error('Invalid response format');
       }
 
-      // Use AI-generated title and tags, not user input
-      const title = result.title || `Blog on ${formData.topic}`;
+      // ALWAYS use AI-generated title and tags, not user input
+      const title = result.title || `Blog: ${formData.topic}`;
       const blocks = Array.isArray(result.blocks) ? result.blocks : [{ type: 'text', content: 'No content generated' }];
       const aiTags = Array.isArray(result.tags) ? result.tags : [];
 
-      // Enrich tags with medical context if they exist
-      const enrichedTags = aiTags.length > 0 ? enrichTags(aiTags) : 
-        (formData.keywords ? enrichTags(formData.keywords.split(',').map(k => k.trim()).filter(Boolean)) : []);
+      // Enrich AI tags with medical context
+      const enrichedTags = aiTags.length > 0 ? enrichTags(aiTags) : [];
 
       setGeneratedDraft({
         title,
@@ -301,7 +302,7 @@ export default function GenerateBlogDraft() {
         }
       }).join('\n\n');
 
-      // Create the draft
+      // Create the draft - createDraft function automatically sets status='draft'
       const { id } = await createDraft({
         title: generatedDraft.title,
         content_md: content_md,

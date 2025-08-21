@@ -162,7 +162,8 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
         const result = await res.json();
         const content = result.choices?.[0]?.message?.content;
         
-        return new Response(JSON.stringify(content), {
+        // Return the raw JSON string from AI (frontend will parse it)
+        return new Response(content, {
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
         });
       } catch (error) {
