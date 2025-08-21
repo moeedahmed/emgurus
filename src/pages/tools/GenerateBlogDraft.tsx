@@ -21,9 +21,15 @@ interface BlogCategory {
   slug: string;
 }
 
+interface ContentBlock {
+  type: 'text' | 'image_request' | 'video_placeholder';
+  content?: string;
+  description?: string;
+}
+
 interface GeneratedDraft {
   title: string;
-  content: string;
+  blocks: ContentBlock[];
   tags: string[];
 }
 
@@ -38,9 +44,9 @@ export default function GenerateBlogDraft() {
     topic: '',
     keywords: '',
     category_id: '',
-    assigned_guru: '',
     additional_instructions: ''
   });
+  const [assignedGuru, setAssignedGuru] = useState('');
   const { toast } = useToast();
 
   // Load gurus and categories
@@ -115,7 +121,7 @@ export default function GenerateBlogDraft() {
             },
             {
               role: 'user',
-              content: `Generate a comprehensive blog post about "${formData.topic}". ${formData.keywords ? `Focus on these key areas: ${formData.keywords}.` : ''} ${formData.additional_instructions || ''}\n\nFormat the response as JSON with the following structure:\n{\n  "title": "Blog post title",\n  "content": "Full blog post content in markdown format",\n  "tags": ["tag1", "tag2", "tag3"]\n}\n\nThe content should be professionally written, evidence-based, and practical for emergency medicine practitioners.`
+              content: `Generate a comprehensive blog post about "${formData.topic}". ${formData.keywords ? `Focus on these key areas: ${formData.keywords}.` : ''} ${formData.additional_instructions || ''}\n\nFormat the response as JSON with the following structure:\n{\n  "title": "Blog post title",\n  "tags": ["tag1", "tag2", "tag3"],\n  "blocks": [\n    {"type": "text", "content": "Introduction paragraph..."},\n    {"type": "image_request", "description": "ECG showing STEMI pattern"},\n    {"type": "text", "content": "Next section content..."},\n    {"type": "video_placeholder", "description": "YouTube lecture on cardiac catheterization"}\n  ]\n}\n\nThe content should be professionally written, evidence-based, and practical for emergency medicine practitioners. Use blocks to structure the content with text paragraphs, image requests for medical illustrations/diagrams, and video placeholders for educational content.`
             }
           ]
         }
@@ -133,16 +139,23 @@ export default function GenerateBlogDraft() {
       } catch {
         // Fallback: treat as text and structure it
         const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+        // Split content into paragraphs and create text blocks
+        const paragraphs = content.split('\n\n').filter(p => p.trim());
+        const blocks: ContentBlock[] = paragraphs.map(paragraph => ({
+          type: 'text',
+          content: paragraph.trim()
+        }));
+        
         result = {
           title: formData.topic,
-          content: content,
+          blocks: blocks,
           tags: formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : []
         };
       }
 
       setGeneratedDraft({
         title: result.title || formData.topic,
-        content: result.content || '',
+        blocks: result.blocks || [{ type: 'text', content: result.content || '' }],
         tags: result.tags || []
       });
 
@@ -165,7 +178,61 @@ export default function GenerateBlogDraft() {
   const handleSaveDraft = async () => {
     if (!generatedDraft) return;
     
-    if (!formData.assigned_guru) {
+    setLoading(true);
+    try {
+      // Convert blocks to markdown for storage
+      const content_md = generatedDraft.blocks.map(block => {
+        switch (block.type) {
+          case 'text':
+            return block.content || '';
+          case 'image_request':
+            return `*[Image needed: ${block.description || 'Medical illustration'}]*`;
+          case 'video_placeholder':
+            return `*[Video placeholder: ${block.description || 'Educational video'}]*`;
+          default:
+            return '';
+        }
+      }).join('\n\n');
+
+      // Create the draft
+      const { id } = await createDraft({
+        title: generatedDraft.title,
+        content_md: content_md,
+        category_id: formData.category_id || undefined,
+        tag_slugs: generatedDraft.tags
+      });
+
+      toast({
+        title: "Draft Saved",
+        description: "Blog draft has been saved successfully.",
+      });
+
+      // Reset form and generated content
+      setFormData({
+        topic: '',
+        keywords: '',
+        category_id: '',
+        additional_instructions: ''
+      });
+      setGeneratedDraft(null);
+      setAssignedGuru('');
+      
+      return id;
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast({
+        title: "Save Failed",
+        description: "Unable to save blog draft. Please try again.",
+        variant: "destructive"
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAssignToGuru = async () => {
+    if (!generatedDraft || !assignedGuru) {
       toast({
         title: "Missing Assignment",
         description: "Please select a guru to assign this draft to.",
@@ -174,50 +241,46 @@ export default function GenerateBlogDraft() {
       return;
     }
 
-    setLoading(true);
     try {
-      // Create the draft
-      const { id } = await createDraft({
-        title: generatedDraft.title,
-        content_md: generatedDraft.content,
-        category_id: formData.category_id || undefined,
-        tag_slugs: generatedDraft.tags
-      });
+      // First save the draft if not already saved
+      const draftId = await handleSaveDraft();
+      
+      if (draftId) {
+        // Assign to guru by updating the post
+        const { error: assignError } = await supabase
+          .from('blog_posts')
+          .update({ 
+            author_id: assignedGuru,
+            reviewer_id: user.id // Admin who generated it becomes reviewer
+          })
+          .eq('id', draftId);
 
-      // Assign to guru by updating the post
-      const { error: assignError } = await supabase
-        .from('blog_posts')
-        .update({ 
-          author_id: formData.assigned_guru,
-          reviewer_id: user.id // Admin who generated it becomes reviewer
-        })
-        .eq('id', id);
+        if (assignError) throw assignError;
 
-      if (assignError) throw assignError;
-
-      toast({
-        title: "Draft Saved & Assigned",
-        description: "Blog draft has been created and assigned to the selected guru.",
-      });
-
-      // Reset form and generated content
-      setFormData({
-        topic: '',
-        keywords: '',
-        category_id: '',
-        assigned_guru: '',
-        additional_instructions: ''
-      });
-      setGeneratedDraft(null);
+        toast({
+          title: "Draft Assigned",
+          description: "Blog draft has been assigned to the selected guru.",
+        });
+      }
     } catch (error) {
-      console.error('Error saving draft:', error);
+      console.error('Error assigning draft:', error);
       toast({
-        title: "Save Failed",
-        description: "Unable to save blog draft. Please try again.",
+        title: "Assignment Failed",
+        description: "Unable to assign blog draft. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const handleEditDraft = async () => {
+    try {
+      const draftId = await handleSaveDraft();
+      if (draftId) {
+        // Navigate to editor with the draft ID
+        window.open(`/blogs/editor/edit/${draftId}`, '_blank');
+      }
+    } catch (error) {
+      // Error already handled in handleSaveDraft
     }
   };
 
@@ -274,24 +337,6 @@ export default function GenerateBlogDraft() {
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="assigned_guru">Assign to Guru *</Label>
-              <Select 
-                value={formData.assigned_guru} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_guru: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a guru to assign" />
-                </SelectTrigger>
-                <SelectContent>
-                  {gurus.map(guru => (
-                    <SelectItem key={guru.user_id} value={guru.user_id}>
-                      {guru.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
             <div>
               <Label htmlFor="instructions">Additional Instructions</Label>
@@ -330,38 +375,116 @@ export default function GenerateBlogDraft() {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium">Content Preview</Label>
-                  <div className="p-3 bg-muted rounded-md max-h-40 overflow-y-auto">
-                    <p className="text-sm whitespace-pre-wrap">
-                      {generatedDraft.content.slice(0, 500)}
-                      {generatedDraft.content.length > 500 && "..."}
-                    </p>
+                  <Label className="text-sm font-medium">Content Blocks</Label>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {generatedDraft.blocks.map((block, index) => (
+                      <div key={index} className="p-3 bg-muted rounded-md">
+                        {block.type === 'text' && (
+                          <p className="text-sm whitespace-pre-wrap">
+                            {block.content}
+                          </p>
+                        )}
+                        {block.type === 'image_request' && (
+                          <div className="border-2 border-dashed border-primary/30 p-4 rounded-md text-center">
+                            <div className="text-sm font-medium text-primary mb-2">
+                              📸 Image Request
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-3">
+                              {block.description || 'Medical illustration needed'}
+                            </p>
+                            <div className="flex gap-2 justify-center">
+                              <Button size="sm" variant="outline">
+                                Upload Image
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                Generate with AI
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        {block.type === 'video_placeholder' && (
+                          <div className="border-2 border-dashed border-secondary/30 p-4 rounded-md">
+                            <div className="text-sm font-medium text-secondary mb-2">
+                              🎥 Video Placeholder
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-3">
+                              {block.description || 'Educational video content'}
+                            </p>
+                            <Input 
+                              placeholder="Paste YouTube URL here..."
+                              className="text-xs"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {generatedDraft.tags.length > 0 && (
-                  <div>
-                    <Label className="text-sm font-medium">Tags</Label>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {generatedDraft.tags.map((tag, index) => (
-                        <span 
-                          key={index}
-                          className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-md"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+                <div>
+                  <Label className="text-sm font-medium">Suggested Tags</Label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {(generatedDraft.tags.length > 0 ? generatedDraft.tags : 
+                      formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : []
+                    ).map((tag, index) => (
+                      <span 
+                        key={index}
+                        className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-md"
+                      >
+                        {tag}
+                      </span>
+                    ))}
                   </div>
-                )}
+                </div>
 
-                <Button 
-                  onClick={handleSaveDraft} 
-                  disabled={loading || !formData.assigned_guru}
-                  className="w-full"
-                >
-                  {loading ? "Saving..." : "Save Draft & Assign to Guru"}
-                </Button>
+                {/* Assignment Section */}
+                <div className="border-t pt-4">
+                  <Label className="text-sm font-medium mb-3 block">Assign to Guru</Label>
+                  <Select 
+                    value={assignedGuru} 
+                    onValueChange={setAssignedGuru}
+                  >
+                    <SelectTrigger className="mb-3">
+                      <SelectValue placeholder="Select a guru to assign" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gurus.map(guru => (
+                        <SelectItem key={guru.user_id} value={guru.user_id}>
+                          {guru.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    onClick={handleSaveDraft} 
+                    disabled={loading}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {loading ? "Saving..." : "Save Draft"}
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleAssignToGuru} 
+                    disabled={loading || !assignedGuru}
+                    className="w-full"
+                  >
+                    Assign to Guru
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleEditDraft} 
+                    disabled={loading}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    Edit Draft
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-8">
