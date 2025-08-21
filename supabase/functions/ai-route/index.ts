@@ -108,9 +108,16 @@ serve(async (req) => {
 
     // Handle blog generation purpose
     if (purpose === 'blog_generation') {
-      const { topic, keywords, instructions, source_urls, source_texts, context_text } = body;
+      const { topic, instructions_text, source_links, source_files } = body;
       if (!topic) {
         return new Response(JSON.stringify({ error: 'Topic is required for blog generation' }), {
+          status: 400,
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      if (!instructions_text) {
+        return new Response(JSON.stringify({ error: 'Instructions text is required for blog generation' }), {
           status: 400,
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
         });
@@ -121,25 +128,25 @@ serve(async (req) => {
         
         // Build context from sources
         let contextBlock = '';
-        const hasUrls = Array.isArray(source_urls) && source_urls.length > 0;
-        const hasTexts = Array.isArray(source_texts) && source_texts.length > 0;
-        const hasContext = typeof context_text === 'string' && context_text.trim().length > 0;
+        const hasUrls = Array.isArray(source_links) && source_links.length > 0;
+        const hasFiles = Array.isArray(source_files) && source_files.length > 0;
         
-        if (hasUrls || hasTexts || hasContext) {
+        // Process source files - only include files with content (client-parsed .txt/.md files)
+        let sourceTexts: string[] = [];
+        if (hasFiles) {
+          sourceTexts = source_files
+            .filter((file: any) => file.content && file.content.trim())
+            .map((file: any) => file.content);
+        }
+        
+        if (hasUrls || sourceTexts.length > 0) {
           contextBlock = '\n\nContext to ground your response:\n';
           
-          // Add source texts and context text (truncate to 3000 chars total)
-          let combinedText = '';
-          if (hasTexts) {
-            combinedText += source_texts.join('\n\n');
-          }
-          if (hasContext) {
-            combinedText += (combinedText ? '\n\n' : '') + context_text.trim();
-          }
-          
-          if (combinedText) {
-            contextBlock += combinedText.slice(0, 3000);
-            if (combinedText.length > 3000) {
+          // Add source texts (truncate to 4000 chars total)
+          if (sourceTexts.length > 0) {
+            const combinedText = sourceTexts.join('\n\n');
+            contextBlock += combinedText.slice(0, 4000);
+            if (combinedText.length > 4000) {
               contextBlock += '\n[Content truncated for length]';
             }
           }
@@ -147,7 +154,7 @@ serve(async (req) => {
           // Add numbered URL list for citations
           if (hasUrls) {
             contextBlock += '\n\nSource URLs for citation:\n';
-            source_urls.forEach((url: string, index: number) => {
+            source_links.forEach((url: string, index: number) => {
               contextBlock += `[${index + 1}] ${url}\n`;
             });
           }
@@ -170,8 +177,7 @@ Each block should have:
           systemPrompt += `\n\nIMPORTANT: Ground your content in the provided sources and cite them inline using bracketed numbers [1], [2], etc. that correspond to the numbered source URLs provided.`;
         }
 
-        systemPrompt += `\n\nKeywords to incorporate: ${keywords || 'N/A'}
-Additional instructions: ${instructions || 'None'}
+        systemPrompt += `\n\nInstructions: ${instructions_text}
 
 Example JSON format:
 {
@@ -220,7 +226,7 @@ Generate comprehensive, evidence-based content appropriate for emergency medicin
           const paragraphs = content.split('\n\n').filter(p => p.trim()).slice(0, 5);
           structuredData = {
             title: `Blog on ${topic}`,
-            tags: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [],
+            tags: [],
             blocks: paragraphs.length > 0 
               ? paragraphs.map(p => ({ type: 'text', content: p.trim() }))
               : [{ type: 'text', content: 'No content generated' }]

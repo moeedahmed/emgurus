@@ -45,7 +45,7 @@ interface SourceFile {
 interface GenerationLog {
   ts: string;
   topic: string;
-  keywords: string;
+  instructions_text: string;
   urlCount: number;
   fileCount: number;
   contentChars?: number;
@@ -62,22 +62,19 @@ export default function GenerateBlogDraft() {
   const [generatedDraft, setGeneratedDraft] = useState<GeneratedDraft | null>(null);
   const [formData, setFormData] = useState({
     topic: '',
-    keywords: '',
-    category_id: '',
-    additional_instructions: ''
+    instructions_text: ''
   });
   const [assignedGuru, setAssignedGuru] = useState('');
   
-  // New source-related state
+  // Source-related state
   const [sourceUrls, setSourceUrls] = useState<string[]>([]);
   const [newUrl, setNewUrl] = useState('');
   const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([]);
-  const [contextText, setContextText] = useState('');
   const [sourcesCollapsed, setSourcesCollapsed] = useState(false);
   
   const { toast } = useToast();
 
-  // Load gurus and categories
+  // Load gurus
   useEffect(() => {
     if (!user) return;
 
@@ -99,14 +96,6 @@ export default function GenerateBlogDraft() {
           
           setGurus(guruProfiles || []);
         }
-
-        // Load categories
-        const { data: categoriesData } = await supabase
-          .from('blog_categories')
-          .select('id, title, slug')
-          .order('title');
-        
-        setCategories(categoriesData || []);
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -272,48 +261,65 @@ export default function GenerateBlogDraft() {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     
+    const allowedExtensions = ['.pdf', '.docx', '.pptx', '.txt', '.md'];
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    const maxFiles = 5;
+    
     for (const file of files) {
       // Validate file type
-      if (!file.name.toLowerCase().endsWith('.txt') && !file.name.toLowerCase().endsWith('.md')) {
+      const hasValidExtension = allowedExtensions.some(ext => 
+        file.name.toLowerCase().endsWith(ext)
+      );
+      
+      if (!hasValidExtension) {
         toast({
           title: "Invalid File Type",
-          description: `${file.name} is not supported. Only .txt and .md files are allowed.`,
+          description: `${file.name} is not supported. Only .pdf, .docx, .pptx, .txt, and .md files are allowed.`,
           variant: "destructive"
         });
         continue;
       }
 
-      // Validate file size (200KB limit)
-      if (file.size > 200 * 1024) {
+      // Validate file size (10MB limit)
+      if (file.size > maxFileSize) {
         toast({
           title: "File Too Large",
-          description: `${file.name} exceeds 200KB limit.`,
+          description: `${file.name} exceeds 10MB limit.`,
           variant: "destructive"
         });
         continue;
       }
 
-      // Check if already have 10 files
-      if (sourceFiles.length >= 10) {
+      // Check if already have 5 files
+      if (sourceFiles.length >= maxFiles) {
         toast({
           title: "Too Many Files",
-          description: "Maximum 10 files allowed.",
+          description: "Maximum 5 files allowed.",
           variant: "destructive"
         });
         break;
       }
 
-      // Parse file content
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
+      // For text files, parse content client-side
+      if (file.name.toLowerCase().endsWith('.txt') || file.name.toLowerCase().endsWith('.md')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target?.result as string;
+          setSourceFiles(prev => [...prev, {
+            name: file.name,
+            content: content,
+            size: file.size
+          }]);
+        };
+        reader.readAsText(file);
+      } else {
+        // For other file types, store the file object for server-side processing
         setSourceFiles(prev => [...prev, {
           name: file.name,
-          content: content,
+          content: '', // Will be processed server-side
           size: file.size
         }]);
-      };
-      reader.readAsText(file);
+      }
     }
 
     // Reset input
@@ -353,22 +359,31 @@ export default function GenerateBlogDraft() {
       return;
     }
 
+    if (!formData.instructions_text.trim()) {
+      toast({
+        title: "Missing Instructions",
+        description: "Please describe what you want to include in the blog.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setGenerating(true);
     const startTime = new Date().toISOString();
     
     try {
       // Prepare source data
-      const source_texts = sourceFiles.map(f => f.content);
+      const source_texts = sourceFiles
+        .filter(f => f.content) // Only include files with parsed content
+        .map(f => f.content);
       
       const response = await supabase.functions.invoke('ai-route', {
         body: {
           purpose: 'blog_generation',
           topic: formData.topic,
-          keywords: formData.keywords,
-          instructions: formData.additional_instructions,
-          source_urls: sourceUrls,
-          source_texts: source_texts,
-          context_text: contextText
+          instructions_text: formData.instructions_text,
+          source_links: sourceUrls,
+          source_files: sourceFiles // Send all files for server-side processing
         }
       });
 
@@ -402,7 +417,7 @@ export default function GenerateBlogDraft() {
       saveGenerationLog({
         ts: startTime,
         topic: formData.topic,
-        keywords: formData.keywords,
+        instructions_text: formData.instructions_text,
         urlCount: sourceUrls.length,
         fileCount: sourceFiles.length,
         contentChars,
@@ -420,7 +435,7 @@ export default function GenerateBlogDraft() {
       saveGenerationLog({
         ts: startTime,
         topic: formData.topic,
-        keywords: formData.keywords,
+        instructions_text: formData.instructions_text,
         urlCount: sourceUrls.length,
         fileCount: sourceFiles.length,
         success: false,
@@ -457,10 +472,11 @@ export default function GenerateBlogDraft() {
       }).join('\n\n');
 
       // Create the draft - createDraft function automatically sets status='draft'
+      // Category will be assigned later in the editor
       const { id } = await createDraft({
         title: generatedDraft.title,
         content_md: content_md,
-        category_id: formData.category_id || undefined,
+        category_id: undefined, // No category assignment during generation
         tag_slugs: generatedDraft.tags
       });
 
@@ -472,15 +488,12 @@ export default function GenerateBlogDraft() {
       // Reset form and generated content
       setFormData({
         topic: '',
-        keywords: '',
-        category_id: '',
-        additional_instructions: ''
+        instructions_text: ''
       });
       setGeneratedDraft(null);
       setAssignedGuru('');
       setSourceUrls([]);
       setSourceFiles([]);
-      setContextText('');
       
       return id;
     } catch (error) {
@@ -574,42 +587,13 @@ export default function GenerateBlogDraft() {
             </div>
 
             <div>
-              <Label htmlFor="keywords">Keywords/Focus Areas</Label>
-              <Input
-                id="keywords"
-                value={formData.keywords}
-                onChange={(e) => setFormData(prev => ({ ...prev, keywords: e.target.value }))}
-                placeholder="e.g., STEMI, cardiac catheterization, door-to-balloon"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="category">Category</Label>
-              <Select 
-                value={formData.category_id} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, category_id: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(category => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="instructions">Additional Instructions</Label>
+              <Label htmlFor="instructions_text">What to include *</Label>
               <Textarea
-                id="instructions"
-                value={formData.additional_instructions}
-                onChange={(e) => setFormData(prev => ({ ...prev, additional_instructions: e.target.value }))}
-                placeholder="Any specific requirements, tone, or focus areas..."
-                rows={3}
+                id="instructions_text"
+                value={formData.instructions_text}
+                onChange={(e) => setFormData(prev => ({ ...prev, instructions_text: e.target.value }))}
+                placeholder="Describe what you want in the blog — sections, keywords, tone, focus areas, or specific requirements."
+                rows={4}
               />
             </div>
 
@@ -663,17 +647,17 @@ export default function GenerateBlogDraft() {
 
                 {/* File Upload */}
                 <div>
-                  <Label className="text-sm font-medium">Files (.txt, .md only)</Label>
+                  <Label className="text-sm font-medium">Supporting Documents</Label>
                   <div className="mt-1">
                     <input
                       type="file"
                       multiple
-                      accept=".txt,.md"
+                      accept=".pdf,.docx,.pptx,.txt,.md"
                       onChange={handleFileUpload}
                       className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Max 200KB per file, up to 10 files
+                      Upload .pdf, .docx, .pptx, .txt, .md — max 10 MB each, up to 5 files
                     </p>
                   </div>
                   
@@ -702,18 +686,6 @@ export default function GenerateBlogDraft() {
                   )}
                 </div>
 
-                {/* Context Text */}
-                <div>
-                  <Label htmlFor="context" className="text-sm font-medium">Notes/Context</Label>
-                  <Textarea
-                    id="context"
-                    value={contextText}
-                    onChange={(e) => setContextText(e.target.value)}
-                    placeholder="Paste key excerpts, bullet points, or additional context..."
-                    rows={3}
-                    className="mt-1"
-                  />
-                </div>
 
                 {/* Generation History Link */}
                 <div className="flex justify-end">
@@ -765,7 +737,7 @@ export default function GenerateBlogDraft() {
 
             <Button 
               onClick={handleGenerate} 
-              disabled={generating || !formData.topic.trim()}
+              disabled={generating || !formData.topic.trim() || !formData.instructions_text.trim()}
               className="w-full"
             >
               {generating ? (
