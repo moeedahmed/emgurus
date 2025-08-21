@@ -113,51 +113,46 @@ export default function GenerateBlogDraft() {
           purpose: 'blog_generation',
           topic: formData.topic,
           keywords: formData.keywords,
-          instructions: formData.additional_instructions,
-          category: formData.category_id,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert medical writer specializing in Emergency Medicine content. Generate high-quality, evidence-based blog posts for EM clinicians.'
-            },
-            {
-              role: 'user',
-              content: `Generate a comprehensive blog post about "${formData.topic}". ${formData.keywords ? `Focus on these key areas: ${formData.keywords}.` : ''} ${formData.additional_instructions || ''}\n\nFormat the response as JSON with the following structure:\n{\n  "title": "Blog post title",\n  "tags": ["tag1", "tag2", "tag3"],\n  "blocks": [\n    {"type": "text", "content": "Introduction paragraph..."},\n    {"type": "image_request", "description": "ECG showing STEMI pattern"},\n    {"type": "text", "content": "Next section content..."},\n    {"type": "video_placeholder", "description": "YouTube lecture on cardiac catheterization"}\n  ]\n}\n\nThe content should be professionally written, evidence-based, and practical for emergency medicine practitioners. Use blocks to structure the content with text paragraphs, image requests for medical illustrations/diagrams, and video placeholders for educational content.`
-            }
-          ]
+          instructions: formData.additional_instructions
         }
       });
 
       if (response.error) throw new Error(response.error.message || 'Generation failed');
 
-      let result;
-      try {
-        // Try to parse JSON response
-        result = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-        if (result.message) {
-          result = JSON.parse(result.message);
+      let result: any;
+      
+      // Parse the response data
+      if (response.data && typeof response.data === 'object' && response.data.title && response.data.blocks) {
+        // Already structured correctly
+        result = response.data;
+      } else {
+        // Try to parse as JSON string
+        try {
+          const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+          result = JSON.parse(content);
+        } catch {
+          // Fallback: treat as plain text and structure it
+          const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+          // Split content into paragraphs and create text blocks
+          const paragraphs = content.split('\n\n').filter(p => p.trim());
+          const blocks: ContentBlock[] = paragraphs.map(paragraph => ({
+            type: 'text',
+            content: paragraph.trim()
+          }));
+          
+          result = {
+            title: formData.topic,
+            blocks: blocks,
+            tags: formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : []
+          };
         }
-      } catch {
-        // Fallback: treat as text and structure it
-        const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-        // Split content into paragraphs and create text blocks
-        const paragraphs = content.split('\n\n').filter(p => p.trim());
-        const blocks: ContentBlock[] = paragraphs.map(paragraph => ({
-          type: 'text',
-          content: paragraph.trim()
-        }));
-        
-        result = {
-          title: formData.topic,
-          blocks: blocks,
-          tags: formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : []
-        };
       }
 
+      // Ensure we have valid structure
       setGeneratedDraft({
         title: result.title || formData.topic,
-        blocks: result.blocks || [{ type: 'text', content: result.content || '' }],
-        tags: result.tags || []
+        blocks: Array.isArray(result.blocks) ? result.blocks : [{ type: 'text', content: result.content || 'No content generated' }],
+        tags: Array.isArray(result.tags) ? result.tags : (formData.keywords ? formData.keywords.split(',').map(k => k.trim()) : [])
       });
 
       toast({
