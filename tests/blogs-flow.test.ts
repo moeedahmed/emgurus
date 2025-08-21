@@ -5,7 +5,7 @@
 */
 import { describe, it, expect, beforeAll, vi } from 'vitest'
 
-const SUPABASE_URL = 'https://cgtvvpzrzwyvsbavboxa.supabase.co'
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://cgtvvpzrzwyvsbavboxa.supabase.co'
 const BASE = `${SUPABASE_URL}/functions/v1/blogs-api`
 const TOKEN = process.env.SUPABASE_TEST_JWT
 

@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-const FORUMS_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/forums-api";
+const FORUMS_EDGE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/forums-api`;
 
 interface ThreadRow { id: string; title: string; content: string; author_id: string; category_id: string; created_at: string; updated_at: string; }
 interface ReplyRow { id: string; thread_id: string; author_id: string; content: string; created_at: string; likes_count?: number; reaction_counts?: Record<string, number>; user_reactions?: string[]; }

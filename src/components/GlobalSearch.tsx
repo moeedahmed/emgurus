@@ -42,7 +42,7 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
     const run = async () => {
       setLoading(true);
       try {
-        const FORUMS_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/forums-api";
+        const FORUMS_EDGE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/forums-api`;
         const [blogsData, reviewedData, gurusRes, forumsRes] = await Promise.all([
           // Blogs: query directly with RLS (published)
           supabase

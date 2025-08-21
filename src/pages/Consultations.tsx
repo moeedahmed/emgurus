@@ -42,7 +42,7 @@ const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
   }, []);
 
   // Fetch gurus from Edge Function
-  const SUPABASE_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/consultations-api";
+  const SUPABASE_EDGE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/consultations-api`;
 
   type ApiGuru = {
     user_id?: string; // primary id in API

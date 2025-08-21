@@ -8,12 +8,12 @@ import DOMPurify from "dompurify";
 interface ChatMsg { role: 'user'|'assistant'; content: string }
 
 // Streaming helpers
-const supaUrl = "https://cgtvvpzrzwyvsbavboxa.supabase.co";
+const supaUrl = import.meta.env.VITE_SUPABASE_URL;
 const functionsUrl = (path: string) => `${supaUrl}/functions/v1/${path}`;
 function supabaseFnHeaders(session?: { access_token?: string }) { 
   const h: Record<string,string> = { 
     'Content-Type': 'application/json', 
-    apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNndHZ2cHpyend5dnNiYXZib3hhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1MjYyNTAsImV4cCI6MjA3MDEwMjI1MH0.IkZEQamwiYvGvb3gFMmL8IDNfh_rAtwyrzwF8zqV7xw"
+    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
   }; 
   if (session?.access_token) h.Authorization = `Bearer ${session.access_token}`; 
   return h; 

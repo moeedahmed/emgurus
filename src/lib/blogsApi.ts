@@ -34,7 +34,7 @@ export interface BlogDetailPayload {
   ai_summary: { provider: string; model: string; summary_md: string; created_at: string } | null;
 }
 
-const BASE = "https://cgtvvpzrzwyvsbavboxa.functions.supabase.co/blogs-api";
+const BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.functions.supabase.co/blogs-api`;
 
 import { supabase } from "@/integrations/supabase/client";
 

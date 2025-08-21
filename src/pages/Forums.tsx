@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ForumsFilterPanel from "@/components/forums/ForumsFilterPanel";
 
-const FORUMS_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/forums-api";
+const FORUMS_EDGE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/forums-api`;
 
 interface Category { id: string; title: string; description: string | null }
 interface ThreadRow {

@@ -8,7 +8,7 @@ import { format, parseISO } from "date-fns";
 import type { Guru } from "./GuruCard";
 import { toast } from "@/hooks/use-toast";
 
-const SUPABASE_EDGE = "https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/consultations-api";
+const SUPABASE_EDGE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/consultations-api`;
 
 type Slot = { start: string; end: string };
 
