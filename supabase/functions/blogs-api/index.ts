@@ -180,15 +180,26 @@ serve(async (req) => {
       const { data: basePosts, error: baseErr } = await query;
       if (baseErr) throw baseErr;
 
-      // Tag filter post-hoc if necessary
+      // Tag filter - more efficient using inner join when tag is specified
       let posts = basePosts ?? [];
       if (tagId) {
-        const { data: tagLinks } = await supabase
-          .from("blog_post_tags")
-          .select("post_id")
-          .eq("tag_id", tagId);
-        const allowedIds = new Set((tagLinks ?? []).map((t) => t.post_id));
-        posts = posts.filter((p) => allowedIds.has(p.id));
+        // Re-query with tag join for better performance on large datasets
+        const taggedQuery = supabase
+          .from("blog_posts")
+          .select(`
+            id, title, slug, description, cover_image_url, category_id, author_id, status, view_count, created_at,
+            blog_post_tags!inner(tag_id)
+          `)
+          .eq("blog_post_tags.tag_id", tagId)
+          .order("created_at", { ascending: false });
+
+        if (status) taggedQuery.eq("status", status);
+        if (categoryId) taggedQuery.eq("category_id", categoryId);
+        if (q) taggedQuery.ilike("title", `%${q}%`);
+
+        const { data: taggedPosts, error: taggedErr } = await taggedQuery;
+        if (taggedErr) throw taggedErr;
+        posts = taggedPosts ?? [];
       }
 
       // Pagination
@@ -377,6 +388,41 @@ serve(async (req) => {
       const body = await req.json();
       const parsed = createDraftSchema.parse(body);
 
+      // Validate category exists before creating post
+      if (parsed.category_id) {
+        const { data: categoryExists } = await supabase
+          .from("blog_categories")
+          .select("id")
+          .eq("id", parsed.category_id)
+          .maybeSingle();
+        if (!categoryExists) {
+          return new Response(JSON.stringify({ error: "Invalid category ID" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      // Validate tag slugs exist before creating post
+      let validatedTags: { id: string; slug: string }[] = [];
+      if (parsed.tag_slugs && parsed.tag_slugs.length) {
+        const { data: tags } = await supabase
+          .from("blog_tags")
+          .select("id, slug")
+          .in("slug", parsed.tag_slugs);
+        
+        // Validate all provided tag slugs exist
+        const foundSlugs = new Set((tags ?? []).map((t) => t.slug));
+        const invalidSlugs = parsed.tag_slugs.filter((slug) => !foundSlugs.has(slug));
+        if (invalidSlugs.length > 0) {
+          return new Response(JSON.stringify({ error: `Invalid tag slugs: ${invalidSlugs.join(", ")}` }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        validatedTags = tags ?? [];
+      }
+
       const baseSlug = slugify(parsed.title);
       let slug = baseSlug;
       // ensure unique slug
@@ -403,14 +449,10 @@ serve(async (req) => {
       if (insertRes.error) throw insertRes.error;
       const postId = insertRes.data!.id as string;
 
-      // Link existing tags by slug
-      if (parsed.tag_slugs && parsed.tag_slugs.length) {
-        const { data: tags } = await supabase
-          .from("blog_tags")
-          .select("id, slug")
-          .in("slug", parsed.tag_slugs);
-        const links = (tags ?? []).map((t) => ({ post_id: postId, tag_id: t.id }));
-        if (links.length) await supabase.from("blog_post_tags").insert(links);
+      // Link validated tags
+      if (validatedTags.length) {
+        const links = validatedTags.map((t) => ({ post_id: postId, tag_id: t.id }));
+        await supabase.from("blog_post_tags").insert(links);
       }
 
       return new Response(JSON.stringify({ id: postId, slug }), {
@@ -439,6 +481,41 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: "Only drafts can be updated" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
+      // Validate category exists before updating
+      if (typeof parsed.category_id === "string") {
+        const { data: categoryExists } = await supabase
+          .from("blog_categories")
+          .select("id")
+          .eq("id", parsed.category_id)
+          .maybeSingle();
+        if (!categoryExists) {
+          return new Response(JSON.stringify({ error: "Invalid category ID" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      // Validate tag slugs exist before updating
+      let validatedTags: { id: string; slug: string }[] = [];
+      if (parsed.tag_slugs && parsed.tag_slugs.length) {
+        const { data: tags } = await supabase
+          .from("blog_tags")
+          .select("id, slug")
+          .in("slug", parsed.tag_slugs);
+        
+        // Validate all provided tag slugs exist
+        const foundSlugs = new Set((tags ?? []).map((t: any) => t.slug));
+        const invalidSlugs = parsed.tag_slugs.filter((slug: string) => !foundSlugs.has(slug));
+        if (invalidSlugs.length > 0) {
+          return new Response(JSON.stringify({ error: `Invalid tag slugs: ${invalidSlugs.join(", ")}` }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        validatedTags = tags ?? [];
+      }
+
       const patch: Record<string, any> = {};
       if (typeof parsed.title === "string") patch.title = parsed.title;
       if (typeof parsed.excerpt === "string") patch.description = parsed.excerpt;
@@ -453,15 +530,11 @@ serve(async (req) => {
         if (error) throw error;
       }
 
-      if (parsed.tag_slugs) {
+      if (parsed.tag_slugs !== undefined) {
         await supabase.from("blog_post_tags").delete().eq("post_id", id);
-        if (parsed.tag_slugs.length) {
-          const { data: tags } = await supabase
-            .from("blog_tags")
-            .select("id, slug")
-            .in("slug", parsed.tag_slugs);
-          const links = (tags ?? []).map((t: any) => ({ post_id: id, tag_id: t.id }));
-          if (links.length) await supabase.from("blog_post_tags").insert(links);
+        if (validatedTags.length) {
+          const links = validatedTags.map((t: any) => ({ post_id: id, tag_id: t.id }));
+          await supabase.from("blog_post_tags").insert(links);
         }
       }
 

@@ -49,7 +49,7 @@ const ExamsAICuration = lazy(() => import("./pages/admin/ExamsAICuration"));
 const ApproveGurus = lazy(() => import("./pages/admin/ApproveGurus"));
 const ModeratePosts = lazy(() => import("./pages/admin/ModeratePosts"));
 const AssignReviews = lazy(() => import("./pages/admin/AssignReviews"));
-const Taxonomy = lazy(() => import("./pages/admin/Taxonomy"));
+
 const MarkedQuestionsAdmin = lazy(() => import("./pages/admin/MarkedQuestions"));
 const QuestionSetsAdmin = lazy(() => import("./pages/admin/QuestionSets"));
 const QuestionGenerator = lazy(() => import("./pages/admin/QuestionGenerator"));
@@ -415,13 +415,6 @@ const App = () => (
                 <RoleProtectedRoute roles={["admin"]}>
                   <Suspense fallback={<PageLoadingFallback />}>
                     <QuestionSetsAdmin />
-                  </Suspense>
-                </RoleProtectedRoute>
-              } />
-              <Route path="/admin/taxonomy" element={
-                <RoleProtectedRoute roles={["admin"]}>
-                  <Suspense fallback={<PageLoadingFallback />}>
-                    <Taxonomy />
                   </Suspense>
                 </RoleProtectedRoute>
               } />

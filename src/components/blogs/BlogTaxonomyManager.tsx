@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Edit, Trash2, ChevronRight, ChevronDown, FolderOpen, Folder } from "lucide-react";
+import { Plus, Edit, Trash2, ChevronRight, ChevronDown, FolderOpen, Folder, Tag } from "lucide-react";
 
 interface Category {
   id: string;
@@ -20,25 +21,41 @@ interface Category {
   children?: Category[];
 }
 
+interface BlogTag {
+  id: string;
+  title: string;
+  slug: string;
+  post_count?: number;
+}
+
 export default function BlogTaxonomyManager() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [tags, setTags] = useState<BlogTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  // Category dialogs
+  const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
+  const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   
-  const [newTitle, setNewTitle] = useState("");
-  const [newParentId, setNewParentId] = useState<string | null>(null);
+  // Tag dialogs
+  const [isCreateTagOpen, setIsCreateTagOpen] = useState(false);
+  const [isEditTagOpen, setIsEditTagOpen] = useState(false);
+  const [editingTag, setEditingTag] = useState<BlogTag | null>(null);
+  
+  // Form states
+  const [newCategoryTitle, setNewCategoryTitle] = useState("");
+  const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
+  const [newTagTitle, setNewTagTitle] = useState("");
 
-  const loadCategories = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       
       // Load categories with post counts
-      const { data: cats, error } = await supabase
+      const { data: cats, error: catsError } = await supabase
         .from('blog_categories')
         .select(`
           id, title, slug, parent_id,
@@ -46,7 +63,7 @@ export default function BlogTaxonomyManager() {
         `)
         .order('title');
         
-      if (error) throw error;
+      if (catsError) throw catsError;
       
       const categoriesWithCounts = (cats || []).map((cat: any) => ({
         ...cat,
@@ -65,40 +82,58 @@ export default function BlogTaxonomyManager() {
       
       const tree = buildTree(categoriesWithCounts);
       setCategories(tree);
+
+      // Load tags with post counts
+      const { data: tagsData, error: tagsError } = await supabase
+        .from('blog_tags')
+        .select(`
+          id, title, slug,
+          posts:blog_post_tags(count)
+        `)
+        .order('title');
+        
+      if (tagsError) throw tagsError;
+      
+      const tagsWithCounts = (tagsData || []).map((tag: any) => ({
+        ...tag,
+        post_count: tag.posts?.[0]?.count || 0,
+      }));
+      
+      setTags(tagsWithCounts);
     } catch (error) {
-      console.error('Failed to load categories:', error);
-      toast.error('Failed to load categories');
+      console.error('Failed to load data:', error);
+      toast.error('Failed to load categories and tags');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadCategories();
+    loadData();
   }, []);
 
   const createCategory = async () => {
-    if (!newTitle.trim()) return;
+    if (!newCategoryTitle.trim()) return;
     
     try {
-      const slug = newTitle.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+      const slug = newCategoryTitle.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
       
       const { error } = await supabase
         .from('blog_categories')
         .insert({
-          title: newTitle.trim(),
+          title: newCategoryTitle.trim(),
           slug,
-          name: newTitle.trim(),
-          parent_id: newParentId,
+          name: newCategoryTitle.trim(),
+          parent_id: newCategoryParentId,
         });
         
       if (error) throw error;
       
       toast.success('Category created');
-      setNewTitle("");
-      setNewParentId(null);
-      setIsCreateOpen(false);
-      loadCategories();
+      setNewCategoryTitle("");
+      setNewCategoryParentId(null);
+      setIsCreateCategoryOpen(false);
+      loadData();
     } catch (error) {
       console.error('Failed to create category:', error);
       toast.error('Failed to create category');
@@ -106,18 +141,18 @@ export default function BlogTaxonomyManager() {
   };
 
   const updateCategory = async () => {
-    if (!editingCategory || !newTitle.trim()) return;
+    if (!editingCategory || !newCategoryTitle.trim()) return;
     
     try {
-      const slug = newTitle.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+      const slug = newCategoryTitle.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
       
       const { error } = await supabase
         .from('blog_categories')
         .update({
-          title: newTitle.trim(),
+          title: newCategoryTitle.trim(),
           slug,
-          name: newTitle.trim(),
-          parent_id: newParentId,
+          name: newCategoryTitle.trim(),
+          parent_id: newCategoryParentId,
         })
         .eq('id', editingCategory.id);
         
@@ -125,10 +160,10 @@ export default function BlogTaxonomyManager() {
       
       toast.success('Category updated');
       setEditingCategory(null);
-      setNewTitle("");
-      setNewParentId(null);
-      setIsEditOpen(false);
-      loadCategories();
+      setNewCategoryTitle("");
+      setNewCategoryParentId(null);
+      setIsEditCategoryOpen(false);
+      loadData();
     } catch (error) {
       console.error('Failed to update category:', error);
       toast.error('Failed to update category');
@@ -155,10 +190,84 @@ export default function BlogTaxonomyManager() {
       if (error) throw error;
       
       toast.success('Category deleted');
-      loadCategories();
+      loadData();
     } catch (error) {
       console.error('Failed to delete category:', error);
       toast.error('Failed to delete category');
+    }
+  };
+
+  const createTag = async () => {
+    if (!newTagTitle.trim()) return;
+    
+    try {
+      const slug = newTagTitle.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+      
+      const { error } = await supabase
+        .from('blog_tags')
+        .insert({
+          title: newTagTitle.trim(),
+          slug,
+        });
+        
+      if (error) throw error;
+      
+      toast.success('Tag created');
+      setNewTagTitle("");
+      setIsCreateTagOpen(false);
+      loadData();
+    } catch (error) {
+      console.error('Failed to create tag:', error);
+      toast.error('Failed to create tag');
+    }
+  };
+
+  const updateTag = async () => {
+    if (!editingTag || !newTagTitle.trim()) return;
+    
+    try {
+      const slug = newTagTitle.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+      
+      const { error } = await supabase
+        .from('blog_tags')
+        .update({
+          title: newTagTitle.trim(),
+          slug,
+        })
+        .eq('id', editingTag.id);
+        
+      if (error) throw error;
+      
+      toast.success('Tag updated');
+      setEditingTag(null);
+      setNewTagTitle("");
+      setIsEditTagOpen(false);
+      loadData();
+    } catch (error) {
+      console.error('Failed to update tag:', error);
+      toast.error('Failed to update tag');
+    }
+  };
+
+  const deleteTag = async (tag: BlogTag) => {
+    if (tag.post_count && tag.post_count > 0) {
+      toast.error(`Cannot delete tag in use by ${tag.post_count} posts`);
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('blog_tags')
+        .delete()
+        .eq('id', tag.id);
+        
+      if (error) throw error;
+      
+      toast.success('Tag deleted');
+      loadData();
+    } catch (error) {
+      console.error('Failed to delete tag:', error);
+      toast.error('Failed to delete tag');
     }
   };
 
@@ -174,6 +283,10 @@ export default function BlogTaxonomyManager() {
 
   const filteredCategories = categories.filter(cat => 
     cat.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredTags = tags.filter(tag => 
+    tag.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const toggleExpanded = (id: string) => {
@@ -226,9 +339,9 @@ export default function BlogTaxonomyManager() {
               size="sm"
               onClick={() => {
                 setEditingCategory(category);
-                setNewTitle(category.title);
-                setNewParentId(category.parent_id);
-                setIsEditOpen(true);
+                setNewCategoryTitle(category.title);
+                setNewCategoryParentId(category.parent_id);
+                setIsEditCategoryOpen(true);
               }}
             >
               <Edit className="w-4 h-4" />
@@ -284,82 +397,202 @@ export default function BlogTaxonomyManager() {
   return (
     <div className="space-y-4">
       <div className="text-sm text-muted-foreground">
-        Manage blog categories and subcategories. Categories with posts cannot be deleted.
+        Manage blog categories, subcategories, and tags. Items with posts cannot be deleted.
       </div>
       
-      <div className="flex gap-2">
-        <Input
-          placeholder="Search categories..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1"
-        />
+      <Tabs defaultValue="categories" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="categories">Categories</TabsTrigger>
+          <TabsTrigger value="tags">Tags</TabsTrigger>
+        </TabsList>
         
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Create
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Category</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Title</Label>
-                <Input
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Category title"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Parent Category (optional)</Label>
-                <Select value={newParentId || undefined} onValueChange={(value) => setNewParentId(value === 'none' ? null : value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select parent" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No parent (top level)</SelectItem>
-                    {flatCategories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {'  '.repeat(cat.level)}{cat.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-                  Cancel
+        <TabsContent value="categories" className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Search categories..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1"
+            />
+            
+            <Dialog open={isCreateCategoryOpen} onOpenChange={setIsCreateCategoryOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Category
                 </Button>
-                <Button onClick={createCategory} disabled={!newTitle.trim()}>
-                  Create
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create Category</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Title</Label>
+                    <Input
+                      value={newCategoryTitle}
+                      onChange={(e) => setNewCategoryTitle(e.target.value)}
+                      placeholder="Category title"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Parent Category (optional)</Label>
+                    <Select value={newCategoryParentId || undefined} onValueChange={(value) => setNewCategoryParentId(value === 'none' ? null : value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select parent" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No parent (top level)</SelectItem>
+                        {flatCategories.map(cat => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {'  '.repeat(cat.level)}{cat.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" onClick={() => setIsCreateCategoryOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={createCategory} disabled={!newCategoryTitle.trim()}>
+                      Create
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+          
+          <Card className="p-4">
+            <div className="space-y-1">
+              {filteredCategories.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  No categories found
+                </div>
+              ) : (
+                filteredCategories.map(category => renderCategory(category))
+              )}
+            </div>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="tags" className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Search tags..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1"
+            />
+            
+            <Dialog open={isCreateTagOpen} onOpenChange={setIsCreateTagOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Tag
                 </Button>
-              </div>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create Tag</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Title</Label>
+                    <Input
+                      value={newTagTitle}
+                      onChange={(e) => setNewTagTitle(e.target.value)}
+                      placeholder="Tag title"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" onClick={() => setIsCreateTagOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={createTag} disabled={!newTagTitle.trim()}>
+                      Create
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+          
+          <Card className="p-4">
+            <div className="space-y-2">
+              {filteredTags.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  No tags found
+                </div>
+              ) : (
+                filteredTags.map(tag => (
+                  <div key={tag.id} className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded">
+                    <Tag className="w-4 h-4 text-muted-foreground" />
+                    <span className="flex-1 font-medium">{tag.title}</span>
+                    
+                    {tag.post_count !== undefined && (
+                      <Badge variant="secondary" className="text-xs">
+                        {tag.post_count} posts
+                      </Badge>
+                    )}
+                    
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingTag(tag);
+                          setNewTagTitle(tag.title);
+                          setIsEditTagOpen(true);
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={tag.post_count > 0}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Tag</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{tag.title}"? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteTag(tag)}
+                              className="bg-destructive text-destructive-foreground"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
       
-      <Card className="p-4">
-        <div className="space-y-1">
-          {filteredCategories.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              No categories found
-            </div>
-          ) : (
-            filteredCategories.map(category => renderCategory(category))
-          )}
-        </div>
-      </Card>
-      
-      {/* Edit Dialog */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+      {/* Edit Category Dialog */}
+      <Dialog open={isEditCategoryOpen} onOpenChange={setIsEditCategoryOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Category</DialogTitle>
@@ -368,15 +601,15 @@ export default function BlogTaxonomyManager() {
             <div className="space-y-2">
               <Label>Title</Label>
               <Input
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
+                value={newCategoryTitle}
+                onChange={(e) => setNewCategoryTitle(e.target.value)}
                 placeholder="Category title"
               />
             </div>
             
             <div className="space-y-2">
               <Label>Parent Category (optional)</Label>
-              <Select value={newParentId || undefined} onValueChange={(value) => setNewParentId(value === 'none' ? null : value)}>
+              <Select value={newCategoryParentId || undefined} onValueChange={(value) => setNewCategoryParentId(value === 'none' ? null : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select parent" />
                 </SelectTrigger>
@@ -394,10 +627,38 @@ export default function BlogTaxonomyManager() {
             </div>
             
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+              <Button variant="outline" onClick={() => setIsEditCategoryOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={updateCategory} disabled={!newTitle.trim()}>
+              <Button onClick={updateCategory} disabled={!newCategoryTitle.trim()}>
+                Update
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Tag Dialog */}
+      <Dialog open={isEditTagOpen} onOpenChange={setIsEditTagOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Tag</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input
+                value={newTagTitle}
+                onChange={(e) => setNewTagTitle(e.target.value)}
+                placeholder="Tag title"
+              />
+            </div>
+            
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setIsEditTagOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={updateTag} disabled={!newTagTitle.trim()}>
                 Update
               </Button>
             </div>
