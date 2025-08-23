@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import DOMPurify from "dompurify";
 import { Eye, ThumbsUp, ChevronUp, ChevronDown } from "lucide-react";
 import ReportIssueModal from "@/components/blogs/ReportIssueModal";
+import AuthorChip from "@/components/blogs/AuthorChip";
 
 interface Post {
   id: string;
@@ -23,6 +24,14 @@ interface Post {
   reviewed_at: string | null;
   view_count?: number | null;
   likes_count?: number | null;
+}
+
+interface AuthorProfile {
+  user_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  title: string | null;
 }
 
 const pseudoCount = (seed: string, base: number, spread = 500) => {
@@ -47,6 +56,7 @@ const BlogPost = () => {
 const { slug } = useParams();
   const { user } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
+  const [author, setAuthor] = useState<AuthorProfile | null>(null);
   const [related, setRelated] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
@@ -67,6 +77,16 @@ const { slug } = useParams();
       setPost(current);
       setViewCount(current?.view_count ?? 0);
       setLikeCount(current?.likes_count ?? 0);
+
+      // Fetch author profile data
+      if (current?.author_id) {
+        const { data: authorData } = await supabase
+          .from("profiles")
+          .select("user_id,full_name,avatar_url,bio,title")
+          .eq("user_id", current.author_id)
+          .maybeSingle();
+        setAuthor(authorData as AuthorProfile | null);
+      }
 
       if (current?.tags?.length) {
         const { data: rel } = await supabase
@@ -166,21 +186,35 @@ const { slug } = useParams();
           {post.description && (
             <p className="text-muted-foreground mb-3">{post.description}</p>
           )}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
+            {author && (
+              <div className="flex items-center gap-3">
+                <AuthorChip 
+                  id={author.user_id}
+                  name={author.full_name || "EMGurus Contributor"}
+                  avatar={author.avatar_url}
+                  className="text-sm"
+                />
+                <div className="text-xs">
+                  <div className="font-medium text-foreground">{author.title || "Medical Professional"}</div>
+                  {author.bio && (
+                    <div className="text-muted-foreground mt-1 max-w-md line-clamp-2">{author.bio}</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-muted" aria-hidden />
-              <span>EMGurus Contributor</span>
-              <Badge variant="secondary">Guru</Badge>
-            </div>
-              {publishedDate && (
-                <span title={publishedDate.toLocaleString()}>
-                  {publishedDate.toLocaleDateString()} • {minutes} min read
-                </span>
-              )}
-              <span className="flex items-center gap-1"><Eye className="h-4 w-4" /> {viewCount}</span>
-              <button className="inline-flex items-center gap-1 hover:opacity-80" onClick={toggleLike} aria-label="Like this article">
-                <ThumbsUp className="h-4 w-4" /> {likeCount}
-              </button>
+            {publishedDate && (
+              <span title={publishedDate.toLocaleString()}>
+                {publishedDate.toLocaleDateString()} • {minutes} min read
+              </span>
+            )}
+            <span className="flex items-center gap-1"><Eye className="h-4 w-4" /> {viewCount}</span>
+            <button className="inline-flex items-center gap-1 hover:opacity-80" onClick={toggleLike} aria-label="Like this article">
+              <ThumbsUp className="h-4 w-4" /> {likeCount}
+            </button>
           </div>
         </header>
 
