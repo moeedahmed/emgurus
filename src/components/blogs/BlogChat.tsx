@@ -50,7 +50,7 @@ export default function BlogChat({ postId }: { postId: string }) {
       await callFunction(`/api/blogs/${postId}/discussions`, {
         message: text.trim(),
         kind: "comment"
-      });
+      }, true, "POST");
       setText("");
       await load();
     } catch (error) {
@@ -63,13 +63,7 @@ export default function BlogChat({ postId }: { postId: string }) {
   const handleDelete = async (id: string) => {
     if (!isAdmin) return;
     try {
-      const response = await fetch(`/functions/v1/blogs-api/api/blogs/discussions/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      await callFunction(`/api/blogs/discussions/${id}`, {}, true, "DELETE");
       await load();
     } catch (error) {
       console.error("Failed to delete message:", error);

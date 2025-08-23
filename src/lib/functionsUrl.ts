@@ -12,7 +12,7 @@ export function getFunctionsBaseUrl() {
   return base;
 }
 
-export async function callFunction(path: string, body?: unknown, includeAuth = true, method: 'GET' | 'POST' = 'POST') {
+export async function callFunction(path: string, body?: unknown, includeAuth = true, method: 'GET' | 'POST' | 'DELETE' = 'POST') {
   // Ensure Supabase Edge Functions prefix
   const base = getFunctionsBaseUrl();
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
