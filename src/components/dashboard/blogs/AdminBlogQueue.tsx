@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TableCard from "@/components/dashboard/TableCard";
 import { ErrorBoundary } from "react-error-boundary";
 import { Link } from "react-router-dom";
@@ -15,6 +16,7 @@ interface BlogPost {
   status: string;
   submitted_at: string;
   author?: { display_name?: string; email?: string };
+  reviewers?: Array<{ full_name: string; user_id: string }>;
 }
 
 function AdminBlogQueueContent() {
@@ -22,61 +24,151 @@ function AdminBlogQueueContent() {
   const [activeFilter, setActiveFilter] = useState<'submitted' | 'assigned' | 'approved' | 'rejected'>('submitted');
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [gurus, setGurus] = useState<Array<{ user_id: string; full_name: string }>>([]);
+  const [selectedGuru, setSelectedGuru] = useState<string>("");
+  const [assigning, setAssigning] = useState<string | null>(null);
 
   const loadPosts = async () => {
     if (!user) return;
     
     setLoading(true);
     try {
-      let query = supabase
-        .from('blog_posts')
-        .select(`
-          id,
-          title,
-          status,
-          submitted_at,
-          author_id,
-          reviewer_id,
-          profiles!blog_posts_author_id_fkey(full_name)
-        `);
-
+      let postsQuery;
+      
       switch (activeFilter) {
         case 'submitted':
-          query = query.eq('status', 'in_review').is('reviewer_id', null);
+          // Get posts with no assignments
+          const { data: assignedPostIds } = await supabase
+            .from('blog_review_assignments')
+            .select('post_id')
+            .eq('status', 'pending');
+          
+          const assignedIds = (assignedPostIds || []).map(a => a.post_id);
+          
+          postsQuery = supabase
+            .from('blog_posts')
+            .select(`
+              id,
+              title,
+              status,
+              submitted_at,
+              author_id,
+              profiles!blog_posts_author_id_fkey(full_name)
+            `)
+            .eq('status', 'in_review');
+            
+          if (assignedIds.length > 0) {
+            postsQuery = postsQuery.not('id', 'in', `(${assignedIds.join(',')})`);
+          }
           break;
         case 'assigned':
-          query = query.eq('status', 'in_review').not('reviewer_id', 'is', null);
+          // Get assigned post IDs first
+          const { data: pendingAssignments } = await supabase
+            .from('blog_review_assignments')
+            .select('post_id')
+            .eq('status', 'pending');
+          
+          const pendingIds = (pendingAssignments || []).map(a => a.post_id);
+          
+          if (pendingIds.length === 0) {
+            // No assigned posts
+            postsQuery = supabase
+              .from('blog_posts')
+              .select(`
+                id,
+                title,
+                status,
+                submitted_at,
+                author_id,
+                profiles!blog_posts_author_id_fkey(full_name)
+              `)
+              .eq('id', '00000000-0000-0000-0000-000000000000'); // No results
+          } else {
+            postsQuery = supabase
+              .from('blog_posts')
+              .select(`
+                id,
+                title,
+                status,
+                submitted_at,
+                author_id,
+                profiles!blog_posts_author_id_fkey(full_name)
+              `)
+              .eq('status', 'in_review')
+              .in('id', pendingIds);
+          }
           break;
         case 'approved':
-          query = query.eq('status', 'published');
+          postsQuery = supabase
+            .from('blog_posts')
+            .select(`
+              id,
+              title,
+              status,
+              submitted_at,
+              author_id,
+              profiles!blog_posts_author_id_fkey(full_name)
+            `)
+            .eq('status', 'published');
           break;
         case 'rejected':
-          query = query.eq('status', 'archived');
+          postsQuery = supabase
+            .from('blog_posts')
+            .select(`
+              id,
+              title,
+              status,
+              submitted_at,
+              author_id,
+              profiles!blog_posts_author_id_fkey(full_name)
+            `)
+            .eq('status', 'archived');
           break;
       }
 
-      const { data, error } = await query
+      const { data, error } = await postsQuery
         .order('submitted_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
 
-      // For assigned posts, also get reviewer info
+      // For assigned posts, get reviewer info
       let postsWithReviewers = data || [];
       if (activeFilter === 'assigned' && data && data.length > 0) {
-        const reviewerIds = data.map(p => p.reviewer_id).filter(Boolean);
-        if (reviewerIds.length > 0) {
-          const { data: reviewers } = await supabase
-            .from('profiles')
-            .select('user_id, full_name')
-            .in('user_id', reviewerIds);
+        const postIds = data.map(p => p.id);
+        const { data: assignments } = await supabase
+          .from('blog_review_assignments')
+          .select(`
+            post_id,
+            reviewer_id
+          `)
+          .in('post_id', postIds)
+          .eq('status', 'pending');
 
-          const reviewerMap = new Map(reviewers?.map(r => [r.user_id, r]) || []);
-          postsWithReviewers = data.map(p => ({
-            ...p,
-            reviewer: p.reviewer_id ? reviewerMap.get(p.reviewer_id) : null
-          }));
+        // Get reviewer profiles separately
+        const reviewerIds = (assignments || []).map(a => a.reviewer_id).filter(Boolean);
+        const { data: reviewerProfiles } = reviewerIds.length > 0 ? await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', reviewerIds) : { data: [] };
+
+        const profileMap = new Map((reviewerProfiles || []).map(p => [p.user_id, p]));
+
+        // Group reviewers by post
+        const reviewerMap = new Map<string, Array<{ full_name: string; user_id: string }>>();
+        for (const assignment of assignments || []) {
+          const existing = reviewerMap.get(assignment.post_id) || [];
+          const profile = profileMap.get(assignment.reviewer_id);
+          if (profile) {
+            existing.push(profile);
+          }
+          reviewerMap.set(assignment.post_id, existing);
         }
+
+        postsWithReviewers = data.map(p => ({
+          ...p,
+          reviewers: reviewerMap.get(p.id) || []
+        }));
       }
 
       setPosts(postsWithReviewers);
@@ -88,8 +180,42 @@ function AdminBlogQueueContent() {
     }
   };
 
+  const loadGurus = async () => {
+    try {
+      const { data: userRoles, error } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'guru');
+
+      if (error) throw error;
+      
+      const guruIds = (userRoles || []).map(ur => ur.user_id);
+      if (guruIds.length === 0) {
+        setGurus([]);
+        return;
+      }
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', guruIds);
+      
+      const guruList = (profiles || [])
+        .filter(p => p.full_name)
+        .map(p => ({
+          user_id: p.user_id,
+          full_name: p.full_name
+        }));
+      
+      setGurus(guruList);
+    } catch (error) {
+      console.error('Failed to load gurus:', error);
+    }
+  };
+
   useEffect(() => {
     loadPosts();
+    loadGurus();
   }, [user, activeFilter]);
 
   const publishPost = async (postId: string) => {
@@ -132,6 +258,29 @@ function AdminBlogQueueContent() {
     }
   };
 
+  const assignReviewer = async (postId: string) => {
+    if (!selectedGuru) {
+      toast.error('Please select a reviewer');
+      return;
+    }
+
+    setAssigning(postId);
+    try {
+      await callFunction(`blogs-api/api/blogs/${postId}/assign`, { 
+        reviewer_id: selectedGuru,
+        note: `Assigned to ${gurus.find(g => g.user_id === selectedGuru)?.full_name || 'reviewer'}`
+      });
+      toast.success('Reviewer assigned');
+      setSelectedGuru("");
+      loadPosts();
+    } catch (error) {
+      console.error('Failed to assign reviewer:', error);
+      toast.error('Failed to assign reviewer');
+    } finally {
+      setAssigning(null);
+    }
+  };
+
   const getColumns = () => {
     const baseColumns = [
       { 
@@ -153,9 +302,12 @@ function AdminBlogQueueContent() {
     // Add reviewer column for assigned posts
     if (activeFilter === 'assigned') {
       baseColumns.push({
-        key: 'reviewer',
-        header: 'Reviewer',
-        render: (post: any) => post.reviewer?.full_name || 'Unassigned'
+        key: 'reviewers',
+        header: 'Reviewers',
+        render: (post: any) => {
+          if (!post.reviewers || post.reviewers.length === 0) return 'No reviewers';
+          return post.reviewers.map((r: any) => r.full_name).join(', ');
+        }
       });
     }
 
@@ -178,7 +330,36 @@ function AdminBlogQueueContent() {
           </div>
         )
       });
-    } else if (activeFilter === 'submitted' || activeFilter === 'assigned') {
+    } else if (activeFilter === 'submitted') {
+      baseColumns.push({
+        key: 'actions',
+        header: 'Actions',
+        render: (post: any) => (
+          <div className="flex gap-2 items-center">
+            <Select value={selectedGuru} onValueChange={setSelectedGuru}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Select guru" />
+              </SelectTrigger>
+              <SelectContent>
+                {gurus.map(guru => (
+                  <SelectItem key={guru.user_id} value={guru.user_id}>
+                    {guru.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button 
+              onClick={() => assignReviewer(post.id)}
+              size="sm"
+              variant="default"
+              disabled={!selectedGuru || assigning === post.id}
+            >
+              {assigning === post.id ? 'Assigning...' : 'Assign'}
+            </Button>
+          </div>
+        )
+      });
+    } else if (activeFilter === 'assigned') {
       baseColumns.push({
         key: 'actions',
         header: 'Actions',

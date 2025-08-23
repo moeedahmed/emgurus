@@ -792,7 +792,72 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // POST /api/blogs/:id/review
+    // POST /api/blogs/:id/assign -> assign reviewer(s)
+    const assignMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/assign$/i);
+    if (req.method === "POST" && assignMatch) {
+      requireAuth();
+      const id = assignMatch[1];
+      const { reviewer_id, note } = await req.json();
+      const { isAdmin } = await getUserRoleFlags(supabase, user!.id);
+      if (!isAdmin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      // Verify reviewer is a guru
+      const { data: isReviewerGuru } = await supabase.rpc("has_role", { _user_id: reviewer_id, _role: "guru" });
+      if (!isReviewerGuru) {
+        return new Response(JSON.stringify({ error: "Reviewer must be a guru" }), { 
+          status: 400, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
+      // Insert assignment
+      const { error } = await supabase
+        .from("blog_review_assignments")
+        .insert({
+          post_id: id,
+          reviewer_id,
+          assigned_by: user!.id,
+          notes: note || null,
+          status: "pending"
+        });
+
+      if (error) throw error;
+
+      // Trigger notification for blog assignment
+      try {
+        const { data: postData } = await supabase
+          .from("blog_posts")
+          .select("title, author_id")
+          .eq("id", id)
+          .single();
+        
+        if (postData) {
+          // Notify assigned reviewer
+          await supabase.functions.invoke("notifications-dispatch", {
+            body: {
+              toUserIds: [reviewer_id],
+              category: "blogs",
+              subject: `New blog assigned for review: ${postData.title}`,
+              html: `<h2>Blog assigned for review</h2><p>You have been assigned to review the blog post: <strong>${postData.title}</strong></p>${note ? `<p>Note: ${note}</p>` : ''}`,
+              inApp: [{
+                userId: reviewer_id,
+                type: "blog_assigned",
+                title: "Blog assigned for review",
+                body: postData.title,
+                data: { postId: id, postTitle: postData.title },
+                category: "blogs",
+              }],
+            },
+          });
+        }
+      } catch (notifyError) {
+        console.warn("Failed to send assignment notification:", notifyError);
+      }
+
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // POST /api/blogs/:id/review -> guru review actions
     const reviewMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/review$/i);
     if (req.method === "POST" && reviewMatch) {
       requireAuth();
@@ -801,46 +866,23 @@ serve(async (req) => {
       const { isAdmin, isGuru } = await getUserRoleFlags(supabase, user!.id);
       if (!isAdmin && !isGuru) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      const patch: Record<string, any> = { reviewer_id: user!.id };
+      // Update assignment status to completed
+      const { error: assignmentError } = await supabase
+        .from("blog_review_assignments")
+        .update({ status: "completed", updated_at: new Date().toISOString() })
+        .eq("post_id", id)
+        .eq("reviewer_id", user!.id)
+        .eq("status", "pending");
+
+      if (assignmentError) console.warn("Failed to update assignment:", assignmentError);
+
+      const patch: Record<string, any> = { reviewed_by: user!.id, reviewed_at: new Date().toISOString() };
       if (typeof body.is_featured === "boolean") patch.is_featured = body.is_featured;
       if (typeof body.is_editors_pick === "boolean") patch.is_editors_pick = body.is_editors_pick;
       if (body.notes) patch.review_notes = body.notes;
 
       const { error } = await supabase.from("blog_posts").update(patch).eq("id", id);
       if (error) throw error;
-
-      // Trigger notification for blog assignment if reviewer was assigned
-      if (patch.reviewer_id) {
-        try {
-          const { data: postData } = await supabase
-            .from("blog_posts")
-            .select("title, author_id")
-            .eq("id", id)
-            .single();
-          
-          if (postData) {
-            // Notify assigned reviewer
-            await supabase.functions.invoke("notifications-dispatch", {
-              body: {
-                toUserIds: [patch.reviewer_id],
-                category: "blogs",
-                subject: `New blog assigned for review: ${postData.title}`,
-                html: `<h2>Blog assigned for review</h2><p>You have been assigned to review the blog post: <strong>${postData.title}</strong></p>`,
-                inApp: [{
-                  userId: patch.reviewer_id,
-                  type: "blog_assigned",
-                  title: "Blog assigned for review",
-                  body: postData.title,
-                  data: { postId: id, postTitle: postData.title },
-                  category: "blogs",
-                }],
-              },
-            });
-          }
-        } catch (notifyError) {
-          console.warn("Failed to send assignment notification:", notifyError);
-        }
-      }
 
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -853,6 +895,18 @@ serve(async (req) => {
       const { note } = await req.json();
       const { isAdmin, isGuru } = await getUserRoleFlags(supabase, user!.id);
       if (!isAdmin && !isGuru) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      // Update assignment status if this is from assigned reviewer
+      if (isGuru) {
+        const { error: assignmentError } = await supabase
+          .from("blog_review_assignments")
+          .update({ status: "changes_requested", updated_at: new Date().toISOString() })
+          .eq("post_id", id)
+          .eq("reviewer_id", user!.id)
+          .eq("status", "pending");
+
+        if (assignmentError) console.warn("Failed to update assignment:", assignmentError);
+      }
 
       const { error } = await supabase.rpc('review_request_changes', { p_post_id: id, p_note: note });
       if (error) throw error;
@@ -889,6 +943,18 @@ serve(async (req) => {
       const { note } = await req.json();
       const { isAdmin, isGuru } = await getUserRoleFlags(supabase, user!.id);
       if (!isAdmin && !isGuru) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      // Update assignment status if this is from assigned reviewer
+      if (isGuru) {
+        const { error: assignmentError } = await supabase
+          .from("blog_review_assignments")
+          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .eq("post_id", id)
+          .eq("reviewer_id", user!.id)
+          .eq("status", "pending");
+
+        if (assignmentError) console.warn("Failed to update assignment:", assignmentError);
+      }
 
       const { error } = await supabase
         .from("blog_posts")
@@ -927,11 +993,22 @@ serve(async (req) => {
       const id = publishMatch[1];
       const { data: post } = await supabase
         .from("blog_posts")
-        .select("id, reviewer_id, reviewed_by")
+        .select("id, reviewed_by")
         .eq("id", id)
         .maybeSingle();
       const { isAdmin } = await getUserRoleFlags(supabase, user!.id);
-      const canReview = isAdmin || !!(post && (post.reviewer_id === user!.id || post.reviewed_by === user!.id));
+      
+      // Check if user can publish (admin or has assignment)
+      let canReview = isAdmin || !!(post && post.reviewed_by === user!.id);
+      if (!canReview && !isAdmin) {
+        const { data: assignment } = await supabase
+          .from("blog_review_assignments")
+          .select("id")
+          .eq("post_id", id)
+          .eq("reviewer_id", user!.id)
+          .maybeSingle();
+        canReview = !!assignment;
+      }
       if (!canReview) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const nowIso = new Date().toISOString();
