@@ -292,8 +292,8 @@ export default function DashboardGuru() {
           render: <BlogReviews /> 
         },
         { 
-          id: "my-blogs", 
-          title: "My Blogs", 
+          id: "myblogs", 
+          title: "MyBlogs", 
           description: "Write or continue your own posts.", 
           render: <MyBlogStatusPanel filter="draft" /> 
         },

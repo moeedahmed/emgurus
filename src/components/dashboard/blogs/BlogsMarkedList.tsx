@@ -55,7 +55,7 @@ export default function BlogsMarkedList() {
     <div className="p-4">
       <div className="mb-2 text-sm text-muted-foreground">Unresolved blog feedback from users.</div>
       <TableCard
-        title="Marked Blogs"
+        title="Marked"
         columns={[
           { key: 'created_at', header: 'Date', render: (r: any) => new Date(r.created_at).toLocaleString() },
           { key: 'user', header: 'User', render: (r: any) => r.user?.full_name || 'Unknown User' },

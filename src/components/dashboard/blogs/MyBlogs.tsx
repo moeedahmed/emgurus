@@ -50,7 +50,7 @@ export default function MyBlogs({ filter = 'draft' }: MyBlogsProps) {
 
   const getTitle = () => {
     switch (activeFilter) {
-      case 'draft': return 'Draft';
+      case 'draft': return 'Drafts';
       case 'in_review': return 'Submitted';
       case 'published': return 'Published';
       case 'rejected': return 'Rejected';
@@ -62,12 +62,15 @@ export default function MyBlogs({ filter = 'draft' }: MyBlogsProps) {
     ? [
         { key: 'title', header: 'Title' },
         { key: 'updated_at', header: 'Updated', render: (r: any) => new Date(r.updated_at).toLocaleString() },
-        { key: 'review_notes', header: 'Note', render: (r: any) => (r.review_notes || '').split('\n').slice(-1)[0] || '-' },
+        { key: 'review_notes', header: 'Feedback', render: (r: any) => (r.review_notes || '').split('\n').slice(-1)[0] || '-' },
         { key: 'actions', header: 'Actions', render: (r: any) => (
           <div className="flex gap-2">
-            <a className="underline" href={`/blogs/editor/${r.id}`}>Edit</a>
-            <button
-              className="underline"
+            <Button asChild variant="outline" size="sm">
+              <a href={`/blogs/editor/${r.id}`}>Edit</a>
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
               onClick={async () => {
                 try {
                   await submitPost(r.id);
@@ -86,14 +89,14 @@ export default function MyBlogs({ filter = 'draft' }: MyBlogsProps) {
                   setRows(prev => prev.filter(x => x.id !== r.id));
                 } catch (e: any) {}
               }}
-            >Resubmit</button>
+            >Resubmit</Button>
           </div>
         ) },
       ]
-    : [
+      : [
         { key: 'title', header: 'Title' },
         { key: 'updated_at', header: 'Updated', render: (r: any) => new Date(r.published_at || r.submitted_at || r.updated_at).toLocaleString() },
-        { key: 'slug', header: 'Link', render: (r: any) => (r.slug ? <a className="underline" href={`/blogs/${r.slug}`}>Open</a> : '-') },
+        { key: 'slug', header: 'Link', render: (r: any) => (r.slug ? <Button asChild variant="link" size="sm"><a href={`/blogs/${r.slug}`}>View</a></Button> : '-') },
       ];
 
   return (

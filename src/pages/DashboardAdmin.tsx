@@ -1146,14 +1146,14 @@ export default function DashboardAdmin() {
           render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blog moderation and publishing at a glance.</div><BlogsOverviewPanel /></div> 
         },
         { 
-          id: "submission-queue", 
-          title: "Submission Queue", 
+          id: "queue", 
+          title: "Queue", 
           description: "Triage incoming posts and assign to reviewers.", 
           render: <BlogSubmissionQueue /> 
         },
         { 
-          id: "published-archive", 
-          title: "Published & Archive", 
+          id: "published", 
+          title: "Published", 
           description: "Manage published posts and archive.", 
           render: <BlogPublishedArchive /> 
         },
@@ -1164,8 +1164,8 @@ export default function DashboardAdmin() {
           render: <BlogTaxonomyManager /> 
         },
         { 
-          id: "my-blogs", 
-          title: "My Blogs", 
+          id: "myblogs", 
+          title: "MyBlogs", 
           description: "Your authored posts.", 
           render: <MyBlogsAdmin /> 
         },

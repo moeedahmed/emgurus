@@ -112,6 +112,7 @@ function AdminBlogQueueContent() {
             <Button 
               onClick={() => publishPost(post.id)}
               size="sm"
+              variant="default"
             >
               Publish
             </Button>
@@ -144,7 +145,7 @@ function AdminBlogQueueContent() {
   return (
     <div className="p-4">
       <div className="mb-4 text-sm text-muted-foreground">
-        Manage all blog submissions and publishing workflow.
+        Review and manage blog submissions.
       </div>
       
       <div className="flex gap-2 mb-4">
@@ -166,7 +167,7 @@ function AdminBlogQueueContent() {
       </div>
 
       <TableCard
-        title="Blog Queue"
+        title="Queue"
         columns={getColumns()}
         rows={posts}
         emptyText="No posts in this category."

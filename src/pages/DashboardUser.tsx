@@ -23,7 +23,7 @@ export default function DashboardUser() {
       icon: BookOpen,
       tabs: [
         { id: "overview", title: "Overview", render: <div className="p-0"><BlogsOverview /></div> },
-        { id: "draft", title: "Draft", description: "Private posts you're still working on.", render: <MyBlogs filter="draft" /> },
+        { id: "drafts", title: "Drafts", description: "Private posts you're still working on.", render: <MyBlogs filter="draft" /> },
         { id: "submitted", title: "Submitted", description: "Posts awaiting review by the team.", render: <MyBlogs filter="in_review" /> },
         { id: "published", title: "Published", description: "Your posts that are live on EMGurus.", render: <MyBlogs filter="published" /> },
         { id: "rejected", title: "Rejected", description: "Changes requested. Edit and resubmit when ready.", render: <MyBlogs filter="rejected" /> },

@@ -29,7 +29,7 @@ export default function BlogsFeedbackList() {
     <div className="p-4">
       <div className="mb-2 text-sm text-muted-foreground">Blog feedback you've sent.</div>
       <TableCard
-        title="My Feedback"
+        title="Feedback"
         columns={[
           { key: 'created_at', header: 'Date', render: (r: any) => new Date(r.created_at).toLocaleString() },
           { key: 'post', header: 'Blog Post', render: (r: any) => r.post?.title || 'Unknown Post' },
