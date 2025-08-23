@@ -1585,11 +1585,11 @@ async function trackShare(postId: string, req: Request): Promise<Response> {
       }
     }
 
-    // POST /api/blogs/:id/comment
-    const commentMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/comment$/i);
-    if (req.method === "POST" && commentMatch) {
+    // POST /api/blogs/:id/comment (duplicate handler)
+    const commentMatch2 = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/comment$/i);
+    if (req.method === "POST" && commentMatch2) {
       requireAuth();
-      const id = commentMatch[1];
+      const id = commentMatch2[1];
       const { content, parent_id } = commentSchema.parse(await req.json());
 
       // Optional parent validation (same post)
