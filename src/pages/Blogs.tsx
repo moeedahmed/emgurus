@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import BlogCard from "@/components/blogs/BlogCard";
 import BlogsFilterPanel from "@/components/blogs/BlogsFilterPanel";
 import TopAuthorsPanel from "@/components/blogs/TopAuthorsPanel";
-import PopularCategoriesPanel from "@/components/blogs/PopularCategoriesPanel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PageHero from "@/components/PageHero";
@@ -224,7 +223,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
           ctas={[{ label: "Write Blog", href: "/blogs/editor/new", variant: "default" }]}
         />
       )}
-      <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left filters panel - sticky and independently scrollable */}
           <aside className="lg:col-span-4 hidden lg:block">
@@ -240,7 +239,6 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
                   onChange={setParam}
                   onReset={() => setSearchParams(new URLSearchParams())}
                 />
-                <PopularCategoriesPanel categories={categories} />
                 <TopAuthorsPanel authors={topAuthors} />
               </div>
             </div>
@@ -255,10 +253,6 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
               </div>
             )}
             
-            {/* Popular Categories - visible on mobile */}
-            <div className="lg:hidden mb-6">
-              <PopularCategoriesPanel categories={categories} />
-            </div>
             
             <div className="mb-4 space-y-3">
               <div className="flex items-center gap-3 lg:hidden">
@@ -307,33 +301,45 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
                 </div>
               )}
             </div>
-            <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">{pagination.total} posts</div>
+            {/* Header with count */}
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl mb-2">Blogs</h1>
+              <p className="text-sm text-muted-foreground">Latest posts ({pagination.total})</p>
+            </div>
+
+            <div className="space-y-4 sm:space-y-6">
               {loading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <Card key={i} className="h-72 animate-pulse" />
-                ))
+                <div className="grid gap-4 sm:gap-6">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Card key={i} className="h-72 animate-pulse" />
+                  ))}
+                </div>
               ) : items.length === 0 ? (
-                <Card className="p-6">No posts yet. Check back soon.</Card>
+                <Card className="p-6 sm:p-8 text-center">
+                  <h3 className="font-semibold text-lg mb-2">No posts yet</h3>
+                  <p className="text-muted-foreground">New articles are published regularly—check back soon.</p>
+                </Card>
               ) : (
-                items.map((p) => (
-                <BlogCard
-                  key={p.id}
-                  post={p}
-                  onOpen={() => navigate(`/blogs/${p.slug}`)}
-                  topBadge={topByCat.has(p.id) ? { label: 'Most Liked' } : null}
-                  selectedCategory={category}
-                  selectedTag={tag}
-                  selectedSort={sort}
-                  onTagClick={(type, value) => {
-                    if (type === 'category') toggleParam('category', value);
-                    if (type === 'tag') {
-                      if (value === 'most-liked') setParam('sort', sort === 'liked' ? 'newest' : 'liked');
-                      else toggleParam('tag', value);
-                    }
-                  }}
-                />
-                ))
+                <div className="grid gap-4 sm:gap-6">
+                  {items.map((p) => (
+                    <BlogCard
+                      key={p.id}
+                      post={p}
+                      onOpen={() => navigate(`/blogs/${p.slug}`)}
+                      topBadge={topByCat.has(p.id) ? { label: 'Most Liked' } : null}
+                      selectedCategory={category}
+                      selectedTag={tag}
+                      selectedSort={sort}
+                      onTagClick={(type, value) => {
+                        if (type === 'category') toggleParam('category', value);
+                        if (type === 'tag') {
+                          if (value === 'most-liked') setParam('sort', sort === 'liked' ? 'newest' : 'liked');
+                          else toggleParam('tag', value);
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
               )}
               
               {/* Pagination */}
