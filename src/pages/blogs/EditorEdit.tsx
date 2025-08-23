@@ -22,6 +22,7 @@ import RoleGate from "@/components/auth/RoleGate";
 import EmailVerifyBanner from "@/components/auth/EmailVerifyBanner";
 import BlogEditorSidebar from "@/components/blogs/editor/BlogEditorSidebar";
 import BlogChat from "@/components/blogs/BlogChat";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export default function EditorEdit() {
   const { id } = useParams();
@@ -384,7 +385,16 @@ export default function EditorEdit() {
               selectedCategoryId={categoryId}
               onCategoryChange={setCategoryId}
             />
-            {id && <BlogChat postId={id} />}
+            {id && (
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 font-semibold text-left bg-card border rounded-lg hover:bg-accent transition-colors">
+                  Discussion
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <BlogChat postId={id} />
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
         </div>
       </div>

@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoles } from "@/hooks/useRoles";
 import { Trash2 } from "lucide-react";
-import { callFunction } from "@/lib/functionsUrl";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Discussion {
@@ -16,7 +16,6 @@ interface Discussion {
   message: string;
   kind: string;
   created_at: string;
-  author_name: string;
 }
 
 export default function BlogChat({ postId }: { postId: string }) {
@@ -40,10 +39,17 @@ export default function BlogChat({ postId }: { postId: string }) {
 
   const load = async () => {
     if (!postId) return;
+    setLoading(true);
     try {
-      setLoading(true);
-      const data = await callFunction(`/api/blogs/${postId}/discussions`, {}, true, 'GET');
-      setItems(data.items || []);
+      const { data, error } = await supabase
+        .from("blog_post_discussions")
+        .select("*")
+        .eq("post_id", postId)
+        .order("created_at", { ascending: true });
+      
+      if (!error) {
+        setItems(data || []);
+      }
     } catch (error) {
       console.error("Failed to load discussions:", error);
       toast.error("Failed to load messages");
@@ -54,25 +60,57 @@ export default function BlogChat({ postId }: { postId: string }) {
 
   useEffect(() => {
     load();
-    // Simple polling for real-time updates
-    const interval = setInterval(load, 5000);
-    return () => clearInterval(interval);
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel(`blog_chat_${postId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'blog_post_discussions',
+          filter: `post_id=eq.${postId}`,
+        },
+        (payload) => {
+          setItems(prev => [...prev, payload.new as Discussion]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'blog_post_discussions',
+          filter: `post_id=eq.${postId}`,
+        },
+        (payload) => {
+          setItems(prev => prev.filter(item => item.id !== payload.old.id));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [postId]);
 
   const send = async () => {
     if (!text.trim() || !user || sending) return;
     setSending(true);
     try {
-      const response = await callFunction(`/api/blogs/${postId}/discussions`, {
-        message: text.trim(),
-        kind: "comment"
-      }, true, "POST");
+      const { error } = await supabase
+        .from("blog_post_discussions")
+        .insert({
+          post_id: postId,
+          author_id: user.id,
+          message: text.trim(),
+          kind: "comment"
+        });
       
-      if (response.success) {
-        setText("");
-        await load();
-        toast.success("Message sent");
-      }
+      if (error) throw error;
+      setText("");
+      toast.success("Message sent");
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error("Failed to send message");
@@ -84,11 +122,13 @@ export default function BlogChat({ postId }: { postId: string }) {
   const handleDelete = async (id: string, authorId: string) => {
     if (!isAdmin && authorId !== user?.id) return;
     try {
-      const response = await callFunction(`/api/blogs/discussions/${id}`, {}, true, "DELETE");
-      if (response.success) {
-        await load();
-        toast.success("Message deleted");
-      }
+      const { error } = await supabase
+        .from("blog_post_discussions")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+      toast.success("Message deleted");
     } catch (error) {
       console.error("Failed to delete message:", error);
       toast.error("Failed to delete message");
@@ -111,29 +151,36 @@ export default function BlogChat({ postId }: { postId: string }) {
           {!loading && items.length === 0 && (
             <div className="text-sm text-muted-foreground">No messages yet.</div>
           )}
-          {items.map((m) => (
-            <div key={m.id} className="text-sm group">
-              <div className="flex items-center justify-between">
-                <div className="text-muted-foreground text-xs mb-1">
-                  {new Date(m.created_at).toLocaleString()} • {m.author_name} • {m.kind}
+          {items.map((m) => {
+            const isOwnMessage = user?.id === m.author_id;
+            return (
+              <div key={m.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} group`}>
+                <div className={`max-w-[80%] ${isOwnMessage ? 'order-2' : 'order-1'}`}>
+                  <div className="text-muted-foreground text-xs mb-1 flex items-center gap-2">
+                    <span>{new Date(m.created_at).toLocaleString()}</span>
+                    <span>•</span>
+                    <span>{m.kind}</span>
+                    {(isAdmin || isOwnMessage) && (
+                      <button 
+                        onClick={() => handleDelete(m.id, m.author_id)}
+                        className="text-destructive hover:text-destructive/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label="Delete message"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <div className={`rounded-lg p-3 whitespace-pre-wrap leading-relaxed ${
+                    isOwnMessage 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-muted'
+                  }`}>
+                    {m.message}
+                  </div>
                 </div>
-                {(isAdmin || m.author_id === user?.id) && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100" 
-                    aria-label="Delete message" 
-                    onClick={() => handleDelete(m.id, m.author_id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
-              <div className="bg-muted rounded-md p-2 whitespace-pre-wrap leading-relaxed">
-                {m.message}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </ScrollArea>
       <div className="mt-2 flex gap-2">
