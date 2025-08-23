@@ -1399,6 +1399,146 @@ serve(async (req) => {
       });
     }
 
+    // Blog Metrics for dashboard analytics
+    if (req.method === "GET" && pathname === "/api/blogs/metrics") {
+      const { isAdmin, isGuru } = await getUserRoleFlags(supabase, user.id);
+      if (!isAdmin && !isGuru) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { 
+          status: 403, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
+      try {
+        // KPIs - status counts using individual queries
+        const [
+          { count: draftCount },
+          { count: inReviewCount },
+          { count: publishedCount },
+          { count: rejectedCount }
+        ] = await Promise.all([
+          supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
+          supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'in_review'),
+          supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'published'),
+          supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'rejected')
+        ]);
+
+        const statusMap = {
+          draft: draftCount || 0,
+          in_review: inReviewCount || 0,
+          published: publishedCount || 0,
+          rejected: rejectedCount || 0
+        };
+
+        // Turnaround calculation (days from submission to publication)
+        const { data: turnaroundData } = await supabase
+          .from('blog_posts')
+          .select('submitted_at, published_at')
+          .not('submitted_at', 'is', null)
+          .not('published_at', 'is', null)
+          .eq('status', 'published')
+          .order('published_at', { ascending: false })
+          .limit(50);
+
+        const avgTurnaround = turnaroundData?.length 
+          ? turnaroundData.reduce((sum, post) => {
+              const days = (new Date(post.published_at).getTime() - new Date(post.submitted_at).getTime()) / (1000 * 60 * 60 * 24);
+              return sum + days;
+            }, 0) / turnaroundData.length
+          : 0;
+
+        const kpis = {
+          submitted: statusMap['in_review'] || 0,
+          assigned: 0, // Will calculate from assignments
+          published: statusMap['published'] || 0,
+          rejected: statusMap['rejected'] || 0,
+          turnaround_avg_days: Math.round(avgTurnaround * 10) / 10
+        };
+
+        // Active assignments count
+        const { count: assignedCount } = await supabase
+          .from('blog_review_assignments')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        kpis.assigned = assignedCount || 0;
+
+        // Workload distribution (for admins)
+        let workload = { total_active_assignments: kpis.assigned, per_guru: [] };
+        if (isAdmin) {
+          const { data: guruWorkload } = await supabase
+            .from('blog_review_assignments')
+            .select(`
+              reviewer_id,
+              profiles!reviewer_id(full_name)
+            `)
+            .eq('status', 'pending');
+
+          const workloadMap = (guruWorkload as any[])?.reduce((acc, assignment) => {
+            const guruId = assignment.reviewer_id;
+            const name = assignment.profiles?.full_name || 'Unknown';
+            if (!acc[guruId]) acc[guruId] = { guru_id: guruId, name, active_assignments: 0 };
+            acc[guruId].active_assignments++;
+            return acc;
+          }, {}) || {};
+
+          workload.per_guru = Object.values(workloadMap);
+        }
+
+        // Trends - weekly data for last 12 weeks
+        const weeksAgo = 12;
+        const trends = { submissions: [], publications: [], reviews_completed: [] };
+        
+        for (let i = weeksAgo - 1; i >= 0; i--) {
+          const weekStart = new Date(Date.now() - (i * 7 * 24 * 60 * 60 * 1000));
+          const weekEnd = new Date(weekStart.getTime() + (7 * 24 * 60 * 60 * 1000));
+          const weekLabel = `${weekStart.getFullYear()}-${String(Math.ceil((weekStart.getTime() - new Date(weekStart.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000))).padStart(2, '0')}`;
+
+          // Submissions
+          const { count: submissionCount } = await supabase
+            .from('blog_posts')
+            .select('id', { count: 'exact', head: true })
+            .gte('submitted_at', weekStart.toISOString())
+            .lt('submitted_at', weekEnd.toISOString());
+
+          trends.submissions.push({ week: weekLabel, count: submissionCount || 0 });
+
+          // Publications
+          const { count: publicationCount } = await supabase
+            .from('blog_posts')
+            .select('id', { count: 'exact', head: true })
+            .gte('published_at', weekStart.toISOString())
+            .lt('published_at', weekEnd.toISOString());
+
+          trends.publications.push({ week: weekLabel, count: publicationCount || 0 });
+
+          // Reviews completed (for guru-specific metrics)
+          if (isGuru && !isAdmin) {
+            const { count: reviewCount } = await supabase
+              .from('blog_review_logs')
+              .select('id', { count: 'exact', head: true })
+              .eq('actor_id', user.id)
+              .in('action', ['publish', 'request_changes', 'reject'])
+              .gte('created_at', weekStart.toISOString())
+              .lt('created_at', weekEnd.toISOString());
+
+            trends.reviews_completed.push({ week: weekLabel, count: reviewCount || 0 });
+          }
+        }
+
+        const metrics = { kpis, workload, trends };
+        return new Response(JSON.stringify(metrics), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+
+      } catch (error) {
+        console.error("Metrics error:", error);
+        return new Response(JSON.stringify({ error: "Failed to fetch metrics" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+    }
+
     // Docs
     if (req.method === "GET" && pathname === "/api/blogs/docs") {
       const docs = {
@@ -1415,6 +1555,7 @@ serve(async (req) => {
           { method: "POST", path: "/api/blogs/:id/react", body: reactSchema.shape },
           { method: "POST", path: "/api/blogs/:id/comment", body: commentSchema.shape },
           { method: "POST", path: "/api/blogs/:id/ai-summary" },
+          { method: "GET", path: "/api/blogs/metrics" },
           { method: "GET", path: "/api/blogs/admin?status=" },
           { method: "GET", path: "/api/user/feedback" },
           { method: "GET", path: "/api/admin/feedback" },

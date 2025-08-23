@@ -262,13 +262,13 @@ export default function DashboardGuru() {
   const AnalyticsPanel: React.FC = () => {
     const { kpis, throughputSeries, isLoading } = useGuruMetrics();
     return (
-      <div className="p-4 grid gap-4 md:grid-cols-4">
-        <KpiCard title="Assigned" value={kpis.myAssignedCount} isLoading={isLoading} />
-        <KpiCard title="Approved (7d)" value={kpis.myApproved7d} isLoading={isLoading} />
+      <div className="sm:p-2 md:p-4 lg:p-6 grid gap-4 md:grid-cols-4">
+        <KpiCard title="Active Assignments" value={kpis.myAssignedCount} isLoading={isLoading} />
+        <KpiCard title="Reviews Completed" value={kpis.myReviewsCompleted} isLoading={isLoading} />
         <KpiCard title="Avg Turnaround" value={`${kpis.avgTurnaroundHrs}h`} isLoading={isLoading} />
         <KpiCard title="Upcoming Consults" value={kpis.upcomingConsults} isLoading={isLoading} />
         <div className="md:col-span-4">
-          <TrendCard title="Throughput" series={throughputSeries} rangeLabel="Last 28 days" isLoading={isLoading} />
+          <TrendCard title="Review Throughput" series={throughputSeries} rangeLabel="Last 12 weeks" isLoading={isLoading} />
         </div>
       </div>
     );

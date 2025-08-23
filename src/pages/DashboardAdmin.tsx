@@ -40,16 +40,44 @@ import BlogTaxonomyManager from "@/components/blogs/BlogTaxonomyManager";
 
 // -------- Analytics panel
 const AdminAnalyticsPanel: React.FC = () => {
-  const { kpis, submissionsSeries, isLoading } = useAdminMetrics();
+  const { kpis, submissionsSeries, workload, isLoading } = useAdminMetrics();
   return (
-    <div className="p-4 grid gap-4 md:grid-cols-4">
+    <div className="sm:p-2 md:p-4 lg:p-6 grid gap-4 md:grid-cols-4">
       <KpiCard title="New Users (7d)" value={kpis.newUsers7d} isLoading={isLoading} />
-      <KpiCard title="Posts Submitted (7d)" value={kpis.postsSubmitted7d} isLoading={isLoading} />
+      <KpiCard title="Posts Submitted" value={kpis.postsSubmitted} isLoading={isLoading} />
+      <KpiCard title="Posts Assigned" value={kpis.postsAssigned} isLoading={isLoading} />
+      <KpiCard title="Posts Published" value={kpis.postsPublished} isLoading={isLoading} />
+      <KpiCard title="Posts Rejected" value={kpis.postsRejected} isLoading={isLoading} />
+      <KpiCard title="Avg Turnaround" value={`${kpis.avgTurnaroundDays} days`} isLoading={isLoading} />
       <KpiCard title="Questions Pending" value={kpis.questionsPending} isLoading={isLoading} />
-      <KpiCard title="Chat Error Rate (7d)" value={`${kpis.chatErrorRate7d}%`} isLoading={isLoading} />
       <div className="md:col-span-4">
-        <TrendCard title="Submissions" series={submissionsSeries} rangeLabel="Last 28 days" isLoading={isLoading} />
+        <TrendCard title="Blog Submissions vs Publications" series={submissionsSeries} rangeLabel="Last 12 weeks" isLoading={isLoading} />
       </div>
+      {workload.per_guru.length > 0 && (
+        <div className="md:col-span-4">
+          <Card className="p-4">
+            <h3 className="font-semibold mb-3">Per-Guru Workload</h3>
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Guru</TableHead>
+                    <TableHead>Active Assignments</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {workload.per_guru.map((guru) => (
+                    <TableRow key={guru.guru_id}>
+                      <TableCell>{guru.name}</TableCell>
+                      <TableCell>{guru.active_assignments}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
