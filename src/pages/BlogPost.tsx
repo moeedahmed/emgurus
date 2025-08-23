@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import DOMPurify from "dompurify";
-import { Eye, ThumbsUp, ChevronUp, ChevronDown } from "lucide-react";
+import { Eye, ThumbsUp, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
 import ReportIssueModal from "@/components/blogs/ReportIssueModal";
 import AuthorChip from "@/components/blogs/AuthorChip";
+import CollapsibleCard from "@/components/ui/CollapsibleCard";
 
 interface Post {
   id: string;
@@ -63,6 +64,7 @@ const { slug } = useParams();
   const [liked, setLiked] = useState(false);
   const [viewCount, setViewCount] = useState<number>(0);
   const [likeCount, setLikeCount] = useState<number>(0);
+  const [aiSummaryContent, setAiSummaryContent] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -78,14 +80,25 @@ const { slug } = useParams();
       setViewCount(current?.view_count ?? 0);
       setLikeCount(current?.likes_count ?? 0);
 
-      // Fetch author profile data
+      // Fetch author profile data and AI summary
       if (current?.author_id) {
-        const { data: authorData } = await supabase
-          .from("profiles")
-          .select("user_id,full_name,avatar_url,bio,title")
-          .eq("user_id", current.author_id)
-          .maybeSingle();
-        setAuthor(authorData as AuthorProfile | null);
+        const [authorData, summaryData] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("user_id,full_name,avatar_url,bio,title")
+            .eq("user_id", current.author_id)
+            .maybeSingle(),
+          supabase
+            .from("blog_ai_summaries")
+            .select("summary_md")
+            .eq("post_id", current.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        ]);
+        
+        setAuthor(authorData.data as AuthorProfile | null);
+        setAiSummaryContent(summaryData.data?.summary_md || null);
       }
 
       if (current?.tags?.length) {
@@ -219,20 +232,29 @@ const { slug } = useParams();
         </header>
 
         {/* AI Summary */}
-        <Card className="p-4 mb-6">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide mb-1">AI-Generated Summary</p>
-              <p className="text-sm text-muted-foreground">
-                {expanded ? aiSummary : (aiSummary.slice(0, 180) + (aiSummary.length > 180 ? '…' : ''))}
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">Disclaimer: This summary may contain inaccuracies. Verify clinical content.</p>
+        {aiSummaryContent && (
+          <CollapsibleCard
+            title="AI Summary"
+            titleIcon={<Sparkles className="h-4 w-4 text-primary" />}
+            badge={<Badge variant="secondary" className="text-xs">AI-generated</Badge>}
+            className="mb-6"
+            defaultOpen={false}
+          >
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <div 
+                className="whitespace-pre-wrap text-sm text-muted-foreground"
+                dangerouslySetInnerHTML={{ 
+                  __html: DOMPurify.sanitize(aiSummaryContent
+                    .replace(/^-\s+/gm, '• ')
+                    .replace(/^\*\s+/gm, '• '))
+                }}
+              />
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setExpanded((e) => !e)} aria-label={expanded ? 'Collapse summary' : 'Expand summary'}>
-              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-          </div>
-        </Card>
+            <p className="text-xs text-muted-foreground mt-3 pt-2 border-t">
+              Disclaimer: This summary may contain inaccuracies. Verify clinical content.
+            </p>
+          </CollapsibleCard>
+        )}
 
         {post.cover_image_url && (
           <img src={post.cover_image_url} alt={`Cover image for ${post.title}`} className="w-full max-h-96 object-cover rounded-md mb-6" loading="lazy" />

@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoles } from "@/hooks/useRoles";
+import CollapsibleCard from "@/components/ui/CollapsibleCard";
 
 interface AIOverviewPanelProps {
   postId: string;
@@ -95,12 +95,11 @@ export default function AIOverviewPanel({ postId, content, className }: AIOvervi
     }
     
     return (
-      <Card className={`p-4 bg-muted/30 ${className}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="font-medium">Article Overview</span>
-          </div>
+      <CollapsibleCard
+        title="Article Overview"
+        titleIcon={<Sparkles className="w-4 h-4 text-primary" />}
+        className={`bg-muted/30 ${className}`}
+        actions={
           <Button
             variant="outline"
             size="sm"
@@ -119,26 +118,27 @@ export default function AIOverviewPanel({ postId, content, className }: AIOvervi
               </>
             )}
           </Button>
-        </div>
-        <div className="text-sm text-muted-foreground mt-2">
+        }
+      >
+        <div className="text-sm text-muted-foreground">
           Generate an AI-powered overview with key learning points
         </div>
-      </Card>
+      </CollapsibleCard>
     );
   }
 
   return (
-    <Card className={`p-4 bg-muted/30 ${className}`}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span className="font-medium">Article Overview</span>
-          <Badge variant="secondary" className="text-xs">
-            AI-generated
-          </Badge>
-        </div>
-        
-        {(isAdmin || isReviewer) && (
+    <CollapsibleCard
+      title="Article Overview"
+      titleIcon={<Sparkles className="w-4 h-4 text-primary" />}
+      badge={
+        <Badge variant="secondary" className="text-xs">
+          AI-generated
+        </Badge>
+      }
+      className={`bg-muted/30 ${className}`}
+      actions={
+        (isAdmin || isReviewer) && (
           <Button
             variant="ghost"
             size="sm"
@@ -152,9 +152,9 @@ export default function AIOverviewPanel({ postId, content, className }: AIOvervi
               <RefreshCw className="w-3 h-3" />
             )}
           </Button>
-        )}
-      </div>
-      
+        )
+      }
+    >
       <div className="prose prose-sm dark:prose-invert max-w-none">
         <div 
           className="whitespace-pre-wrap"
@@ -169,6 +169,6 @@ export default function AIOverviewPanel({ postId, content, className }: AIOvervi
       <div className="text-xs text-muted-foreground mt-3 pt-2 border-t">
         Generated {new Date(summary.created_at).toLocaleDateString()} using {summary.model}
       </div>
-    </Card>
+    </CollapsibleCard>
   );
 }

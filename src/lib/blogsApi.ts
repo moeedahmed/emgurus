@@ -211,11 +211,12 @@ export async function getBlog(slug: string): Promise<BlogDetailPayload> {
 
     if (error || !post) throw new Error("Post not found");
 
-    // Fetch related data
-    const [authorRes, categoryRes, tagsRes] = await Promise.all([
+    // Fetch related data including AI summary
+    const [authorRes, categoryRes, tagsRes, aiSummaryRes] = await Promise.all([
       supabase.from("profiles").select("user_id, full_name, avatar_url").eq("user_id", post.author_id).maybeSingle(),
       post.category_id ? supabase.from("blog_categories").select("id, title, slug").eq("id", post.category_id).maybeSingle() : Promise.resolve({ data: null }),
-      supabase.from("blog_post_tags").select("tag:blog_tags(slug, title)").eq("post_id", post.id)
+      supabase.from("blog_post_tags").select("tag:blog_tags(slug, title)").eq("post_id", post.id),
+      supabase.from("blog_ai_summaries").select("summary_md").eq("post_id", post.id).order("created_at", { ascending: false }).limit(1).maybeSingle()
     ]);
 
     return {
@@ -237,7 +238,7 @@ export async function getBlog(slug: string): Promise<BlogDetailPayload> {
       counts: { likes: 0, comments: 0, views: post.view_count || 0 },
       reactions: {},
       user_reaction: null,
-      ai_summary: null,
+      ai_summary: aiSummaryRes.data?.summary_md || null,
       comments: []
     };
   }
