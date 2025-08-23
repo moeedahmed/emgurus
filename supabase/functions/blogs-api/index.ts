@@ -310,15 +310,18 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
 
-      const [authorRes, reviewerRes, reactionsRes, commentsRes, summaryRes, tagsRes] = await Promise.all([
+      const [authorRes, assignmentsRes, reactionsRes, commentsRes, summaryRes, tagsRes] = await Promise.all([
         supabase.from("profiles").select("user_id, full_name, avatar_url").eq("user_id", post.author_id).maybeSingle(),
-        post.reviewer_id || post.reviewed_by
-          ? supabase
-              .from("profiles")
-              .select("user_id, full_name, avatar_url")
-              .eq("user_id", post.reviewer_id ?? post.reviewed_by)
-              .maybeSingle()
-          : Promise.resolve({ data: null } as any),
+        // Get assigned reviewers from blog_review_assignments
+        supabase
+          .from("blog_review_assignments")
+          .select(`
+            reviewer_id,
+            status,
+            profiles!blog_review_assignments_reviewer_id_fkey(user_id, full_name, avatar_url)
+          `)
+          .eq("post_id", post.id)
+          .eq("status", "pending"),
         supabase.from("blog_reactions").select("reaction").eq("post_id", post.id),
         supabase.from("blog_comments").select("id, author_id, parent_id, content, created_at").eq("post_id", post.id).order("created_at", { ascending: true }),
         supabase.from("blog_ai_summaries").select("provider, model, summary_md, created_at").eq("post_id", post.id).maybeSingle(),
@@ -356,15 +359,20 @@ serve(async (req) => {
         for (const c of comments) c.author = cmap.get(c.author_id) ?? null;
       }
 
+      // Process reviewers from assignments
+      const reviewers = (assignmentsRes.data || []).map((a: any) => ({
+        id: a.reviewer_id,
+        name: a.profiles?.full_name || 'Unknown',
+        avatar: a.profiles?.avatar_url || null
+      }));
+
       const payload = {
         post: {
           ...post,
           author: authorRes.data
             ? { id: post.author_id, name: authorRes.data.full_name, avatar: authorRes.data.avatar_url ?? null }
             : { id: post.author_id, name: "Unknown", avatar: null },
-          reviewer: reviewerRes.data
-            ? { id: reviewerRes.data.user_id, name: reviewerRes.data.full_name, avatar: reviewerRes.data.avatar_url ?? null }
-            : null,
+          reviewers: reviewers.length > 0 ? reviewers : null,
           tags: (tagsRes.data ?? []).map((t: any) => t.tag).filter(Boolean),
         },
         reactions: Object.fromEntries(reactions),
@@ -428,11 +436,20 @@ serve(async (req) => {
       try {
         const { data: postData } = await supabase
           .from("blog_posts")
-          .select("title, author_id, reviewer_id")
+          .select("title, author_id")
           .eq("id", postId)
           .single();
         
         if (postData) {
+          // Get all active reviewers for notifications
+          const { data: assignments } = await supabase
+            .from('blog_review_assignments')
+            .select('reviewer_id')
+            .eq('post_id', postId)
+            .eq('status', 'pending');
+
+          const reviewerIds = (assignments || []).map((a: any) => a.reviewer_id);
+          
           // Notify admins and assigned gurus
           await supabase.functions.invoke("notifications-dispatch", {
             body: {
@@ -451,16 +468,16 @@ serve(async (req) => {
             },
           });
           
-          // Also notify assigned reviewer if any
-          if (postData.reviewer_id) {
+          // Notify all active reviewers
+          for (const reviewerId of reviewerIds) {
             await supabase.functions.invoke("notifications-dispatch", {
               body: {
-                toUserIds: [postData.reviewer_id],
+                toUserIds: [reviewerId],
                 category: "blogs",
                 subject: `New feedback on blog: ${postData.title}`,
-                html: `<h2>New feedback reported</h2><p>A user has reported an issue with the blog post you reviewed: <strong>${postData.title}</strong></p><p>Feedback: ${message.trim()}</p>`,
+                html: `<h2>New feedback reported</h2><p>A user has reported an issue with the blog post you're reviewing: <strong>${postData.title}</strong></p><p>Feedback: ${message.trim()}</p>`,
                 inApp: [{
-                  userId: postData.reviewer_id,
+                  userId: reviewerId,
                   type: "blog_feedback",
                   title: "New blog feedback",
                   body: postData.title,
@@ -1159,13 +1176,25 @@ serve(async (req) => {
 
       const { data: post } = await supabase
         .from("blog_posts")
-        .select("id, title, content, reviewer_id, reviewed_by")
+        .select("id, title, content, reviewed_by")
         .eq("id", id)
         .maybeSingle();
       if (!post) return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const { isAdmin } = await getUserRoleFlags(supabase, user!.id);
-      const canReview = isAdmin || post.reviewer_id === user!.id || post.reviewed_by === user!.id;
+      
+      // Check if user can review (admin, reviewed_by, or has assignment)
+      let canReview = isAdmin || post.reviewed_by === user!.id;
+      if (!canReview) {
+        const { data: assignment } = await supabase
+          .from('blog_review_assignments')
+          .select('id')
+          .eq('post_id', id)
+          .eq('reviewer_id', user!.id)
+          .eq('status', 'pending')
+          .maybeSingle();
+        canReview = !!assignment;
+      }
       if (!canReview) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const content = post.content ? stripHtml(post.content) : "";
@@ -1223,7 +1252,7 @@ serve(async (req) => {
       // Check if user can access this post
       const { data: post } = await supabase
         .from("blog_posts")
-        .select("id, author_id, reviewer_id, reviewed_by, status")
+        .select("id, author_id, reviewed_by, status")
         .eq("id", postId)
         .maybeSingle();
       
