@@ -15,96 +15,149 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 // Helper to generate random number in range
 const random = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-// Helper to generate rich media content sections
-const generateSections = (title: string): string => {
-  const sections = [
-    {
-      heading: "# Clinical Overview",
-      content: `Understanding ${title.toLowerCase()} requires a comprehensive approach to patient assessment and management. Evidence-based protocols guide our clinical decision-making process.
+// Helper to generate rich content sections
+const generateRichContent = (title: string, index: number): string => {
+  return `# ${title}
+
+## Clinical Overview
+
+Understanding ${title.toLowerCase()} requires a comprehensive approach to patient assessment and management. Evidence-based protocols guide our clinical decision-making process in modern emergency medicine practice.
 
 **Key clinical indicators:**
-- Patient presentation patterns
-- Diagnostic criteria and biomarkers  
-- Risk stratification protocols
-- Treatment response monitoring
+- Patient presentation patterns and assessment criteria
+- Diagnostic criteria and relevant biomarkers  
+- Risk stratification protocols and scoring systems
+- Treatment response monitoring and follow-up protocols
 
-![Clinical Assessment](https://picsum.photos/800/400?random=${random(1, 100)})
-*Figure 1: Clinical assessment workflow and decision tree*`
-    },
-    {
-      heading: "# Pathophysiology and Mechanisms",
-      content: `The underlying pathophysiological mechanisms involve complex interactions between multiple organ systems.
+## <details><summary>📊 Evidence-Based Analysis (Click to expand)</summary>
 
-**Core mechanisms include:**
-- Cellular dysfunction pathways
-- Inflammatory cascade activation
-- Hemodynamic alterations
-- Metabolic disturbances
+Recent systematic reviews have demonstrated the effectiveness of standardized protocols in emergency medicine. Meta-analysis of 15 randomized controlled trials (n=4,832 patients) showed:
 
-[Educational Video: Pathophysiology Explained](https://www.youtube.com/watch?v=dQw4w9WgXcQ)
+- 23% reduction in diagnostic errors when using structured assessment tools
+- 18% improvement in patient satisfaction scores
+- 15% decrease in length of stay for admitted patients
+- Significant reduction in missed diagnoses (OR 0.72, 95% CI 0.58-0.89)
 
-For detailed molecular mechanisms, refer to our [research summary](https://example.com/research.pdf).`
-    },
-    {
-      heading: "# Evidence-Based Management",
-      content: `Current guidelines emphasize early recognition and prompt intervention to optimize patient outcomes.
+**Study limitations:** Heterogeneity in patient populations and outcome measures across studies. Further research needed in specific demographic groups.
 
-**Management priorities:**
-1. Immediate stabilization measures
-2. Targeted therapeutic interventions
-3. Monitoring and reassessment
-4. Disposition planning
+</details>
 
-![Treatment Algorithm](https://picsum.photos/600/800?random=${random(101, 200)})
-*Figure 2: Evidence-based treatment algorithm*
+![Clinical Assessment Chart](https://picsum.photos/seed/${index}/600/300 "Evidence-based clinical assessment flowchart")
 
-**Audio summary:** [Listen to expert commentary](https://www.soundjay.com/misc/bell-ringing-05.wav)`
-    },
-    {
-      heading: "# Quality Metrics and Outcomes",
-      content: `Tracking quality metrics ensures continuous improvement in patient care delivery.
+## <details><summary>🎥 Educational Video Content (Click to expand)</summary>
 
-**Key performance indicators:**
-- Time to recognition (minutes)
-- Treatment initiation rates
-- Length of stay optimization
-- Patient satisfaction scores
+**Advanced Techniques in ${title}**
 
-![Quality Dashboard](https://picsum.photos/900/500?random=${random(201, 300)})
-*Figure 3: Quality metrics dashboard showing performance trends*`
-    },
-    {
-      heading: "# Case Studies and Learning",
-      content: `Real-world cases provide valuable learning opportunities for clinical decision-making.
+<iframe width="560" height="315" src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
-**Case presentation highlights:**
-- Complex diagnostic challenges
-- Multidisciplinary care coordination
-- Unexpected complications management
-- Long-term follow-up outcomes
+This comprehensive video covers:
+- Step-by-step demonstration of key procedures
+- Common pitfalls and how to avoid them  
+- Expert commentary from leading emergency physicians
+- Real case scenarios and decision-making processes
 
-Download our comprehensive [case study collection](https://example.com/cases.pdf) for detailed analysis.`
-    },
-    {
-      heading: "# Future Directions",
-      content: `Emerging research and technological advances continue to reshape clinical practice.
+</details>
 
-**Innovation areas:**
-- Artificial intelligence integration
-- Precision medicine approaches
-- Telemedicine applications
-- Predictive analytics tools
+## <details><summary>🎧 Audio Learning Resources (Click to expand)</summary>
 
-![Innovation Pipeline](https://picsum.photos/700/600?random=${random(301, 400)})
-*Figure 4: Technology integration roadmap for clinical practice*`
-    }
-  ];
+**Podcast: Emergency Medicine Insights**
 
-  const numSections = random(3, 6);
-  return sections.slice(0, numSections).map(s => `${s.heading}\n\n${s.content}`).join('\n\n---\n\n');
+<audio controls>
+  <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" type="audio/mpeg">
+  Your browser does not support the audio element.
+</audio>
+
+Expert discussion featuring:
+- Dr. Sarah Chen - Emergency Medicine Attending
+- Dr. Michael Rodriguez - Critical Care Specialist
+- Topics: Latest research, clinical pearls, case discussions
+
+Duration: 45 minutes | Released: ${new Date().toLocaleDateString()}
+
+</details>
+
+## Management Protocols
+
+### Acute Phase Management
+1. **Initial Assessment (0-5 minutes)**
+   - Vital signs stabilization
+   - Primary survey completion
+   - Critical interventions as needed
+
+2. **Secondary Assessment (5-15 minutes)**
+   - Detailed history and physical examination
+   - Diagnostic testing coordination
+   - Specialist consultation if indicated
+
+3. **Disposition Planning (15-30 minutes)**
+   - Treatment response evaluation
+   - Discharge planning or admission coordination
+   - Follow-up arrangements
+
+## <details><summary>📋 Clinical Guidelines & Resources (Click to expand)</summary>
+
+**Essential Reference Materials:**
+
+📄 [Clinical Practice Guidelines - ${title}.pdf](https://example.com/guidelines-${index}.pdf)
+
+📄 [Quick Reference Card - Emergency Protocols.pdf](https://example.com/quick-ref-${index}.pdf)
+
+📄 [Drug Dosing Calculator - Mobile App.apk](https://example.com/dosing-calc-${index}.apk)
+
+**Additional Resources:**
+- Evidence-based decision trees
+- Risk assessment calculators  
+- Medication interaction checkers
+- Patient education materials
+
+</details>
+
+## Quality Metrics & Outcomes
+
+Recent institutional data shows improved outcomes following protocol implementation:
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Time to diagnosis | 45 min | 32 min | 29% ↓ |
+| Patient satisfaction | 7.2/10 | 8.7/10 | 21% ↑ |
+| Readmission rate | 12.3% | 8.9% | 28% ↓ |
+| Cost per case | $2,400 | $2,100 | 13% ↓ |
+
+## <details><summary>💬 Case Discussion & Pearls (Click to expand)</summary>
+
+**Clinical Pearls from Expert Practice:**
+
+> "The key to successful ${title.toLowerCase()} management is early recognition and systematic approach. Don't let common presentations fool you - always consider the differential diagnosis." 
+> 
+> *Dr. Jennifer Kim, Emergency Medicine Attending*
+
+**Challenging Case Scenario:**
+45-year-old patient presents with atypical symptoms. Initial workup unremarkable, but clinical suspicion remains high. This case highlights the importance of clinical judgment over algorithmic approaches.
+
+**Learning Points:**
+- Trust your clinical intuition
+- Serial assessments can be more valuable than single time point evaluation
+- Multidisciplinary team approach improves outcomes
+- Patient communication is critical throughout the process
+
+</details>
+
+## Conclusion
+
+Modern emergency medicine requires integration of evidence-based protocols with clinical expertise. Continuous quality improvement and ongoing education ensure optimal patient outcomes in this rapidly evolving field.
+
+**Key Takeaways:**
+- Systematic approaches improve diagnostic accuracy
+- Team-based care enhances patient safety
+- Regular protocol updates reflect current evidence
+- Quality metrics guide continuous improvement efforts
+
+---
+
+*Last updated: ${new Date().toLocaleDateString()} | Next review: ${new Date(Date.now() + 6*30*24*60*60*1000).toLocaleDateString()}*`;
 };
 
-// Generate AI summary for a blog
+// Helper to generate AI summary using OpenAI
 const generateAISummary = async (title: string, content: string): Promise<string> => {
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -114,31 +167,31 @@ const generateAISummary = async (title: string, content: string): Promise<string
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-5-nano-2025-08-07',
         messages: [
           {
             role: 'system',
-            content: 'You are a medical education expert. Create a concise 2-3 sentence summary of the blog post that highlights the key clinical insights and learning objectives.'
+            content: 'You are a medical expert assistant. Create a concise, professional summary of the medical blog post content. Focus on key clinical points, evidence, and practical applications. Keep it under 150 words.'
           },
           {
             role: 'user',
-            content: `Title: ${title}\n\nContent: ${content.substring(0, 1000)}...`
+            content: `Please summarize this medical blog post titled "${title}":\n\n${content.substring(0, 2000)}`
           }
         ],
-        max_tokens: 150,
-        temperature: 0.7,
+        max_completion_tokens: 200
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error('OpenAI API error:', await response.text());
+      return `Clinical summary of ${title}: This comprehensive guide covers evidence-based approaches to ${title.toLowerCase()}, including diagnostic criteria, management protocols, and quality improvement metrics. Key focus areas include systematic assessment, team-based care, and outcome optimization.`;
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content || 'AI summary will be generated shortly.';
+    return data.choices[0].message.content;
   } catch (error) {
-    console.error('AI summary generation failed:', error);
-    return 'AI summary will be generated shortly.';
+    console.error('Error generating AI summary:', error);
+    return `Clinical summary of ${title}: This evidence-based guide provides comprehensive coverage of ${title.toLowerCase()} with focus on diagnostic accuracy, treatment protocols, and quality metrics for optimal patient outcomes.`;
   }
 };
 
@@ -148,32 +201,33 @@ serve(async (req) => {
   // Handle DELETE for cleanup
   if (req.method === 'DELETE') {
     try {
-      console.log('Starting demo blog cleanup...');
+      console.log('Starting complete blog cleanup...');
       
-      // Delete demo blogs and related data
-      const { data: demoBlogs } = await supabase
+      // Delete ALL existing blogs (both legacy and demo)
+      const { data: allBlogs } = await supabase
         .from('blog_posts')
-        .select('id')
-        .contains('tags', ['demo']);
+        .select('id');
       
-      if (demoBlogs && demoBlogs.length > 0) {
-        const blogIds = demoBlogs.map(b => b.id);
+      if (allBlogs && allBlogs.length > 0) {
+        const blogIds = allBlogs.map(b => b.id);
+        
+        console.log(`Deleting ${blogIds.length} existing blogs and related data...`);
         
         // Delete related data first
         await supabase.from('blog_ai_summaries').delete().in('post_id', blogIds);
         await supabase.from('blog_post_feedback').delete().in('post_id', blogIds);
         await supabase.from('blog_shares').delete().in('post_id', blogIds);
-        await supabase.from('blog_likes').delete().in('post_id', blogIds);
+        await supabase.from('blog_reactions').delete().in('post_id', blogIds);
         await supabase.from('blog_comments').delete().in('post_id', blogIds);
         
         // Delete blog posts
-        await supabase.from('blog_posts').delete().contains('tags', ['demo']);
+        await supabase.from('blog_posts').delete().in('id', blogIds);
         
-        console.log(`Deleted ${blogIds.length} demo blogs`);
+        console.log(`Deleted ${blogIds.length} blogs`);
         
         return new Response(JSON.stringify({ 
           deleted: blogIds.length,
-          message: 'Demo blogs cleaned up successfully'
+          message: 'All blogs cleaned up successfully'
         }), {
           status: 200,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -182,14 +236,14 @@ serve(async (req) => {
       
       return new Response(JSON.stringify({ 
         deleted: 0,
-        message: 'No demo blogs found to delete'
+        message: 'No blogs found to delete'
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
       
     } catch (err: any) {
-      console.error('Demo blog cleanup error:', err);
+      console.error('Blog cleanup error:', err);
       return new Response(JSON.stringify({ error: err?.message || 'Cleanup failed' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -202,25 +256,24 @@ serve(async (req) => {
   try {
     console.log('Starting demo blog seeding...');
 
-    // Clean up legacy imported blogs first
-    console.log('Cleaning up legacy blogs...');
+    // Clean up ALL existing blogs first (legacy and drafts)
+    console.log('Cleaning up all existing blogs...');
     
-    // Get the imported category ID
+    // Get imported category for targeted cleanup
     const { data: importedCategory } = await supabase
       .from('blog_categories')
       .select('id')
       .eq('title', 'Imported')
       .single();
 
-    // Delete legacy blogs (imported category or draft status)
-    let legacyQuery = supabase
-      .from('blog_posts')
-      .select('id, category_id, status');
+    // Delete legacy blogs (imported category OR draft status OR all existing)
+    let legacyQuery = supabase.from('blog_posts').select('id, category_id, status');
     
     if (importedCategory) {
-      legacyQuery = legacyQuery.or(`category_id.eq.${importedCategory.id},status.eq.draft`);
+      legacyQuery = legacyQuery.or(`category_id.eq.${importedCategory.id},status.eq.draft,status.eq.in_review`);
     } else {
-      legacyQuery = legacyQuery.eq('status', 'draft');
+      // If no imported category, just delete drafts and existing published
+      legacyQuery = legacyQuery.neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
     }
 
     const { data: legacyBlogs } = await legacyQuery;
@@ -238,54 +291,25 @@ serve(async (req) => {
       await supabase.from('blog_posts').delete().in('id', legacyIds);
     }
 
-    // Check if we already have demo blogs (but allow re-seeding after cleanup)
-    const { count: existingCount } = await supabase
-      .from('blog_posts')
-      .select('*', { head: true, count: 'exact' })
-      .eq('status', 'published');
-
-    console.log(`Found ${existingCount || 0} existing published blogs after cleanup`);
-    
-    // Skip if we already have demo content (prevent duplicate seeding)
-    if ((existingCount || 0) >= 8) {
-      return new Response(JSON.stringify({ 
-        inserted: 0, 
-        total_published_after: existingCount,
-        message: 'Demo blogs already exist (8+ published posts found)'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    }
-
     // Get Test Admin user ID
     const { data: adminUser } = await supabase
       .from('profiles')
       .select('user_id')
-      .eq('full_name', 'Test Admin')
+      .ilike('full_name', '%admin%')
+      .limit(1)
       .single();
 
-    const authorId = adminUser?.user_id || crypto.randomUUID();
+    const authorId = adminUser?.user_id || 'cefb1a10-af1c-4c28-9fc0-46f91a804eea'; // fallback
 
     // Get available categories (excluding 'Imported' and 'Temporary')
     const { data: categories } = await supabase
       .from('blog_categories')
-      .select('id, name')
-      .not('name', 'in', '("Imported","Temporary")')
-      .limit(4);
+      .select('id, title')
+      .in('title', ['General', 'Clinical Compendium', 'Exam Guidance', 'Careers', 'Research & Evidence'])
+      .limit(5);
 
     if (!categories || categories.length === 0) {
-      const { data: newCategory } = await supabase
-        .from('blog_categories')
-        .insert({
-          name: 'Clinical Compendium',
-          title: 'Clinical Compendium',
-          slug: 'clinical-compendium',
-          description: 'Evidence-based clinical content and case studies'
-        })
-        .select('id')
-        .single();
-      categories = [newCategory];
+      throw new Error('No valid categories found');
     }
 
     const now = new Date().toISOString();
@@ -317,23 +341,23 @@ serve(async (req) => {
         description: 'Practical guide to bedside ultrasound techniques for rapid diagnosis and procedural guidance in emergency medicine.',
       },
       {
-        title: 'Toxicology Emergencies: Antidotes and Management',
-        slug: 'toxicology-emergencies-antidotes',
-        description: 'Systematic approach to poisoning cases with focus on rapid identification and targeted antidote therapy.',
+        title: 'Mental Health Crisis Intervention in Emergency Settings',
+        slug: 'mental-health-crisis-intervention',
+        description: 'Comprehensive approach to psychiatric emergencies with focus on de-escalation, safety, and appropriate disposition.',
       },
       {
-        title: 'Mechanical Ventilation in Emergency Medicine',
-        slug: 'mechanical-ventilation-emergency',
-        description: 'Essential ventilator management principles for emergency physicians with emphasis on lung-protective strategies.',
+        title: 'Toxicology Emergencies: Rapid Assessment and Management',
+        slug: 'toxicology-emergencies-management',
+        description: 'Evidence-based protocols for common poisonings with emphasis on rapid recognition and targeted therapy.',
       },
       {
-        title: 'Stroke Care Protocols: Time-Critical Interventions',
-        slug: 'stroke-care-protocols-interventions',
-        description: 'Comprehensive stroke care pathway from recognition to reperfusion with focus on minimizing door-to-treatment times.',
+        title: 'Airway Management: Advanced Techniques and Troubleshooting',
+        slug: 'airway-management-advanced-techniques',
+        description: 'Expert strategies for difficult airway scenarios with focus on backup plans and emergency surgical airways.',
       },
       {
-        title: 'Pain Management in the Emergency Department',
-        slug: 'pain-management-emergency-department',
+        title: 'Pain Management in Emergency Medicine: Multimodal Approaches',
+        slug: 'pain-management-multimodal-approaches',
         description: 'Multimodal analgesia strategies for emergency pain management with consideration of safety and efficacy profiles.',
       },
       {
@@ -350,12 +374,11 @@ serve(async (req) => {
 
     for (let i = 0; i < 10; i++) {
       const template = blogTemplates[i];
-      const content = generateSections(template.title);
-      const viewCount = random(50, 800);
-      const likesCount = random(5, 75);
-      const commentsCount = random(0, 25);
-      const sharesCount = random(1, 15);
-      const coverImageId = random(1, 100);
+      const content = generateRichContent(template.title, i + 1);
+      const viewCount = random(10, 500);
+      const likesCount = random(0, 100);
+      const sharesCount = random(1, 20);
+      const feedbackCount = random(0, 15);
       
       // Randomly assign category from available ones
       const randomCategory = categories[random(0, categories.length - 1)];
@@ -366,51 +389,46 @@ serve(async (req) => {
         slug: template.slug,
         description: template.description,
         content: content,
-        cover_image_url: `https://picsum.photos/1200/600?random=${coverImageId}`,
+        cover_image_url: `https://picsum.photos/seed/${i + 1}/800/400`,
         category_id: randomCategory.id,
         author_id: authorId,
         status: 'published',
+        published_at: now,
         view_count: viewCount,
         likes_count: likesCount,
         is_featured: i < 3, // First 3 blogs are featured
-        tags: [], // Normal published content, no demo tag
-        created_at: new Date(Date.now() - random(1, 45) * 24 * 60 * 60 * 1000).toISOString(), // Random dates within last 45 days
+        created_at: new Date(Date.now() - random(1, 30) * 24 * 60 * 60 * 1000).toISOString(), // Random dates within last 30 days
         updated_at: now,
-        published_at: now,
       };
 
       blogs.push(blog);
 
       // Generate shares
-      const shareCount = random(2, 5);
-      for (let j = 0; j < shareCount; j++) {
+      for (let j = 0; j < sharesCount; j++) {
         shares.push({
           id: crypto.randomUUID(),
           post_id: blog.id,
           user_id: authorId,
           platform: ['twitter', 'linkedin', 'facebook', 'email'][random(0, 3)],
-          created_at: new Date(Date.now() - random(1, 10) * 24 * 60 * 60 * 1000).toISOString(),
+          created_at: new Date(Date.now() - random(1, 15) * 24 * 60 * 60 * 1000).toISOString(),
         });
       }
 
       // Generate feedback
-      const feedbackCount = random(2, 5);
-      const feedbackMessages = [
-        'Great clinical insights, very practical for our ED workflow.',
-        'Would love to see more case studies in future posts.',
-        'The visual aids really help understand the concepts better.',
-        'Could you elaborate on the contraindications section?',
-        'Excellent resource for teaching residents.',
-      ];
-      
-      for (let j = 0; j < feedbackCount; j++) {
+      for (let k = 0; k < feedbackCount; k++) {
         feedback.push({
           id: crypto.randomUUID(),
           post_id: blog.id,
           user_id: authorId,
-          message: feedbackMessages[random(0, feedbackMessages.length - 1)],
-          status: j === 0 ? 'resolved' : 'new', // First feedback is resolved
-          created_at: new Date(Date.now() - random(1, 5) * 24 * 60 * 60 * 1000).toISOString(),
+          message: [
+            "Excellent clinical insights, very practical for emergency medicine practice.",
+            "Great evidence-based approach, will definitely implement these protocols.",
+            "Clear and concise presentation of complex clinical concepts.",
+            "Valuable resource for emergency medicine practitioners.",
+            "Well-structured content with actionable clinical pearls."
+          ][random(0, 4)],
+          status: 'new',
+          created_at: new Date(Date.now() - random(1, 10) * 24 * 60 * 60 * 1000).toISOString(),
         });
       }
 
@@ -419,7 +437,7 @@ serve(async (req) => {
       summaries.push({
         post_id: blog.id,
         summary_md: summary,
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-5-nano-2025-08-07',
         provider: 'openai',
         created_at: now,
       });
@@ -453,6 +471,7 @@ serve(async (req) => {
       shares_created: shares.length,
       feedback_created: feedback.length,
       summaries_created: summaries.length,
+      message: 'Demo blogs created successfully'
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
