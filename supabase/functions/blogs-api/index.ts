@@ -424,6 +424,57 @@ serve(async (req) => {
 
       if (error) throw error;
 
+      // Trigger notification for new feedback
+      try {
+        const { data: postData } = await supabase
+          .from("blog_posts")
+          .select("title, author_id, reviewer_id")
+          .eq("id", postId)
+          .single();
+        
+        if (postData) {
+          // Notify admins and assigned gurus
+          await supabase.functions.invoke("notifications-dispatch", {
+            body: {
+              toRole: "admin",
+              category: "blogs",
+              subject: `New feedback on blog: ${postData.title}`,
+              html: `<h2>New feedback reported</h2><p>A user has reported an issue with the blog post: <strong>${postData.title}</strong></p><p>Feedback: ${message.trim()}</p>`,
+              inApp: [{
+                toRole: "admin",
+                type: "blog_feedback",
+                title: "New blog feedback",
+                body: postData.title,
+                data: { postId, postTitle: postData.title, feedbackId: feedback.id },
+                category: "blogs",
+              }],
+            },
+          });
+          
+          // Also notify assigned reviewer if any
+          if (postData.reviewer_id) {
+            await supabase.functions.invoke("notifications-dispatch", {
+              body: {
+                toUserIds: [postData.reviewer_id],
+                category: "blogs",
+                subject: `New feedback on blog: ${postData.title}`,
+                html: `<h2>New feedback reported</h2><p>A user has reported an issue with the blog post you reviewed: <strong>${postData.title}</strong></p><p>Feedback: ${message.trim()}</p>`,
+                inApp: [{
+                  userId: postData.reviewer_id,
+                  type: "blog_feedback",
+                  title: "New blog feedback",
+                  body: postData.title,
+                  data: { postId, postTitle: postData.title, feedbackId: feedback.id },
+                  category: "blogs",
+                }],
+              },
+            });
+          }
+        }
+      } catch (notifyError) {
+        console.warn("Failed to send feedback notification:", notifyError);
+      }
+
       return new Response(JSON.stringify({ id: feedback.id }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 201,
@@ -495,6 +546,40 @@ serve(async (req) => {
         .eq("id", feedbackId);
 
       if (error) throw error;
+
+      // Trigger notification for feedback resolution
+      try {
+        const { data: feedbackData } = await supabase
+          .from("blog_post_feedback")
+          .select(`
+            user_id,
+            post:blog_posts(title)
+          `)
+          .eq("id", feedbackId)
+          .single();
+        
+        if (feedbackData && feedbackData.user_id) {
+          // Notify feedback author
+          await supabase.functions.invoke("notifications-dispatch", {
+            body: {
+              toUserIds: [feedbackData.user_id],
+              category: "blogs",
+              subject: `Your blog feedback was resolved: ${feedbackData.post?.title}`,
+              html: `<h2>Feedback resolved</h2><p>Your feedback on the blog post <strong>${feedbackData.post?.title}</strong> has been processed.</p>${resolution_note ? `<p>Resolution: ${resolution_note}</p>` : ''}`,
+              inApp: [{
+                userId: feedbackData.user_id,
+                type: "blog_feedback_resolved",
+                title: "Feedback resolved",
+                body: feedbackData.post?.title || "Blog post",
+                data: { feedbackId, postTitle: feedbackData.post?.title, status: "resolved" },
+                category: "blogs",
+              }],
+            },
+          });
+        }
+      } catch (notifyError) {
+        console.warn("Failed to send feedback resolution notification:", notifyError);
+      }
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -672,6 +757,38 @@ serve(async (req) => {
         .eq("id", id)
         .eq("author_id", user!.id);
       if (error) throw error;
+
+      // Trigger notification for blog submission
+      try {
+        const { data: postData } = await supabase
+          .from("blog_posts")
+          .select("title")
+          .eq("id", id)
+          .single();
+        
+        if (postData) {
+          // Notify admins about new submission
+          await supabase.functions.invoke("notifications-dispatch", {
+            body: {
+              toRole: "admin",
+              category: "blogs",
+              subject: `New blog submitted: ${postData.title}`,
+              html: `<h2>New blog submitted for review</h2><p>A new blog post has been submitted: <strong>${postData.title}</strong></p><p>Please review and assign a reviewer.</p>`,
+              inApp: [{
+                toRole: "admin",
+                type: "blog_submitted",
+                title: "New blog submitted",
+                body: postData.title,
+                data: { postId: id, postTitle: postData.title },
+                category: "blogs",
+              }],
+            },
+          });
+        }
+      } catch (notifyError) {
+        console.warn("Failed to send submission notification:", notifyError);
+      }
+
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -691,6 +808,40 @@ serve(async (req) => {
 
       const { error } = await supabase.from("blog_posts").update(patch).eq("id", id);
       if (error) throw error;
+
+      // Trigger notification for blog assignment if reviewer was assigned
+      if (patch.reviewer_id) {
+        try {
+          const { data: postData } = await supabase
+            .from("blog_posts")
+            .select("title, author_id")
+            .eq("id", id)
+            .single();
+          
+          if (postData) {
+            // Notify assigned reviewer
+            await supabase.functions.invoke("notifications-dispatch", {
+              body: {
+                toUserIds: [patch.reviewer_id],
+                category: "blogs",
+                subject: `New blog assigned for review: ${postData.title}`,
+                html: `<h2>Blog assigned for review</h2><p>You have been assigned to review the blog post: <strong>${postData.title}</strong></p>`,
+                inApp: [{
+                  userId: patch.reviewer_id,
+                  type: "blog_assigned",
+                  title: "Blog assigned for review",
+                  body: postData.title,
+                  data: { postId: id, postTitle: postData.title },
+                  category: "blogs",
+                }],
+              },
+            });
+          }
+        } catch (notifyError) {
+          console.warn("Failed to send assignment notification:", notifyError);
+        }
+      }
+
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -714,6 +865,37 @@ serve(async (req) => {
         .update({ status: "published", reviewed_at: nowIso, reviewed_by: user!.id, published_at: nowIso })
         .eq("id", id);
       if (error) throw error;
+
+      // Trigger notification for blog publication
+      try {
+        const { data: postData } = await supabase
+          .from("blog_posts")
+          .select("title, author_id")
+          .eq("id", id)
+          .single();
+        
+        if (postData && postData.author_id) {
+          // Notify author about publication
+          await supabase.functions.invoke("notifications-dispatch", {
+            body: {
+              toUserIds: [postData.author_id],
+              category: "blogs",
+              subject: `Your blog has been published: ${postData.title}`,
+              html: `<h2>Blog published!</h2><p>Congratulations! Your blog post <strong>${postData.title}</strong> has been published and is now live.</p>`,
+              inApp: [{
+                userId: postData.author_id,
+                type: "blog_published",
+                title: "Your blog was published",
+                body: postData.title,
+                data: { postId: id, postTitle: postData.title },
+                category: "blogs",
+              }],
+            },
+          });
+        }
+      } catch (notifyError) {
+        console.warn("Failed to send publication notification:", notifyError);
+      }
 
       // Try to auto-generate AI summary (non-blocking)
       try {
