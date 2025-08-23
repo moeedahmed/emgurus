@@ -140,12 +140,111 @@ const { slug } = useParams();
   }, [slug]);
 
   useEffect(() => {
-    if (post?.title) {
-      document.title = `${post.title} | EMGurus Blog`;
-      const meta = document.querySelector("meta[name='description']");
-      if (meta) meta.setAttribute("content", post.description || "EMGurus medical article");
+    if (!post) return;
+
+    // Fallback values
+    const title = post.title || "EMGurus Blog";
+    const description = post.description || "Read this blog post on EMGurus.";
+    const imageUrl = post.cover_image_url || `${window.location.origin}/assets/logo-em-gurus.png`;
+    const authorName = author?.full_name || "EMGurus Contributor";
+    const canonicalUrl = `${window.location.origin}/blogs/${slug}`;
+
+    // Set page title
+    document.title = `${title} | EMGurus Blog`;
+    
+    // Update or create meta description
+    let meta = document.querySelector("meta[name='description']");
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "description");
+      document.head.appendChild(meta);
     }
-  }, [post]);
+    meta.setAttribute("content", description);
+
+    // Create OpenGraph meta tags
+    const ogTags = [
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:type", content: "article" },
+      { property: "og:url", content: canonicalUrl },
+      { property: "og:image", content: imageUrl },
+      { property: "og:site_name", content: "EMGurus" }
+    ];
+
+    // Create Twitter meta tags
+    const twitterTags = [
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+      { name: "twitter:image", content: imageUrl }
+    ];
+
+    // Add or update meta tags
+    const addedTags: HTMLMetaElement[] = [];
+    [...ogTags, ...twitterTags].forEach((tag) => {
+      const attr = 'property' in tag ? 'property' : 'name';
+      const value = 'property' in tag ? tag.property : tag.name;
+      let element = document.querySelector(`meta[${attr}="${value}"]`) as HTMLMetaElement;
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attr, value);
+        document.head.appendChild(element);
+        addedTags.push(element);
+      }
+      element.setAttribute("content", tag.content);
+    });
+
+    // JSON-LD structured data
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": title,
+      "description": description,
+      "image": imageUrl,
+      "author": {
+        "@type": "Person",
+        "name": authorName
+      },
+      "datePublished": post.created_at,
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": canonicalUrl
+      }
+    };
+
+    // Add or update JSON-LD script
+    let jsonLdScript = document.querySelector('script[type="application/ld+json"]') as HTMLScriptElement;
+    if (!jsonLdScript) {
+      jsonLdScript = document.createElement("script");
+      jsonLdScript.setAttribute("type", "application/ld+json");
+      document.head.appendChild(jsonLdScript);
+    }
+    jsonLdScript.textContent = JSON.stringify(jsonLd);
+
+    // Canonical link
+    let canonical = document.querySelector("link[rel='canonical']") as HTMLLinkElement;
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", canonicalUrl);
+
+    return () => {
+      // Cleanup only newly added tags
+      addedTags.forEach(tag => {
+        if (document.head.contains(tag)) {
+          document.head.removeChild(tag);
+        }
+      });
+      if (document.head.contains(jsonLdScript)) {
+        document.head.removeChild(jsonLdScript);
+      }
+      if (document.head.contains(canonical)) {
+        document.head.removeChild(canonical);
+      }
+    };
+  }, [post, author, slug]);
 
   useEffect(() => {
     if (!post?.id) return;
@@ -369,7 +468,7 @@ const { slug } = useParams();
         </Card>
       </section>
 
-      <link rel="canonical" href={`${window.location.origin}/blog/${slug}`} />
+      
     </main>
   );
 };

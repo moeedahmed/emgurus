@@ -42,14 +42,72 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
     setParam(k, cur === v ? "" : v);
   };
   useEffect(() => {
-    document.title = "Blogs | EM Gurus";
-    const meta = document.querySelector("meta[name='description']");
-    if (meta) meta.setAttribute("content", "Evidence-based articles, exam guidance, and clinical pearls.");
-    const link = document.createElement("link");
-    link.setAttribute("rel", "canonical");
-    link.setAttribute("href", `${window.location.origin}/blogs`);
-    document.head.appendChild(link);
-    return () => { document.head.removeChild(link); };
+    // Set page title and meta description
+    document.title = "Blogs – EMGurus";
+    const description = "Explore the latest medical learning blogs from EMGurus.";
+    
+    // Update or create meta description
+    let meta = document.querySelector("meta[name='description']");
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "description");
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", description);
+
+    // Create OpenGraph meta tags
+    const ogTags = [
+      { property: "og:title", content: "Blogs – EMGurus" },
+      { property: "og:description", content: description },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: `${window.location.origin}/blogs` },
+      { property: "og:image", content: `${window.location.origin}/assets/logo-em-gurus.png` },
+      { property: "og:site_name", content: "EMGurus" }
+    ];
+
+    // Create Twitter meta tags
+    const twitterTags = [
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Blogs – EMGurus" },
+      { name: "twitter:description", content: description },
+      { name: "twitter:image", content: `${window.location.origin}/assets/logo-em-gurus.png` }
+    ];
+
+    // Add or update meta tags
+    const addedTags: HTMLMetaElement[] = [];
+    [...ogTags, ...twitterTags].forEach((tag) => {
+      const attr = 'property' in tag ? 'property' : 'name';
+      const value = 'property' in tag ? tag.property : tag.name;
+      let element = document.querySelector(`meta[${attr}="${value}"]`) as HTMLMetaElement;
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attr, value);
+        document.head.appendChild(element);
+        addedTags.push(element);
+      }
+      element.setAttribute("content", tag.content);
+    });
+
+    // Canonical link
+    let canonical = document.querySelector("link[rel='canonical']") as HTMLLinkElement;
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", `${window.location.origin}/blogs`);
+
+    return () => {
+      // Cleanup only newly added tags
+      addedTags.forEach(tag => {
+        if (document.head.contains(tag)) {
+          document.head.removeChild(tag);
+        }
+      });
+      if (document.head.contains(canonical)) {
+        document.head.removeChild(canonical);
+      }
+    };
   }, []);
 
   useEffect(() => {
