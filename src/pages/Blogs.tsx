@@ -23,7 +23,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
   const [pagination, setPagination] = useState({ page: 1, page_size: 12, total: 0 });
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [seeding, setSeeding] = useState(false);
+  
 
   const q = searchParams.get("q") || "";
   const category = searchParams.get("category") || "";
@@ -111,28 +111,6 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
     };
   }, []);
 
-  // Auto-seed demo blogs on first visit
-  useEffect(() => {
-    const seedDemoBlogs = async () => {
-      if (localStorage.getItem('demoSeeded') === '1') return;
-      
-      try {
-        setSeeding(true);
-        console.log('Seeding demo blogs...');
-        const result = await callFunction('seed-demo-blogs', {}, true, 'POST');
-        console.log('Demo blogs seeded:', result);
-        localStorage.setItem('demoSeeded', '1');
-        toast.success(`Demo blogs seeded: ${result.inserted} blogs created`);
-      } catch (error: any) {
-        console.error('Failed to seed demo blogs:', error);
-        toast.error('Failed to seed demo blogs');
-      } finally {
-        setSeeding(false);
-      }
-    };
-    
-    seedDemoBlogs();
-  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -333,7 +311,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
             </div>
 
             <div className="space-y-4 sm:space-y-6">
-              {(loading || seeding) ? (
+              {loading ? (
                 <div className="grid gap-4 sm:gap-6">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <Card key={i} className="h-72 animate-pulse" />

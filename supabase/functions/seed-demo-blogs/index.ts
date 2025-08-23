@@ -202,13 +202,35 @@ serve(async (req) => {
   try {
     console.log('Starting demo blog seeding...');
 
-    // Check if blogs already exist
+    // Clean up legacy blogs first
+    console.log('Cleaning up legacy blogs...');
+    
+    // Delete legacy blogs (imported category or no cover image)
+    const { data: legacyBlogs } = await supabase
+      .from('blog_posts')
+      .select('id, category_id')
+      .or('cover_image_url.is.null,status.eq.draft');
+    
+    if (legacyBlogs && legacyBlogs.length > 0) {
+      const legacyIds = legacyBlogs.map(b => b.id);
+      console.log(`Deleting ${legacyIds.length} legacy blogs...`);
+      
+      // Delete related data first
+      await supabase.from('blog_ai_summaries').delete().in('post_id', legacyIds);
+      await supabase.from('blog_post_feedback').delete().in('post_id', legacyIds);
+      await supabase.from('blog_shares').delete().in('post_id', legacyIds);
+      await supabase.from('blog_reactions').delete().in('post_id', legacyIds);
+      await supabase.from('blog_comments').delete().in('post_id', legacyIds);
+      await supabase.from('blog_posts').delete().in('id', legacyIds);
+    }
+
+    // Check if we already have demo blogs
     const { count: existingCount } = await supabase
       .from('blog_posts')
       .select('*', { head: true, count: 'exact' })
       .eq('status', 'published');
 
-    if ((existingCount || 0) >= 10) {
+    if ((existingCount || 0) >= 5) {
       return new Response(JSON.stringify({ 
         inserted: 0, 
         total_published_after: existingCount,
