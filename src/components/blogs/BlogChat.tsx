@@ -92,34 +92,31 @@ export default function BlogChat({ postId }: { postId: string }) {
       .channel(`blog_discussions_${postId}`)
       .on(
         "postgres_changes",
-        { 
-          event: "*", 
-          schema: "public", 
-          table: "blog_post_discussions", 
-          filter: `post_id=eq.${postId}` 
-        },
+        { event: "INSERT", schema: "public", table: "blog_post_discussions", filter: `post_id=eq.${postId}` },
         (payload) => {
-          if (payload.eventType === "INSERT") {
-            // For INSERT events, fetch the author info and add to items
-            const fetchAuthorAndAdd = async () => {
-              const { data: profile } = await supabase
-                .from("profiles")
-                .select("full_name")
-                .eq("user_id", payload.new.author_id)
-                .single();
-              
-              const messageWithAuthor = {
-                ...payload.new,
-                author: profile ? { full_name: profile.full_name || 'Unknown' } : { full_name: 'Unknown' }
-              };
-              
-              setItems((prev) => [...prev, messageWithAuthor as Discussion]);
+          // For INSERT events, fetch author info and add to items
+          const fetchAuthorAndAdd = async () => {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("user_id", payload.new.author_id)
+              .single();
+            
+            const messageWithAuthor = {
+              ...payload.new,
+              author: profile ? { full_name: profile.full_name || 'Unknown' } : { full_name: 'Unknown' }
             };
-            fetchAuthorAndAdd();
-          }
-          if (payload.eventType === "DELETE") {
-            setItems((prev) => prev.filter((m) => m.id !== payload.old.id));
-          }
+            
+            setItems((prev) => [...prev, messageWithAuthor as Discussion]);
+          };
+          fetchAuthorAndAdd();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "blog_post_discussions", filter: `post_id=eq.${postId}` },
+        (payload) => {
+          setItems((prev) => prev.filter((m) => m.id !== payload.old.id));
         }
       )
       .subscribe();
@@ -170,15 +167,14 @@ export default function BlogChat({ postId }: { postId: string }) {
     }
   };
 
-  const handleDelete = async (id: string, authorId: string) => {
-    if (!isAdmin && authorId !== user?.id) return;
+  const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase
         .from("blog_post_discussions")
         .delete()
         .eq("id", id);
-      
       if (error) throw error;
+      setItems((prev) => prev.filter((m) => m.id !== id)); // optimistic UI update
       toast.success("Message deleted");
     } catch (error) {
       console.error("Failed to delete message:", error);
@@ -195,61 +191,65 @@ export default function BlogChat({ postId }: { postId: string }) {
     <Card className="p-3 md:p-4 h-[520px] flex flex-col">
       <div className="font-semibold mb-2">Discussion</div>
       <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0 pr-3">
-        <div className="space-y-3 pb-2">
+        <div className="space-y-3 p-2 max-h-96 overflow-y-auto">
           {loading && items.length === 0 && (
-            <div className="text-sm text-muted-foreground">Loading messages...</div>
+            <div className="text-sm text-muted-foreground text-center">Loading messages...</div>
           )}
           {!loading && items.length === 0 && (
-            <div className="text-sm text-muted-foreground">No messages yet.</div>
+            <div className="text-sm text-muted-foreground text-center">No messages yet.</div>
           )}
           {items.map((m) => {
-            const isOwnMessage = user?.id === m.author_id;
+            const isMine = m.author_id === user?.id;
             return (
-              <div key={m.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} group`}>
-                <div className={`max-w-[80%] ${isOwnMessage ? 'order-2' : 'order-1'}`}>
-                  <div className="text-muted-foreground text-xs mb-1 flex items-center gap-2">
-                    <span>{m.author?.full_name || 'Unknown'}</span>
-                    <span>•</span>
-                    <span>{new Date(m.created_at).toLocaleString()}</span>
-                    <span>•</span>
-                    <span>{m.kind}</span>
-                    {(isAdmin || isOwnMessage) && (
-                      <button 
-                        onClick={() => handleDelete(m.id, m.author_id)}
-                        className="text-destructive hover:text-destructive/80 opacity-0 group-hover:opacity-100 transition-opacity"
-                        aria-label="Delete message"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    )}
+              <div
+                key={m.id}
+                className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`rounded-2xl px-4 py-2 shadow text-sm max-w-xs break-words ${
+                    isMine
+                      ? "bg-primary text-primary-foreground rounded-br-none"
+                      : "bg-muted text-muted-foreground rounded-bl-none"
+                  }`}
+                >
+                  <div className="text-xs opacity-75 mb-1">
+                    {m.author?.full_name || "Unknown"} •{" "}
+                    {new Date(m.created_at).toLocaleTimeString()}
                   </div>
-                  <div className={`rounded-lg p-3 whitespace-pre-wrap leading-relaxed ${
-                    isOwnMessage 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted'
-                  }`}>
-                    {m.message}
-                  </div>
+                  <div className="text-foreground">{m.message}</div>
+                  {(isAdmin || isMine) && (
+                    <button
+                      onClick={() => handleDelete(m.id)}
+                      className="text-xs opacity-70 hover:opacity-100 mt-1"
+                    >
+                      🗑 Delete
+                    </button>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
       </ScrollArea>
-      <div className="mt-2 flex gap-2">
-        <Input 
-          value={text} 
-          onChange={(e) => setText(e.target.value)} 
-          placeholder="Write a message..." 
-          disabled={sending}
+      <div className="flex gap-2 mt-2">
+        <Input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+            if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               send();
             }
           }}
+          placeholder="Write a message..."
+          disabled={sending}
+          className="flex-1"
         />
-        <Button onClick={send} disabled={sending || !text.trim()}>
+        <Button
+          onClick={send}
+          disabled={sending || !text.trim()}
+          className="px-4"
+        >
           {sending ? "Sending..." : "Send"}
         </Button>
       </div>
