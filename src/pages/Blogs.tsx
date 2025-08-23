@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import BlogCard from "@/components/blogs/BlogCard";
 import BlogsFilterPanel from "@/components/blogs/BlogsFilterPanel";
 import TopAuthorsPanel from "@/components/blogs/TopAuthorsPanel";
+import PopularCategoriesPanel from "@/components/blogs/PopularCategoriesPanel";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PageHero from "@/components/PageHero";
@@ -181,6 +182,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
                   onChange={setParam}
                   onReset={() => setSearchParams(new URLSearchParams())}
                 />
+                <PopularCategoriesPanel categories={categories} />
                 <TopAuthorsPanel authors={topAuthors} />
               </div>
             </div>
@@ -190,8 +192,15 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
           <section className="lg:col-span-8">
             {/* Featured posts carousel */}
             {featuredItems.length > 0 && (
-              <FeaturedBlogCarousel posts={featuredItems} />
+              <div className="mb-8">
+                <FeaturedBlogCarousel posts={featuredItems} />
+              </div>
             )}
+            
+            {/* Popular Categories - visible on mobile */}
+            <div className="lg:hidden mb-6">
+              <PopularCategoriesPanel categories={categories} />
+            </div>
             
             <div className="mb-4 space-y-3">
               <div className="flex items-center gap-3 lg:hidden">
