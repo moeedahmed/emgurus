@@ -329,7 +329,7 @@ serve(async (req) => {
         view_count: viewCount,
         likes_count: likesCount,
         is_featured: i < 3, // First 3 are featured
-        tags: ['demo'], // Mark as demo content
+        tags: [], // Normal published content
         created_at: new Date(Date.now() - random(1, 30) * 24 * 60 * 60 * 1000).toISOString(), // Random dates within last 30 days
         updated_at: now,
         published_at: now,

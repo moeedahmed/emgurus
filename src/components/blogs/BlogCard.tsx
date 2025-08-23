@@ -20,7 +20,6 @@ interface BlogCardProps {
     counts: { likes: number; comments?: number; views?: number; shares?: number; feedback?: number };
   };
   topBadge?: { label: string } | null;
-  demoBadge?: boolean;
   onOpen?: () => void;
   onTagClick?: (type: 'category' | 'tag' | 'author', value: string) => void;
   selectedCategory?: string;
@@ -28,7 +27,7 @@ interface BlogCardProps {
   selectedSort?: string;
 }
 
-export default function BlogCard({ post: p, topBadge, demoBadge, onOpen, onTagClick, selectedCategory, selectedTag, selectedSort }: BlogCardProps) {
+export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, selectedCategory, selectedTag, selectedSort }: BlogCardProps) {
   const cover = p.cover_image_url || fallbackImage;
   const words = (p.excerpt || "").split(/\s+/).filter(Boolean).length;
   const readMin = Math.max(1, Math.ceil(words / 220));
@@ -38,7 +37,6 @@ export default function BlogCard({ post: p, topBadge, demoBadge, onOpen, onTagCl
   const tagStrings = (p.tags || []).map(t => typeof t === 'string' ? t : (t.slug || t.title));
   
   const badges: string[] = [];
-  if (demoBadge) badges.push("Demo");
   if ((p.counts?.likes || 0) >= 10) badges.push("Most Discussed");
   if (tagStrings.some((t) => /editor|pick/i.test(t))) badges.push("Editor's Pick");
   if (tagStrings.some((t) => /featured|star|top/i.test(t))) badges.push("Featured");
@@ -89,7 +87,7 @@ export default function BlogCard({ post: p, topBadge, demoBadge, onOpen, onTagCl
               {p.category.title}
             </Chip>
           )}
-          {tagStrings.filter(t => t !== 'demo').slice(0, 3).map((label) => {
+          {tagStrings.slice(0, 3).map((label) => {
             const active = selectedTag === label;
             return (
               <Chip

@@ -329,7 +329,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
             {/* Header with count */}
             <div className="mb-6">
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl mb-2">Blogs</h1>
-              <p className="text-sm text-muted-foreground">Latest posts ({pagination.total})</p>
+              <p className="text-sm text-muted-foreground">Showing {pagination.total} posts</p>
             </div>
 
             <div className="space-y-4 sm:space-y-6">
@@ -345,14 +345,13 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
                   <p className="text-muted-foreground">New articles are published regularly—check back soon.</p>
                 </Card>
               ) : (
-                <div className="grid gap-4 sm:gap-6">
+                <div className="grid gap-4 sm:gap-6 max-w-4xl mx-auto">
                   {items.map((p) => (
                     <BlogCard
                       key={p.id}
                       post={p}
                       onOpen={() => navigate(`/blogs/${p.slug}`)}
                       topBadge={topByCat.has(p.id) ? { label: 'Most Liked' } : null}
-                      demoBadge={p.tags?.includes('demo')}
                       selectedCategory={category}
                       selectedTag={tag}
                       selectedSort={sort}
@@ -393,27 +392,6 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
                 <TopAuthorsPanel authors={topAuthors} />
               </div>
               
-              {/* Hidden dev cleanup button */}
-              {localStorage.getItem('showDemoCleanup') === '1' && (
-                <div className="mt-8 pt-4 border-t border-dashed">
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        await callFunction('seed-demo-blogs', {}, true, 'DELETE');
-                        localStorage.removeItem('demoSeeded');
-                        toast.success('Demo blogs removed');
-                        window.location.reload();
-                      } catch (error: any) {
-                        toast.error('Failed to remove demo blogs');
-                      }
-                    }}
-                  >
-                    Remove Demo Blogs
-                  </Button>
-                </div>
-              )}
             </div>
           </section>
         </div>
