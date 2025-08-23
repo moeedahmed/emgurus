@@ -1351,8 +1351,96 @@ serve(async (req) => {
                 category: "blogs",
               }],
             },
-          });
-        }
+  });
+}
+
+async function trackShare(postId: string, req: Request): Promise<Response> {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+
+  try {
+    const { platform } = await req.json();
+
+    if (!platform) {
+      return new Response(JSON.stringify({ error: 'Platform is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Get user ID for authenticated tracking (optional)
+    const authHeader = req.headers.get('authorization');
+    let userId = null;
+    
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user } } = await supabase.auth.getUser(token);
+        userId = user?.id || null;
+      } catch (error) {
+        // Continue without user ID for anonymous shares
+      }
+    }
+
+    // Check if blog post exists
+    const { data: post, error: postError } = await supabase
+      .from('blog_posts')
+      .select('id')
+      .eq('id', postId)
+      .eq('status', 'published')
+      .single();
+
+    if (postError || !post) {
+      return new Response(JSON.stringify({ error: 'Post not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Record the share
+    const { error: shareError } = await supabase
+      .from('blog_shares')
+      .insert({
+        post_id: postId,
+        user_id: userId,
+        platform: platform,
+        shared_at: new Date().toISOString(),
+      });
+
+    if (shareError) {
+      console.error('Error recording share:', shareError);
+      return new Response(JSON.stringify({ error: 'Failed to record share' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Get updated share count
+    const { data: shares } = await supabase
+      .from('blog_shares')
+      .select('id')
+      .eq('post_id', postId);
+
+    const shareCount = shares?.length || 0;
+
+    return new Response(JSON.stringify({ 
+      success: true,
+      share_count: shareCount,
+      platform 
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Error in trackShare:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+}
       } catch (notifyError) {
         console.warn("Failed to send publication notification:", notifyError);
       }

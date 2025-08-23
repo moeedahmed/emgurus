@@ -18,6 +18,7 @@ export interface BlogListItem {
     likes?: number;
     comments?: number;
     views?: number;
+    shares?: number;
   };
 }
 
@@ -37,6 +38,15 @@ export interface BlogDetailPayload {
     likes?: number;
     comments?: number;
     views?: number;
+    shares?: number;
+    feedback?: number;
+  };
+  engagement?: {
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    feedback: number;
   };
   reactions?: { [key in ReactionKey]?: number };
   user_reaction?: ReactionKey | null;
@@ -329,6 +339,16 @@ export async function refreshAISummary(id: string) {
   const res = await fetch(`${BASE}/api/blogs/${id}/ai-summary`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...(await authHeader()) },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function sharePost(id: string, platform: string) {
+  const res = await fetch(`${BASE}/api/blogs/${id}/share`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(await authHeader()) },
+    body: JSON.stringify({ platform }),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
