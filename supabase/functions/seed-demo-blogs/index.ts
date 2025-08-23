@@ -250,25 +250,25 @@ serve(async (req) => {
 
     const authorId = adminUser?.user_id || crypto.randomUUID();
 
-    // Get category ID (use first available or create one)
-    let { data: category } = await supabase
+    // Get available categories (excluding 'Imported' and 'Temporary')
+    const { data: categories } = await supabase
       .from('blog_categories')
-      .select('id')
-      .limit(1)
-      .single();
+      .select('id, name')
+      .not('name', 'in', '("Imported","Temporary")')
+      .limit(4);
 
-    if (!category) {
+    if (!categories || categories.length === 0) {
       const { data: newCategory } = await supabase
         .from('blog_categories')
         .insert({
-          name: 'Emergency Medicine',
-          title: 'Emergency Medicine',
-          slug: 'emergency-medicine',
-          description: 'Clinical updates and best practices in emergency medicine'
+          name: 'Clinical Compendium',
+          title: 'Clinical Compendium',
+          slug: 'clinical-compendium',
+          description: 'Evidence-based clinical content and case studies'
         })
         .select('id')
         .single();
-      category = newCategory;
+      categories = [newCategory];
     }
 
     const now = new Date().toISOString();
@@ -334,9 +334,14 @@ serve(async (req) => {
     for (let i = 0; i < 10; i++) {
       const template = blogTemplates[i];
       const content = generateSections(template.title);
-      const viewCount = random(20, 500);
-      const likesCount = random(0, 50);
-      const coverImageId = random(1, 50);
+      const viewCount = random(50, 800);
+      const likesCount = random(5, 75);
+      const commentsCount = random(0, 25);
+      const sharesCount = random(1, 15);
+      const coverImageId = random(1, 100);
+      
+      // Randomly assign category from available ones
+      const randomCategory = categories[random(0, categories.length - 1)];
       
       const blog = {
         id: crypto.randomUUID(),
@@ -345,14 +350,14 @@ serve(async (req) => {
         description: template.description,
         content: content,
         cover_image_url: `https://picsum.photos/1200/600?random=${coverImageId}`,
-        category_id: category.id,
+        category_id: randomCategory.id,
         author_id: authorId,
         status: 'published',
         view_count: viewCount,
         likes_count: likesCount,
-        is_featured: i < 3, // First 3 are featured
-        tags: [], // Normal published content
-        created_at: new Date(Date.now() - random(1, 30) * 24 * 60 * 60 * 1000).toISOString(), // Random dates within last 30 days
+        is_featured: random(0, 2) === 0, // Random featured status (33% chance)
+        tags: [], // Normal published content, no demo tag
+        created_at: new Date(Date.now() - random(1, 45) * 24 * 60 * 60 * 1000).toISOString(), // Random dates within last 45 days
         updated_at: now,
         published_at: now,
       };

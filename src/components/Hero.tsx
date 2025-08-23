@@ -32,7 +32,7 @@ const Hero = () => {
               <Button
                 variant="default"
                 size="lg"
-                className="group w-full sm:w-auto max-w-[320px] hover-lift focus-ring touch-target"
+                className="group w-full sm:w-auto max-w-[280px] hover-lift focus-ring touch-target"
                 onClick={() => navigate('/exams')}
                 role="button"
                 aria-label="Start exam preparation"
@@ -43,7 +43,7 @@ const Hero = () => {
               <Button
                 variant="outline"
                 size="lg"
-                className="group w-full sm:w-auto max-w-[320px] hover-lift focus-ring touch-target"
+                className="group w-full sm:w-auto max-w-[280px] hover-lift focus-ring touch-target"
                 onClick={() => navigate('/consultations')}
                 role="button"
                 aria-label="Book a Guru consultation"
@@ -51,12 +51,24 @@ const Hero = () => {
                 Book a Guru
               </Button>
               <Button
-                asChild
+                variant="outline"
+                size="lg"
+                className="group w-full sm:w-auto max-w-[280px] hover-lift focus-ring touch-target"
+                onClick={() => navigate('/blogs')}
+                role="button"
+                aria-label="Read clinical blogs"
+              >
+                Read Blogs
+              </Button>
+              <Button
                 variant="ghost"
                 size="lg"
-                className="group w-full sm:w-auto max-w-[320px] hover-lift focus-ring touch-target"
+                className="group w-full sm:w-auto max-w-[280px] hover-lift focus-ring touch-target"
+                onClick={() => navigate('/forums')}
+                role="button"
+                aria-label="Join discussion forums"
               >
-                <a href="/#pricing" role="button" aria-label="See pricing">See Pricing</a>
+                Join Forum
               </Button>
             </div>
           </div>
