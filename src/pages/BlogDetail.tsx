@@ -83,31 +83,6 @@ export default function BlogDetail() {
     fetchProfiles();
   }, [data]);
 
-  const contentHtml = useMemo(() => {
-    if (!data) return "";
-    let html = data.content_html || data.content || data.content_md || "";
-    
-    // Convert markdown-style content to HTML if needed
-    if (html && typeof html === 'string') {
-      // Basic markdown to HTML conversions
-      html = html
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-        .replace(/\n\n/g, '</p><p>')
-        .replace(/\n/g, '<br/>')
-        .replace(/^(.)/g, '<p>$1')
-        .replace(/(.)$/g, '$1</p>');
-      
-      // Process media embeds
-      html = processMediaEmbeds(html);
-    }
-    
-    return DOMPurify.sanitize(html);
-  }, [data]);
-
   const processMediaEmbeds = (html: string): string => {
     // YouTube embeds
     html = html.replace(
@@ -135,6 +110,31 @@ export default function BlogDetail() {
     
     return html;
   };
+
+  const contentHtml = useMemo(() => {
+    if (!data) return "";
+    let html = data.content_html || data.content || data.content_md || "";
+    
+    // Convert markdown-style content to HTML if needed
+    if (html && typeof html === 'string') {
+      // Basic markdown to HTML conversions
+      html = html
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br/>')
+        .replace(/^(.)/g, '<p>$1')
+        .replace(/(.)$/g, '$1</p>');
+      
+      // Process media embeds
+      html = processMediaEmbeds(html);
+    }
+    
+    return DOMPurify.sanitize(html);
+  }, [data]);
 
   const aiSummary = useMemo(() => {
     if (data?.ai_summary?.summary_md) {
