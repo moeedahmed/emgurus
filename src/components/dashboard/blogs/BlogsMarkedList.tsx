@@ -15,6 +15,7 @@ export default function BlogsMarkedList() {
   const [resolutionNote, setResolutionNote] = useState("");
   const [resolving, setResolving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState({ unresolved: 0, resolved: 0, total: 0 });
   const { toast } = useToast();
 
   const loadFeedback = async () => {
@@ -27,10 +28,17 @@ export default function BlogsMarkedList() {
     try {
       setLoading(true);
       const response = await callFunction('blogs-api/api/admin/feedback', {}, true, 'GET');
-      setRows(response.items || []);
+      const items = response.items || [];
+      setRows(items);
+      
+      // Calculate summary
+      const unresolved = items.filter((item: any) => item.status === 'new').length;
+      const resolved = items.filter((item: any) => item.status === 'resolved').length;
+      setSummary({ unresolved, resolved, total: items.length });
     } catch (error) {
       console.error('Error loading feedback:', error);
       setRows([]);
+      setSummary({ unresolved: 0, resolved: 0, total: 0 });
     } finally {
       setLoading(false);
     }
@@ -63,7 +71,15 @@ export default function BlogsMarkedList() {
 
   return (
     <div className="p-0">
-      {/* Removed duplicate description - handled by WorkspaceLayout */}
+      {/* Feedback Summary */}
+      <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+        <div className="flex gap-6 text-sm">
+          <span><strong>{summary.unresolved}</strong> unresolved</span>
+          <span><strong>{summary.resolved}</strong> resolved</span>
+          <span><strong>{summary.total}</strong> total feedback</span>
+        </div>
+      </div>
+      
       <TableCard
         title="Marked"
         columns={[

@@ -40,7 +40,7 @@ import BlogTaxonomyManager from "@/components/blogs/BlogTaxonomyManager";
 
 // -------- Analytics panel
 const AdminAnalyticsPanel: React.FC = () => {
-  const { kpis, submissionsSeries, workload, isLoading } = useAdminMetrics();
+  const { kpis, submissionsSeries, workload, engagement, feedbackSummary, isLoading } = useAdminMetrics();
   return (
     <div className="sm:p-2 md:p-4 lg:p-6 grid gap-4 md:grid-cols-4">
       <KpiCard title="New Users (7d)" value={kpis.newUsers7d} isLoading={isLoading} />
@@ -50,6 +50,13 @@ const AdminAnalyticsPanel: React.FC = () => {
       <KpiCard title="Posts Rejected" value={kpis.postsRejected} isLoading={isLoading} />
       <KpiCard title="Avg Turnaround" value={`${kpis.avgTurnaroundDays} days`} isLoading={isLoading} />
       <KpiCard title="Questions Pending" value={kpis.questionsPending} isLoading={isLoading} />
+      
+      {/* Engagement KPIs */}
+      <KpiCard title="Total Views" value={engagement.views} isLoading={isLoading} />
+      <KpiCard title="Total Likes" value={engagement.likes} isLoading={isLoading} />
+      <KpiCard title="Total Comments" value={engagement.comments} isLoading={isLoading} />
+      <KpiCard title="Total Shares" value={engagement.shares} isLoading={isLoading} />
+      <KpiCard title="Feedback Reports" value={`${feedbackSummary.unresolved}/${feedbackSummary.total}`} helpText="unresolved/total" isLoading={isLoading} />
       <div className="md:col-span-4">
         <TrendCard title="Blog Submissions vs Publications" series={submissionsSeries} rangeLabel="Last 12 weeks" isLoading={isLoading} />
       </div>

@@ -1988,7 +1988,54 @@ async function trackShare(postId: string, req: Request): Promise<Response> {
           }
         }
 
-        const metrics = { kpis, workload, trends };
+        // Get engagement totals
+        const { data: posts } = await supabase
+          .from('blog_posts')
+          .select(`
+            view_count,
+            likes_count,
+            id
+          `)
+          .eq('status', 'published');
+
+        const { data: commentCounts } = await supabase
+          .from('blog_comments')
+          .select('post_id')
+          .in('post_id', posts?.map(p => p.id) || []);
+
+        const { data: shareCounts } = await supabase
+          .from('blog_shares')
+          .select('post_id')
+          .in('post_id', posts?.map(p => p.id) || []);
+
+        const { data: feedbackCounts } = await supabase
+          .from('blog_post_feedback')
+          .select('post_id, status')
+          .in('post_id', posts?.map(p => p.id) || []);
+
+        const totalViews = posts?.reduce((sum, p) => sum + (p.view_count || 0), 0) || 0;
+        const totalLikes = posts?.reduce((sum, p) => sum + (p.likes_count || 0), 0) || 0;
+        const totalComments = commentCounts?.length || 0;
+        const totalShares = shareCounts?.length || 0;
+        const totalFeedback = feedbackCounts?.length || 0;
+        const unresolvedFeedback = feedbackCounts?.filter(f => f.status === 'new').length || 0;
+        const resolvedFeedback = feedbackCounts?.filter(f => f.status === 'resolved').length || 0;
+
+        const engagement = {
+          views: totalViews,
+          likes: totalLikes,
+          comments: totalComments,
+          shares: totalShares,
+          feedback: totalFeedback
+        };
+
+        const feedback_summary = {
+          unresolved: unresolvedFeedback,
+          resolved: resolvedFeedback,
+          total: totalFeedback
+        };
+
+        const metrics = { kpis, workload, trends, engagement, feedback_summary };
         return new Response(JSON.stringify(metrics), {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });

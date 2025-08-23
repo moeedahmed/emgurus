@@ -260,13 +260,21 @@ export default function DashboardGuru() {
   useEffect(() => { document.title = "Guru Workspace | EM Gurus"; }, []);
 
   const AnalyticsPanel: React.FC = () => {
-    const { kpis, throughputSeries, isLoading } = useGuruMetrics();
+    const { kpis, throughputSeries, engagement, feedbackSummary, isLoading } = useGuruMetrics();
     return (
       <div className="sm:p-2 md:p-4 lg:p-6 grid gap-4 md:grid-cols-4">
         <KpiCard title="Active Assignments" value={kpis.myAssignedCount} isLoading={isLoading} />
         <KpiCard title="Reviews Completed" value={kpis.myReviewsCompleted} isLoading={isLoading} />
         <KpiCard title="Avg Turnaround" value={`${kpis.avgTurnaroundHrs}h`} isLoading={isLoading} />
         <KpiCard title="Upcoming Consults" value={kpis.upcomingConsults} isLoading={isLoading} />
+        
+        {/* Engagement KPIs */}
+        <KpiCard title="Total Views" value={engagement.views} isLoading={isLoading} />
+        <KpiCard title="Total Likes" value={engagement.likes} isLoading={isLoading} />
+        <KpiCard title="Total Comments" value={engagement.comments} isLoading={isLoading} />
+        <KpiCard title="Total Shares" value={engagement.shares} isLoading={isLoading} />
+        <KpiCard title="Feedback Reports" value={`${feedbackSummary.unresolved}/${feedbackSummary.total}`} helpText="unresolved/total" isLoading={isLoading} />
+        
         <div className="md:col-span-4">
           <TrendCard title="Review Throughput" series={throughputSeries} rangeLabel="Last 12 weeks" isLoading={isLoading} />
         </div>

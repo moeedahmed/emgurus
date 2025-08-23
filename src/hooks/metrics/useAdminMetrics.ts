@@ -23,6 +23,18 @@ interface BlogMetrics {
     publications: Array<{ week: string; count: number }>;
     reviews_completed: Array<{ week: string; count: number }>;
   };
+  engagement: {
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    feedback: number;
+  };
+  feedback_summary: {
+    unresolved: number;
+    resolved: number;
+    total: number;
+  };
 }
 
 export function useAdminMetrics() {
@@ -38,6 +50,8 @@ export function useAdminMetrics() {
   });
   const [submissionsSeries, setSeries] = useState<Array<{ date: string; value: number }>>([]);
   const [workload, setWorkload] = useState<BlogMetrics['workload']>({ total_active_assignments: 0, per_guru: [] });
+  const [engagement, setEngagement] = useState<BlogMetrics['engagement']>({ views: 0, likes: 0, comments: 0, shares: 0, feedback: 0 });
+  const [feedbackSummary, setFeedbackSummary] = useState<BlogMetrics['feedback_summary']>({ unresolved: 0, resolved: 0, total: 0 });
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +86,8 @@ export function useAdminMetrics() {
           }));
           setSeries(trendData);
           setWorkload(blogMetrics.workload);
+          setEngagement(blogMetrics.engagement || { views: 0, likes: 0, comments: 0, shares: 0, feedback: 0 });
+          setFeedbackSummary(blogMetrics.feedback_summary || { unresolved: 0, resolved: 0, total: 0 });
         }
       } catch (error) {
         console.error('Admin metrics error:', error);
@@ -79,6 +95,8 @@ export function useAdminMetrics() {
           setKpis({ newUsers7d: 0, postsSubmitted: 0, postsAssigned: 0, postsPublished: 0, postsRejected: 0, questionsPending: 0, avgTurnaroundDays: 0 }); 
           setSeries([]); 
           setWorkload({ total_active_assignments: 0, per_guru: [] });
+          setEngagement({ views: 0, likes: 0, comments: 0, shares: 0, feedback: 0 });
+          setFeedbackSummary({ unresolved: 0, resolved: 0, total: 0 });
         }
       } finally { 
         if (!cancelled) setLoading(false); 
@@ -87,5 +105,5 @@ export function useAdminMetrics() {
     return () => { cancelled = true; };
   }, []);
 
-  return { kpis, submissionsSeries, workload, isLoading } as const;
+  return { kpis, submissionsSeries, workload, engagement, feedbackSummary, isLoading } as const;
 }

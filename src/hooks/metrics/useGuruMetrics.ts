@@ -12,6 +12,18 @@ interface BlogMetrics {
   trends: {
     reviews_completed: Array<{ week: string; count: number }>;
   };
+  engagement: {
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    feedback: number;
+  };
+  feedback_summary: {
+    unresolved: number;
+    resolved: number;
+    total: number;
+  };
 }
 
 export function useGuruMetrics() {
@@ -24,6 +36,8 @@ export function useGuruMetrics() {
   });
   const [throughputSeries, setSeries] = useState<Array<{ date: string; value: number }>>([]);
   const [queues, setQueues] = useState<{ questions: any[]; blogs: any[] }>({ questions: [], blogs: [] });
+  const [engagement, setEngagement] = useState<BlogMetrics['engagement']>({ views: 0, likes: 0, comments: 0, shares: 0, feedback: 0 });
+  const [feedbackSummary, setFeedbackSummary] = useState<BlogMetrics['feedback_summary']>({ unresolved: 0, resolved: 0, total: 0 });
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +77,8 @@ export function useGuruMetrics() {
 
           setSeries(trendData);
           setQueues({ questions: [], blogs: [] }); // Not needed anymore, kept for compatibility
+          setEngagement(blogMetrics.engagement || { views: 0, likes: 0, comments: 0, shares: 0, feedback: 0 });
+          setFeedbackSummary(blogMetrics.feedback_summary || { unresolved: 0, resolved: 0, total: 0 });
         }
       } catch (error) {
         console.error('Guru metrics error:', error);
@@ -70,11 +86,13 @@ export function useGuruMetrics() {
           setKpis({ myAssignedCount: 0, myReviewsCompleted: 0, avgTurnaroundHrs: 0, upcomingConsults: 0 });
           setSeries([]);
           setQueues({ questions: [], blogs: [] });
+          setEngagement({ views: 0, likes: 0, comments: 0, shares: 0, feedback: 0 });
+          setFeedbackSummary({ unresolved: 0, resolved: 0, total: 0 });
         }
       } finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
   }, []);
 
-  return { kpis, throughputSeries, queues, isLoading } as const;
+  return { kpis, throughputSeries, queues, engagement, feedbackSummary, isLoading } as const;
 }
