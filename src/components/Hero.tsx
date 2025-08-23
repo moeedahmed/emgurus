@@ -28,22 +28,22 @@ const Hero = () => {
               Prepare, practice, and succeed with structured exam resources and expert guidance.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg mx-auto">
               <Button
                 variant="default"
                 size="lg"
-                className="group w-full sm:w-auto max-w-[280px] hover-lift focus-ring touch-target"
+                className="group w-full bg-primary text-white rounded-xl px-4 py-3 hover:bg-primary/90 hover-lift focus-ring touch-target"
                 onClick={() => navigate('/exams')}
                 role="button"
                 aria-label="Start exam preparation"
               >
                 Start Exam Prep
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button
-                variant="outline"
+                variant="default"
                 size="lg"
-                className="group w-full sm:w-auto max-w-[280px] hover-lift focus-ring touch-target"
+                className="group w-full bg-primary text-white rounded-xl px-4 py-3 hover:bg-primary/90 hover-lift focus-ring touch-target"
                 onClick={() => navigate('/consultations')}
                 role="button"
                 aria-label="Book a Guru consultation"
@@ -51,9 +51,9 @@ const Hero = () => {
                 Book a Guru
               </Button>
               <Button
-                variant="outline"
+                variant="default"
                 size="lg"
-                className="group w-full sm:w-auto max-w-[280px] hover-lift focus-ring touch-target"
+                className="group w-full bg-primary text-white rounded-xl px-4 py-3 hover:bg-primary/90 hover-lift focus-ring touch-target"
                 onClick={() => navigate('/blogs')}
                 role="button"
                 aria-label="Read clinical blogs"
@@ -61,9 +61,9 @@ const Hero = () => {
                 Read Blogs
               </Button>
               <Button
-                variant="ghost"
+                variant="default"
                 size="lg"
-                className="group w-full sm:w-auto max-w-[280px] hover-lift focus-ring touch-target"
+                className="group w-full bg-primary text-white rounded-xl px-4 py-3 hover:bg-primary/90 hover-lift focus-ring touch-target"
                 onClick={() => navigate('/forums')}
                 role="button"
                 aria-label="Join discussion forums"
