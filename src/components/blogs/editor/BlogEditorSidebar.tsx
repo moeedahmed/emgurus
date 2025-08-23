@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, Layers } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Layers, Type, Image, Video, Volume2, Quote, Minus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -9,12 +9,12 @@ import BlogCategoryPanel from "../BlogCategoryPanel";
 
 // Block types
 const blockTypes = [
-  { type: 'text' as const, icon: Plus, label: 'Text', description: 'Rich text paragraph' },
-  { type: 'image' as const, icon: Plus, label: 'Image', description: 'Upload or link image' },
-  { type: 'video' as const, icon: Plus, label: 'Video', description: 'YouTube/Vimeo embed' },
-  { type: 'audio' as const, icon: Plus, label: 'Audio', description: 'Audio file or URL' },
-  { type: 'quote' as const, icon: Plus, label: 'Quote', description: 'Blockquote' },
-  { type: 'divider' as const, icon: Plus, label: 'Divider', description: 'Horizontal rule' },
+  { type: 'text' as const, icon: Type, label: 'Text', description: 'Rich text paragraph' },
+  { type: 'image' as const, icon: Image, label: 'Image', description: 'Upload or link image' },
+  { type: 'video' as const, icon: Video, label: 'Video', description: 'YouTube/Vimeo embed' },
+  { type: 'audio' as const, icon: Volume2, label: 'Audio', description: 'Audio file or URL' },
+  { type: 'quote' as const, icon: Quote, label: 'Quote', description: 'Blockquote' },
+  { type: 'divider' as const, icon: Minus, label: 'Divider', description: 'Horizontal rule' },
 ];
 
 interface BlogEditorSidebarProps {

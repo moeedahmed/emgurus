@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,23 +8,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { createDraft, submitPost } from "@/lib/blogsApi";
 import { supabase } from "@/integrations/supabase/client";
-import { isFeatureEnabled } from "@/lib/constants";
-import BlocksPalette, { Block } from "@/components/blogs/editor/BlocksPalette";
+import { Block } from "@/components/blogs/editor/BlocksPalette";
 import BlockEditor from "@/components/blogs/editor/BlockEditor";
-import { blocksToMarkdown, markdownToBlocks } from "@/components/blogs/editor/BlocksToMarkdown";
+import { blocksToMarkdown } from "@/components/blogs/editor/BlocksToMarkdown";
 import AuthGate from "@/components/auth/AuthGate";
 import EmailVerifyBanner from "@/components/auth/EmailVerifyBanner";
+import BlogEditorSidebar from "@/components/blogs/editor/BlogEditorSidebar";
 
 export default function EditorNew() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [cover, setCover] = useState("");
-  const [content, setContent] = useState("");
+  
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [tagsInput, setTagsInput] = useState<string>("");
   const [tagList, setTagList] = useState<string[]>([]);
@@ -32,8 +32,7 @@ export default function EditorNew() {
   const [allTags, setAllTags] = useState<{ id: string; slug: string; title: string }[]>([]);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   
-  // New editor state
-  const [useBlockEditor, setUseBlockEditor] = useState(isFeatureEnabled('BLOG_EDITOR_V2'));
+  // Block editor is the default
   const [blocks, setBlocks] = useState<Block[]>([]);
   useEffect(() => {
     if (!user) navigate("/auth");
@@ -79,8 +78,8 @@ export default function EditorNew() {
       const leftover = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
       const tag_slugs = Array.from(new Set([...tagList, ...leftover].map((t) => t.toLowerCase().replace(/\s+/g, "-"))));
       
-      // Convert blocks to markdown if using block editor
-      const finalContent = useBlockEditor ? blocksToMarkdown(blocks) : content;
+      // Convert blocks to markdown
+      const finalContent = blocksToMarkdown(blocks);
       
       const res = await createDraft({ title, content_md: finalContent, category_id: categoryId, tag_slugs, cover_image_url: cover || undefined });
       if (submit) await submitPost(res.id);
@@ -122,186 +121,186 @@ export default function EditorNew() {
     });
   };
 
-  const toggleEditor = () => {
-    if (useBlockEditor) {
-      // Convert blocks to markdown
-      const markdown = blocksToMarkdown(blocks);
-      setContent(markdown);
-    } else {
-      // Convert markdown to blocks
-      const newBlocks = markdownToBlocks(content);
-      setBlocks(newBlocks);
-    }
-    setUseBlockEditor(!useBlockEditor);
-  };
 
   return (
     <AuthGate>
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <EmailVerifyBanner className="mb-6" />
         
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">New Blog</h1>
-          {isFeatureEnabled('BLOG_EDITOR_V2') && (
-            <Button variant="outline" onClick={toggleEditor}>
-              {useBlockEditor ? 'Revert to classic editor' : 'Use block editor'}
-            </Button>
-          )}
+        <div className="flex items-center gap-4 mb-8">
+          <Button variant="ghost" onClick={() => navigate('/blogs/dashboard')} className="flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Button>
         </div>
       
-      <div className="flex gap-6">
-        <div className="flex-1">
-          <Card className="p-6 space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="title">Title</Label>
-          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Post title" />
-        </div>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="cover">Cover image</Label>
-            <div className="space-y-2">
-              <Input id="cover" value={cover} onChange={(e) => setCover(e.target.value)} placeholder="https://..." />
-              <Input type="file" accept="image/*" onChange={(e) => onCoverFileChange(e.target.files?.[0])} />
-              {cover && (
-                <img
-                  src={cover}
-                  alt="Blog cover preview"
-                  className="mt-2 w-full max-h-64 object-cover rounded-md border"
-                  loading="lazy"
+      <div className="flex gap-8 relative">
+        {/* Main Content */}
+        <div className="flex-1 max-w-5xl">
+          <Card className="p-8">
+            <div className="space-y-8">
+              <div>
+                <h1 className="text-4xl font-bold mb-8 text-center">New Blog</h1>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="title" className="text-base font-semibold">Title</Label>
+                <Input 
+                  id="title" 
+                  value={title} 
+                  onChange={(e) => setTitle(e.target.value)} 
+                  placeholder="Enter your blog post title" 
+                  className="text-lg py-3"
                 />
-              )}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Category</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent className="z-50">
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Tags</Label>
-          <div className="relative">
-            <Input
-              value={tagsInput}
-              onChange={(e) => { setTagsInput(e.target.value); setShowTagSuggestions(true); }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === ",") {
-                  e.preventDefault();
-                  const parts = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
-                  if (parts.length) {
-                    setTagList((prev) => Array.from(new Set([...prev, ...parts.map((t) => t.toLowerCase().replace(/\s+/g, '-'))])));
-                    setTagsInput('');
-                    setShowTagSuggestions(false);
-                  }
-                }
-              }}
-              placeholder="Type a tag and press Enter"
-            />
-            {showTagSuggestions && tagsInput && (
-              <div className="absolute z-50 bg-popover border rounded-md mt-1 w-full max-h-48 overflow-auto shadow">
-                {allTags
-                  .filter(t => t.slug.includes(tagsInput.toLowerCase()) || (t.title || '').toLowerCase().includes(tagsInput.toLowerCase()))
-                  .slice(0, 8)
-                  .map(t => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className="w-full text-left px-3 py-2 hover:bg-accent"
-                      onClick={() => {
-                        setTagList(prev => Array.from(new Set([...prev, t.slug])));
-                        setTagsInput('');
-                        setShowTagSuggestions(false);
-                      }}
-                    >
-                      {t.title} ({t.slug})
-                    </button>
-                  ))}
-                {allTags.filter(t => t.slug.includes(tagsInput.toLowerCase()) || (t.title || '').toLowerCase().includes(tagsInput.toLowerCase())).length === 0 && (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">Press Enter to add "{tagsInput}"</div>
-                )}
               </div>
-            )}
-          </div>
-          {tagList.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-2">
-              {tagList.map((t) => (
-                <Badge key={t} variant="secondary" className="flex items-center gap-1">
-                  <span>{t}</span>
-                  <button type="button" onClick={() => setTagList((prev) => prev.filter((x) => x !== t))} aria-label={`Remove ${t}`} className="ml-1">×</button>
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-        {useBlockEditor ? (
-          <div className="space-y-4">
-            <Label>Content (Block Editor)</Label>
-            {blocks.length === 0 ? (
-              <Card className="p-8 text-center border-dashed">
-                <div className="text-muted-foreground">
-                  Start building your post by adding blocks from the palette →
-                </div>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {blocks
-                  .sort((a, b) => a.order - b.order)
-                  .map(block => (
-                    <BlockEditor
-                      key={block.id}
-                      block={block}
-                      onUpdate={(content) => handleUpdateBlock(block.id, content)}
-                      onRemove={() => handleRemoveBlock(block.id)}
+              
+              <div className="border-t pt-8">
+                <div className="space-y-4">
+                  <Label htmlFor="cover" className="text-base font-semibold">Cover Image</Label>
+                  <div className="space-y-4">
+                    <Input 
+                      id="cover" 
+                      value={cover} 
+                      onChange={(e) => setCover(e.target.value)} 
+                      placeholder="https://example.com/image.jpg" 
+                      className="py-3"
                     />
-                  ))}
+                    <Input 
+                      type="file" 
+                      accept="image/*" 
+                      className="py-3"
+                      onChange={(e) => onCoverFileChange(e.target.files?.[0])} 
+                    />
+                    {cover && (
+                      <img
+                        src={cover}
+                        alt="Blog cover preview"
+                        className="w-full max-h-80 object-cover rounded-lg border shadow-sm"
+                        loading="lazy"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <Label>Content</Label>
-            <Textarea className="min-h-[300px]" value={content} onChange={(e) => setContent(e.target.value)} placeholder="# Heading\nYour content..." />
-          </div>
-        )}
-        <div className="flex gap-2 justify-end">
-          <Button variant="outline" onClick={() => onSave(false)} disabled={loading}>Save Draft</Button>
-          <Button onClick={() => onSave(true)} disabled={loading}>Submit</Button>
-        </div>
+              
+              <div className="border-t pt-8">
+                <div className="space-y-6">
+                  <Label className="text-base font-semibold">Content</Label>
+                  {blocks.length === 0 ? (
+                    <Card className="p-12 text-center border-dashed border-2">
+                      <div className="text-muted-foreground">
+                        Start building your post by adding blocks from the sidebar →
+                      </div>
+                    </Card>
+                  ) : (
+                    <div className="space-y-6">
+                      {blocks
+                        .sort((a, b) => a.order - b.order)
+                        .map(block => (
+                          <BlockEditor
+                            key={block.id}
+                            block={block}
+                            onUpdate={(content) => handleUpdateBlock(block.id, content)}
+                            onRemove={() => handleRemoveBlock(block.id)}
+                          />
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t pt-8">
+                <div className="space-y-4">
+                  <Label className="text-base font-semibold">Tags</Label>
+                  <div className="relative">
+                    <Input
+                      value={tagsInput}
+                      onChange={(e) => { setTagsInput(e.target.value); setShowTagSuggestions(true); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === ",") {
+                          e.preventDefault();
+                          const parts = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
+                          if (parts.length) {
+                            setTagList((prev) => Array.from(new Set([...prev, ...parts.map((t) => t.toLowerCase().replace(/\s+/g, '-'))])));
+                            setTagsInput('');
+                            setShowTagSuggestions(false);
+                          }
+                        }
+                      }}
+                      placeholder="Type a tag and press Enter or comma"
+                      className="py-3"
+                    />
+                    {showTagSuggestions && tagsInput && (
+                      <div className="absolute z-50 bg-popover border rounded-md mt-1 w-full max-h-48 overflow-auto shadow-lg">
+                        {allTags
+                          .filter(t => t.slug.includes(tagsInput.toLowerCase()) || (t.title || '').toLowerCase().includes(tagsInput.toLowerCase()))
+                          .slice(0, 8)
+                          .map(t => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              className="w-full text-left px-4 py-3 hover:bg-accent rounded transition-colors"
+                              onClick={() => {
+                                setTagList(prev => Array.from(new Set([...prev, t.slug])));
+                                setTagsInput('');
+                                setShowTagSuggestions(false);
+                              }}
+                            >
+                              <div className="font-medium">{t.title}</div>
+                              <div className="text-xs text-muted-foreground">{t.slug}</div>
+                            </button>
+                          ))}
+                        {allTags.filter(t => t.slug.includes(tagsInput.toLowerCase()) || (t.title || '').toLowerCase().includes(tagsInput.toLowerCase())).length === 0 && (
+                          <div className="px-4 py-3 text-sm text-muted-foreground">Press Enter to add "{tagsInput}"</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {tagList.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {tagList.map((t) => (
+                        <Badge key={t} variant="secondary" className="flex items-center gap-2 px-3 py-1 text-sm">
+                          <span>{t}</span>
+                          <button 
+                            type="button" 
+                            onClick={() => setTagList((prev) => prev.filter((x) => x !== t))} 
+                            aria-label={`Remove ${t}`} 
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="border-t pt-8">
+                <div className="flex gap-4 justify-end">
+                  <Button variant="outline" onClick={() => onSave(false)} disabled={loading} size="lg">
+                    Save Draft
+                  </Button>
+                  <Button onClick={() => onSave(true)} disabled={loading} size="lg">
+                    Submit for Review
+                  </Button>
+                </div>
+              </div>
+            </div>
           </Card>
         </div>
         
-        {useBlockEditor && (
-          <div className="hidden lg:block">
-            <BlocksPalette
-              blocks={blocks}
+        {/* Right Sidebar - Consolidated */}
+        <div className="hidden lg:block">
+          <div className="sticky top-6">
+            <BlogEditorSidebar
               onAddBlock={handleAddBlock}
-              onUpdateBlock={handleUpdateBlock}
-              onRemoveBlock={handleRemoveBlock}
-              onReorderBlocks={handleReorderBlocks}
+              selectedCategoryId={categoryId}
+              onCategoryChange={setCategoryId}
             />
           </div>
-        )}
-      </div>
-      
-      {useBlockEditor && (
-        <div className="lg:hidden">
-          <BlocksPalette
-            blocks={blocks}
-            onAddBlock={handleAddBlock}
-            onUpdateBlock={handleUpdateBlock}
-            onRemoveBlock={handleRemoveBlock}
-            onReorderBlocks={handleReorderBlocks}
-          />
         </div>
-      )}
+      </div>
       
       <link rel="canonical" href={`${window.location.origin}/blogs/editor/new`} />
       </main>
