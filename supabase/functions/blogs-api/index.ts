@@ -94,6 +94,24 @@ function readingMinutesFrom({ md, html }: { md?: string; html?: string }) {
   return Math.max(1, Math.ceil(words / 220));
 }
 
+function generateAutoSummary(content: string): string {
+  const text = stripHtml(content);
+  const sentences = text.split(/[.!?]+/).filter(Boolean);
+  
+  // Take first 2-3 sentences or up to 150 words
+  let summary = "";
+  let wordCount = 0;
+  
+  for (const sentence of sentences.slice(0, 3)) {
+    const words = sentence.trim().split(/\s+/).length;
+    if (wordCount + words > 150) break;
+    summary += sentence.trim() + ". ";
+    wordCount += words;
+  }
+  
+  return summary.trim() || "Auto-generated summary not available.";
+}
+
 serve(async (req) => {
   const origin = req.headers.get("Origin") ?? "";
   const allowed = isAllowedOrigin(origin);
@@ -234,14 +252,20 @@ serve(async (req) => {
       const authorMap = new Map((authors ?? []).map((a) => [a.user_id, a]));
       const categoryMap = new Map((categories ?? []).map((c) => [c.id, c]));
 
-      // Reactions and comments counts
+      // Reactions, comments, shares, and feedback counts
       const ids = pageItems.map((p) => p.id);
-      const [reactionsRes, commentsRes] = await Promise.all([
+      const [reactionsRes, commentsRes, sharesRes, feedbackRes] = await Promise.all([
         ids.length
           ? supabase.from("blog_reactions").select("post_id, reaction").in("post_id", ids)
           : Promise.resolve({ data: [] as any[] } as any),
         ids.length
           ? supabase.from("blog_comments").select("post_id").in("post_id", ids)
+          : Promise.resolve({ data: [] as any[] } as any),
+        ids.length
+          ? supabase.from("blog_shares").select("post_id").in("post_id", ids)
+          : Promise.resolve({ data: [] as any[] } as any),
+        ids.length
+          ? supabase.from("blog_post_feedback").select("post_id").in("post_id", ids)
           : Promise.resolve({ data: [] as any[] } as any),
       ]);
 
@@ -253,6 +277,14 @@ serve(async (req) => {
       const commentsCount = new Map<string, number>();
       for (const c of commentsRes.data ?? []) {
         commentsCount.set(c.post_id, (commentsCount.get(c.post_id) ?? 0) + 1);
+      }
+      const sharesCount = new Map<string, number>();
+      for (const s of sharesRes.data ?? []) {
+        sharesCount.set(s.post_id, (sharesCount.get(s.post_id) ?? 0) + 1);
+      }
+      const feedbackCount = new Map<string, number>();
+      for (const f of feedbackRes.data ?? []) {
+        feedbackCount.set(f.post_id, (feedbackCount.get(f.post_id) ?? 0) + 1);
       }
 
       const items = pageItems.map((p: any) => ({
@@ -275,6 +307,8 @@ serve(async (req) => {
           likes: likesCount.get(p.id) ?? 0,
           comments: commentsCount.get(p.id) ?? 0,
           views: p.view_count ?? 0,
+          shares: sharesCount.get(p.id) ?? 0,
+          feedback: feedbackCount.get(p.id) ?? 0,
         },
       }));
 
@@ -373,6 +407,27 @@ serve(async (req) => {
         avatar: a.profiles?.avatar_url || null
       }));
 
+      // Generate AI summary if missing
+      let aiSummary = summaryRes.data;
+      if (!aiSummary && post.content) {
+        try {
+          const summaryContent = generateAutoSummary(post.content);
+          const { data: newSummary } = await supabase
+            .from("blog_ai_summaries")
+            .insert({
+              post_id: post.id,
+              provider: "auto",
+              model: "auto-generated",
+              summary_md: summaryContent,
+            })
+            .select()
+            .single();
+          aiSummary = newSummary;
+        } catch (error) {
+          console.error("Failed to generate AI summary:", error);
+        }
+      }
+
       // Build engagement object
       const engagement = {
         views: post.view_count ?? 0,
@@ -393,7 +448,7 @@ serve(async (req) => {
         },
         reactions: Object.fromEntries(reactions),
         comments: roots,
-        ai_summary: summaryRes.data ?? null,
+        ai_summary: aiSummary ?? null,
         engagement,
       };
 

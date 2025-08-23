@@ -78,16 +78,8 @@ const { slug } = useParams();
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("blog_posts")
-        .select("id,title,description,cover_image_url,created_at,content,tags,author_id,reviewed_by,reviewed_at,view_count,likes_count,slug")
-        .eq("slug", slug)
-        .eq("status", "published")
-        .maybeSingle();
-      const current = (data as any) || null;
-      setPost(current);
       
-      // Try to get engagement data from API first
+      // Load blog data from API for complete engagement data
       try {
         const response = await fetch(`/functions/v1/blogs-api/api/blogs/${slug}`, {
           headers: {
@@ -95,8 +87,12 @@ const { slug } = useParams();
             'Content-Type': 'application/json'
           }
         });
+        
         if (response.ok) {
           const apiData = await response.json();
+          const current = apiData.post || null;
+          setPost(current);
+          
           const eng = apiData.engagement;
           if (eng) {
             setViewCount(eng.views ?? 0);
@@ -106,54 +102,56 @@ const { slug } = useParams();
             setCommentCount(eng.comments ?? 0);
             setEngagement(eng);
           }
+          
+          // Set AI summary from API
+          if (apiData.ai_summary?.summary_md) {
+            setAiSummaryContent(apiData.ai_summary.summary_md);
+          }
+          
+          // Set comments from API  
+          if (apiData.comments) {
+            setComments(apiData.comments);
+          }
+        } else {
+          // Fallback to direct supabase query
+          const { data } = await supabase
+            .from("blog_posts")
+            .select("id,title,description,cover_image_url,created_at,content,tags,author_id,reviewed_by,reviewed_at,view_count,likes_count,slug")
+            .eq("slug", slug)
+            .eq("status", "published")
+            .maybeSingle();
+          const current = (data as any) || null;
+          setPost(current);
+          setViewCount(current?.view_count ?? 0);
+          setLikeCount(current?.likes_count ?? 0);
         }
       } catch (error) {
-        console.error("Failed to load engagement data:", error);
-        // Fallback to basic counts
+        console.error("Failed to load blog data:", error);
+        // Final fallback
+        const { data } = await supabase
+          .from("blog_posts")
+          .select("id,title,description,cover_at,content,tags,author_id,reviewed_by,reviewed_at,view_count,likes_count,slug")
+          .eq("slug", slug)
+          .eq("status", "published")
+          .maybeSingle();
+        const current = (data as any) || null;
+        setPost(current);
         setViewCount(current?.view_count ?? 0);
         setLikeCount(current?.likes_count ?? 0);
-        setShareCount(0);
-        setFeedbackCount(0);
       }
 
-      // Fetch author profile data and AI summary
-      if (current?.author_id) {
-        const [authorData, summaryData] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("user_id,full_name,avatar_url,bio,title")
-            .eq("user_id", current.author_id)
-            .maybeSingle(),
-          supabase
-            .from("blog_ai_summaries")
-            .select("summary_md")
-            .eq("post_id", current.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle()
-        ]);
+      // Fetch author profile data if not already loaded
+      if (post?.author_id && !author) {
+        const authorData = await supabase
+          .from("profiles")
+          .select("user_id,full_name,avatar_url,bio,title")
+          .eq("user_id", post.author_id)
+          .maybeSingle();
         
         setAuthor(authorData.data as AuthorProfile | null);
-        setAiSummaryContent(summaryData.data?.summary_md || null);
-
-        // Load comments
-        try {
-          const response = await fetch(`/functions/v1/blogs-api/api/blogs/${current.id}/comments`);
-          if (response.ok) {
-            const commentsData = await response.json();
-            setComments(commentsData.comments || []);
-            // Count total comments including replies
-            const totalComments = (commentsData.comments || []).reduce((acc: number, comment: any) => {
-              return acc + 1 + (comment.replies?.length || 0);
-            }, 0);
-            setCommentCount(totalComments);
-          }
-        } catch (error) {
-          console.error("Failed to load comments:", error);
-        }
       }
 
-      if (current?.tags?.length) {
+      if (post?.tags?.length) {
         const { data: rel } = await supabase
           .from("blog_posts")
           .select("id,title,description,cover_image_url,created_at,content,tags,author_id,reviewed_by,reviewed_at,slug")
@@ -161,7 +159,7 @@ const { slug } = useParams();
           .limit(12);
         const relFiltered = ((rel as any[]) || [])
           .filter((p) => p.slug !== slug)
-          .filter((p) => (p.tags || []).some((t: string) => current.tags.includes(t)))
+          .filter((p) => (p.tags || []).some((t: string) => post.tags.includes(t)))
           .slice(0, 3);
         setRelated(relFiltered as any);
       } else {
@@ -372,7 +370,7 @@ const { slug } = useParams();
                 <AuthorChip 
                   id={author.user_id}
                   name={author.full_name || "EMGurus Contributor"}
-                  avatar={author.avatar_url}
+                  avatar={author.avatar_url || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E"}
                   className="text-sm"
                 />
                 <div className="text-xs">
@@ -465,30 +463,32 @@ const { slug } = useParams();
           </div>
         </div>
 
-        {/* AI Summary */}
-        {aiSummaryContent && (
-          <CollapsibleCard
-            title="AI Summary"
-            titleIcon={<Sparkles className="h-4 w-4 text-primary" />}
-            badge={<Badge variant="secondary" className="text-xs">AI-generated</Badge>}
-            className="mb-6"
-            defaultOpen={false}
-          >
-            <div className="prose prose-sm dark:prose-invert max-w-none">
+        {/* AI Summary - Always show, auto-generate if missing */}
+        <CollapsibleCard
+          title="AI Summary"
+          titleIcon={<Sparkles className="h-4 w-4 text-primary" />}
+          badge={<Badge variant="secondary" className="text-xs">AI-generated</Badge>}
+          className="mb-6"
+          defaultOpen={false}
+        >
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            {aiSummaryContent ? (
               <div 
-                className="whitespace-pre-wrap text-sm text-muted-foreground"
+                className="whitespace-pre-wrap text-sm"
                 dangerouslySetInnerHTML={{ 
                   __html: DOMPurify.sanitize(aiSummaryContent
                     .replace(/^-\s+/gm, '• ')
                     .replace(/^\*\s+/gm, '• '))
                 }}
               />
-            </div>
+            ) : (
+              <p className="text-muted-foreground">Generating AI summary...</p>
+            )}
             <p className="text-xs text-muted-foreground mt-3 pt-2 border-t">
               Disclaimer: This summary may contain inaccuracies. Verify clinical content.
             </p>
-          </CollapsibleCard>
-        )}
+          </div>
+        </CollapsibleCard>
 
         {post.cover_image_url && (
           <img src={post.cover_image_url} alt={`Cover image for ${post.title}`} className="w-full max-h-96 object-cover rounded-md mb-6" loading="lazy" />

@@ -14,14 +14,14 @@ interface KpiCardProps {
 
 const KpiCard: React.FC<KpiCardProps> = ({ title, value, deltaPct, helpText, isLoading, icon: Icon, iconColor }) => {
   return (
-    <Card className="rounded-2xl shadow-md p-4 sm:p-6">
+    <Card className="rounded-2xl shadow-md p-4 sm:p-6 bg-card border border-border/50 hover:shadow-lg transition-shadow">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="text-sm font-medium text-muted-foreground mb-1">{title}</div>
           {isLoading ? (
             <div className="h-8 w-20 bg-muted rounded animate-pulse" />
           ) : (
-            <div className="text-2xl font-bold">{value}</div>
+            <div className="text-2xl font-bold text-foreground">{value}</div>
           )}
           <div className="text-xs text-muted-foreground mt-1">
             {typeof deltaPct === 'number' ? (
@@ -33,7 +33,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, value, deltaPct, helpText, isL
           </div>
         </div>
         {Icon && (
-          <div className={`p-2 rounded-full bg-muted/30 ${iconColor || ''}`}>
+          <div className={`p-3 rounded-full bg-primary/10 ${iconColor || 'text-primary'}`}>
             <Icon className="h-5 w-5" />
           </div>
         )}
