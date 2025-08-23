@@ -312,19 +312,21 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
 
             <div className="space-y-4 sm:space-y-6">
               {loading ? (
-                <div className="grid gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 justify-center max-w-6xl mx-auto">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <Card key={i} className="h-72 animate-pulse" />
                   ))}
                 </div>
               ) : items.length === 0 ? (
-                <Card className="p-6 sm:p-8 text-center">
+                <Card className="p-6 sm:p-8 text-center max-w-2xl mx-auto">
                   <h3 className="font-semibold text-lg mb-2">No posts yet</h3>
                   <p className="text-muted-foreground">New articles are published regularly—check back soon.</p>
                 </Card>
               ) : (
-                <div className="grid gap-4 sm:gap-6 max-w-4xl mx-auto">
-                  {items.map((p) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 justify-center max-w-6xl mx-auto">
+                  {items
+                    .filter(p => !/^imported$/i.test(p.category?.title || ''))
+                    .map((p) => (
                     <BlogCard
                       key={p.id}
                       post={p}

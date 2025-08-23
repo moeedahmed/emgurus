@@ -43,7 +43,7 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, select
 
   return (
     <Card
-      className="overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative"
+      className="overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.02] relative rounded-2xl"
       onClick={onOpen}
       aria-label={`Open blog post ${p.title}`}
     >
@@ -51,10 +51,17 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, select
         <img
           src={cover}
           alt={`${p.title} cover image`}
-          className="w-full h-32 md:h-40 object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
           decoding="async"
         />
+        {topBadge?.label && (
+          <div className="absolute top-3 left-3">
+            <span className="bg-primary text-primary-foreground px-2 py-1 rounded-full text-xs font-medium">
+              Featured
+            </span>
+          </div>
+        )}
       </div>
       <div className="p-2 sm:p-4 md:p-6 space-y-4">
         <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
@@ -105,8 +112,8 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, select
           })}
         </div>
 
-        <h3 className="font-bold text-xl md:text-2xl line-clamp-2 story-link leading-tight">{p.title}</h3>
-        {summary && <p className="text-base text-muted-foreground line-clamp-3 leading-relaxed">{summary}</p>}
+        <h3 className="font-bold text-lg line-clamp-2 story-link leading-tight hover:text-primary transition-colors">{p.title}</h3>
+        {summary && <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">{summary}</p>}
 
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-3">

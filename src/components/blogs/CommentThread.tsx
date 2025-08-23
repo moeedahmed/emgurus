@@ -78,6 +78,30 @@ export default function CommentThread({
       toast.error("Please verify your email to comment");
       return;
     }
+    
+    // Optimistic update - add comment instantly
+    const optimisticComment = {
+      id: `temp-${Date.now()}`,
+      author_id: user.id,
+      parent_id: parent,
+      content,
+      created_at: new Date().toISOString(),
+      author: {
+        user_id: user.id,
+        full_name: user.user_metadata?.full_name || 'You',
+        avatar_url: user.user_metadata?.avatar_url || null
+      },
+      replies: [],
+      reactions: { up: 0, down: 0 },
+      user_reaction: null
+    };
+    
+    const updatedComments = [...comments, optimisticComment];
+    setComments(updatedComments);
+    onCommentsChange?.(updatedComments);
+    setText("");
+    setReplyTo(null);
+    
     try {
       setBusy(true);
       const response = await fetch(`/functions/v1/blogs-api/api/blogs/${postId}/comment`, {
@@ -90,15 +114,19 @@ export default function CommentThread({
       });
       
       if (response.ok) {
-        setText("");
-        setReplyTo(null);
-        await loadComments(); // Reload comments to get fresh data
+        await loadComments(); // Reload to get real data
         toast.success("Comment posted");
       } else {
+        // Revert optimistic update on error
+        setComments(comments);
+        onCommentsChange?.(comments);
         const error = await response.json();
         toast.error(error.error || "Failed to post comment");
       }
     } catch (e) {
+      // Revert optimistic update on error
+      setComments(comments);
+      onCommentsChange?.(comments);
       console.error(e);
       toast.error("Failed to post comment");
     } finally {
@@ -278,20 +306,32 @@ export default function CommentThread({
       <div className="space-y-6">
         {user ? (
           <div className="flex items-start gap-2">
-            <Textarea 
-              className="flex-1" 
-              value={text} 
-              onChange={(e) => setText(e.target.value)} 
-              placeholder={user?.email_confirmed_at ? "Add a comment" : "Verify your email to comment"}
-              disabled={!user?.email_confirmed_at}
-            />
-            <Button 
-              size="sm" 
-              onClick={() => submit(null)} 
-              disabled={busy || !user?.email_confirmed_at}
-            >
-              Comment
-            </Button>
+            {busy ? (
+              <div className="flex-1 p-3 border rounded-lg bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm text-muted-foreground">Posting comment...</span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Textarea 
+                  className="flex-1 rounded-2xl" 
+                  value={text} 
+                  onChange={(e) => setText(e.target.value)} 
+                  placeholder={user?.email_confirmed_at ? "Add a comment" : "Verify your email to comment"}
+                  disabled={!user?.email_confirmed_at}
+                />
+                <Button 
+                  size="sm" 
+                  onClick={() => submit(null)} 
+                  disabled={busy || !user?.email_confirmed_at}
+                  className="rounded-2xl"
+                >
+                  Comment
+                </Button>
+              </>
+            )}
           </div>
         ) : (
           <div className="text-center text-muted-foreground py-4">
