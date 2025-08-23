@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
-import { BookOpen, Stethoscope, GraduationCap, MessageSquare } from "lucide-react";
+import { BookOpen, Stethoscope, GraduationCap, MessageSquare, Eye, ThumbsUp, MessageCircle, Share2, Flag, Clock, CheckCircle } from "lucide-react";
 import ReviewedByMe from "@/pages/guru/ReviewedByMe";
 import GuruReviewQueue from "@/pages/guru/ReviewQueue";
 import MyExamDrafts from "@/pages/tools/MyExamDrafts";
@@ -263,17 +263,17 @@ export default function DashboardGuru() {
     const { kpis, throughputSeries, engagement, feedbackSummary, isLoading } = useGuruMetrics();
     return (
       <div className="sm:p-2 md:p-4 lg:p-6 grid gap-4 md:grid-cols-4">
-        <KpiCard title="Active Assignments" value={kpis.myAssignedCount} isLoading={isLoading} />
-        <KpiCard title="Reviews Completed" value={kpis.myReviewsCompleted} isLoading={isLoading} />
-        <KpiCard title="Avg Turnaround" value={`${kpis.avgTurnaroundHrs}h`} isLoading={isLoading} />
-        <KpiCard title="Upcoming Consults" value={kpis.upcomingConsults} isLoading={isLoading} />
+        <KpiCard title="Active Assignments" value={kpis.myAssignedCount} isLoading={isLoading} icon={BookOpen} iconColor="text-orange-600" />
+        <KpiCard title="Reviews Completed" value={kpis.myReviewsCompleted} isLoading={isLoading} icon={CheckCircle} iconColor="text-green-600" />
+        <KpiCard title="Avg Turnaround" value={`${kpis.avgTurnaroundHrs}h`} isLoading={isLoading} icon={Clock} iconColor="text-blue-600" />
+        <KpiCard title="Upcoming Consults" value={kpis.upcomingConsults} isLoading={isLoading} icon={Stethoscope} iconColor="text-purple-600" />
         
         {/* Engagement KPIs */}
-        <KpiCard title="Total Views" value={engagement.views} isLoading={isLoading} />
-        <KpiCard title="Total Likes" value={engagement.likes} isLoading={isLoading} />
-        <KpiCard title="Total Comments" value={engagement.comments} isLoading={isLoading} />
-        <KpiCard title="Total Shares" value={engagement.shares} isLoading={isLoading} />
-        <KpiCard title="Feedback Reports" value={`${feedbackSummary.unresolved}/${feedbackSummary.total}`} helpText="unresolved/total" isLoading={isLoading} />
+        <KpiCard title="Total Views" value={engagement.views} isLoading={isLoading} icon={Eye} iconColor="text-blue-600" />
+        <KpiCard title="Total Likes" value={engagement.likes} isLoading={isLoading} icon={ThumbsUp} iconColor="text-green-600" />
+        <KpiCard title="Total Comments" value={engagement.comments} isLoading={isLoading} icon={MessageCircle} iconColor="text-purple-600" />
+        <KpiCard title="Total Shares" value={engagement.shares} isLoading={isLoading} icon={Share2} iconColor="text-orange-600" />
+        <KpiCard title="Feedback Reports" value={`${feedbackSummary.unresolved}/${feedbackSummary.total}`} helpText="unresolved/total" isLoading={isLoading} icon={Flag} iconColor="text-gray-600" />
         
         <div className="md:col-span-4">
           <TrendCard title="Review Throughput" series={throughputSeries} rangeLabel="Last 12 weeks" isLoading={isLoading} />

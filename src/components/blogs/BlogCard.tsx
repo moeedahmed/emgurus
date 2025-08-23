@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Chip } from "@/components/ui/chip";
+import { Eye, ThumbsUp, MessageCircle, Share2, Flag } from "lucide-react";
 import fallbackImage from "@/assets/medical-blog.jpg";
 
 interface BlogCardProps {
@@ -106,20 +107,52 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, select
 
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-3">
-            <AuthorChip id={p.author.id} name={p.author.name} avatar={p.author.avatar} onClick={() => onTagClick?.('author', p.author.id)} />
+            <AuthorChip id={p.author.id} name={p.author.name} avatar={p.author.avatar || undefined} onClick={() => onTagClick?.('author', p.author.id)} />
             <span className="text-xs text-muted-foreground">
               {p.published_at ? new Date(p.published_at).toLocaleDateString() : ""}
               {words ? ` · ${readMin} min read` : ""}
             </span>
           </div>
+          
+          {/* Standardized Engagement Bar */}
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span>{(p.counts?.likes || 0)} reactions</span>
-            <span>{p.counts?.views || 0} views</span>
+            {/* Views - always show */}
+            <span className="flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              <span className="hidden sm:inline">Views: </span>
+              {p.counts?.views || 0}
+            </span>
+            
+            {/* Likes - always show */}
+            <span className="flex items-center gap-1">
+              <ThumbsUp className="h-3 w-3" />
+              <span className="hidden sm:inline">Likes: </span>
+              {p.counts?.likes || 0}
+            </span>
+            
+            {/* Comments - always show */}
+            <span className="flex items-center gap-1">
+              <MessageCircle className="h-3 w-3" />
+              <span className="hidden sm:inline">Comments: </span>
+              {p.counts?.comments || 0}
+            </span>
+            
+            {/* Shares - show when > 0 */}
             {(p.counts?.shares || 0) > 0 && (
-              <span>{p.counts.shares} shares</span>
+              <span className="flex items-center gap-1">
+                <Share2 className="h-3 w-3" />
+                <span className="hidden sm:inline">Shares: </span>
+                {p.counts.shares}
+              </span>
             )}
+            
+            {/* Feedback - show when > 0 */}
             {(p.counts?.feedback || 0) > 0 && (
-              <span>{p.counts.feedback} feedback</span>
+              <span className="flex items-center gap-1">
+                <Flag className="h-3 w-3" />
+                <span className="hidden sm:inline">Feedback: </span>
+                {p.counts.feedback}
+              </span>
             )}
           </div>
         </div>

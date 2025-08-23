@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
-import { BookOpen, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings, Stethoscope, Brain } from "lucide-react";
+import { BookOpen, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings, Stethoscope, Brain, Eye, ThumbsUp, MessageCircle, Share2, Flag } from "lucide-react";
 import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
 import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
 import ForumsModerationQueue from "@/components/dashboard/forums/ForumsModerationQueue";
@@ -43,20 +43,20 @@ const AdminAnalyticsPanel: React.FC = () => {
   const { kpis, submissionsSeries, workload, engagement, feedbackSummary, isLoading } = useAdminMetrics();
   return (
     <div className="sm:p-2 md:p-4 lg:p-6 grid gap-4 md:grid-cols-4">
-      <KpiCard title="New Users (7d)" value={kpis.newUsers7d} isLoading={isLoading} />
-      <KpiCard title="Posts Submitted" value={kpis.postsSubmitted} isLoading={isLoading} />
-      <KpiCard title="Posts Assigned" value={kpis.postsAssigned} isLoading={isLoading} />
-      <KpiCard title="Posts Published" value={kpis.postsPublished} isLoading={isLoading} />
-      <KpiCard title="Posts Rejected" value={kpis.postsRejected} isLoading={isLoading} />
-      <KpiCard title="Avg Turnaround" value={`${kpis.avgTurnaroundDays} days`} isLoading={isLoading} />
-      <KpiCard title="Questions Pending" value={kpis.questionsPending} isLoading={isLoading} />
+      <KpiCard title="New Users (7d)" value={kpis.newUsers7d} isLoading={isLoading} icon={UsersRound} iconColor="text-blue-600" />
+      <KpiCard title="Posts Submitted" value={kpis.postsSubmitted} isLoading={isLoading} icon={BookOpen} iconColor="text-purple-600" />
+      <KpiCard title="Posts Assigned" value={kpis.postsAssigned} isLoading={isLoading} icon={Settings} iconColor="text-orange-600" />
+      <KpiCard title="Posts Published" value={kpis.postsPublished} isLoading={isLoading} icon={BookOpen} iconColor="text-green-600" />
+      <KpiCard title="Posts Rejected" value={kpis.postsRejected} isLoading={isLoading} icon={BookOpen} iconColor="text-red-600" />
+      <KpiCard title="Avg Turnaround" value={`${kpis.avgTurnaroundDays} days`} isLoading={isLoading} icon={BarChart3} iconColor="text-gray-600" />
+      <KpiCard title="Questions Pending" value={kpis.questionsPending} isLoading={isLoading} icon={GraduationCap} iconColor="text-yellow-600" />
       
       {/* Engagement KPIs */}
-      <KpiCard title="Total Views" value={engagement.views} isLoading={isLoading} />
-      <KpiCard title="Total Likes" value={engagement.likes} isLoading={isLoading} />
-      <KpiCard title="Total Comments" value={engagement.comments} isLoading={isLoading} />
-      <KpiCard title="Total Shares" value={engagement.shares} isLoading={isLoading} />
-      <KpiCard title="Feedback Reports" value={`${feedbackSummary.unresolved}/${feedbackSummary.total}`} helpText="unresolved/total" isLoading={isLoading} />
+      <KpiCard title="Total Views" value={engagement.views} isLoading={isLoading} icon={Eye} iconColor="text-blue-600" />
+      <KpiCard title="Total Likes" value={engagement.likes} isLoading={isLoading} icon={ThumbsUp} iconColor="text-green-600" />
+      <KpiCard title="Total Comments" value={engagement.comments} isLoading={isLoading} icon={MessageCircle} iconColor="text-purple-600" />
+      <KpiCard title="Total Shares" value={engagement.shares} isLoading={isLoading} icon={Share2} iconColor="text-orange-600" />
+      <KpiCard title="Feedback Reports" value={`${feedbackSummary.unresolved}/${feedbackSummary.total}`} helpText="unresolved/total" isLoading={isLoading} icon={Flag} iconColor="text-gray-600" />
       <div className="md:col-span-4">
         <TrendCard title="Blog Submissions vs Publications" series={submissionsSeries} rangeLabel="Last 12 weeks" isLoading={isLoading} />
       </div>

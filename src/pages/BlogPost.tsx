@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import DOMPurify from "dompurify";
-import { Eye, ThumbsUp, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
+import { Eye, ThumbsUp, MessageCircle, Share2, Flag, Sparkles } from "lucide-react";
 import ReportIssueModal from "@/components/blogs/ReportIssueModal";
 import AuthorChip from "@/components/blogs/AuthorChip";
 import CollapsibleCard from "@/components/ui/CollapsibleCard";
@@ -404,39 +404,64 @@ const { slug } = useParams();
           </div>
         </header>
 
-        {/* Engagement Section */}
-        <div className="mb-6 p-4 bg-muted/30 rounded-lg">
+        {/* Standardized Engagement Bar */}
+        <div className="mb-6 p-4 sm:p-6 bg-muted/30 rounded-lg">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+            <div className="flex items-center gap-4 sm:gap-6 text-sm text-muted-foreground">
+              {/* Views */}
               <span className="flex items-center gap-1">
                 <Eye className="h-4 w-4" />
-                {viewCount} views
+                <span className="hidden sm:inline">Views: </span>
+                {viewCount}
               </span>
+              
+              {/* Likes */}
+              <button 
+                className="flex items-center gap-1 hover:text-foreground transition-colors" 
+                onClick={toggleLike}
+                aria-label="Like this article"
+              >
+                <ThumbsUp className={`h-4 w-4 ${liked ? 'fill-current text-primary' : ''}`} />
+                <span className="hidden sm:inline">Likes: </span>
+                {likeCount}
+              </button>
+              
+              {/* Comments */}
               <span className="flex items-center gap-1">
-                <ThumbsUp className="h-4 w-4" />
-                {likeCount} likes
+                <MessageCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Comments: </span>
+                {commentCount}
               </span>
+              
+              {/* Shares */}
               <span className="flex items-center gap-1">
-                💬 {commentCount} comments
+                <Share2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Shares: </span>
+                {shareCount}
               </span>
-              <span className="flex items-center gap-1">
-                📤 {shareCount} shares
-              </span>
+              
+              {/* Feedback */}
               {feedbackCount > 0 && (
                 <span className="flex items-center gap-1">
-                  🚩 {feedbackCount} feedback
+                  <Flag className="h-4 w-4" />
+                  <span className="hidden sm:inline">Feedback: </span>
+                  {feedbackCount}
                 </span>
               )}
             </div>
-            <ShareButtons
-              title={post.title}
-              url={`${window.location.origin}/blog/${slug}`}
-              text={post.description || "Check out this blog post on EMGurus"}
-              postId={post.id}
-              shareCount={shareCount}
-              onShare={handleShare}
-              variant="inline"
-            />
+            
+            <div className="flex items-center gap-2">
+              <ShareButtons
+                title={post.title}
+                url={`${window.location.origin}/blog/${slug}`}
+                text={post.description || "Check out this blog post on EMGurus"}
+                postId={post.id}
+                shareCount={shareCount}
+                onShare={handleShare}
+                variant="inline"
+              />
+              <ReportIssueModal postId={post.id} postTitle={post.title} />
+            </div>
           </div>
         </div>
 
@@ -477,15 +502,21 @@ const { slug } = useParams();
           ))}
         </div>
 
-        <section className="prose dark:prose-invert max-w-none">
-          {post.content && (
-            isHtml ? (
-              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content || "") }} />
-            ) : (
-              <pre className="whitespace-pre-wrap font-sans text-base">{post.content}</pre>
-            )
-          )}
-        </section>
+        <CollapsibleCard
+          title="Article Content"
+          defaultOpen={true}
+          className="mb-6"
+        >
+          <div className="prose prose-lg dark:prose-invert max-w-none">
+            {post.content && (
+              isHtml ? (
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content || "") }} />
+              ) : (
+                <pre className="whitespace-pre-wrap font-sans text-base">{post.content}</pre>
+              )
+            )}
+          </div>
+        </CollapsibleCard>
 
         {/* Share & Report Section */}
         <section className="mt-8 pt-6 border-t">
@@ -522,59 +553,57 @@ const { slug } = useParams();
         <section className="mt-10">
           {/* Add references when available */}
         </section>
-      </article>
+        {related.length > 0 && (
+          <CollapsibleCard
+            title="Related Articles"
+            defaultOpen={false}
+            className="mt-8"
+          >
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {related.map((p) => (
+                <Card key={p.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  {p.cover_image_url && (
+                    <img
+                      src={p.cover_image_url}
+                      alt={`Cover image for ${p.title}`}
+                      className="w-full h-32 object-cover hover:scale-105 transition-transform"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="p-4">
+                    <h4 className="font-semibold text-sm mb-2 line-clamp-2 story-link">{p.title}</h4>
+                    <p className="text-xs text-muted-foreground line-clamp-3">{summarize(p.description || p.content)}</p>
+                    <div className="mt-3">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to={`/blog/${(p as any).slug}`}>Read more →</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </CollapsibleCard>
+        )}
 
-      {/* Related Posts */}
-      {related.length > 0 && (
-        <section className="max-w-5xl mx-auto mt-12">
-          <h3 className="text-xl font-semibold mb-4">Related Articles</h3>
-          <div className="grid gap-6 md:grid-cols-3">
-            {related.map((p) => (
-              <Card key={p.id} className="overflow-hidden">
-                {p.cover_image_url && (
-                  <img
-                    src={p.cover_image_url}
-                    alt={`Cover image for ${p.title}`}
-                    className="w-full h-36 object-cover"
-                    loading="lazy"
-                  />
-                )}
-                <div className="p-4">
-                  <h4 className="font-semibold mb-2 line-clamp-2">{p.title}</h4>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{p.description}</p>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/blog/${(p as any).slug}`}>Read</Link>
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Comments */}
-      <section className="max-w-3xl mx-auto mt-12">
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold">
-              Discussion {commentCount > 0 && `(${commentCount})`}
-            </h3>
-          </div>
+        <CollapsibleCard
+          title={`Comments ${commentCount > 0 ? `(${commentCount})` : ''}`}
+          titleIcon={<MessageCircle className="h-4 w-4" />}
+          defaultOpen={true}
+          className="mt-8"
+        >
           <CommentThread 
             postId={post.id} 
-            comments={comments}
-            onCommentsChange={(newComments) => {
-              setComments(newComments);
-              const totalComments = newComments.reduce((acc: number, comment: any) => {
+            comments={comments} 
+            onCommentsChange={(updatedComments) => {
+              setComments(updatedComments);
+              const totalComments = updatedComments.reduce((acc: number, comment: any) => {
                 return acc + 1 + (comment.replies?.length || 0);
               }, 0);
               setCommentCount(totalComments);
             }}
           />
-        </Card>
-      </section>
-
-      
+        </CollapsibleCard>
+      </article>
     </main>
   );
 };

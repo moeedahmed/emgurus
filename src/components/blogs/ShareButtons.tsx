@@ -74,47 +74,42 @@ export default function ShareButtons({
 
   if (variant === "inline") {
     return (
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => open(links.x, "twitter")}
-            className="p-2 rounded-full hover:bg-muted transition-colors"
-            aria-label="Share on Twitter"
-          >
-            <Twitter className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => open(links.linkedin, "linkedin")}
-            className="p-2 rounded-full hover:bg-muted transition-colors"
-            aria-label="Share on LinkedIn"
-          >
-            <Linkedin className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => open(links.whatsapp, "whatsapp")}
-            className="p-2 rounded-full hover:bg-muted transition-colors"
-            aria-label="Share on WhatsApp"
-          >
-            <MessageCircle className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => open(links.facebook, "facebook")}
-            className="p-2 rounded-full hover:bg-muted transition-colors"
-            aria-label="Share on Facebook"
-          >
-            <Facebook className="h-4 w-4" />
-          </button>
-          <button
-            onClick={copy}
-            className="p-2 rounded-full hover:bg-muted transition-colors"
-            aria-label="Copy link"
-          >
-            <Copy className="h-4 w-4" />
-          </button>
-        </div>
-        {shareCount > 0 && (
-          <span className="text-sm text-muted-foreground ml-2">{shareCount} shares</span>
-        )}
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => open(links.x, "twitter")}
+          className="p-1.5 rounded-full hover:bg-muted transition-colors"
+          aria-label="Share on Twitter"
+        >
+          <Twitter className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={() => open(links.linkedin, "linkedin")}
+          className="p-1.5 rounded-full hover:bg-muted transition-colors"
+          aria-label="Share on LinkedIn"
+        >
+          <Linkedin className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={() => open(links.whatsapp, "whatsapp")}
+          className="p-1.5 rounded-full hover:bg-muted transition-colors"
+          aria-label="Share on WhatsApp"
+        >
+          <MessageCircle className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={() => open(links.facebook, "facebook")}
+          className="p-1.5 rounded-full hover:bg-muted transition-colors"
+          aria-label="Share on Facebook"
+        >
+          <Facebook className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={copy}
+          className="p-1.5 rounded-full hover:bg-muted transition-colors"
+          aria-label="Copy link"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </button>
       </div>
     );
   }
