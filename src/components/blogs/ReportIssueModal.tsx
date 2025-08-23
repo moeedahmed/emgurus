@@ -32,16 +32,23 @@ export default function ReportIssueModal({ postId, postTitle }: ReportIssueModal
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('blog_post_feedback')
-        .insert({
-          post_id: postId,
-          user_id: user.id,
-          message: message.trim(),
-          status: 'new',
-        });
+      // Use direct fetch to call the blogs-api edge function with the feedback endpoint
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      
+      const response = await fetch(`https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/blogs-api/api/blogs/${postId}/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message: message.trim() }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit feedback');
+      }
 
       toast({ title: "Feedback submitted successfully", description: "Thank you for helping us improve!" });
       setMessage("");

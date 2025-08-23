@@ -1169,6 +1169,12 @@ export default function DashboardAdmin() {
           description: "Your authored posts.", 
           render: <MyBlogsAdmin /> 
         },
+        { 
+          id: "marked", 
+          title: "Marked", 
+          description: "Unresolved blog feedback from users.", 
+          render: <div className="p-0"><BlogsMarkedList /></div> 
+        },
       ],
     },
     {
