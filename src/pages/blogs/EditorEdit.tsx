@@ -23,6 +23,8 @@ import EmailVerifyBanner from "@/components/auth/EmailVerifyBanner";
 import BlogEditorSidebar from "@/components/blogs/editor/BlogEditorSidebar";
 import BlogChat from "@/components/blogs/BlogChat";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
+import { reviewPost } from "@/lib/blogsApi";
 
 export default function EditorEdit() {
   const { id } = useParams();
@@ -42,6 +44,7 @@ export default function EditorEdit() {
   const [allTags, setAllTags] = useState<{ id: string; slug: string; title: string }[]>([]);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [isAssignedReviewer, setIsAssignedReviewer] = useState(false);
+  const [isFeatured, setIsFeatured] = useState(false);
   
   // Block editor is the default
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -73,7 +76,7 @@ export default function EditorEdit() {
       if (!id) return;
   const { data: post } = await supabase
         .from("blog_posts")
-        .select("id, title, description, content, cover_image_url, category_id")
+        .select("id, title, description, content, cover_image_url, category_id, is_featured")
         .eq("id", id)
         .maybeSingle();
       if (!post) { toast.error("Draft not found"); navigate("/dashboard"); return; }
@@ -82,6 +85,7 @@ export default function EditorEdit() {
       const contentValue = (post as any).content || "";
       setContent(contentValue);
       setCategoryId((post as any).category_id || undefined);
+      setIsFeatured((post as any).is_featured || false);
       
       // Check if current user is assigned as reviewer via blog_review_assignments
       if (user?.id) {
@@ -180,6 +184,7 @@ export default function EditorEdit() {
     try {
       setLoading(true);
       if (isAdmin) {
+        await reviewPost(id, { is_featured: isFeatured });
         const { error } = await supabase.rpc('review_approve_publish', { p_post_id: id });
         if (error) throw error as any;
         toast.success('Post published');
@@ -359,11 +364,32 @@ export default function EditorEdit() {
                       ))}
                     </div>
                   )}
-                </div>
-              </div>
-              <div className="border-t pt-8">
-                { (isAdmin || isAssignedReviewer) ? (
-                  <RoleGate roles={['admin', 'guru']}>
+                 </div>
+               </div>
+
+               {isAdmin && (
+                 <div className="border-t pt-8">
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <Label htmlFor="featured" className="text-base font-semibold">
+                         Featured Post
+                       </Label>
+                       <p className="text-sm text-muted-foreground mt-1">
+                         Mark this post as featured to display it prominently on the blog homepage
+                       </p>
+                     </div>
+                     <Switch
+                       id="featured"
+                       checked={isFeatured}
+                       onCheckedChange={setIsFeatured}
+                     />
+                   </div>
+                 </div>
+               )}
+
+               <div className="border-t pt-8">
+                 { (isAdmin || isAssignedReviewer) ? (
+                   <RoleGate roles={['admin', 'guru']}>
                     <div className="flex gap-4 justify-end">
                       <Button variant="outline" onClick={onReject} disabled={loading} size="lg">
                         Reject Changes

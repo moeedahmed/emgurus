@@ -13,9 +13,11 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PageHero from "@/components/PageHero";
 import { CATEGORIES, sanitizeCategory } from "@/lib/taxonomy";
 import { Chip } from "@/components/ui/chip";
+import FeaturedBlogCarousel from "@/components/blogs/FeaturedBlogCarousel";
 
 export default function Blogs({ embedded = false }: { embedded?: boolean } = {}) {
   const [items, setItems] = useState<any[]>([]);
+  const [featuredItems, setFeaturedItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, page_size: 12, total: 0 });
   const [searchParams, setSearchParams] = useSearchParams();
@@ -53,44 +55,36 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
     const load = async () => {
       setLoading(true);
       try {
-        try {
-          const params = new URLSearchParams();
-          if (q) params.set("q", q);
-          if (category) params.set("category", category);
-          if (author) params.set("author", author);
-          if (tag) params.set("tag", tag);
-          if (sort) params.set("sort", sort);
-          params.set("page", String(page));
-          params.set("page_size", "12");
-          
-          const res = await getJson(`/public-blogs?${params.toString()}`);
-          const mapped = (res.items || []).map((p: any) => ({
-            id: p.id,
-            title: p.title,
-            slug: p.slug,
-            excerpt: p.excerpt ?? null,
-            cover_image_url: p.cover_image_url ?? null,
-            author: { id: p.author_id || '', name: 'Author', avatar: null },
-            reading_minutes: null,
-            published_at: p.created_at ?? null,
-            counts: { likes: 0, comments: 0, views: 0 },
-          }));
-          setItems(mapped);
-          setPagination({ page: res.page || 1, page_size: res.page_size || 12, total: res.total || 0 });
-        } catch {
-          const res = await listBlogs({ 
-            status: "published", 
-            q: q || undefined, 
-            category: category || undefined,
-            author: author || undefined,
-            tag: tag || undefined,
-            sort: sort || undefined,
-            page,
-            page_size: 12
-          });
-          setItems(res.items || []);
-          setPagination({ page: res.page, page_size: res.page_size, total: res.total });
+        // Load featured posts separately (only on first page with no filters)
+        if (page === 1 && !q && !category && !author && !tag) {
+          try {
+            const featuredRes = await listBlogs({ status: "published", featured: true });
+            setFeaturedItems(featuredRes.items || []);
+          } catch (e) {
+            console.warn("Failed to load featured posts:", e);
+          }
+        } else {
+          setFeaturedItems([]);
         }
+
+        // Load regular posts
+        const res = await listBlogs({ 
+          status: "published", 
+          q: q || undefined, 
+          category: category || undefined,
+          author: author || undefined,
+          tag: tag || undefined,
+          sort: sort || undefined,
+          page,
+          page_size: 12
+        });
+        
+        // Filter out featured posts from regular list to avoid duplicates
+        const featuredIds = new Set(featuredItems.map(f => f.id));
+        const filteredItems = (res.items || []).filter(item => !featuredIds.has(item.id));
+        
+        setItems(filteredItems);
+        setPagination({ page: res.page, page_size: res.page_size, total: res.total });
       } catch (e: any) {
         toast.error(e.message || "Failed to load blogs");
       } finally {
@@ -194,6 +188,11 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
 
           {/* Main list - vertical cards, left aligned */}
           <section className="lg:col-span-8">
+            {/* Featured posts carousel */}
+            {featuredItems.length > 0 && (
+              <FeaturedBlogCarousel posts={featuredItems} />
+            )}
+            
             <div className="mb-4 space-y-3">
               <div className="flex items-center gap-3 lg:hidden">
                 <Sheet>

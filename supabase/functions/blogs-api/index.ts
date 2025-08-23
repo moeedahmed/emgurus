@@ -141,6 +141,7 @@ serve(async (req) => {
       const categorySlug = url.searchParams.get("category") ?? undefined;
       const tagSlug = url.searchParams.get("tag") ?? undefined;
       const q = url.searchParams.get("q")?.trim() ?? "";
+      const featured = url.searchParams.get("featured") === "true";
       const page = Math.max(1, Number(url.searchParams.get("page") ?? 1));
       const pageSize = Math.min(50, Math.max(1, Number(url.searchParams.get("page_size") ?? 12)));
 
@@ -169,12 +170,14 @@ serve(async (req) => {
       // Base query for posts
       let query = supabase
         .from("blog_posts")
-        .select("id, title, slug, description, cover_image_url, category_id, author_id, status, view_count, created_at")
+        .select("id, title, slug, description, cover_image_url, category_id, author_id, status, view_count, created_at, is_featured")
         .order("created_at", { ascending: false });
 
       if (status) query = query.eq("status", status);
       if (categoryId) query = query.eq("category_id", categoryId);
       if (q) query = query.ilike("title", `%${q}%`);
+      if (featured) query = query.eq("is_featured", true);
+      if (featured) query = query.eq("is_featured", true);
 
       // Execute base to get candidate posts
       const { data: basePosts, error: baseErr } = await query;
@@ -187,7 +190,7 @@ serve(async (req) => {
         const taggedQuery = supabase
           .from("blog_posts")
           .select(`
-            id, title, slug, description, cover_image_url, category_id, author_id, status, view_count, created_at,
+            id, title, slug, description, cover_image_url, category_id, author_id, status, view_count, created_at, is_featured,
             blog_post_tags!inner(tag_id)
           `)
           .eq("blog_post_tags.tag_id", tagId)
@@ -196,6 +199,8 @@ serve(async (req) => {
         if (status) taggedQuery.eq("status", status);
         if (categoryId) taggedQuery.eq("category_id", categoryId);
         if (q) taggedQuery.ilike("title", `%${q}%`);
+        if (featured) taggedQuery.eq("is_featured", true);
+        if (featured) taggedQuery.eq("is_featured", true);
 
         const { data: taggedPosts, error: taggedErr } = await taggedQuery;
         if (taggedErr) throw taggedErr;
