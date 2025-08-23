@@ -456,8 +456,9 @@ serve(async (req) => {
     if (feedbackError) throw new Error(`Feedback insert error: ${feedbackError.message}`);
 
     const { error: summariesError } = await supabase.from('blog_ai_summaries').insert(summaries);
-    if (summariesError) throw new Error(`Summaries insert error: ${summariesError.message}`);
+    if (summariesError) console.error('Summaries insert error:', summariesError);
 
+    // Final count
     const { count: finalCount } = await supabase
       .from('blog_posts')
       .select('*', { head: true, count: 'exact' })
