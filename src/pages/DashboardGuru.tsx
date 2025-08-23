@@ -16,6 +16,7 @@ import TrendCard from "@/components/dashboard/TrendCard";
 import { useGuruMetrics } from "@/hooks/metrics/useGuruMetrics";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import BlogsMarkedList from "@/components/dashboard/blogs/BlogsMarkedList";
 
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -295,6 +296,12 @@ export default function DashboardGuru() {
           title: "My Blogs", 
           description: "Write or continue your own posts.", 
           render: <MyBlogStatusPanel filter="draft" /> 
+        },
+        { 
+          id: "marked", 
+          title: "Marked", 
+          description: "Unresolved blog feedback from users.", 
+          render: <div className="p-0"><BlogsMarkedList /></div> 
         },
       ],
     },

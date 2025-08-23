@@ -7,6 +7,7 @@ import ExamsAttempts from "@/components/dashboard/exams/ExamsAttempts";
 import ExamsProgressMatrix from "@/components/dashboard/exams/ExamsProgressMatrix";
 import ExamsFeedbackList from "@/components/dashboard/exams/ExamsFeedbackList";
 import BlogsOverview from "@/components/dashboard/blogs/BlogsOverview";
+import BlogsFeedbackList from "@/components/dashboard/blogs/BlogsFeedbackList";
 import ConsultationsOverview from "@/components/dashboard/consultations/ConsultationsOverview";
 import ForumsOverview from "@/components/dashboard/forums/ForumsOverview";
 import MyBlogs from "@/components/dashboard/blogs/MyBlogs";
@@ -26,6 +27,7 @@ export default function DashboardUser() {
         { id: "submitted", title: "Submitted", description: "Posts awaiting review by the team.", render: <MyBlogs filter="in_review" /> },
         { id: "published", title: "Published", description: "Your posts that are live on EMGurus.", render: <MyBlogs filter="published" /> },
         { id: "rejected", title: "Rejected", description: "Changes requested. Edit and resubmit when ready.", render: <MyBlogs filter="rejected" /> },
+        { id: "feedback", title: "Feedback", description: "Blog feedback you've submitted.", render: <div className="p-0"><BlogsFeedbackList /></div> },
       ],
     },
     {

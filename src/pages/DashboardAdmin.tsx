@@ -27,6 +27,7 @@ import SubmitQuestion from "@/pages/tools/SubmitQuestion";
 import QuestionSetsAdmin from "@/pages/admin/QuestionSets";
 import DatabaseManager from "@/components/admin/database/DatabaseManager";
 import AdminConsultsOverview from "@/components/dashboard/consultations/AdminConsultsOverview";
+import BlogsMarkedList from "@/components/dashboard/blogs/BlogsMarkedList";
 import AdminConsultsBookings from "@/components/dashboard/consultations/AdminConsultsBookings";
 import AdminConsultsGurus from "@/components/dashboard/consultations/AdminConsultsGurus";
 import AdminConsultsPolicies from "@/components/dashboard/consultations/AdminConsultsPolicies";

@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import DOMPurify from "dompurify";
 import { Eye, ThumbsUp, ChevronUp, ChevronDown } from "lucide-react";
+import ReportIssueModal from "@/components/blogs/ReportIssueModal";
 
 interface Post {
   id: string;
@@ -219,6 +220,19 @@ const { slug } = useParams();
               <pre className="whitespace-pre-wrap font-sans text-base">{post.content}</pre>
             )
           )}
+        </section>
+
+        {/* Report Issue */}
+        <section className="mt-8 pt-6 border-t">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium">Found an issue?</h3>
+              <p className="text-xs text-muted-foreground">
+                Help us improve by reporting medical inaccuracies, typos, or other issues.
+              </p>
+            </div>
+            <ReportIssueModal postId={post.id} postTitle={post.title} />
+          </div>
         </section>
 
         {/* References placeholder */}

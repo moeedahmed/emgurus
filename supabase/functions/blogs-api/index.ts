@@ -382,6 +382,125 @@ serve(async (req) => {
       if (!user) throw new Error("Unauthorized");
     };
 
+    // POST /api/blogs/:id/feedback -> create feedback
+    const feedbackMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/feedback$/i);
+    if (req.method === "POST" && feedbackMatch) {
+      requireAuth();
+      const postId = feedbackMatch[1];
+      const { message } = await req.json();
+      
+      if (!message || typeof message !== "string" || message.trim().length < 5) {
+        return new Response(JSON.stringify({ error: "Message must be at least 5 characters" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Verify post exists and is published
+      const { data: post } = await supabase
+        .from("blog_posts")
+        .select("id, status")
+        .eq("id", postId)
+        .eq("status", "published")
+        .maybeSingle();
+      
+      if (!post) {
+        return new Response(JSON.stringify({ error: "Post not found or not published" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: feedback, error } = await supabase
+        .from("blog_post_feedback")
+        .insert({
+          post_id: postId,
+          user_id: user!.id,
+          message: message.trim(),
+          status: "new",
+        })
+        .select("id")
+        .single();
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ id: feedback.id }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 201,
+      });
+    }
+
+    // GET /api/blogs/:id/feedback -> list feedback for post (admins/gurus only)
+    const feedbackListMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/feedback$/i);
+    if (req.method === "GET" && feedbackListMatch) {
+      requireAuth();
+      const postId = feedbackListMatch[1];
+      const { isAdmin, isGuru } = await getUserRoleFlags(supabase, user!.id);
+      
+      if (!isAdmin && !isGuru) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: feedback, error } = await supabase
+        .from("blog_post_feedback")
+        .select(`
+          id,
+          post_id,
+          user_id,
+          message,
+          status,
+          created_at,
+          resolved_at,
+          resolved_by,
+          resolution_note,
+          user:profiles(full_name)
+        `)
+        .eq("post_id", postId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ feedback }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // POST /api/blogs/feedback/:id/resolve -> resolve feedback (admins/gurus)
+    const resolveMatch = pathname.match(/^\/api\/blogs\/feedback\/([0-9a-f-]{36})\/resolve$/i);
+    if (req.method === "POST" && resolveMatch) {
+      requireAuth();
+      const feedbackId = resolveMatch[1];
+      const { isAdmin, isGuru } = await getUserRoleFlags(supabase, user!.id);
+      
+      if (!isAdmin && !isGuru) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { resolution_note } = await req.json();
+
+      const { error } = await supabase
+        .from("blog_post_feedback")
+        .update({
+          status: "resolved",
+          resolved_at: new Date().toISOString(),
+          resolved_by: user!.id,
+          resolution_note: resolution_note || null,
+        })
+        .eq("id", feedbackId);
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // POST /api/blogs -> create draft
     if (req.method === "POST" && pathname === "/api/blogs") {
       requireAuth();
