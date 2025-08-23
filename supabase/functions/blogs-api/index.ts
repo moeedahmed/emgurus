@@ -845,6 +845,81 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // POST /api/blogs/:id/request-changes
+    const requestChangesMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/request-changes$/i);
+    if (req.method === "POST" && requestChangesMatch) {
+      requireAuth();
+      const id = requestChangesMatch[1];
+      const { note } = await req.json();
+      const { isAdmin, isGuru } = await getUserRoleFlags(supabase, user!.id);
+      if (!isAdmin && !isGuru) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const { error } = await supabase.rpc('review_request_changes', { p_post_id: id, p_note: note });
+      if (error) throw error;
+
+      // Trigger notification for change request
+      try {
+        const { data: postData } = await supabase
+          .from("blog_posts")
+          .select("title, author_id")
+          .eq("id", id)
+          .single();
+        
+        if (postData && postData.author_id) {
+          await supabase.from("notifications").insert({
+            user_id: postData.author_id,
+            type: "blog_changes_requested",
+            title: "Changes requested for your blog",
+            body: `Your blog "${postData.title}" needs revisions.`,
+            data: { post_id: id, title: postData.title, note },
+          });
+        }
+      } catch (notifyError) {
+        console.warn("Failed to send change request notification:", notifyError);
+      }
+
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // POST /api/blogs/:id/reject
+    const rejectMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/reject$/i);
+    if (req.method === "POST" && rejectMatch) {
+      requireAuth();
+      const id = rejectMatch[1];
+      const { note } = await req.json();
+      const { isAdmin, isGuru } = await getUserRoleFlags(supabase, user!.id);
+      if (!isAdmin && !isGuru) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const { error } = await supabase
+        .from("blog_posts")
+        .update({ status: "archived", review_notes: note, reviewed_by: user!.id, reviewed_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+
+      // Trigger notification for rejection
+      try {
+        const { data: postData } = await supabase
+          .from("blog_posts")
+          .select("title, author_id")
+          .eq("id", id)
+          .single();
+        
+        if (postData && postData.author_id) {
+          await supabase.from("notifications").insert({
+            user_id: postData.author_id,
+            type: "blog_rejected",
+            title: "Blog submission rejected",
+            body: `Your blog "${postData.title}" was not approved for publication.`,
+            data: { post_id: id, title: postData.title, note },
+          });
+        }
+      } catch (notifyError) {
+        console.warn("Failed to send rejection notification:", notifyError);
+      }
+
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // POST /api/blogs/:id/publish
     const publishMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/publish$/i);
     if (req.method === "POST" && publishMatch) {
@@ -1159,6 +1234,65 @@ serve(async (req) => {
       });
     }
 
+    // GET /api/user/feedback -> get current user's feedback
+    if (req.method === "GET" && pathname === "/api/user/feedback") {
+      requireAuth();
+      
+      const { data: feedback, error } = await supabase
+        .from("blog_post_feedback")
+        .select(`
+          id,
+          message,
+          status,
+          resolution_note,
+          created_at,
+          resolved_at,
+          post:blog_posts!inner(title, slug)
+        `)
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ items: feedback || [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // GET /api/admin/feedback -> get unresolved feedback for admins/gurus
+    if (req.method === "GET" && pathname === "/api/admin/feedback") {
+      requireAuth();
+      const { isAdmin, isGuru } = await getUserRoleFlags(supabase, user!.id);
+      
+      if (!isAdmin && !isGuru) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      const { data: feedback, error } = await supabase
+        .from("blog_post_feedback")
+        .select(`
+          id,
+          message,
+          status,
+          resolution_note,
+          created_at,
+          resolved_at,
+          user:profiles!blog_post_feedback_user_id_fkey(full_name),
+          post:blog_posts!inner(title, slug)
+        `)
+        .eq("status", "new")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ items: feedback || [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Docs
     if (req.method === "GET" && pathname === "/api/blogs/docs") {
       const docs = {
@@ -1169,11 +1303,16 @@ serve(async (req) => {
           { method: "POST", path: "/api/blogs", body: createDraftSchema.shape },
           { method: "POST", path: "/api/blogs/:id/submit" },
           { method: "POST", path: "/api/blogs/:id/review", body: reviewSchema.shape },
+          { method: "POST", path: "/api/blogs/:id/request-changes" },
+          { method: "POST", path: "/api/blogs/:id/reject" },
           { method: "POST", path: "/api/blogs/:id/publish" },
           { method: "POST", path: "/api/blogs/:id/react", body: reactSchema.shape },
           { method: "POST", path: "/api/blogs/:id/comment", body: commentSchema.shape },
           { method: "POST", path: "/api/blogs/:id/ai-summary" },
           { method: "GET", path: "/api/blogs/admin?status=" },
+          { method: "GET", path: "/api/user/feedback" },
+          { method: "GET", path: "/api/admin/feedback" },
+          { method: "POST", path: "/api/blogs/feedback/:id/resolve" },
           { method: "GET", path: "/api/blogs/:id/discussions" },
           { method: "POST", path: "/api/blogs/:id/discussions" },
           { method: "DELETE", path: "/api/blogs/discussions/:id" },

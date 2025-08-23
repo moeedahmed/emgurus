@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 
-type BlogStatus = 'draft' | 'in_review' | 'published' | 'rejected' | 'archived';
+type BlogStatus = 'draft' | 'in_review' | 'published' | 'rejected' | 'archived' | 'new' | 'resolved';
 
 interface BlogStatusBadgeProps {
   status: BlogStatus;
@@ -12,6 +12,8 @@ const statusConfig = {
   published: { label: "Published", variant: "outline" as const },
   rejected: { label: "Rejected", variant: "destructive" as const },
   archived: { label: "Archived", variant: "secondary" as const },
+  new: { label: "New", variant: "default" as const },
+  resolved: { label: "Resolved", variant: "outline" as const },
 };
 
 export default function BlogStatusBadge({ status }: BlogStatusBadgeProps) {

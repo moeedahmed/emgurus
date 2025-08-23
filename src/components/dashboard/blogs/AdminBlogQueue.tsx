@@ -7,6 +7,7 @@ import TableCard from "@/components/dashboard/TableCard";
 import { ErrorBoundary } from "react-error-boundary";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { callFunction } from "@/lib/functionsUrl";
 
 interface BlogPost {
   id: string;
@@ -33,16 +34,18 @@ function AdminBlogQueueContent() {
           id,
           title,
           status,
-          submitted_at
+          submitted_at,
+          author_id,
+          reviewer_id,
+          profiles!blog_posts_author_id_fkey(full_name)
         `);
 
       switch (activeFilter) {
         case 'submitted':
-          query = query.eq('status', 'in_review');
+          query = query.eq('status', 'in_review').is('reviewer_id', null);
           break;
         case 'assigned':
-          // Would need to check assignment table
-          query = query.eq('status', 'in_review');
+          query = query.eq('status', 'in_review').not('reviewer_id', 'is', null);
           break;
         case 'approved':
           query = query.eq('status', 'published');
@@ -57,7 +60,26 @@ function AdminBlogQueueContent() {
         .limit(50);
 
       if (error) throw error;
-      setPosts(data || []);
+
+      // For assigned posts, also get reviewer info
+      let postsWithReviewers = data || [];
+      if (activeFilter === 'assigned' && data && data.length > 0) {
+        const reviewerIds = data.map(p => p.reviewer_id).filter(Boolean);
+        if (reviewerIds.length > 0) {
+          const { data: reviewers } = await supabase
+            .from('profiles')
+            .select('user_id, full_name')
+            .in('user_id', reviewerIds);
+
+          const reviewerMap = new Map(reviewers?.map(r => [r.user_id, r]) || []);
+          postsWithReviewers = data.map(p => ({
+            ...p,
+            reviewer: p.reviewer_id ? reviewerMap.get(p.reviewer_id) : null
+          }));
+        }
+      }
+
+      setPosts(postsWithReviewers);
     } catch (error) {
       console.error('Failed to load posts:', error);
       setPosts([]);
@@ -82,6 +104,34 @@ function AdminBlogQueueContent() {
     }
   };
 
+  const requestChanges = async (postId: string) => {
+    const note = prompt('What changes are needed?') || 'Changes requested';
+    if (!note) return;
+    
+    try {
+      await callFunction(`blogs-api/api/blogs/${postId}/request-changes`, { note });
+      toast.success('Changes requested');
+      loadPosts();
+    } catch (error) {
+      console.error('Failed to request changes:', error);
+      toast.error('Failed to request changes');
+    }
+  };
+
+  const rejectPost = async (postId: string) => {
+    const note = prompt('Reason for rejection:') || 'Post rejected';
+    if (!note) return;
+    
+    try {
+      await callFunction(`blogs-api/api/blogs/${postId}/reject`, { note });
+      toast.success('Post rejected');
+      loadPosts();
+    } catch (error) {
+      console.error('Failed to reject post:', error);
+      toast.error('Failed to reject post');
+    }
+  };
+
   const getColumns = () => {
     const baseColumns = [
       { 
@@ -91,7 +141,7 @@ function AdminBlogQueueContent() {
       { 
         key: 'author', 
         header: 'Author',
-        render: (post: any) => post.author?.display_name || post.author?.email || 'Unknown'
+        render: (post: any) => post.profiles?.full_name || 'Unknown'
       },
       { 
         key: 'submitted_at', 
@@ -99,6 +149,15 @@ function AdminBlogQueueContent() {
         render: (post: any) => new Date(post.submitted_at).toLocaleDateString()
       }
     ];
+
+    // Add reviewer column for assigned posts
+    if (activeFilter === 'assigned') {
+      baseColumns.push({
+        key: 'reviewer',
+        header: 'Reviewer',
+        render: (post: any) => post.reviewer?.full_name || 'Unassigned'
+      });
+    }
 
     if (activeFilter === 'approved') {
       baseColumns.push({
@@ -115,6 +174,32 @@ function AdminBlogQueueContent() {
               variant="default"
             >
               Publish
+            </Button>
+          </div>
+        )
+      });
+    } else if (activeFilter === 'submitted' || activeFilter === 'assigned') {
+      baseColumns.push({
+        key: 'actions',
+        header: 'Actions',
+        render: (post: any) => (
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to={`/blogs/editor/${post.id}`}>Review</Link>
+            </Button>
+            <Button 
+              onClick={() => requestChanges(post.id)}
+              size="sm"
+              variant="secondary"
+            >
+              Request Changes
+            </Button>
+            <Button 
+              onClick={() => rejectPost(post.id)}
+              size="sm"
+              variant="destructive"
+            >
+              Reject
             </Button>
           </div>
         )
@@ -170,6 +255,7 @@ function AdminBlogQueueContent() {
         title="Queue"
         columns={getColumns()}
         rows={posts}
+        isLoading={loading}
         emptyText="No posts in this category."
       />
     </div>

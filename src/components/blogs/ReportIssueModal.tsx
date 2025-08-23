@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { callFunction } from "@/lib/functionsUrl";
 import { Flag } from "lucide-react";
 
 interface ReportIssueModalProps {
@@ -32,30 +32,21 @@ export default function ReportIssueModal({ postId, postTitle }: ReportIssueModal
 
     setSubmitting(true);
     try {
-      // Use direct fetch to call the blogs-api edge function with the feedback endpoint
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      
-      const response = await fetch(`https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/blogs-api/api/blogs/${postId}/feedback`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ message: message.trim() }),
+      await callFunction(`blogs-api/api/blogs/${postId}/feedback`, {
+        message: message.trim()
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit feedback');
-      }
 
       toast({ title: "Feedback submitted successfully", description: "Thank you for helping us improve!" });
       setMessage("");
       setOpen(false);
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      toast({ title: "Failed to submit feedback", variant: "destructive" });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to submit feedback';
+      toast({ 
+        title: "Failed to submit feedback", 
+        description: errorMessage,
+        variant: "destructive" 
+      });
     } finally {
       setSubmitting(false);
     }

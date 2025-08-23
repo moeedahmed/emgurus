@@ -1,27 +1,43 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import TableCard from "@/components/dashboard/TableCard";
+import { callFunction } from "@/lib/functionsUrl";
+import BlogStatusBadge from "./BlogStatusBadge";
 
 export default function BlogsFeedbackList() {
   const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      if (!user) { setRows([]); return; }
+    
+    const loadFeedback = async () => {
+      if (!user) { 
+        setRows([]);
+        setLoading(false);
+        return; 
+      }
       
       try {
-        // For now, since we need the blogs-api endpoints, let's use a simpler approach
-        // We'll fetch this data using the edge function when it's ready
-        // For now, return empty to avoid TypeScript errors
-        setRows([]);
+        setLoading(true);
+        const response = await callFunction('blogs-api/api/user/feedback', {}, true, 'GET');
+        if (!cancelled) {
+          setRows(response.items || []);
+        }
       } catch (error) {
         console.error('Error loading feedback:', error);
-        setRows([]);
+        if (!cancelled) {
+          setRows([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    })();
+    };
+
+    loadFeedback();
     return () => { cancelled = true; };
   }, [user?.id]);
 
@@ -33,11 +49,12 @@ export default function BlogsFeedbackList() {
         columns={[
           { key: 'created_at', header: 'Date', render: (r: any) => new Date(r.created_at).toLocaleString() },
           { key: 'post', header: 'Blog Post', render: (r: any) => r.post?.title || 'Unknown Post' },
-          { key: 'your', header: 'Your feedback', render: (r: any) => (r.message || '').slice(0,120) },
-          { key: 'status', header: 'Status' },
-          { key: 'reply', header: 'Response', render: (r: any) => (r.resolution_note || '-').slice(0,120) },
+          { key: 'message', header: 'Your feedback', render: (r: any) => (r.message || '').slice(0,120) },
+          { key: 'status', header: 'Status', render: (r: any) => <BlogStatusBadge status={r.status} /> },
+          { key: 'resolution_note', header: 'Response', render: (r: any) => (r.resolution_note || '-').slice(0,120) },
         ] as any}
         rows={rows}
+        isLoading={loading}
         emptyText="No feedback yet."
       />
     </div>

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import TableCard from "@/components/dashboard/TableCard";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { callFunction } from "@/lib/functionsUrl";
+import BlogStatusBadge from "./BlogStatusBadge";
 
 export default function BlogsMarkedList() {
   const { user } = useAuth();
@@ -13,19 +14,25 @@ export default function BlogsMarkedList() {
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
   const [resolutionNote, setResolutionNote] = useState("");
   const [resolving, setResolving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const loadFeedback = async () => {
-    if (!user) { setRows([]); return; }
+    if (!user) { 
+      setRows([]);
+      setLoading(false);
+      return; 
+    }
     
     try {
-      // For now, since we need the blogs-api endpoints, let's use a simpler approach
-      // We'll fetch this data using the edge function when it's ready
-      // For now, return empty to avoid TypeScript errors
-      setRows([]);
+      setLoading(true);
+      const response = await callFunction('blogs-api/api/admin/feedback', {}, true, 'GET');
+      setRows(response.items || []);
     } catch (error) {
       console.error('Error loading feedback:', error);
       setRows([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,11 +45,14 @@ export default function BlogsMarkedList() {
     
     setResolving(true);
     try {
-      // For now, since we need the blogs-api endpoints, let's use a simpler approach
-      // We'll implement this using the edge function when it's ready
-      toast({ title: "Feature coming soon", description: "Blog feedback resolution will be available soon." });
+      await callFunction(`blogs-api/api/blogs/feedback/${selectedFeedback.id}/resolve`, {
+        resolution_note: resolutionNote
+      });
+      
+      toast({ title: "Feedback resolved", description: "The user has been notified." });
       setSelectedFeedback(null);
       setResolutionNote("");
+      loadFeedback(); // Refresh the list
     } catch (error) {
       console.error('Error resolving feedback:', error);
       toast({ title: "Failed to resolve feedback", variant: "destructive" });
@@ -61,6 +71,7 @@ export default function BlogsMarkedList() {
           { key: 'user', header: 'User', render: (r: any) => r.user?.full_name || 'Unknown User' },
           { key: 'post', header: 'Blog Post', render: (r: any) => r.post?.title || 'Unknown Post' },
           { key: 'message', header: 'Feedback', render: (r: any) => (r.message || '').slice(0,120) },
+          { key: 'status', header: 'Status', render: (r: any) => <BlogStatusBadge status={r.status} /> },
           { 
             key: 'actions', 
             header: 'Actions', 
@@ -109,6 +120,7 @@ export default function BlogsMarkedList() {
           },
         ] as any}
         rows={rows}
+        isLoading={loading}
         emptyText="No unresolved feedback."
       />
     </div>
