@@ -55,7 +55,7 @@ export interface BlogDetailPayload {
 }
 
 // Primary API functions pointing to the blogs-api Edge Function
-const BASE = `${window.location.protocol}//${window.location.hostname}:54321/functions/v1/blogs-api`;
+const BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/blogs-api`;
 
 import { supabase } from "@/integrations/supabase/client";
 
