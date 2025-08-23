@@ -315,7 +315,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
 
-      const [authorRes, assignmentsRes, reactionsRes, commentsRes, summaryRes, tagsRes] = await Promise.all([
+      const [authorRes, assignmentsRes, reactionsRes, commentsRes, summaryRes, tagsRes, sharesRes, feedbackRes] = await Promise.all([
         supabase.from("profiles").select("user_id, full_name, avatar_url").eq("user_id", post.author_id).maybeSingle(),
         // Get assigned reviewers from blog_review_assignments
         supabase
@@ -331,6 +331,8 @@ serve(async (req) => {
         supabase.from("blog_comments").select("id, author_id, parent_id, content, created_at").eq("post_id", post.id).order("created_at", { ascending: true }),
         supabase.from("blog_ai_summaries").select("provider, model, summary_md, created_at").eq("post_id", post.id).maybeSingle(),
         supabase.from("blog_post_tags").select("tag:blog_tags(slug, title)").eq("post_id", post.id),
+        supabase.from("blog_shares").select("id").eq("post_id", post.id),
+        supabase.from("blog_post_feedback").select("id").eq("post_id", post.id),
       ]);
 
       const reactions = new Map<string, number>();
@@ -371,6 +373,15 @@ serve(async (req) => {
         avatar: a.profiles?.avatar_url || null
       }));
 
+      // Build engagement object
+      const engagement = {
+        views: post.view_count ?? 0,
+        likes: reactions.get("thumbs_up") ?? 0,
+        comments: roots.length + roots.reduce((acc: number, c: any) => acc + (c.replies?.length ?? 0), 0),
+        shares: (sharesRes.data ?? []).length,
+        feedback: (feedbackRes.data ?? []).length
+      };
+
       const payload = {
         post: {
           ...post,
@@ -383,6 +394,7 @@ serve(async (req) => {
         reactions: Object.fromEntries(reactions),
         comments: roots,
         ai_summary: summaryRes.data ?? null,
+        engagement,
       };
 
       return new Response(JSON.stringify(payload), {

@@ -41,6 +41,7 @@ export default function CommentThread({
   const [feedbackModal, setFeedbackModal] = useState<{ commentId: string; open: boolean }>({ commentId: "", open: false });
   const [feedbackReason, setFeedbackReason] = useState("");
   const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setComments(initialComments);
@@ -184,6 +185,7 @@ export default function CommentThread({
         setFeedbackModal({ commentId: "", open: false });
         setFeedbackReason("");
         setFeedbackText("");
+        setFeedbackSubmitted(prev => new Set([...prev, feedbackModal.commentId]));
         await loadComments();
         toast.success("Feedback submitted");
       } else {
@@ -213,6 +215,7 @@ export default function CommentThread({
   const Item = ({ c }: { c: CommentNode }) => {
     const isOwner = user?.id && c.author_id === user.id;
     const reactions = c.reactions || { up: 0, down: 0 };
+    const hasFeedback = feedbackSubmitted.has(c.id);
     
     return (
       <div className="flex items-start gap-3">
@@ -248,12 +251,18 @@ export default function CommentThread({
                 variant={c.user_reaction === "down" ? "default" : "ghost"}
                 onClick={() => reactToComment(c.id, "down")}
                 className="h-7 px-2"
+                disabled={hasFeedback}
               >
                 <ThumbsDown className="h-3 w-3 mr-1" />
                 {reactions.down > 0 && <span className="text-xs">{reactions.down}</span>}
               </Button>
             </div>
           </div>
+          {hasFeedback && (
+            <p className="text-xs text-muted-foreground mt-2">
+              ✓ Feedback sent
+            </p>
+          )}
           {c.replies && c.replies.length > 0 && (
             <div className="mt-3 space-y-4 border-l pl-4">
               {c.replies.filter(r => !deletedIds.has(r.id)).map(r => <Item key={r.id} c={r} />)}

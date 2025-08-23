@@ -353,3 +353,13 @@ export async function sharePost(id: string, platform: string) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+export async function submitFeedback(postId: string, message: string) {
+  const res = await fetch(`${BASE}/api/blogs/${postId}/feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(await authHeader()) },
+    body: JSON.stringify({ message }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

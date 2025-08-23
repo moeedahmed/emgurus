@@ -17,6 +17,7 @@ export default function ReportIssueModal({ postId, postTitle }: ReportIssueModal
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async () => {
@@ -38,6 +39,7 @@ export default function ReportIssueModal({ postId, postTitle }: ReportIssueModal
 
       toast({ title: "Feedback submitted successfully", description: "Thank you for helping us improve!" });
       setMessage("");
+      setSubmitted(true);
       setOpen(false);
     } catch (error) {
       console.error('Error submitting feedback:', error);
@@ -53,13 +55,14 @@ export default function ReportIssueModal({ postId, postTitle }: ReportIssueModal
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Flag className="h-4 w-4 mr-2" />
-          Report Issue
-        </Button>
-      </DialogTrigger>
+    <div className="space-y-2">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" disabled={submitted}>
+            <Flag className="h-4 w-4 mr-2" />
+            {submitted ? "Feedback Sent" : "Report Issue"}
+          </Button>
+        </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Report an Issue</DialogTitle>
@@ -83,7 +86,7 @@ export default function ReportIssueModal({ postId, postTitle }: ReportIssueModal
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleSubmit} disabled={submitting || !message.trim()}>
+            <Button onClick={handleSubmit} disabled={submitting || !message.trim() || submitted}>
               {submitting ? "Submitting..." : "Submit Feedback"}
             </Button>
             <Button variant="outline" onClick={() => setOpen(false)}>
@@ -93,5 +96,11 @@ export default function ReportIssueModal({ postId, postTitle }: ReportIssueModal
         </div>
       </DialogContent>
     </Dialog>
+    {submitted && (
+      <p className="text-xs text-muted-foreground mt-1">
+        ✓ Feedback sent
+      </p>
+    )}
+    </div>
   );
 }

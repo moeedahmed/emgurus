@@ -72,6 +72,7 @@ const { slug } = useParams();
   const [comments, setComments] = useState<any[]>([]);
   const [commentCount, setCommentCount] = useState<number>(0);
   const [shareCount, setShareCount] = useState<number>(0);
+  const [feedbackCount, setFeedbackCount] = useState<number>(0);
   const [engagement, setEngagement] = useState<any>(null);
 
   useEffect(() => {
@@ -85,10 +86,35 @@ const { slug } = useParams();
         .maybeSingle();
       const current = (data as any) || null;
       setPost(current);
-      setViewCount(current?.view_count ?? 0);
-      setLikeCount(current?.likes_count ?? 0);
-      setShareCount(current?.engagement?.shares ?? 0);
-      setEngagement(current?.engagement || null);
+      
+      // Try to get engagement data from API first
+      try {
+        const response = await fetch(`/functions/v1/blogs-api/api/blogs/${slug}`, {
+          headers: {
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (response.ok) {
+          const apiData = await response.json();
+          const eng = apiData.engagement;
+          if (eng) {
+            setViewCount(eng.views ?? 0);
+            setLikeCount(eng.likes ?? 0);
+            setShareCount(eng.shares ?? 0);
+            setFeedbackCount(eng.feedback ?? 0);
+            setCommentCount(eng.comments ?? 0);
+            setEngagement(eng);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load engagement data:", error);
+        // Fallback to basic counts
+        setViewCount(current?.view_count ?? 0);
+        setLikeCount(current?.likes_count ?? 0);
+        setShareCount(0);
+        setFeedbackCount(0);
+      }
 
       // Fetch author profile data and AI summary
       if (current?.author_id) {
@@ -379,42 +405,40 @@ const { slug } = useParams();
         </header>
 
         {/* Engagement Section */}
-        {engagement && (
-          <div className="mb-6 p-4 bg-muted/30 rounded-lg">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-6 text-sm text-muted-foreground">
+        <div className="mb-6 p-4 bg-muted/30 rounded-lg">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Eye className="h-4 w-4" />
+                {viewCount} views
+              </span>
+              <span className="flex items-center gap-1">
+                <ThumbsUp className="h-4 w-4" />
+                {likeCount} likes
+              </span>
+              <span className="flex items-center gap-1">
+                💬 {commentCount} comments
+              </span>
+              <span className="flex items-center gap-1">
+                📤 {shareCount} shares
+              </span>
+              {feedbackCount > 0 && (
                 <span className="flex items-center gap-1">
-                  <Eye className="h-4 w-4" />
-                  {engagement.views} views
+                  🚩 {feedbackCount} feedback
                 </span>
-                <span className="flex items-center gap-1">
-                  <ThumbsUp className="h-4 w-4" />
-                  {engagement.likes} likes
-                </span>
-                <span className="flex items-center gap-1">
-                  💬 {engagement.comments} comments
-                </span>
-                <span className="flex items-center gap-1">
-                  📤 {engagement.shares} shares
-                </span>
-                {engagement.feedback > 0 && (
-                  <span className="flex items-center gap-1">
-                    🚩 {engagement.feedback} feedback
-                  </span>
-                )}
-              </div>
-              <ShareButtons
-                title={post.title}
-                url={`${window.location.origin}/blog/${slug}`}
-                text={post.description || "Check out this blog post on EMGurus"}
-                postId={post.id}
-                shareCount={shareCount}
-                onShare={handleShare}
-                variant="inline"
-              />
+              )}
             </div>
+            <ShareButtons
+              title={post.title}
+              url={`${window.location.origin}/blog/${slug}`}
+              text={post.description || "Check out this blog post on EMGurus"}
+              postId={post.id}
+              shareCount={shareCount}
+              onShare={handleShare}
+              variant="inline"
+            />
           </div>
-        )}
+        </div>
 
         {/* AI Summary */}
         {aiSummaryContent && (

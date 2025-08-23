@@ -16,7 +16,7 @@ interface BlogCardProps {
     tags: { slug: string; title: string }[];
     author: { id: string; name: string; avatar: string | null };
     published_at: string | null;
-    counts: { likes: number; comments?: number; views?: number; shares?: number };
+    counts: { likes: number; comments?: number; views?: number; shares?: number; feedback?: number };
   };
   topBadge?: { label: string } | null;
   onOpen?: () => void;
@@ -117,6 +117,9 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, select
             <span>{p.counts?.views || 0} views</span>
             {(p.counts?.shares || 0) > 0 && (
               <span>{p.counts.shares} shares</span>
+            )}
+            {(p.counts?.feedback || 0) > 0 && (
+              <span>{p.counts.feedback} feedback</span>
             )}
           </div>
         </div>
