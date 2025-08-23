@@ -1544,6 +1544,78 @@ async function trackShare(postId: string, req: Request): Promise<Response> {
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // POST /api/blogs/:id/share
+    const shareMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/share$/i);
+    if (req.method === "POST" && shareMatch) {
+      const id = shareMatch[1];
+      const body = await req.json();
+      const { platform } = body;
+
+      if (!platform) {
+        return new Response(JSON.stringify({ error: 'Platform is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Get user ID for authenticated tracking (optional)
+      let userId = null;
+      try {
+        if (user) userId = user.id;
+      } catch (error) {
+        // Continue without user ID for anonymous shares
+      }
+
+      // Check if blog post exists
+      const { data: post, error: postError } = await supabase
+        .from('blog_posts')
+        .select('id')
+        .eq('id', id)
+        .eq('status', 'published')
+        .single();
+
+      if (postError || !post) {
+        return new Response(JSON.stringify({ error: 'Post not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Record the share
+      const { error: shareError } = await supabase
+        .from('blog_shares')
+        .insert({
+          post_id: id,
+          user_id: userId,
+          platform: platform,
+          shared_at: new Date().toISOString(),
+        });
+
+      if (shareError) {
+        console.error('Error recording share:', shareError);
+        return new Response(JSON.stringify({ error: 'Failed to record share' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Get updated share count
+      const { data: shares } = await supabase
+        .from('blog_shares')
+        .select('id')
+        .eq('post_id', id);
+
+      const shareCount = shares?.length || 0;
+
+      return new Response(JSON.stringify({ 
+        success: true,
+        share_count: shareCount,
+        platform 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // POST /api/blogs/:id/ai-summary
     const aiMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/ai-summary$/i);
     if (req.method === "POST" && aiMatch) {
@@ -1934,6 +2006,7 @@ async function trackShare(postId: string, req: Request): Promise<Response> {
           { method: "POST", path: "/api/blogs/:id/react", body: reactSchema.shape },
           { method: "POST", path: "/api/blogs/:id/comment", body: commentSchema.shape },
           { method: "POST", path: "/api/blogs/:id/ai-summary" },
+          { method: "POST", path: "/api/blogs/:id/share" },
           { method: "GET", path: "/api/blogs/metrics" },
           { method: "GET", path: "/api/blogs/admin?status=" },
           { method: "GET", path: "/api/user/feedback" },

@@ -12,6 +12,9 @@ import ReportIssueModal from "@/components/blogs/ReportIssueModal";
 import AuthorChip from "@/components/blogs/AuthorChip";
 import CollapsibleCard from "@/components/ui/CollapsibleCard";
 import CommentThread from "@/components/blogs/CommentThread";
+import ShareButtons from "@/components/blogs/ShareButtons";
+import { sharePost } from "@/lib/blogsApi";
+import { toast } from "sonner";
 
 interface Post {
   id: string;
@@ -68,6 +71,8 @@ const { slug } = useParams();
   const [aiSummaryContent, setAiSummaryContent] = useState<string | null>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [commentCount, setCommentCount] = useState<number>(0);
+  const [shareCount, setShareCount] = useState<number>(0);
+  const [engagement, setEngagement] = useState<any>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -82,6 +87,8 @@ const { slug } = useParams();
       setPost(current);
       setViewCount(current?.view_count ?? 0);
       setLikeCount(current?.likes_count ?? 0);
+      setShareCount(current?.engagement?.shares ?? 0);
+      setEngagement(current?.engagement || null);
 
       // Fetch author profile data and AI summary
       if (current?.author_id) {
@@ -277,6 +284,22 @@ const { slug } = useParams();
     }
   };
 
+  const handleShare = async (platform: string) => {
+    if (!post?.id) return;
+    
+    try {
+      const result = await sharePost(post.id, platform);
+      if (result.share_count) {
+        setShareCount(result.share_count);
+      }
+      toast.success(`Shared on ${platform}`);
+    } catch (error) {
+      console.error("Failed to track share:", error);
+      // Still show success since the share itself worked
+      toast.success(`Shared on ${platform}`);
+    }
+  };
+
   const publishedDate = useMemo(() =>
     post?.created_at ? new Date(post.created_at) : null
   , [post?.created_at]);
@@ -349,8 +372,49 @@ const { slug } = useParams();
             {commentCount > 0 && (
               <span className="flex items-center gap-1">💬 {commentCount}</span>
             )}
+            {shareCount > 0 && (
+              <span className="flex items-center gap-1">📤 {shareCount}</span>
+            )}
           </div>
         </header>
+
+        {/* Engagement Section */}
+        {engagement && (
+          <div className="mb-6 p-4 bg-muted/30 rounded-lg">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Eye className="h-4 w-4" />
+                  {engagement.views} views
+                </span>
+                <span className="flex items-center gap-1">
+                  <ThumbsUp className="h-4 w-4" />
+                  {engagement.likes} likes
+                </span>
+                <span className="flex items-center gap-1">
+                  💬 {engagement.comments} comments
+                </span>
+                <span className="flex items-center gap-1">
+                  📤 {engagement.shares} shares
+                </span>
+                {engagement.feedback > 0 && (
+                  <span className="flex items-center gap-1">
+                    🚩 {engagement.feedback} feedback
+                  </span>
+                )}
+              </div>
+              <ShareButtons
+                title={post.title}
+                url={`${window.location.origin}/blog/${slug}`}
+                text={post.description || "Check out this blog post on EMGurus"}
+                postId={post.id}
+                shareCount={shareCount}
+                onShare={handleShare}
+                variant="inline"
+              />
+            </div>
+          </div>
+        )}
 
         {/* AI Summary */}
         {aiSummaryContent && (
@@ -399,16 +463,34 @@ const { slug } = useParams();
           )}
         </section>
 
-        {/* Report Issue */}
+        {/* Share & Report Section */}
         <section className="mt-8 pt-6 border-t">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h3 className="text-sm font-medium mb-2">Share this article</h3>
+              <ShareButtons
+                title={post.title}
+                url={`${window.location.origin}/blog/${slug}`}
+                text={post.description || "Check out this blog post on EMGurus"}
+                postId={post.id}
+                shareCount={shareCount}
+                onShare={handleShare}
+                variant="dropdown"
+              />
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between pt-4 border-t">
             <div>
               <h3 className="text-sm font-medium">Found an issue?</h3>
               <p className="text-xs text-muted-foreground">
                 Help us improve by reporting medical inaccuracies, typos, or other issues.
               </p>
             </div>
-            <ReportIssueModal postId={post.id} postTitle={post.title} />
+            <ReportIssueModal 
+              postId={post.id} 
+              postTitle={post.title}
+            />
           </div>
         </section>
 
