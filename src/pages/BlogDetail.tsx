@@ -193,7 +193,7 @@ export default function BlogDetail() {
                 <CommentThread
                   postId={p.id}
                   comments={data.comments || []}
-                  onNewComment={(c) => setData((d: any) => ({ ...d, comments: [...(d.comments || []), c] }))}
+                  onCommentsChange={(comments) => setData((d: any) => ({ ...d, comments }))}
                 />
               </section>
             </article>
@@ -321,7 +321,7 @@ export default function BlogDetail() {
             <CommentThread
               postId={p.id}
               comments={data.comments || []}
-              onNewComment={(c) => setData((d: any) => ({ ...d, comments: [...(d.comments || []), c] }))}
+              onCommentsChange={(comments) => setData((d: any) => ({ ...d, comments }))}
             />
           </section>
         </article>

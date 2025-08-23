@@ -11,6 +11,7 @@ import { Eye, ThumbsUp, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
 import ReportIssueModal from "@/components/blogs/ReportIssueModal";
 import AuthorChip from "@/components/blogs/AuthorChip";
 import CollapsibleCard from "@/components/ui/CollapsibleCard";
+import CommentThread from "@/components/blogs/CommentThread";
 
 interface Post {
   id: string;
@@ -65,6 +66,8 @@ const { slug } = useParams();
   const [viewCount, setViewCount] = useState<number>(0);
   const [likeCount, setLikeCount] = useState<number>(0);
   const [aiSummaryContent, setAiSummaryContent] = useState<string | null>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentCount, setCommentCount] = useState<number>(0);
 
   useEffect(() => {
     const load = async () => {
@@ -99,6 +102,22 @@ const { slug } = useParams();
         
         setAuthor(authorData.data as AuthorProfile | null);
         setAiSummaryContent(summaryData.data?.summary_md || null);
+
+        // Load comments
+        try {
+          const response = await fetch(`/functions/v1/blogs-api/api/blogs/${current.id}/comments`);
+          if (response.ok) {
+            const commentsData = await response.json();
+            setComments(commentsData.comments || []);
+            // Count total comments including replies
+            const totalComments = (commentsData.comments || []).reduce((acc: number, comment: any) => {
+              return acc + 1 + (comment.replies?.length || 0);
+            }, 0);
+            setCommentCount(totalComments);
+          }
+        } catch (error) {
+          console.error("Failed to load comments:", error);
+        }
       }
 
       if (current?.tags?.length) {
@@ -228,6 +247,9 @@ const { slug } = useParams();
             <button className="inline-flex items-center gap-1 hover:opacity-80" onClick={toggleLike} aria-label="Like this article">
               <ThumbsUp className="h-4 w-4" /> {likeCount}
             </button>
+            {commentCount > 0 && (
+              <span className="flex items-center gap-1">💬 {commentCount}</span>
+            )}
           </div>
         </header>
 
@@ -325,14 +347,25 @@ const { slug } = useParams();
         </section>
       )}
 
-      {/* Comments placeholder */}
+      {/* Comments */}
       <section className="max-w-3xl mx-auto mt-12">
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold">Comments</h3>
-            {!user && <span className="text-sm text-muted-foreground">Sign in to comment</span>}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold">
+              Discussion {commentCount > 0 && `(${commentCount})`}
+            </h3>
           </div>
-          <p className="text-sm text-muted-foreground">Threaded comments with role badges coming soon.</p>
+          <CommentThread 
+            postId={post.id} 
+            comments={comments}
+            onCommentsChange={(newComments) => {
+              setComments(newComments);
+              const totalComments = newComments.reduce((acc: number, comment: any) => {
+                return acc + 1 + (comment.replies?.length || 0);
+              }, 0);
+              setCommentCount(totalComments);
+            }}
+          />
         </Card>
       </section>
 

@@ -4,9 +4,12 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import AuthGate from "@/components/auth/AuthGate";
 import { useAuth } from "@/contexts/AuthContext";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
 
 interface CommentNode {
   id: string;
@@ -16,55 +19,84 @@ interface CommentNode {
   created_at: string;
   author?: { user_id: string; full_name: string; avatar_url: string | null } | null;
   replies?: CommentNode[];
+  reactions?: { up: number; down: number };
+  user_reaction?: string | null;
 }
 
 export default function CommentThread({
   postId,
-  comments,
-  onNewComment,
+  comments: initialComments = [],
+  onCommentsChange,
 }: {
   postId: string;
-  comments: CommentNode[];
-  onNewComment: (c: CommentNode) => void;
+  comments?: CommentNode[];
+  onCommentsChange?: (comments: CommentNode[]) => void;
 }) {
   const { user } = useAuth();
+  const [comments, setComments] = useState<CommentNode[]>(initialComments);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [feedbackModal, setFeedbackModal] = useState<{ commentId: string; open: boolean }>({ commentId: "", open: false });
+  const [feedbackReason, setFeedbackReason] = useState("");
+  const [feedbackText, setFeedbackText] = useState("");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id || null));
-  }, []);
+    setComments(initialComments);
+  }, [initialComments]);
+
+  const loadComments = async () => {
+    try {
+      const response = await fetch(`/functions/v1/blogs-api/api/blogs/${postId}/comments`, {
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setComments(data.comments || []);
+        onCommentsChange?.(data.comments || []);
+      }
+    } catch (error) {
+      console.error("Failed to load comments:", error);
+    }
+  };
 
   const roots = useMemo(() => comments.filter(c => !c.parent_id && !deletedIds.has(c.id)), [comments, deletedIds]);
 
   const submit = async (parent?: string | null) => {
-    const content = (parent ? text.trim() : text.trim());
+    const content = text.trim();
     if (!content) return;
-    if (!userId) {
+    if (!user?.id) {
       toast.error("Please log in to comment");
       return;
     }
-    // Check email verification
     if (!user?.email_confirmed_at) {
       toast.error("Please verify your email to comment");
       return;
     }
     try {
       setBusy(true);
-      await commentOnPost(postId, content, parent ?? null);
-      const c: CommentNode = {
-        id: `temp-${Date.now()}`,
-        author_id: userId,
-        parent_id: parent ?? null,
-        content,
-        created_at: new Date().toISOString(),
-      };
-      onNewComment(c);
-      setText("");
-      setReplyTo(null);
+      const response = await fetch(`/functions/v1/blogs-api/api/blogs/${postId}/comment`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ content, parent_id: parent })
+      });
+      
+      if (response.ok) {
+        setText("");
+        setReplyTo(null);
+        await loadComments(); // Reload comments to get fresh data
+        toast.success("Comment posted");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to post comment");
+      }
     } catch (e) {
       console.error(e);
       toast.error("Failed to post comment");
@@ -75,13 +107,91 @@ export default function CommentThread({
 
   const deleteComment = async (commentId: string) => {
     try {
-      const { error } = await supabase.from('blog_comments').delete().eq('id', commentId).eq('author_id', userId);
-      if (error) throw error;
-      setDeletedIds(prev => new Set([...prev, commentId]));
-      toast.success('Comment deleted');
+      const response = await fetch(`/functions/v1/blogs-api/api/blogs/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        }
+      });
+      
+      if (response.ok) {
+        setDeletedIds(prev => new Set([...prev, commentId]));
+        await loadComments(); // Reload comments
+        toast.success('Comment deleted');
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to delete comment');
+      }
     } catch (e) {
       console.error(e);
       toast.error('Failed to delete comment');
+    }
+  };
+
+  const reactToComment = async (commentId: string, type: "up" | "down") => {
+    if (!user?.id) {
+      toast.error("Please log in to react");
+      return;
+    }
+
+    if (type === "down") {
+      setFeedbackModal({ commentId, open: true });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/functions/v1/blogs-api/api/blogs/comments/${commentId}/react`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ type })
+      });
+      
+      if (response.ok) {
+        await loadComments(); // Reload to get updated reaction counts
+      } else {
+        toast.error("Failed to react");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to react");
+    }
+  };
+
+  const submitFeedback = async () => {
+    if (!feedbackReason && !feedbackText.trim()) {
+      toast.error("Please select a reason or provide feedback");
+      return;
+    }
+
+    try {
+      const feedbackMessage = feedbackReason === "other" 
+        ? feedbackText.trim() 
+        : `${feedbackReason}${feedbackText.trim() ? `: ${feedbackText.trim()}` : ""}`;
+
+      const response = await fetch(`/functions/v1/blogs-api/api/blogs/comments/${feedbackModal.commentId}/react`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ type: "down", feedback: feedbackMessage })
+      });
+      
+      if (response.ok) {
+        setFeedbackModal({ commentId: "", open: false });
+        setFeedbackReason("");
+        setFeedbackText("");
+        await loadComments();
+        toast.success("Feedback submitted");
+      } else {
+        toast.error("Failed to submit feedback");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to submit feedback");
     }
   };
 
@@ -101,7 +211,9 @@ export default function CommentThread({
   const tree = useMemo(() => buildTree(comments), [comments]);
 
   const Item = ({ c }: { c: CommentNode }) => {
-    const isOwner = userId && c.author_id === userId;
+    const isOwner = user?.id && c.author_id === user.id;
+    const reactions = c.reactions || { up: 0, down: 0 };
+    
     return (
       <div className="flex items-start gap-3">
         <Avatar className="h-8 w-8">
@@ -114,11 +226,33 @@ export default function CommentThread({
             <span className="text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
           </div>
           <p className="text-sm mb-2">{c.content}</p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button size="sm" variant="ghost" onClick={() => setReplyTo(c.id)}>Reply</Button>
             {isOwner && (
               <Button size="sm" variant="ghost" onClick={() => deleteComment(c.id)}>Delete</Button>
             )}
+            
+            {/* Reaction buttons */}
+            <div className="flex items-center gap-1 ml-2">
+              <Button
+                size="sm"
+                variant={c.user_reaction === "up" ? "default" : "ghost"}
+                onClick={() => reactToComment(c.id, "up")}
+                className="h-7 px-2"
+              >
+                <ThumbsUp className="h-3 w-3 mr-1" />
+                {reactions.up > 0 && <span className="text-xs">{reactions.up}</span>}
+              </Button>
+              <Button
+                size="sm"
+                variant={c.user_reaction === "down" ? "default" : "ghost"}
+                onClick={() => reactToComment(c.id, "down")}
+                className="h-7 px-2"
+              >
+                <ThumbsDown className="h-3 w-3 mr-1" />
+                {reactions.down > 0 && <span className="text-xs">{reactions.down}</span>}
+              </Button>
+            </div>
           </div>
           {c.replies && c.replies.length > 0 && (
             <div className="mt-3 space-y-4 border-l pl-4">
@@ -131,35 +265,36 @@ export default function CommentThread({
   };
 
   return (
-    <div className="space-y-6">
-      <AuthGate fallback={
-        <div className="text-center text-muted-foreground py-4">
-          Sign in to join the discussion
-        </div>
-      }>
-        <div className="flex items-start gap-2">
-          <Textarea 
-            className="flex-1" 
-            value={text} 
-            onChange={(e) => setText(e.target.value)} 
-            placeholder={user?.email_confirmed_at ? "Add a comment" : "Verify your email to comment"}
-            disabled={!user?.email_confirmed_at}
-          />
-          <Button 
-            size="sm" 
-            onClick={() => submit(null)} 
-            disabled={busy || !user?.email_confirmed_at}
-          >
-            Comment
-          </Button>
-        </div>
-      </AuthGate>
+    <>
       <div className="space-y-6">
-        {roots.map((c) => (
-          <div key={c.id} className="space-y-2">
-            <Item c={c} />
-            {replyTo === c.id && (
-              <AuthGate>
+        {user ? (
+          <div className="flex items-start gap-2">
+            <Textarea 
+              className="flex-1" 
+              value={text} 
+              onChange={(e) => setText(e.target.value)} 
+              placeholder={user?.email_confirmed_at ? "Add a comment" : "Verify your email to comment"}
+              disabled={!user?.email_confirmed_at}
+            />
+            <Button 
+              size="sm" 
+              onClick={() => submit(null)} 
+              disabled={busy || !user?.email_confirmed_at}
+            >
+              Comment
+            </Button>
+          </div>
+        ) : (
+          <div className="text-center text-muted-foreground py-4">
+            Sign in to join the discussion
+          </div>
+        )}
+        
+        <div className="space-y-6">
+          {roots.map((c) => (
+            <div key={c.id} className="space-y-2">
+              <Item c={c} />
+              {replyTo === c.id && user && (
                 <div className="ml-11">
                   <Textarea 
                     value={text} 
@@ -178,11 +313,59 @@ export default function CommentThread({
                     <Button size="sm" variant="ghost" onClick={() => setReplyTo(null)}>Cancel</Button>
                   </div>
                 </div>
-              </AuthGate>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+
+      {/* Feedback Modal */}
+      <Dialog open={feedbackModal.open} onOpenChange={(open) => setFeedbackModal({ ...feedbackModal, open })}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Why are you giving this a thumbs down?</DialogTitle>
+            <DialogDescription>
+              Help us improve by letting us know what's wrong with this comment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <RadioGroup value={feedbackReason} onValueChange={setFeedbackReason}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="unclear" id="unclear" />
+                <Label htmlFor="unclear">Unclear or confusing</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="factually wrong" id="wrong" />
+                <Label htmlFor="wrong">Factually incorrect</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="inappropriate" id="inappropriate" />
+                <Label htmlFor="inappropriate">Inappropriate content</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="other" id="other" />
+                <Label htmlFor="other">Other</Label>
+              </div>
+            </RadioGroup>
+            
+            <div className="space-y-2">
+              <Label htmlFor="feedback">Additional feedback (optional)</Label>
+              <Textarea
+                id="feedback"
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                placeholder="Please explain what's wrong..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFeedbackModal({ commentId: "", open: false })}>
+              Cancel
+            </Button>
+            <Button onClick={submitFeedback}>Submit Feedback</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

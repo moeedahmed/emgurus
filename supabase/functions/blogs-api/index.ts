@@ -608,6 +608,292 @@ serve(async (req) => {
       });
     }
 
+    // GET /api/blogs/:id/comments -> list comments
+    const commentsListMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/comments$/i);
+    if (req.method === "GET" && commentsListMatch) {
+      const postId = commentsListMatch[1];
+      const page = Math.max(1, Number(url.searchParams.get("page") ?? 1));
+      const pageSize = Math.min(20, Math.max(1, Number(url.searchParams.get("page_size") ?? 10)));
+
+      // Verify post exists and is published
+      const { data: post } = await supabase
+        .from("blog_posts")
+        .select("id, status")
+        .eq("id", postId)
+        .eq("status", "published")
+        .maybeSingle();
+      
+      if (!post) {
+        return new Response(JSON.stringify({ error: "Post not found or not published" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Get all comments for this post
+      const { data: allComments, error: commentsErr } = await supabase
+        .from("blog_comments")
+        .select("id, author_id, parent_id, content, created_at")
+        .eq("post_id", postId)
+        .order("created_at", { ascending: true });
+
+      if (commentsErr) throw commentsErr;
+
+      // Get comment authors
+      const authorIds = Array.from(new Set((allComments || []).map(c => c.author_id)));
+      const { data: authors } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, avatar_url")
+        .in("user_id", authorIds);
+      const authorMap = new Map((authors || []).map(a => [a.user_id, a]));
+
+      // Get comment reactions
+      const commentIds = (allComments || []).map(c => c.id);
+      const { data: reactions } = await supabase
+        .from("blog_comment_reactions")
+        .select("comment_id, user_id, reaction")
+        .in("comment_id", commentIds);
+
+      // Build reaction counts and user reactions
+      const reactionCounts = new Map<string, { up: number; down: number }>();
+      const userReactions = new Map<string, string>();
+      
+      for (const r of reactions || []) {
+        const key = r.comment_id;
+        const counts = reactionCounts.get(key) || { up: 0, down: 0 };
+        if (r.reaction === "up") counts.up++;
+        else if (r.reaction === "down") counts.down++;
+        reactionCounts.set(key, counts);
+
+        if (user && r.user_id === user.id) {
+          userReactions.set(key, r.reaction);
+        }
+      }
+
+      // Build threaded structure
+      const comments = (allComments || []).map(c => ({
+        ...c,
+        author: authorMap.get(c.author_id) || null,
+        reactions: reactionCounts.get(c.id) || { up: 0, down: 0 },
+        user_reaction: userReactions.get(c.id) || null,
+        replies: [] as any[]
+      }));
+
+      const commentMap = new Map(comments.map(c => [c.id, c]));
+      const rootComments = [];
+
+      for (const comment of comments) {
+        if (comment.parent_id && commentMap.has(comment.parent_id)) {
+          commentMap.get(comment.parent_id)!.replies.push(comment);
+        } else {
+          rootComments.push(comment);
+        }
+      }
+
+      // Paginate root comments only
+      const total = rootComments.length;
+      const start = (page - 1) * pageSize;
+      const pageComments = rootComments.slice(start, start + pageSize);
+
+      return new Response(JSON.stringify({
+        comments: pageComments,
+        total,
+        page,
+        page_size: pageSize
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // POST /api/blogs/:id/comment -> create comment
+    const commentMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/comment$/i);
+    if (req.method === "POST" && commentMatch) {
+      requireAuth();
+      const postId = commentMatch[1];
+      const body = commentSchema.parse(await req.json());
+      
+      // Verify post exists and is published
+      const { data: post } = await supabase
+        .from("blog_posts")
+        .select("id, status")
+        .eq("id", postId)
+        .eq("status", "published")
+        .maybeSingle();
+      
+      if (!post) {
+        return new Response(JSON.stringify({ error: "Post not found or not published" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check if this is a reply and limit depth
+      if (body.parent_id) {
+        const { data: parent } = await supabase
+          .from("blog_comments")
+          .select("parent_id")
+          .eq("id", body.parent_id)
+          .maybeSingle();
+        
+        if (!parent) {
+          return new Response(JSON.stringify({ error: "Parent comment not found" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        // Limit to 2 levels - can't reply to a reply
+        if (parent.parent_id) {
+          return new Response(JSON.stringify({ error: "Maximum comment depth reached" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      const { data: comment, error } = await supabase
+        .from("blog_comments")
+        .insert({
+          post_id: postId,
+          author_id: user!.id,
+          content: body.content.trim(),
+          parent_id: body.parent_id || null,
+        })
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true, comment }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // DELETE /api/blogs/comments/:id -> delete comment
+    const deleteCommentMatch = pathname.match(/^\/api\/blogs\/comments\/([0-9a-f-]{36})$/i);
+    if (req.method === "DELETE" && deleteCommentMatch) {
+      requireAuth();
+      const commentId = deleteCommentMatch[1];
+      const { isAdmin } = await getUserRoleFlags(supabase, user!.id);
+
+      const { data: comment } = await supabase
+        .from("blog_comments")
+        .select("author_id")
+        .eq("id", commentId)
+        .maybeSingle();
+
+      if (!comment) {
+        return new Response(JSON.stringify({ error: "Comment not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Only author or admin can delete
+      if (comment.author_id !== user!.id && !isAdmin) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { error } = await supabase
+        .from("blog_comments")
+        .delete()
+        .eq("id", commentId);
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // POST /api/blogs/comments/:id/react -> toggle reaction
+    const reactCommentMatch = pathname.match(/^\/api\/blogs\/comments\/([0-9a-f-]{36})\/react$/i);
+    if (req.method === "POST" && reactCommentMatch) {
+      requireAuth();
+      const commentId = reactCommentMatch[1];
+      const { type, feedback } = await req.json();
+
+      if (!["up", "down"].includes(type)) {
+        return new Response(JSON.stringify({ error: "Invalid reaction type" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Verify comment exists
+      const { data: comment } = await supabase
+        .from("blog_comments")
+        .select("post_id")
+        .eq("id", commentId)
+        .maybeSingle();
+
+      if (!comment) {
+        return new Response(JSON.stringify({ error: "Comment not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check existing reaction
+      const { data: existingReaction } = await supabase
+        .from("blog_comment_reactions")
+        .select("reaction")
+        .eq("comment_id", commentId)
+        .eq("user_id", user!.id)
+        .maybeSingle();
+
+      let toggled = false;
+
+      if (existingReaction) {
+        if (existingReaction.reaction === type) {
+          // Remove reaction if same type
+          await supabase
+            .from("blog_comment_reactions")
+            .delete()
+            .eq("comment_id", commentId)
+            .eq("user_id", user!.id);
+          toggled = false;
+        } else {
+          // Update reaction if different type
+          await supabase
+            .from("blog_comment_reactions")
+            .update({ reaction: type })
+            .eq("comment_id", commentId)
+            .eq("user_id", user!.id);
+          toggled = true;
+        }
+      } else {
+        // Create new reaction
+        await supabase
+          .from("blog_comment_reactions")
+          .insert({
+            comment_id: commentId,
+            user_id: user!.id,
+            reaction: type
+          });
+        toggled = true;
+      }
+
+      // If thumbs down and feedback provided, create feedback entry
+      if (type === "down" && toggled && feedback?.trim()) {
+        await supabase
+          .from("blog_post_feedback")
+          .insert({
+            post_id: comment.post_id,
+            user_id: user!.id,
+            message: feedback.trim(),
+            status: "new"
+          });
+      }
+
+      return new Response(JSON.stringify({ success: true, toggled }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // POST /api/blogs -> create draft
     if (req.method === "POST" && pathname === "/api/blogs") {
       requireAuth();
