@@ -202,14 +202,28 @@ serve(async (req) => {
   try {
     console.log('Starting demo blog seeding...');
 
-    // Clean up legacy blogs first
+    // Clean up legacy imported blogs first
     console.log('Cleaning up legacy blogs...');
     
-    // Delete legacy blogs (imported category or no cover image)
-    const { data: legacyBlogs } = await supabase
+    // Get the imported category ID
+    const { data: importedCategory } = await supabase
+      .from('blog_categories')
+      .select('id')
+      .eq('title', 'Imported')
+      .single();
+
+    // Delete legacy blogs (imported category or draft status)
+    let legacyQuery = supabase
       .from('blog_posts')
-      .select('id, category_id')
-      .or('cover_image_url.is.null,status.eq.draft');
+      .select('id, category_id, status');
+    
+    if (importedCategory) {
+      legacyQuery = legacyQuery.or(`category_id.eq.${importedCategory.id},status.eq.draft`);
+    } else {
+      legacyQuery = legacyQuery.eq('status', 'draft');
+    }
+
+    const { data: legacyBlogs } = await legacyQuery;
     
     if (legacyBlogs && legacyBlogs.length > 0) {
       const legacyIds = legacyBlogs.map(b => b.id);
@@ -224,17 +238,20 @@ serve(async (req) => {
       await supabase.from('blog_posts').delete().in('id', legacyIds);
     }
 
-    // Check if we already have demo blogs
+    // Check if we already have demo blogs (but allow re-seeding after cleanup)
     const { count: existingCount } = await supabase
       .from('blog_posts')
       .select('*', { head: true, count: 'exact' })
       .eq('status', 'published');
 
-    if ((existingCount || 0) >= 5) {
+    console.log(`Found ${existingCount || 0} existing published blogs after cleanup`);
+    
+    // Skip if we already have demo content (prevent duplicate seeding)
+    if ((existingCount || 0) >= 8) {
       return new Response(JSON.stringify({ 
         inserted: 0, 
         total_published_after: existingCount,
-        message: 'Demo blogs already exist'
+        message: 'Demo blogs already exist (8+ published posts found)'
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -355,7 +372,7 @@ serve(async (req) => {
         status: 'published',
         view_count: viewCount,
         likes_count: likesCount,
-        is_featured: random(0, 2) === 0, // Random featured status (33% chance)
+        is_featured: i < 3, // First 3 blogs are featured
         tags: [], // Normal published content, no demo tag
         created_at: new Date(Date.now() - random(1, 45) * 24 * 60 * 60 * 1000).toISOString(), // Random dates within last 45 days
         updated_at: now,
