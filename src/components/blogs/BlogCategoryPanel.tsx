@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { FolderTree, Tag, ChevronRight, ChevronDown, FolderOpen, Folder } from "lucide-react";
+import { FolderTree, ChevronRight, ChevronDown, FolderOpen, Folder } from "lucide-react";
 import { useRoles } from "@/hooks/useRoles";
 
 interface Category {
@@ -19,25 +19,19 @@ interface Category {
 
 interface BlogCategoryPanelProps {
   selectedCategoryId?: string;
-  selectedTags?: string[];
   onCategoryChange: (categoryId: string | undefined) => void;
-  onTagsChange: (tags: string[]) => void;
 }
 
 export default function BlogCategoryPanel({ 
   selectedCategoryId, 
-  selectedTags = [], 
-  onCategoryChange, 
-  onTagsChange 
+  onCategoryChange
 }: BlogCategoryPanelProps) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [allTags, setAllTags] = useState<{ id: string; slug: string; title: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const { roles } = useRoles();
   const isAdmin = roles.includes('admin');
   const isGuru = roles.includes('guru');
-  const isUser = !isAdmin && !isGuru;
 
   const loadData = async () => {
     try {
@@ -70,12 +64,6 @@ export default function BlogCategoryPanel({
       const tree = buildTree(categoriesWithCounts);
       setCategories(tree);
       
-      // Load tags
-      const { data: tags } = await supabase
-        .from('blog_tags')
-        .select('id, slug, title')
-        .order('title');
-      setAllTags(tags || []);
       
     } catch (error) {
       console.error('Failed to load categories/tags:', error);
@@ -152,12 +140,6 @@ export default function BlogCategoryPanel({
     );
   };
 
-  const toggleTag = (tagSlug: string) => {
-    const newTags = selectedTags.includes(tagSlug)
-      ? selectedTags.filter(t => t !== tagSlug)
-      : [...selectedTags, tagSlug];
-    onTagsChange(newTags);
-  };
 
   if (loading) {
     return <Card className="p-4 h-96 animate-pulse" />;
@@ -171,46 +153,7 @@ export default function BlogCategoryPanel({
           <h3 className="font-semibold">Blog Organization</h3>
         </div>
         
-        {/* Users only see tags */}
-        {isUser && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <div className="max-h-48 overflow-y-auto space-y-1">
-                {allTags.map(tag => (
-                  <Button
-                    key={tag.id}
-                    variant={selectedTags.includes(tag.slug) ? "default" : "outline"}
-                    size="sm"
-                    className="w-full justify-start text-left"
-                    onClick={() => toggleTag(tag.slug)}
-                  >
-                    <Tag className="w-3 h-3 mr-2" />
-                    {tag.title}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            
-            {selectedTags.length > 0 && (
-              <div className="space-y-2">
-                <Label>Selected Tags</Label>
-                <div className="flex flex-wrap gap-1">
-                  {selectedTags.map(tagSlug => {
-                    const tag = allTags.find(t => t.slug === tagSlug);
-                    return (
-                      <Badge key={tagSlug} variant="secondary" className="text-xs">
-                        {tag?.title || tagSlug}
-                      </Badge>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Gurus and Admins see category tree + tags */}
+        {/* Gurus and Admins see category tree */}
         {(isGuru || isAdmin) && (
           <div className="space-y-4">
             {/* Category Tree */}
@@ -232,41 +175,6 @@ export default function BlogCategoryPanel({
                 </div>
               )}
             </div>
-            
-            {/* Tags Section */}
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <div className="max-h-48 overflow-y-auto space-y-1">
-                {allTags.map(tag => (
-                  <Button
-                    key={tag.id}
-                    variant={selectedTags.includes(tag.slug) ? "default" : "outline"}
-                    size="sm"
-                    className="w-full justify-start text-left"
-                    onClick={() => toggleTag(tag.slug)}
-                  >
-                    <Tag className="w-3 h-3 mr-2" />
-                    {tag.title}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            
-            {selectedTags.length > 0 && (
-              <div className="space-y-2">
-                <Label>Selected Tags</Label>
-                <div className="flex flex-wrap gap-1">
-                  {selectedTags.map(tagSlug => {
-                    const tag = allTags.find(t => t.slug === tagSlug);
-                    return (
-                      <Badge key={tagSlug} variant="secondary" className="text-xs">
-                        {tag?.title || tagSlug}
-                      </Badge>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         )}
         

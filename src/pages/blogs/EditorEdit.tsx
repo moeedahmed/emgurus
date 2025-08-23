@@ -371,9 +371,7 @@ export default function EditorEdit() {
           
           <BlogCategoryPanel
             selectedCategoryId={categoryId}
-            selectedTags={tagList}
             onCategoryChange={setCategoryId}
-            onTagsChange={setTagList}
           />
         </div>
       </div>
