@@ -14,13 +14,13 @@ import { toast } from "sonner";
 import { useRoles } from "@/hooks/useRoles";
 import { submitPost, updateDraft } from "@/lib/blogsApi";
 import { isFeatureEnabled } from "@/lib/constants";
-import BlocksPalette, { Block } from "@/components/blogs/editor/BlocksPalette";
+import { Block } from "@/components/blogs/editor/BlocksPalette";
 import BlockEditor from "@/components/blogs/editor/BlockEditor";
 import { blocksToMarkdown, markdownToBlocks } from "@/components/blogs/editor/BlocksToMarkdown";
 import AuthGate from "@/components/auth/AuthGate";
 import RoleGate from "@/components/auth/RoleGate";
 import EmailVerifyBanner from "@/components/auth/EmailVerifyBanner";
-import BlogCategoryPanel from "@/components/blogs/BlogCategoryPanel";
+import BlogEditorSidebar from "@/components/blogs/editor/BlogEditorSidebar";
 
 export default function EditorEdit() {
   const { id } = useParams();
@@ -192,21 +192,8 @@ export default function EditorEdit() {
         </div>
       
       <div className="flex gap-8 relative">
-        {/* Left Sidebar - Add Blocks */}
-        <div className="hidden lg:block lg:w-80">
-          <div className="sticky top-6">
-            <BlocksPalette
-              blocks={blocks}
-              onAddBlock={handleAddBlock}
-              onUpdateBlock={handleUpdateBlock}
-              onRemoveBlock={handleRemoveBlock}
-              onReorderBlocks={handleReorderBlocks}
-            />
-          </div>
-        </div>
-
         {/* Main Content */}
-        <div className="flex-1 max-w-4xl">
+        <div className="flex-1 max-w-5xl">
           <Card className="p-8">
             <div className="space-y-8">
               <div>
@@ -387,26 +374,16 @@ export default function EditorEdit() {
           </Card>
         </div>
         
-        {/* Right Sidebar - Blog Organization */}
-        <div className="hidden lg:block lg:w-80">
+        {/* Right Sidebar - Consolidated */}
+        <div className="hidden lg:block">
           <div className="sticky top-6">
-            <BlogCategoryPanel
+            <BlogEditorSidebar
+              onAddBlock={handleAddBlock}
               selectedCategoryId={categoryId}
               onCategoryChange={setCategoryId}
             />
           </div>
         </div>
-      </div>
-      
-      {/* Mobile Add Blocks */}
-      <div className="lg:hidden mt-8">
-        <BlocksPalette
-          blocks={blocks}
-          onAddBlock={handleAddBlock}
-          onUpdateBlock={handleUpdateBlock}
-          onRemoveBlock={handleRemoveBlock}
-          onReorderBlocks={handleReorderBlocks}
-        />
       </div>
       </main>
     </AuthGate>
