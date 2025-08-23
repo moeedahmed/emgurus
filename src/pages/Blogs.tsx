@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { listBlogs } from "@/lib/blogsApi";
 import { getJson } from "@/lib/functionsClient";
+import { callFunction } from "@/lib/functionsUrl";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Card } from "@/components/ui/card";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -22,6 +23,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
   const [pagination, setPagination] = useState({ page: 1, page_size: 12, total: 0 });
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [seeding, setSeeding] = useState(false);
 
   const q = searchParams.get("q") || "";
   const category = searchParams.get("category") || "";
@@ -107,6 +109,29 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
         document.head.removeChild(canonical);
       }
     };
+  }, []);
+
+  // Auto-seed demo blogs on first visit
+  useEffect(() => {
+    const seedDemoBlogs = async () => {
+      if (localStorage.getItem('demoSeeded') === '1') return;
+      
+      try {
+        setSeeding(true);
+        console.log('Seeding demo blogs...');
+        const result = await callFunction('seed-demo-blogs', {}, true, 'POST');
+        console.log('Demo blogs seeded:', result);
+        localStorage.setItem('demoSeeded', '1');
+        toast.success(`Demo blogs seeded: ${result.inserted} blogs created`);
+      } catch (error: any) {
+        console.error('Failed to seed demo blogs:', error);
+        toast.error('Failed to seed demo blogs');
+      } finally {
+        setSeeding(false);
+      }
+    };
+    
+    seedDemoBlogs();
   }, []);
 
   useEffect(() => {
@@ -308,7 +333,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
             </div>
 
             <div className="space-y-4 sm:space-y-6">
-              {loading ? (
+              {(loading || seeding) ? (
                 <div className="grid gap-4 sm:gap-6">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <Card key={i} className="h-72 animate-pulse" />
@@ -327,6 +352,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
                       post={p}
                       onOpen={() => navigate(`/blogs/${p.slug}`)}
                       topBadge={topByCat.has(p.id) ? { label: 'Most Liked' } : null}
+                      demoBadge={p.tags?.includes('demo')}
                       selectedCategory={category}
                       selectedTag={tag}
                       selectedSort={sort}
@@ -366,6 +392,28 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
               <div className="lg:hidden">
                 <TopAuthorsPanel authors={topAuthors} />
               </div>
+              
+              {/* Hidden dev cleanup button */}
+              {localStorage.getItem('showDemoCleanup') === '1' && (
+                <div className="mt-8 pt-4 border-t border-dashed">
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await callFunction('seed-demo-blogs', {}, true, 'DELETE');
+                        localStorage.removeItem('demoSeeded');
+                        toast.success('Demo blogs removed');
+                        window.location.reload();
+                      } catch (error: any) {
+                        toast.error('Failed to remove demo blogs');
+                      }
+                    }}
+                  >
+                    Remove Demo Blogs
+                  </Button>
+                </div>
+              )}
             </div>
           </section>
         </div>

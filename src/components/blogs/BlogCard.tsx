@@ -14,12 +14,13 @@ interface BlogCardProps {
     excerpt: string | null;
     cover_image_url: string | null;
     category: { title?: string; slug?: string } | null;
-    tags: { slug: string; title: string }[];
+    tags: string[] | { slug: string; title: string }[];
     author: { id: string; name: string; avatar: string | null };
     published_at: string | null;
     counts: { likes: number; comments?: number; views?: number; shares?: number; feedback?: number };
   };
   topBadge?: { label: string } | null;
+  demoBadge?: boolean;
   onOpen?: () => void;
   onTagClick?: (type: 'category' | 'tag' | 'author', value: string) => void;
   selectedCategory?: string;
@@ -27,15 +28,20 @@ interface BlogCardProps {
   selectedSort?: string;
 }
 
-export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, selectedCategory, selectedTag, selectedSort }: BlogCardProps) {
+export default function BlogCard({ post: p, topBadge, demoBadge, onOpen, onTagClick, selectedCategory, selectedTag, selectedSort }: BlogCardProps) {
   const cover = p.cover_image_url || fallbackImage;
   const words = (p.excerpt || "").split(/\s+/).filter(Boolean).length;
   const readMin = Math.max(1, Math.ceil(words / 220));
   const summary = p.excerpt || "Summary not available yet.";
+  
+  // Handle both string[] and object[] tag formats
+  const tagStrings = (p.tags || []).map(t => typeof t === 'string' ? t : (t.slug || t.title));
+  
   const badges: string[] = [];
+  if (demoBadge) badges.push("Demo");
   if ((p.counts?.likes || 0) >= 10) badges.push("Most Discussed");
-  if ((p.tags || []).some((t) => /editor|pick/i.test(t.slug || t.title))) badges.push("Editor’s Pick");
-  if ((p.tags || []).some((t) => /featured|star|top/i.test(t.slug || t.title))) badges.push("Featured");
+  if (tagStrings.some((t) => /editor|pick/i.test(t))) badges.push("Editor's Pick");
+  if (tagStrings.some((t) => /featured|star|top/i.test(t))) badges.push("Featured");
 
   return (
     <Card
@@ -83,8 +89,7 @@ export default function BlogCard({ post: p, topBadge, onOpen, onTagClick, select
               {p.category.title}
             </Chip>
           )}
-          {(p.tags || []).slice(0, 3).map((t) => {
-            const label = t.slug || t.title;
+          {tagStrings.filter(t => t !== 'demo').slice(0, 3).map((label) => {
             const active = selectedTag === label;
             return (
               <Chip

@@ -144,6 +144,59 @@ const generateAISummary = async (title: string, content: string): Promise<string
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  
+  // Handle DELETE for cleanup
+  if (req.method === 'DELETE') {
+    try {
+      console.log('Starting demo blog cleanup...');
+      
+      // Delete demo blogs and related data
+      const { data: demoBlogs } = await supabase
+        .from('blog_posts')
+        .select('id')
+        .contains('tags', ['demo']);
+      
+      if (demoBlogs && demoBlogs.length > 0) {
+        const blogIds = demoBlogs.map(b => b.id);
+        
+        // Delete related data first
+        await supabase.from('blog_ai_summaries').delete().in('post_id', blogIds);
+        await supabase.from('blog_post_feedback').delete().in('post_id', blogIds);
+        await supabase.from('blog_shares').delete().in('post_id', blogIds);
+        await supabase.from('blog_likes').delete().in('post_id', blogIds);
+        await supabase.from('blog_comments').delete().in('post_id', blogIds);
+        
+        // Delete blog posts
+        await supabase.from('blog_posts').delete().contains('tags', ['demo']);
+        
+        console.log(`Deleted ${blogIds.length} demo blogs`);
+        
+        return new Response(JSON.stringify({ 
+          deleted: blogIds.length,
+          message: 'Demo blogs cleaned up successfully'
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+      
+      return new Response(JSON.stringify({ 
+        deleted: 0,
+        message: 'No demo blogs found to delete'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+      
+    } catch (err: any) {
+      console.error('Demo blog cleanup error:', err);
+      return new Response(JSON.stringify({ error: err?.message || 'Cleanup failed' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+  }
+  
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
 
   try {
@@ -276,6 +329,7 @@ serve(async (req) => {
         view_count: viewCount,
         likes_count: likesCount,
         is_featured: i < 3, // First 3 are featured
+        tags: ['demo'], // Mark as demo content
         created_at: new Date(Date.now() - random(1, 30) * 24 * 60 * 60 * 1000).toISOString(), // Random dates within last 30 days
         updated_at: now,
         published_at: now,
