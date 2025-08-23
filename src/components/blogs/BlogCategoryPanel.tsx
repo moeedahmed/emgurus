@@ -36,6 +36,8 @@ export default function BlogCategoryPanel({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const { roles } = useRoles();
   const isAdmin = roles.includes('admin');
+  const isGuru = roles.includes('guru');
+  const isUser = !isAdmin && !isGuru;
 
   const loadData = async () => {
     try {
@@ -169,29 +171,9 @@ export default function BlogCategoryPanel({
           <h3 className="font-semibold">Blog Organization</h3>
         </div>
         
-        {isAdmin ? (
+        {/* Users only see tags */}
+        {isUser && (
           <div className="space-y-4">
-            {/* Category Tree for Admins */}
-            <div className="space-y-2">
-              <Label>Category</Label>
-              <div className="max-h-48 overflow-y-auto border rounded-md p-2">
-                {categories.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-4 text-sm">
-                    No categories available
-                  </div>
-                ) : (
-                  categories.map(category => renderCategoryTree(category))
-                )}
-              </div>
-              {selectedCategoryId && (
-                <div className="text-xs text-muted-foreground">
-                  Selected: {categories.find(c => c.id === selectedCategoryId)?.title || 
-                    categories.flatMap(c => c.children || []).find(c => c.id === selectedCategoryId)?.title}
-                </div>
-              )}
-            </div>
-            
-            {/* Tags Section */}
             <div className="space-y-2">
               <Label>Tags</Label>
               <div className="max-h-48 overflow-y-auto space-y-1">
@@ -226,9 +208,32 @@ export default function BlogCategoryPanel({
               </div>
             )}
           </div>
-        ) : (
-          /* Non-admins only see tags */
+        )}
+
+        {/* Gurus and Admins see category tree + tags */}
+        {(isGuru || isAdmin) && (
           <div className="space-y-4">
+            {/* Category Tree */}
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <div className="max-h-48 overflow-y-auto border rounded-md p-2">
+                {categories.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-4 text-sm">
+                    No categories available
+                  </div>
+                ) : (
+                  categories.map(category => renderCategoryTree(category))
+                )}
+              </div>
+              {selectedCategoryId && (
+                <div className="text-xs text-muted-foreground">
+                  Selected: {categories.find(c => c.id === selectedCategoryId)?.title || 
+                    categories.flatMap(c => c.children || []).find(c => c.id === selectedCategoryId)?.title}
+                </div>
+              )}
+            </div>
+            
+            {/* Tags Section */}
             <div className="space-y-2">
               <Label>Tags</Label>
               <div className="max-h-48 overflow-y-auto space-y-1">

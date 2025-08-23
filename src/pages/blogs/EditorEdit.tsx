@@ -255,21 +255,6 @@ export default function EditorEdit() {
               )}
             </div>
           </div>
-          {isAdmin && (
-            <div className="space-y-2">
-              <Label>Category</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent className="z-50">
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
         </div>
         <div className="space-y-2">
           <Label>Tags</Label>
