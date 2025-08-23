@@ -532,12 +532,28 @@ export default function GenerateBlogDraft() {
         const { error: assignError } = await supabase
           .from('blog_posts')
           .update({ 
-            author_id: assignedGuru,
-            reviewer_id: user.id // Admin who generated it becomes reviewer
+            author_id: assignedGuru
           })
           .eq('id', draftId);
 
         if (assignError) throw assignError;
+        
+        // Create assignment in blog_review_assignments table
+        const response = await fetch(`https://cgtvvpzrzwyvsbavboxa.functions.supabase.co/blogs-api/api/blogs/${draftId}/assign`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          },
+          body: JSON.stringify({
+            reviewer_id: user.id, // Admin who generated it becomes reviewer
+            note: 'Assigned via AI generation tool'
+          })
+        });
+        
+        if (!response.ok) {
+          console.error('Failed to create review assignment');
+        }
 
         toast({
           title: "Draft Assigned",

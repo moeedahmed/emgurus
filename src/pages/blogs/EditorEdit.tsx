@@ -71,9 +71,9 @@ export default function EditorEdit() {
   useEffect(() => {
     const loadDraft = async () => {
       if (!id) return;
-      const { data: post } = await supabase
+  const { data: post } = await supabase
         .from("blog_posts")
-        .select("id, title, description, content, cover_image_url, category_id, reviewer_id")
+        .select("id, title, description, content, cover_image_url, category_id")
         .eq("id", id)
         .maybeSingle();
       if (!post) { toast.error("Draft not found"); navigate("/dashboard"); return; }
@@ -82,7 +82,18 @@ export default function EditorEdit() {
       const contentValue = (post as any).content || "";
       setContent(contentValue);
       setCategoryId((post as any).category_id || undefined);
-      setIsAssignedReviewer(((post as any).reviewer_id && user?.id) ? (post as any).reviewer_id === user.id : false);
+      
+      // Check if current user is assigned as reviewer via blog_review_assignments
+      if (user?.id) {
+        const { data: assignment } = await supabase
+          .from("blog_review_assignments")
+          .select("id")
+          .eq("post_id", id)
+          .eq("reviewer_id", user.id)
+          .eq("status", "pending")
+          .maybeSingle();
+        setIsAssignedReviewer(!!assignment);
+      }
       
       // Initialize blocks from content
       if (contentValue) {

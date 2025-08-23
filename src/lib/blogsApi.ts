@@ -19,7 +19,7 @@ export interface BlogDetailPayload {
     content_md?: string | null;
     content_html?: string | null;
     content?: string | null;
-    reviewer?: { id: string; name: string; avatar: string | null } | null;
+    reviewers?: { id: string; name: string; avatar: string | null }[];
   };
   reactions: Record<string, number>;
   comments: Array<{
@@ -193,9 +193,7 @@ export async function getBlog(slug: string): Promise<BlogDetailPayload> {
 
     const [authorRes, reviewerRes, reactionsRes, commentsRes, summaryRes, tagsRes] = await Promise.all([
       supabase.from("profiles").select("user_id, full_name, avatar_url").eq("user_id", post.author_id).maybeSingle(),
-      post.reviewer_id || post.reviewed_by
-        ? supabase.from("profiles").select("user_id, full_name, avatar_url").eq("user_id", post.reviewer_id ?? post.reviewed_by).maybeSingle()
-        : Promise.resolve({ data: null } as any),
+      Promise.resolve({ data: null } as any), // Removed reviewer_id lookup
       supabase.from("blog_reactions").select("reaction").eq("post_id", post.id),
       supabase.from("blog_comments").select("id, author_id, parent_id, content, created_at").eq("post_id", post.id).order("created_at", { ascending: true }),
       supabase.from("blog_ai_summaries").select("provider, model, summary_md, created_at").eq("post_id", post.id).maybeSingle(),
