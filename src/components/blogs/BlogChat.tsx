@@ -16,6 +16,9 @@ interface Discussion {
   message: string;
   kind: string;
   created_at: string;
+  author?: {
+    full_name: string;
+  };
 }
 
 export default function BlogChat({ postId }: { postId: string }) {
@@ -43,13 +46,36 @@ export default function BlogChat({ postId }: { postId: string }) {
     try {
       const { data, error } = await supabase
         .from("blog_post_discussions")
-        .select("*")
+        .select(`
+          id,
+          post_id,
+          author_id,
+          message,
+          kind,
+          created_at
+        `)
         .eq("post_id", postId)
         .order("created_at", { ascending: true });
       
-      if (!error) {
-        setItems(data || []);
-      }
+      if (error) throw error;
+      
+      // Fetch author info separately for each message
+      const messagesWithAuthors = await Promise.all(
+        (data || []).map(async (message) => {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("user_id", message.author_id)
+            .single();
+          
+          return {
+            ...message,
+            author: profile ? { full_name: profile.full_name || 'Unknown' } : { full_name: 'Unknown' }
+          };
+        })
+      );
+      
+      setItems(messagesWithAuthors);
     } catch (error) {
       console.error("Failed to load discussions:", error);
       toast.error("Failed to load messages");
@@ -59,33 +85,41 @@ export default function BlogChat({ postId }: { postId: string }) {
   };
 
   useEffect(() => {
+    if (!postId) return;
     load();
 
-    // Set up real-time subscription
     const channel = supabase
-      .channel(`blog_chat_${postId}`)
+      .channel(`blog_discussions_${postId}`)
       .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'blog_post_discussions',
-          filter: `post_id=eq.${postId}`,
+        "postgres_changes",
+        { 
+          event: "*", 
+          schema: "public", 
+          table: "blog_post_discussions", 
+          filter: `post_id=eq.${postId}` 
         },
         (payload) => {
-          setItems(prev => [...prev, payload.new as Discussion]);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'blog_post_discussions',
-          filter: `post_id=eq.${postId}`,
-        },
-        (payload) => {
-          setItems(prev => prev.filter(item => item.id !== payload.old.id));
+          if (payload.eventType === "INSERT") {
+            // For INSERT events, fetch the author info and add to items
+            const fetchAuthorAndAdd = async () => {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("full_name")
+                .eq("user_id", payload.new.author_id)
+                .single();
+              
+              const messageWithAuthor = {
+                ...payload.new,
+                author: profile ? { full_name: profile.full_name || 'Unknown' } : { full_name: 'Unknown' }
+              };
+              
+              setItems((prev) => [...prev, messageWithAuthor as Discussion]);
+            };
+            fetchAuthorAndAdd();
+          }
+          if (payload.eventType === "DELETE") {
+            setItems((prev) => prev.filter((m) => m.id !== payload.old.id));
+          }
         }
       )
       .subscribe();
@@ -99,18 +133,35 @@ export default function BlogChat({ postId }: { postId: string }) {
     if (!text.trim() || !user || sending) return;
     setSending(true);
     try {
-      const { error } = await supabase
+      const { data: newMessage, error } = await supabase
         .from("blog_post_discussions")
         .insert({
           post_id: postId,
           author_id: user.id,
           message: text.trim(),
           kind: "comment"
-        });
+        })
+        .select("*")
+        .single();
       
       if (error) throw error;
-      setText("");
-      toast.success("Message sent");
+      if (newMessage) {
+        // Get author info and add to UI immediately
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", user.id)
+          .single();
+        
+        const messageWithAuthor = {
+          ...newMessage,
+          author: profile ? { full_name: profile.full_name || 'Unknown' } : { full_name: 'Unknown' }
+        };
+        
+        setItems((prev) => [...prev, messageWithAuthor]);
+        setText("");
+        toast.success("Message sent");
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error("Failed to send message");
@@ -157,6 +208,8 @@ export default function BlogChat({ postId }: { postId: string }) {
               <div key={m.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} group`}>
                 <div className={`max-w-[80%] ${isOwnMessage ? 'order-2' : 'order-1'}`}>
                   <div className="text-muted-foreground text-xs mb-1 flex items-center gap-2">
+                    <span>{m.author?.full_name || 'Unknown'}</span>
+                    <span>•</span>
                     <span>{new Date(m.created_at).toLocaleString()}</span>
                     <span>•</span>
                     <span>{m.kind}</span>
