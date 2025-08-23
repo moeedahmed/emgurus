@@ -17,7 +17,7 @@ export type WorkspaceSection = {
 
 /**
  * DEVELOPER NOTE: WorkspaceLayout is the canonical source for tab descriptions.
- * Do not add duplicate top-level descriptions inside components.
+ * Tab descriptions should only be defined in section configs. Do not add duplicate descriptions inside components.
  * Use only the section description defined in WorkspaceLayout.
  */
 
