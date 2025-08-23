@@ -29,7 +29,6 @@ export default function EditorEdit() {
   const { roles } = useRoles();
   const isAdmin = roles.includes("admin");
   const isGuru = roles.includes("guru");
-  const showBlogChat = isAdmin || isGuru;
   const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
@@ -385,9 +384,7 @@ export default function EditorEdit() {
               selectedCategoryId={categoryId}
               onCategoryChange={setCategoryId}
             />
-            {showBlogChat && id && (
-              <BlogChat postId={id} />
-            )}
+            {id && <BlogChat postId={id} />}
           </div>
         </div>
       </div>
