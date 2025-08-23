@@ -85,34 +85,11 @@ export default function BlogEditorSidebar({ onAddBlock, selectedCategoryId, onCa
         </Collapsible>
       </Card>
 
-      {/* Blog Organization Section - Only show for Gurus and Admins */}
-      {!isUser && (
-        <Card className="p-4">
-          <Collapsible open={organizationOpen} onOpenChange={toggleOrganization}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-2 h-auto">
-                <div className="flex items-center gap-3">
-                  <Layers className="w-5 h-5 text-primary" />
-                  <span className="text-lg font-semibold">Blog Organization</span>
-                </div>
-                {organizationOpen ? (
-                  <ChevronDown className="w-4 h-4" />
-                ) : (
-                  <ChevronRight className="w-4 h-4" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-4">
-              <div className="max-h-[60vh] overflow-y-auto">
-                <BlogCategoryPanel
-                  selectedCategoryId={selectedCategoryId}
-                  onCategoryChange={onCategoryChange}
-                />
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </Card>
-      )}
+      {/* Blog Organization Section */}
+      <BlogCategoryPanel
+        selectedCategoryId={selectedCategoryId}
+        onCategoryChange={onCategoryChange}
+      />
     </div>
   );
 }
