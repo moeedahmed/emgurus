@@ -42,8 +42,8 @@ export default function BlogsFeedbackList() {
   }, [user?.id]);
 
   return (
-    <div className="p-4">
-      <div className="mb-2 text-sm text-muted-foreground">Blog feedback you've sent.</div>
+    <div className="p-0">
+      {/* Removed duplicate description - handled by WorkspaceLayout */}
       <TableCard
         title="Feedback"
         columns={[

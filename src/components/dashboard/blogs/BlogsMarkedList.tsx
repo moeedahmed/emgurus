@@ -62,8 +62,8 @@ export default function BlogsMarkedList() {
   };
 
   return (
-    <div className="p-4">
-      <div className="mb-2 text-sm text-muted-foreground">Unresolved blog feedback from users.</div>
+    <div className="p-0">
+      {/* Removed duplicate description - handled by WorkspaceLayout */}
       <TableCard
         title="Marked"
         columns={[

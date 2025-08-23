@@ -12,9 +12,9 @@ function TableCard<T extends { id?: string | number }>({ title, columns, rows, i
   actions?: React.ReactNode;
 }) {
   return (
-    <Card className="p-4">
+    <Card className="p-2 sm:p-4 lg:p-6">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-lg font-semibold">{title}</h3>
+        <h3 className="text-base sm:text-lg font-semibold">{title}</h3>
         {actions}
       </div>
       {isLoading ? (
@@ -27,11 +27,11 @@ function TableCard<T extends { id?: string | number }>({ title, columns, rows, i
         <div className="text-sm text-muted-foreground py-6 text-center">{emptyText || "Nothing to show."}</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="min-w-full text-xs sm:text-sm">
             <thead className="text-left text-muted-foreground">
               <tr>
                 {columns.map((c) => (
-                  <th key={String(c.key)} className="py-2 pr-3 font-medium">{c.header}</th>
+                  <th key={String(c.key)} className="py-2 pr-2 sm:pr-3 font-medium whitespace-nowrap">{c.header}</th>
                 ))}
               </tr>
             </thead>
@@ -39,7 +39,7 @@ function TableCard<T extends { id?: string | number }>({ title, columns, rows, i
               {rows.map((r, idx) => (
                 <tr key={(r.id as any) ?? idx} className="border-t border-border">
                   {columns.map((c) => (
-                    <td key={String(c.key)} className="py-2 pr-3">{c.render ? c.render(r) : String(r[c.key])}</td>
+                    <td key={String(c.key)} className="py-2 pr-2 sm:pr-3 text-xs sm:text-sm">{c.render ? c.render(r) : String(r[c.key])}</td>
                   ))}
                 </tr>
               ))}

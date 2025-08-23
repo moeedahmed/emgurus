@@ -15,6 +15,12 @@ export type WorkspaceSection = {
   }>;
 };
 
+/**
+ * DEVELOPER NOTE: WorkspaceLayout is the canonical source for tab descriptions.
+ * Do not add duplicate top-level descriptions inside components.
+ * Use only the section description defined in WorkspaceLayout.
+ */
+
 export function WorkspaceLayoutInner({
   title,
   sections,
@@ -134,7 +140,7 @@ export function WorkspaceLayoutInner({
             </div>
           </header>
 
-          <div className="container mx-auto px-4 py-6">
+          <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
             <Tabs key={`${sectionId}:${new URLSearchParams(window.location.search).get('tab') || ''}:${searchSync}`}
               defaultValue={(current.tabs.find(t => t.id === new URLSearchParams(window.location.search).get('tab'))?.id) || current.tabs[0]?.id}
               value={undefined /* uncontrolled per remount */}
@@ -152,7 +158,7 @@ export function WorkspaceLayoutInner({
               {current.tabs.map((t) => (
                 <TabsContent key={t.id} value={t.id} className="mt-0">
                   {t.description && (
-                    <div className="mb-3 text-sm text-muted-foreground">{t.description}</div>
+                    <div className="mb-4 text-sm text-muted-foreground">{t.description}</div>
                   )}
                   <div className="border rounded-lg">
                     {typeof t.render === 'function' ? (t.render as any)() : t.render}

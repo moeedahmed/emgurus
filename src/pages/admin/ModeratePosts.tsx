@@ -248,15 +248,11 @@ const ModeratePosts: React.FC<{ embedded?: boolean; forceView?: 'admin'|'reviewe
                         const { error } = await supabase.rpc('review_approve_publish', { p_post_id: p.id });
                         if (error) throw error;
                         toast.success('Post published');
-                        // Notify author (and assigned reviewer if any)
-                        const { data: one } = await supabase.from('blog_posts').select('slug, reviewer_id').eq('id', p.id).maybeSingle();
+                        // Notify author only (reviewer_id column was removed)
+                        const { data: one } = await supabase.from('blog_posts').select('slug').eq('id', p.id).maybeSingle();
                         const link = one?.slug ? `${window.location.origin}/blogs/${one.slug}` : `${window.location.origin}/blogs`;
                         notifyInApp({ toUserId: p.author_id, type: 'blog_published', title: 'Your blog was published', body: `${p.title}`, data: { post_id: p.id, slug: one?.slug || null } });
                         notifyEmailIfConfigured({ toUserIds: [p.author_id], subject: 'Your blog was published', html: `<p>Your blog <strong>${p.title}</strong> was published.</p><p><a href="${link}">View post</a></p>` });
-                        if (one?.reviewer_id) {
-                          notifyInApp({ toUserId: one.reviewer_id, type: 'blog_published', title: 'Blog you reviewed was published', body: `${p.title}`, data: { post_id: p.id, slug: one?.slug || null } });
-                          notifyEmailIfConfigured({ toUserIds: [one.reviewer_id], subject: 'Blog you reviewed was published', html: `<p><strong>${p.title}</strong> was published.</p><p><a href="${link}">View post</a></p>` });
-                        }
                         loadPosts();
                       } catch (e) { console.error(e); toast.error('Failed'); }
                     }}>Publish</Button>

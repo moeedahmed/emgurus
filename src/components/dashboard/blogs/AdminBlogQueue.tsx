@@ -409,10 +409,8 @@ function AdminBlogQueueContent() {
   }
 
   return (
-    <div className="p-4">
-      <div className="mb-4 text-sm text-muted-foreground">
-        Review and manage blog submissions.
-      </div>
+    <div className="p-0">
+      {/* Removed duplicate description - handled by WorkspaceLayout */}
       
       <div className="flex gap-2 mb-4">
         {[
