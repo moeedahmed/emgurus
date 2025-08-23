@@ -21,12 +21,15 @@ import AuthGate from "@/components/auth/AuthGate";
 import RoleGate from "@/components/auth/RoleGate";
 import EmailVerifyBanner from "@/components/auth/EmailVerifyBanner";
 import BlogEditorSidebar from "@/components/blogs/editor/BlogEditorSidebar";
+import BlogChat from "@/components/blogs/BlogChat";
 
 export default function EditorEdit() {
   const { id } = useParams();
   const { user } = useAuth();
   const { roles } = useRoles();
   const isAdmin = roles.includes("admin");
+  const isGuru = roles.includes("guru");
+  const showBlogChat = isAdmin || isGuru;
   const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
@@ -376,12 +379,15 @@ export default function EditorEdit() {
         
         {/* Right Sidebar - Consolidated */}
         <div className="hidden lg:block">
-          <div className="sticky top-6">
+          <div className="sticky top-6 space-y-6">
             <BlogEditorSidebar
               onAddBlock={handleAddBlock}
               selectedCategoryId={categoryId}
               onCategoryChange={setCategoryId}
             />
+            {showBlogChat && id && (
+              <BlogChat postId={id} />
+            )}
           </div>
         </div>
       </div>

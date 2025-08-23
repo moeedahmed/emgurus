@@ -529,6 +529,41 @@ export type Database = {
           },
         ]
       }
+      blog_post_discussions: {
+        Row: {
+          author_id: string
+          created_at: string
+          id: string
+          kind: string
+          message: string
+          post_id: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          id?: string
+          kind?: string
+          message: string
+          post_id: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_post_discussions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_post_tags: {
         Row: {
           post_id: string

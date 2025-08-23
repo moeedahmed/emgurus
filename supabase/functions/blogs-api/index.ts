@@ -762,6 +762,102 @@ serve(async (req) => {
       return new Response(JSON.stringify({ items: data ?? [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // GET /api/blogs/:id/discussions -> fetch discussions for a post
+    const discussionsMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/discussions$/i);
+    if (req.method === "GET" && discussionsMatch) {
+      const postId = discussionsMatch[1];
+      
+      // Check if user can access this post
+      const { data: post } = await supabase
+        .from("blog_posts")
+        .select("id, author_id, reviewer_id, reviewed_by, status")
+        .eq("id", postId)
+        .maybeSingle();
+      
+      if (!post) {
+        return new Response(JSON.stringify({ error: "Post not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: discussions, error } = await supabase
+        .from("blog_post_discussions")
+        .select(`
+          id,
+          post_id,
+          author_id,
+          message,
+          kind,
+          created_at,
+          author:profiles(user_id, full_name)
+        `)
+        .eq("post_id", postId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      const items = (discussions ?? []).map((d: any) => ({
+        id: d.id,
+        post_id: d.post_id,
+        author_id: d.author_id,
+        message: d.message,
+        kind: d.kind,
+        created_at: d.created_at,
+        author_name: d.author?.full_name || "Unknown",
+      }));
+
+      return new Response(JSON.stringify({ items }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // POST /api/blogs/:id/discussions -> create new discussion message
+    if (req.method === "POST" && discussionsMatch) {
+      const postId = discussionsMatch[1];
+      const { message, kind = "comment" } = await req.json();
+
+      if (!message?.trim()) {
+        return new Response(JSON.stringify({ error: "Message is required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { error } = await supabase
+        .from("blog_post_discussions")
+        .insert({
+          post_id: postId,
+          author_id: user.id,
+          message: message.trim(),
+          kind,
+        });
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 201,
+      });
+    }
+
+    // DELETE /api/blogs/discussions/:id -> delete discussion message
+    const deleteDiscussionMatch = pathname.match(/^\/api\/blogs\/discussions\/([0-9a-f-]{36})$/i);
+    if (req.method === "DELETE" && deleteDiscussionMatch) {
+      const discussionId = deleteDiscussionMatch[1];
+
+      const { error } = await supabase
+        .from("blog_post_discussions")
+        .delete()
+        .eq("id", discussionId);
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Docs
     if (req.method === "GET" && pathname === "/api/blogs/docs") {
       const docs = {
@@ -777,6 +873,9 @@ serve(async (req) => {
           { method: "POST", path: "/api/blogs/:id/comment", body: commentSchema.shape },
           { method: "POST", path: "/api/blogs/:id/ai-summary" },
           { method: "GET", path: "/api/blogs/admin?status=" },
+          { method: "GET", path: "/api/blogs/:id/discussions" },
+          { method: "POST", path: "/api/blogs/:id/discussions" },
+          { method: "DELETE", path: "/api/blogs/discussions/:id" },
         ],
       };
       return new Response(JSON.stringify(docs), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
