@@ -778,38 +778,7 @@ const MyQuestionsAdmin: React.FC = () => {
   );
 };
 
-// --- Section Overview Panels
-const BlogsOverviewPanel: React.FC = () => {
-  const [isLoading, setLoading] = useState(true);
-  const [kpis, setKpis] = useState({ submitted: 0, assigned: 0, published7d: 0, rejected7d: 0 });
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const from = new Date(Date.now() - 7*24*60*60*1000).toISOString();
-        const [ { count: submitted }, { count: assigned }, { count: published7d }, { count: rejected7d } ] = await Promise.all([
-          supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status','in_review'),
-          supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status','in_review').not('reviewer_id','is', null),
-          supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status','published').gte('published_at', from),
-          supabase.from('blog_review_logs').select('post_id', { count: 'exact', head: true }).eq('action','request_changes').gte('created_at', from),
-        ]);
-        if (!cancelled) setKpis({ submitted: submitted ?? 0, assigned: assigned ?? 0, published7d: published7d ?? 0, rejected7d: rejected7d ?? 0 });
-      } catch {
-        if (!cancelled) setKpis({ submitted: 0, assigned: 0, published7d: 0, rejected7d: 0 });
-      } finally { if (!cancelled) setLoading(false); }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-  return (
-    <div className="p-4 grid gap-4 md:grid-cols-4">
-      <KpiCard title="Submitted" value={kpis.submitted} isLoading={isLoading} />
-      <KpiCard title="Assigned" value={kpis.assigned} isLoading={isLoading} />
-      <KpiCard title="Published (7d)" value={kpis.published7d} isLoading={isLoading} />
-      <KpiCard title="Rejected (7d)" value={kpis.rejected7d} isLoading={isLoading} />
-    </div>
-  );
-};
+// BlogsOverviewPanel removed - replaced by AdminAnalyticsPanel which uses /api/blogs/metrics
 
 const ExamsOverviewPanel: React.FC = () => {
   const [isLoading, setLoading] = useState(true);
@@ -1171,7 +1140,8 @@ export default function DashboardAdmin() {
         { 
           id: "overview", 
           title: "Overview", 
-          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Blog moderation and publishing at a glance.</div><BlogsOverviewPanel /></div> 
+          description: "Blog moderation and publishing at a glance.",
+          render: <AdminAnalyticsPanel /> 
         },
         { 
           id: "queue", 
