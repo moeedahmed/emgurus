@@ -28,9 +28,9 @@ export default function BlogDetail() {
         setLoading(true);
         const res = await getBlog(slug!);
         setData(res);
-        document.title = `${res.post.title} | EMGurus`;
+        document.title = `${res.title} | EMGurus`;
         const meta = document.querySelector("meta[name='description']");
-        if (meta) meta.setAttribute("content", res.post.excerpt || res.post.title);
+        if (meta) meta.setAttribute("content", res.excerpt || res.title);
       } catch (e: any) {
         toast.error(e.message || "Failed to load post");
       } finally {
@@ -42,29 +42,29 @@ export default function BlogDetail() {
 
   useEffect(() => {
     const fetchProfiles = async () => {
-      if (!data?.post) return;
-      const ids: string[] = [data.post.author?.id, data.post.reviewer?.id].filter(Boolean) as string[];
+      if (!data) return;
+      const ids: string[] = [data.author?.id, data.reviewer?.id].filter(Boolean) as string[];
       if (!ids.length) return;
       const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, avatar_url, bio, title, specialty').in('user_id', ids);
       const map = new Map((profiles || []).map((p: any) => [p.user_id, p]));
-      setAuthorProfile(map.get(data.post.author?.id || '') || null);
-      if (data.post.reviewer?.id) setReviewerProfile(map.get(data.post.reviewer.id) || null);
+      setAuthorProfile(map.get(data.author?.id || '') || null);
+      if (data.reviewer?.id) setReviewerProfile(map.get(data.reviewer.id) || null);
     };
     fetchProfiles();
   }, [data]);
 
   const contentHtml = useMemo(() => {
-    if (!data?.post) return "";
-    const html = data.post.content_html
-      || (data.post.content ? data.post.content : "")
-      || (data.post.content_md ? data.post.content_md.replace(/\n/g, "<br/>") : "");
+    if (!data) return "";
+    const html = data.content_html
+      || (data.content ? data.content : "")
+      || (data.content_md ? data.content_md.replace(/\n/g, "<br/>") : "");
     return DOMPurify.sanitize(html);
   }, [data]);
 
   if (loading) return <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8"><Card className="h-96 animate-pulse" /></main>;
-  if (!data?.post) return <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8"><Card className="p-6">Not found</Card></main>;
+  if (!data) return <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8"><Card className="p-6">Not found</Card></main>;
 
-  const p = data.post;
+  const p = data;
   const useNewLayout = isFeatureEnabled('BLOG_DETAIL_V2');
 
   if (useNewLayout) {
@@ -97,12 +97,12 @@ export default function BlogDetail() {
                   <span>•</span>
                   <span>{p.published_at ? new Date(p.published_at).toLocaleDateString() : ""}</span>
                   <span>•</span>
-                  <span>{(() => {
-                    const text = (data.post.content || data.post.content_md || data.post.content_html || "").toString();
-                    const words = text.replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length;
-                    const mins = Math.max(1, Math.ceil(words / 220));
-                    return `${mins} min read`;
-                  })()}</span>
+                   <span>{(() => {
+                     const text = (data.content || data.content_md || data.content_html || "").toString();
+                     const words = text.replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length;
+                     const mins = Math.max(1, Math.ceil(words / 220));
+                     return `${mins} min read`;
+                   })()}</span>
                 </div>
               </div>
             </div>
@@ -170,16 +170,16 @@ export default function BlogDetail() {
                   </div>
                   
                   {/* Reviewer Attribution */}
-                  {data.post.reviewer && (
+                  {data.reviewer && (
                     <div className="mt-4 pt-4 border-t flex items-start gap-4">
                       <AuthorChip 
-                        id={data.post.reviewer.id} 
-                        name={reviewerProfile?.full_name || data.post.reviewer.name} 
-                        avatar={reviewerProfile?.avatar_url || data.post.reviewer.avatar} 
+                        id={data.reviewer.id} 
+                        name={reviewerProfile?.full_name || data.reviewer.name} 
+                        avatar={reviewerProfile?.avatar_url || data.reviewer.avatar} 
                         onClick={(id) => navigate(`/profile/${id}`)} 
                       />
                       <div>
-                        <div className="font-medium">Reviewed by {reviewerProfile?.full_name || data.post.reviewer.name}</div>
+                        <div className="font-medium">Reviewed by {reviewerProfile?.full_name || data.reviewer.name}</div>
                         {reviewerProfile?.bio && <div className="text-sm text-muted-foreground">{reviewerProfile.bio}</div>}
                       </div>
                     </div>
@@ -302,9 +302,9 @@ export default function BlogDetail() {
                   </div>
                 </div>
                 {/* Reviewer */}
-                {data.post.reviewer && (
+                {data.reviewer && (
                   <div className="flex items-start gap-3">
-                    <AuthorChip id={data.post.reviewer.id} name={reviewerProfile?.full_name || data.post.reviewer.name} avatar={reviewerProfile?.avatar_url || data.post.reviewer.avatar} onClick={(id) => navigate(`/profile/${id}`)} />
+                    <AuthorChip id={data.reviewer.id} name={reviewerProfile?.full_name || data.reviewer.name} avatar={reviewerProfile?.avatar_url || data.reviewer.avatar} onClick={(id) => navigate(`/profile/${id}`)} />
                     <div>
                       <div className="font-medium">Reviewed by</div>
                       {reviewerProfile?.bio && <div className="text-sm text-muted-foreground max-w-prose">{reviewerProfile.bio}</div>}

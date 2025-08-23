@@ -647,6 +647,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_featured: boolean
           likes_count: number
           published_at: string | null
           review_notes: string | null
@@ -668,6 +669,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_featured?: boolean
           likes_count?: number
           published_at?: string | null
           review_notes?: string | null
@@ -689,6 +691,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_featured?: boolean
           likes_count?: number
           published_at?: string | null
           review_notes?: string | null
@@ -3040,6 +3043,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_featured: boolean
           likes_count: number
           published_at: string | null
           review_notes: string | null
@@ -3158,6 +3162,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_featured: boolean
           likes_count: number
           published_at: string | null
           review_notes: string | null
@@ -3198,6 +3203,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_featured: boolean
           likes_count: number
           published_at: string | null
           review_notes: string | null
@@ -3254,6 +3260,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_featured: boolean
           likes_count: number
           published_at: string | null
           review_notes: string | null
@@ -3293,6 +3300,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_featured: boolean
           likes_count: number
           published_at: string | null
           review_notes: string | null

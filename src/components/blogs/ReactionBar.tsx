@@ -4,9 +4,7 @@ import { toast } from "sonner";
 
 const emojiMap: { key: ReactionKey; emoji: string; label: string }[] = [
   { key: "thumbs_up", emoji: "👍", label: "Like" },
-  { key: "love", emoji: "❤️", label: "Love" },
-  { key: "insightful", emoji: "🙌", label: "Insightful" },
-  { key: "curious", emoji: "😮", label: "Curious" },
+  { key: "thumbs_down", emoji: "👎", label: "Dislike" },
 ];
 
 export default function ReactionBar({

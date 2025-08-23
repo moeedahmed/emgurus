@@ -1,6 +1,6 @@
 // This module contains the React Query hooks and functions for interacting with blogs
 
-export type ReactionKey = "thumbs_up" | "thumbs_down" | "heart" | "star" | "brain" | "fire";
+export type ReactionKey = "thumbs_up" | "thumbs_down";
 
 export interface BlogListItem {
   id: string;
@@ -13,6 +13,7 @@ export interface BlogListItem {
   author?: { id: string; name: string; avatar?: string | null };
   reading_minutes?: number | null;
   published_at?: string | null;
+  is_featured?: boolean;
   counts?: {
     likes?: number;
     comments?: number;
@@ -177,6 +178,7 @@ export async function listBlogs(params: {
       })(),
       reading_minutes: null,
       published_at: p.created_at ?? null,
+      is_featured: p.is_featured ?? false,
       counts: {
         likes: likesCount.get(p.id) ?? 0,
         comments: commentsCount.get(p.id) ?? 0,
@@ -247,6 +249,7 @@ export async function createDraft(body: {
   category_id?: string;
   tag_slugs?: string[];
   cover_image_url?: string;
+  excerpt?: string;
 }) {
   const res = await fetch(`${BASE}/api/blogs`, {
     method: "POST",
