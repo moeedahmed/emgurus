@@ -69,6 +69,10 @@ const SiteLayout = () => {
     return needsOnboarding(profile);
   }, [user, profile, bannerDismissed]);
 
+  const isDashboardRoute = useMemo(() => {
+    return location.pathname.startsWith('/dashboard');
+  }, [location.pathname]);
+
   const dismissBanner = () => {
     if (!user) return;
     localStorage.setItem(`onboarding_banner_dismissed_${user.id}`, '1');
@@ -101,7 +105,7 @@ const SiteLayout = () => {
       <main id="main-content" className="flex-1">
         <Outlet />
       </main>
-      <Footer />
+      {!isDashboardRoute && <Footer />}
       <AIGuru />
     </div>
   );
