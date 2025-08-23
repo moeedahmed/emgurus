@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, Layers, Type, Image, Video, Volume2, Quote, Minus } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, FolderTree, Type, Image, Video, Volume2, Quote, Minus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -45,8 +45,8 @@ export default function BlogEditorSidebar({ onAddBlock, selectedCategoryId, onCa
   const { roles } = useRoles();
   const isUser = !roles.includes("admin") && !roles.includes("guru");
   
-  const [addBlocksOpen, toggleAddBlocks] = useCollapsibleState("addBlocks", true);
-  const [organizationOpen, toggleOrganization] = useCollapsibleState("organization", true);
+  const [addBlocksOpen, toggleAddBlocks] = useCollapsibleState("addBlocks", false);
+  const [categoryOpen, toggleCategory] = useCollapsibleState("category", true);
 
   return (
     <div className="w-80 space-y-4">
@@ -85,11 +85,34 @@ export default function BlogEditorSidebar({ onAddBlock, selectedCategoryId, onCa
         </Collapsible>
       </Card>
 
-      {/* Blog Organization Section */}
-      <BlogCategoryPanel
-        selectedCategoryId={selectedCategoryId}
-        onCategoryChange={onCategoryChange}
-      />
+      {/* Category Section - Only show for Gurus and Admins */}
+      {!isUser && (
+        <Card className="p-4">
+          <Collapsible open={categoryOpen} onOpenChange={toggleCategory}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="w-full justify-between p-2 h-auto">
+                <div className="flex items-center gap-3">
+                  <FolderTree className="w-5 h-5 text-primary" />
+                  <span className="text-lg font-semibold">Category</span>
+                </div>
+                {categoryOpen ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <div className="max-h-[60vh] overflow-y-auto">
+                <BlogCategoryPanel
+                  selectedCategoryId={selectedCategoryId}
+                  onCategoryChange={onCategoryChange}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+      )}
     </div>
   );
 }

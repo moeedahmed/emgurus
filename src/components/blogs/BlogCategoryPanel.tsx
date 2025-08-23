@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -147,38 +146,33 @@ export default function BlogCategoryPanel({
   }
 
   if (loading) {
-    return <Card className="p-4 h-96 animate-pulse" />;
+    return <div className="p-4 h-96 animate-pulse bg-muted/20 rounded-lg" />;
   }
 
   return (
-    <Card className="p-6 w-80 h-fit">
-      <div className="space-y-6">
-        {/* Category Tree */}
-        <div className="space-y-3">
-          <Label className="text-base font-medium">Category</Label>
-          <div className="border rounded-lg p-3 min-h-[200px]">
-            {categories.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8 text-sm">
-                No categories available
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {categories.map(category => renderCategoryTree(category))}
-              </div>
-            )}
+    <div className="space-y-4">
+      {/* Category Tree */}
+      <div className="border rounded-lg p-3 min-h-[200px]">
+        {categories.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8 text-sm">
+            No categories available
           </div>
-          {selectedCategoryId && (
-            <div className="text-sm text-muted-foreground p-2 bg-muted/50 rounded">
-              Selected: {categories.find(c => c.id === selectedCategoryId)?.title || 
-                categories.flatMap(c => c.children || []).find(c => c.id === selectedCategoryId)?.title}
-            </div>
-          )}
-        </div>
-        
-        <div className="text-xs text-muted-foreground p-3 bg-muted/20 rounded border-l-2 border-l-primary/20">
-          Taxonomy is managed in the Admin Dashboard
-        </div>
+        ) : (
+          <div className="space-y-1">
+            {categories.map(category => renderCategoryTree(category))}
+          </div>
+        )}
       </div>
-    </Card>
+      {selectedCategoryId && (
+        <div className="text-sm text-muted-foreground p-2 bg-muted/50 rounded">
+          Selected: {categories.find(c => c.id === selectedCategoryId)?.title || 
+            categories.flatMap(c => c.children || []).find(c => c.id === selectedCategoryId)?.title}
+        </div>
+      )}
+      
+      <div className="text-xs text-muted-foreground p-3 bg-muted/20 rounded border-l-2 border-l-primary/20">
+        Taxonomy is managed in the Admin Dashboard
+      </div>
+    </div>
   );
 }
