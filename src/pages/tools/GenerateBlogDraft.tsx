@@ -658,7 +658,7 @@ export default function GenerateBlogDraft() {
       // Call blogs API to handle multi-reviewer assignments
       const response = await supabase.functions.invoke('blogs-api', {
         body: {
-          action: 'assign_multi_reviewers',
+          action: 'assign_reviewers',
           post_id: id,
           reviewer_ids: selectedGurus,
           note: "Blog draft assigned for multi-reviewer review"
