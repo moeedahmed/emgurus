@@ -1368,10 +1368,35 @@ serve(async (req) => {
       const id = publishMatch[1];
       const { data: post } = await supabase
         .from("blog_posts")
-        .select("id, reviewed_by")
+        .select("id, reviewed_by, author_id, title")
         .eq("id", id)
         .maybeSingle();
       const { isAdmin } = await getUserRoleFlags(supabase, user!.id);
+      
+      if (!post) {
+        return new Response(JSON.stringify({ error: "Post not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Enforce reviewer assignment requirement for ALL roles including admins
+      const { data: assignments, error: assignmentsErr } = await supabase
+        .from("blog_review_assignments")
+        .select("id, reviewer_id, status")
+        .eq("post_id", id)
+        .eq("status", "completed");
+
+      if (assignmentsErr) throw assignmentsErr;
+
+      if (!assignments || assignments.length === 0) {
+        return new Response(JSON.stringify({ 
+          error: "Cannot publish: A reviewer must be assigned and approve the post before publishing." 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       
       // Check if user can publish (admin or has assignment)
       let canReview = isAdmin || !!(post && post.reviewed_by === user!.id);

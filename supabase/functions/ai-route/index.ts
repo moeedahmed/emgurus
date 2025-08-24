@@ -182,14 +182,19 @@ RESPOND ONLY with valid JSON in this exact format:
   "title": "Compelling clinical title",
   "tags": ["tag1", "tag2", "tag3"],
   "blocks": [
-    { "type": "paragraph", "content": "Full paragraph text..." },
-    { "type": "image_request", "description": "Specific image description" }
+    { "type": "text", "content": "Full paragraph text..." },
+    { "type": "heading", "content": "Section heading", "level": "h2" },
+    { "type": "image", "description": "Specific image description" }
   ]
 }
 
-Block types allowed: "paragraph", "image_request", "video_placeholder"
-- paragraph blocks need "content" field with full text
-- image_request/video_placeholder blocks need "description" field`;
+Block types allowed: "text", "heading", "image", "video", "quote", "divider"
+- text blocks need "content" field with full text
+- heading blocks need "content" field with heading text and "level" field (h2 or h3)
+- image blocks need "description" field for AI generation
+- video blocks need "description" field for placeholder
+- quote blocks need "content" field with quote text
+- divider blocks need no additional fields`;
 
         if (hasUrls) {
           systemPrompt += `\n\nIMPORTANT: Ground your content in the provided sources and cite them inline using bracketed numbers [1], [2], etc. that correspond to the numbered source URLs.`;
@@ -245,12 +250,36 @@ Block types allowed: "paragraph", "image_request", "video_placeholder"
           });
         }
 
+        // Normalize AI output to editor-compatible schema
+        const normalizedBlocks = Array.isArray(structuredData.blocks) 
+          ? structuredData.blocks.map((block: any) => {
+              // Convert legacy "paragraph" to "text"
+              if (block.type === 'paragraph') {
+                return { type: 'text', content: block.content };
+              }
+              // Convert legacy "image_request" to "image"
+              if (block.type === 'image_request') {
+                return { type: 'image', description: block.description };
+              }
+              // Convert legacy "video_placeholder" to "video"
+              if (block.type === 'video_placeholder') {
+                return { type: 'video', description: block.description };
+              }
+              // Filter out placeholder blocks
+              if (block.content?.includes('content parsing not yet implemented') || 
+                  block.description?.includes('content parsing not yet implemented')) {
+                return null;
+              }
+              return block;
+            }).filter(Boolean)
+          : [{ type: 'text', content: 'No content generated' }];
+
         // Ensure required fields exist with defaults and return success format
         const finalData = {
           success: true,
           title: structuredData.title || `Blog on ${topic}`,
           tags: Array.isArray(structuredData.tags) ? structuredData.tags : [],
-          blocks: Array.isArray(structuredData.blocks) ? structuredData.blocks : [{ type: 'paragraph', content: 'No content generated' }]
+          blocks: normalizedBlocks
         };
 
         return new Response(JSON.stringify(finalData), {

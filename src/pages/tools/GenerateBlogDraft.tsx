@@ -25,9 +25,10 @@ interface BlogCategory {
 }
 
 interface ContentBlock {
-  type: 'text' | 'image_request' | 'video_placeholder';
+  type: 'text' | 'heading' | 'image' | 'video' | 'audio' | 'quote' | 'divider';
   content?: string;
   description?: string;
+  level?: string;
 }
 
 interface GeneratedDraft {
@@ -71,6 +72,7 @@ export default function GenerateBlogDraft() {
   const [newUrl, setNewUrl] = useState('');
   const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([]);
   const [sourcesCollapsed, setSourcesCollapsed] = useState(false);
+  const [searchOnline, setSearchOnline] = useState(false);
   
   const { toast } = useToast();
 
@@ -383,7 +385,8 @@ export default function GenerateBlogDraft() {
           topic: formData.topic,
           instructions_text: formData.instructions_text,
           source_links: sourceUrls,
-          source_files: sourceFiles // Send all files for server-side processing
+          source_files: sourceFiles, // Send all files for server-side processing
+          browsing: searchOnline // Enable web search enrichment
         }
       });
 
@@ -466,10 +469,19 @@ export default function GenerateBlogDraft() {
         switch (block.type) {
           case 'text':
             return block.content || '';
-          case 'image_request':
+          case 'heading':
+            const level = block.level === 'h3' ? '###' : '##';
+            return `${level} ${block.content || ''}`;
+          case 'image':
             return `*[Image needed: ${block.description || 'Medical illustration'}]*`;
-          case 'video_placeholder':
+          case 'video':
             return `*[Video placeholder: ${block.description || 'Educational video'}]*`;
+          case 'audio':
+            return `*[Audio placeholder: ${block.description || 'Audio content'}]*`;
+          case 'quote':
+            return `> ${block.content || ''}`;
+          case 'divider':
+            return '---';
           default:
             return '';
         }
@@ -706,6 +718,22 @@ export default function GenerateBlogDraft() {
                   )}
                 </div>
 
+                {/* Search Online Toggle */}
+                <div className="flex items-center space-x-2 p-3 bg-accent/30 rounded-md">
+                  <input
+                    type="checkbox"
+                    id="searchOnline"
+                    checked={searchOnline}
+                    onChange={(e) => setSearchOnline(e.target.checked)}
+                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                  />
+                  <Label htmlFor="searchOnline" className="text-sm font-medium">
+                    Search Online
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    (Enable AI web search enrichment)
+                  </span>
+                </div>
 
                 {/* Generation History Link */}
                 <div className="flex justify-end">
@@ -836,7 +864,7 @@ export default function GenerateBlogDraft() {
                               </p>
                             </div>
                           )}
-                          {block.type === 'image_request' && (
+                          {block.type === 'image' && (
                             <div className="border-2 border-dashed border-primary/30 p-4 rounded-lg text-center bg-primary/5">
                               <div className="text-sm font-medium text-primary mb-2 flex items-center justify-center gap-2">
                                 📸 Image Request
@@ -875,7 +903,7 @@ export default function GenerateBlogDraft() {
                               </div>
                             </div>
                           )}
-                          {block.type === 'video_placeholder' && (
+                          {block.type === 'video' && (
                             <div className="border-2 border-dashed border-secondary/30 p-4 rounded-lg bg-secondary/5">
                               <div className="text-sm font-medium text-secondary mb-2 flex items-center justify-center gap-2">
                                 🎥 Video Placeholder
