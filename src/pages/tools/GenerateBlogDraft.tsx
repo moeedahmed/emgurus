@@ -786,6 +786,121 @@ export default function GenerateBlogDraft() {
               )}
             </div>
 
+            {/* Sources Section */}
+            <Collapsible open={!sourcesCollapsed} onOpenChange={setSourcesCollapsed}>
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span className="font-medium">Sources</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({sourceFiles.length} files, {sourceUrls.length} URLs)
+                    </span>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${sourcesCollapsed ? 'rotate-180' : ''}`} />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 mt-3">
+                {/* File Upload */}
+                <div>
+                  <Label htmlFor="file-upload" className="text-sm font-medium">
+                    Reference Files
+                  </Label>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    multiple
+                    accept=".pdf,.docx,.pptx,.txt,.md"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-1"
+                    onClick={() => document.getElementById('file-upload')?.click()}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Upload Files (.pdf, .docx, .pptx, .txt, .md)
+                  </Button>
+                  
+                  {sourceFiles.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {sourceFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded text-sm">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3 w-3" />
+                            <span className="truncate max-w-[200px]">{file.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({(file.size / 1024).toFixed(1)}KB)
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* URL Links */}
+                <div>
+                  <Label className="text-sm font-medium">Reference URLs</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      value={newUrl}
+                      onChange={(e) => setNewUrl(e.target.value)}
+                      placeholder="https://example.com/article"
+                      onKeyPress={(e) => e.key === 'Enter' && addUrl()}
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={addUrl}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {sourceUrls.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {sourceUrls.map((url, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded text-sm">
+                          <div className="flex items-center gap-2">
+                            <ExternalLink className="h-3 w-3" />
+                            <span className="truncate max-w-[250px]">{url}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeUrl(index)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Search Online Toggle */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="search-online"
+                    checked={searchOnline}
+                    onCheckedChange={(checked) => setSearchOnline(checked === true)}
+                  />
+                  <Label htmlFor="search-online" className="text-sm">
+                    Search online for additional context
+                  </Label>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
             <Button 
               onClick={handleGenerate} 
               disabled={generating || !formData.topic.trim() || !formData.instructions_text.trim()}
