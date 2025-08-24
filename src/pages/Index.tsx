@@ -92,23 +92,6 @@ const Index = () => {
     <main>
       <Hero />
       <FeatureCarousel />
-      <section className="py-16 lg:py-24 bg-gradient-to-b from-background to-secondary/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="text-center mb-16">
-            <h2 className="heading-xl mb-6">
-              Everything You Need to
-              <span className="text-transparent bg-clip-text bg-gradient-hero block">
-                Excel in Medicine
-              </span>
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              From AI-powered exam preparation to expert mentorship, 
-              EM Gurus provides a comprehensive platform for medical learning.
-            </p>
-          </div>
-        </div>
-      </section>
       <Pricing />
     </main>
   );

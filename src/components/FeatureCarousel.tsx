@@ -45,7 +45,7 @@ const FeatureCarousel = () => {
     {
       icon: Users,
       title: "Community Forums",
-      description: "Peer discussion and shared learning with fellow medical professionals",
+      description: "Connect and collaborate with medical professionals worldwide",
       image: blogImage, // Reusing blog image for now
       highlights: ["Ask and answer questions", "Share resources and tips", "Learn from global peers"],
       href: "/forums",
@@ -55,19 +55,6 @@ const FeatureCarousel = () => {
   return (
     <section className="py-16 lg:py-24 bg-gradient-to-b from-background to-secondary/30">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h2 className="heading-xl mb-6">
-            Everything You Need to
-            <span className="text-transparent bg-clip-text bg-gradient-hero block">
-              Excel in Medicine
-            </span>
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            From AI-powered exam preparation to expert mentorship, 
-            EM Gurus provides a comprehensive platform for medical learning.
-          </p>
-        </div>
 
         {/* Mobile Carousel */}
         <div className="md:hidden">
@@ -75,7 +62,7 @@ const FeatureCarousel = () => {
             <CarouselContent className="-ml-2 md:-ml-4">
               {features.map((feature, index) => (
                 <CarouselItem key={index} className="pl-2 md:pl-4 basis-[85%]">
-                  <Card className="relative overflow-hidden group hover:shadow-strong transition-all duration-300 bg-gradient-card border-0">
+                  <Card className="relative overflow-hidden group hover:shadow-strong transition-all duration-300 bg-gradient-card border-0 flex flex-col h-full">
                     <div className="aspect-[4/3] overflow-hidden">
                       <img
                         src={feature.image}
@@ -86,7 +73,7 @@ const FeatureCarousel = () => {
                       />
                     </div>
                     
-                    <div className="p-6">
+                     <div className="p-6 flex flex-col h-full">
                       <div className="flex items-center space-x-3 mb-4">
                         <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
                           <feature.icon className="w-5 h-5 text-primary-foreground" />
@@ -98,7 +85,7 @@ const FeatureCarousel = () => {
                         {feature.description}
                       </p>
                       
-                      <ul className="space-y-2 mb-6">
+                      <ul className="space-y-2 mb-6 flex-grow">
                         {feature.highlights.map((highlight, idx) => (
                           <li key={idx} className="flex items-center text-sm">
                             <CheckCircle className="w-4 h-4 text-success mr-2" />
@@ -107,7 +94,7 @@ const FeatureCarousel = () => {
                         ))}
                       </ul>
                       
-                      <Button variant="outline" className="w-full group" onClick={() => navigate(feature.href)}>
+                      <Button variant="outline" className="w-full group mt-auto" onClick={() => navigate(feature.href)}>
                         Learn More
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </Button>
@@ -126,7 +113,7 @@ const FeatureCarousel = () => {
           {features.map((feature, index) => (
             <Card 
               key={index} 
-              className="relative overflow-hidden group hover:shadow-strong transition-all duration-300 bg-gradient-card border-0"
+              className="relative overflow-hidden group hover:shadow-strong transition-all duration-300 bg-gradient-card border-0 flex flex-col h-full"
             >
               <div className="aspect-[4/3] overflow-hidden">
                 <img
@@ -138,7 +125,7 @@ const FeatureCarousel = () => {
                 />
               </div>
               
-              <div className="p-6">
+              <div className="p-6 flex flex-col h-full">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
                     <feature.icon className="w-5 h-5 text-primary-foreground" />
@@ -150,7 +137,7 @@ const FeatureCarousel = () => {
                   {feature.description}
                 </p>
                 
-                <ul className="space-y-2 mb-6">
+                <ul className="space-y-2 mb-6 flex-grow">
                   {feature.highlights.map((highlight, idx) => (
                     <li key={idx} className="flex items-center text-sm">
                       <CheckCircle className="w-4 h-4 text-success mr-2" />
@@ -159,7 +146,7 @@ const FeatureCarousel = () => {
                   ))}
                 </ul>
                 
-                <Button variant="outline" className="w-full group" onClick={() => navigate(feature.href)}>
+                <Button variant="outline" className="w-full group mt-auto" onClick={() => navigate(feature.href)}>
                   Learn More
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Button>

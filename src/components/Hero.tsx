@@ -16,8 +16,9 @@ const Hero = () => {
             </h1>
           </div>
 
-          <p className="body-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Prepare, practice, and succeed with structured exam resources and expert guidance.
+          <p className="body-lg text-muted-foreground mb-8 max-w-3xl mx-auto">
+            Prepare, practice, and succeed with structured exam resources, expert guidance, 
+            and comprehensive platform tools designed for medical learning excellence.
           </p>
         </div>
       </div>

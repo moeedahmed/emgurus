@@ -147,7 +147,7 @@ const Pricing = () => {
               {plans.map((plan, index) => (
                 <CarouselItem key={index} className="pl-2 md:pl-4 basis-[85%]">
                   <Card 
-                    className={`relative overflow-hidden transition-all duration-300 hover:shadow-strong ${
+                    className={`relative overflow-hidden transition-all duration-300 hover:shadow-strong flex flex-col h-full ${
                       plan.popular 
                         ? 'border-primary shadow-medium scale-105' 
                         : plan.premium
@@ -155,8 +155,8 @@ const Pricing = () => {
                         : 'hover:scale-105'
                     }`}
                   >
-                    {plan.popular && (
-                      <div className="absolute top-0 left-0 right-0 bg-gradient-primary text-primary-foreground text-center py-2 text-sm font-medium">
+                     {plan.popular && (
+                      <div className="absolute top-0 left-0 right-0 bg-gradient-primary text-primary-foreground text-center py-3 text-sm font-medium z-10">
                         <Star className="w-4 h-4 inline mr-1" />
                         Most Popular
                       </div>
@@ -169,7 +169,7 @@ const Pricing = () => {
                       </div>
                     )}
 
-                    <div className={`p-6 ${plan.popular || plan.premium ? 'pt-12' : ''}`}>
+                    <div className={`p-6 flex flex-col h-full ${plan.popular || plan.premium ? 'pt-14' : ''}`}>
                       {/* Plan Header */}
                       <div className="text-center mb-6">
                         <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
@@ -181,7 +181,7 @@ const Pricing = () => {
                       </div>
 
                       {/* Features */}
-                      <div className="mb-6">
+                      <div className="mb-6 flex-grow">
                         <ul className="space-y-3">
                           {plan.features.map((feature, idx) => (
                             <li key={idx} className="flex items-start text-sm">
@@ -195,7 +195,7 @@ const Pricing = () => {
                       {/* Button */}
                       <Button 
                         variant={plan.buttonVariant} 
-                        className="w-full"
+                        className="w-full mb-4"
                         size="lg"
                         onClick={() => handlePlanClick(plan.name)}
                       >
@@ -204,7 +204,7 @@ const Pricing = () => {
 
                       {/* Not Included (for lower tiers) */}
                       {plan.notIncluded.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-border">
+                        <div className="mt-auto pt-4 border-t border-border">
                           <p className="text-xs text-muted-foreground mb-2">Not included:</p>
                           <ul className="space-y-1">
                             {plan.notIncluded.map((feature, idx) => (
@@ -230,7 +230,7 @@ const Pricing = () => {
           {plans.map((plan, index) => (
             <Card 
               key={index} 
-              className={`relative overflow-hidden transition-all duration-300 hover:shadow-strong ${
+              className={`relative overflow-hidden transition-all duration-300 hover:shadow-strong flex flex-col h-full ${
                 plan.popular 
                   ? 'border-primary shadow-medium scale-105' 
                   : plan.premium
@@ -238,8 +238,8 @@ const Pricing = () => {
                   : 'hover:scale-105'
               }`}
             >
-              {plan.popular && (
-                <div className="absolute top-0 left-0 right-0 bg-gradient-primary text-primary-foreground text-center py-2 text-sm font-medium">
+               {plan.popular && (
+                <div className="absolute top-0 left-0 right-0 bg-gradient-primary text-primary-foreground text-center py-3 text-sm font-medium z-10">
                   <Star className="w-4 h-4 inline mr-1" />
                   Most Popular
                 </div>
@@ -252,53 +252,53 @@ const Pricing = () => {
                 </div>
               )}
 
-              <div className={`p-6 ${plan.popular || plan.premium ? 'pt-12' : ''}`}>
-                {/* Plan Header */}
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
-                  <div className="mb-2">
-                    <span className="heading-lg">{plan.price}</span>
-                    <span className="text-muted-foreground">/{plan.period}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{plan.description}</p>
-                </div>
+               <div className={`p-6 flex flex-col h-full ${plan.popular || plan.premium ? 'pt-14' : ''}`}>
+                 {/* Plan Header */}
+                 <div className="text-center mb-6">
+                   <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
+                   <div className="mb-2">
+                     <span className="heading-lg">{plan.price}</span>
+                     <span className="text-muted-foreground">/{plan.period}</span>
+                   </div>
+                   <p className="text-sm text-muted-foreground">{plan.description}</p>
+                 </div>
 
-                {/* Features */}
-                <div className="mb-6">
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start text-sm">
-                        <CheckCircle className="w-4 h-4 text-success mr-3 mt-0.5 flex-shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                 {/* Features */}
+                 <div className="mb-6 flex-grow">
+                   <ul className="space-y-3">
+                     {plan.features.map((feature, idx) => (
+                       <li key={idx} className="flex items-start text-sm">
+                         <CheckCircle className="w-4 h-4 text-success mr-3 mt-0.5 flex-shrink-0" />
+                         <span>{feature}</span>
+                       </li>
+                     ))}
+                   </ul>
+                 </div>
 
-                {/* Button */}
-                <Button 
-                  variant={plan.buttonVariant} 
-                  className="w-full"
-                  size="lg"
-                  onClick={() => handlePlanClick(plan.name)}
-                >
-                  {plan.buttonText}
-                </Button>
+                 {/* Button */}
+                 <Button 
+                   variant={plan.buttonVariant} 
+                   className="w-full mb-4"
+                   size="lg"
+                   onClick={() => handlePlanClick(plan.name)}
+                 >
+                   {plan.buttonText}
+                 </Button>
 
-                {/* Not Included (for lower tiers) */}
-                {plan.notIncluded.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <p className="text-xs text-muted-foreground mb-2">Not included:</p>
-                    <ul className="space-y-1">
-                      {plan.notIncluded.map((feature, idx) => (
-                        <li key={idx} className="text-xs text-muted-foreground">
-                          • {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+                 {/* Not Included (for lower tiers) */}
+                 {plan.notIncluded.length > 0 && (
+                   <div className="mt-auto pt-4 border-t border-border">
+                     <p className="text-xs text-muted-foreground mb-2">Not included:</p>
+                     <ul className="space-y-1">
+                       {plan.notIncluded.map((feature, idx) => (
+                         <li key={idx} className="text-xs text-muted-foreground">
+                           • {feature}
+                         </li>
+                       ))}
+                     </ul>
+                   </div>
+                 )}
+               </div>
             </Card>
           ))}
         </div>
