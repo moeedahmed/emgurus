@@ -1,4 +1,6 @@
 // This module contains the React Query hooks and functions for interacting with blogs
+import { callFunction } from "@/lib/functionsUrl";
+import { getErrorMessage } from "@/lib/errors";
 
 export type ReactionKey = "thumbs_up" | "thumbs_down";
 
@@ -262,13 +264,12 @@ export async function createDraft(body: {
   cover_image_url?: string;
   excerpt?: string;
 }) {
-  const res = await fetch(`${BASE}/api/blogs`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(await authHeader()) },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  try {
+    return await callFunction("/blogs-api/api/blogs", body, true, "POST");
+  } catch (error: any) {
+    const message = getErrorMessage(error, "Failed to create draft");
+    throw new Error(message);
+  }
 }
 
 export async function updateDraft(id: string, body: {
@@ -288,12 +289,12 @@ export async function updateDraft(id: string, body: {
 }
 
 export async function submitPost(id: string) {
-  const res = await fetch(`${BASE}/api/blogs/${id}/submit`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(await authHeader()) },
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  try {
+    return await callFunction(`/blogs-api/api/blogs/${id}/submit`, {}, true, "POST");
+  } catch (error: any) {
+    const message = getErrorMessage(error, "Failed to submit post");
+    throw new Error(message);
+  }
 }
 
 export async function reviewPost(id: string, body: { note?: string; is_featured?: boolean }) {

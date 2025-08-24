@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createDraft, submitPost } from "@/lib/blogsApi";
+import { getErrorMessage } from "@/lib/errors";
 import { supabase } from "@/integrations/supabase/client";
 import { Block } from "@/components/blogs/editor/BlocksPalette";
 import BlockEditor from "@/components/blogs/editor/BlockEditor";
@@ -75,18 +76,61 @@ export default function EditorNew() {
   const onSave = async (submit = false) => {
     try {
       setLoading(true);
+      
+      // Validate required fields
+      if (!title.trim()) {
+        toast.error("Please enter a title");
+        return;
+      }
+      
+      if (blocks.length === 0) {
+        toast.error("Please add some content blocks");
+        return;
+      }
+
       const leftover = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
       const tag_slugs = Array.from(new Set([...tagList, ...leftover].map((t) => t.toLowerCase().replace(/\s+/g, "-"))));
       
       // Convert blocks to markdown
       const finalContent = blocksToMarkdown(blocks);
       
-      const res = await createDraft({ title, content_md: finalContent, category_id: categoryId, tag_slugs, cover_image_url: cover || undefined });
-      if (submit) await submitPost(res.id);
-      toast.success(submit ? "Submitted. Thanks — admins will assign a guru reviewer and publish soon." : "Draft saved");
+      // Create draft with retry logic
+      let res;
+      let attempt = 0;
+      const maxAttempts = 2;
+      
+      while (attempt < maxAttempts) {
+        try {
+          res = await createDraft({ 
+            title: title.trim(), 
+            content_md: finalContent, 
+            category_id: categoryId, 
+            tag_slugs, 
+            cover_image_url: cover || undefined,
+            excerpt: undefined
+          });
+          break;
+        } catch (error: any) {
+          attempt++;
+          if (attempt >= maxAttempts) {
+            throw error;
+          }
+          // Wait 1 second before retry
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+      
+      // Submit for review if requested
+      if (submit && res) {
+        await submitPost(res.id);
+      }
+      
+      toast.success(submit ? "Submitted for review! Admins will assign a reviewer and publish soon." : "Draft saved successfully");
       navigate("/blogs/dashboard");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to save");
+    } catch (error: any) {
+      const message = getErrorMessage(error, submit ? "Failed to submit post" : "Failed to save draft");
+      toast.error(message);
+      console.error("Blog save error:", error);
     } finally {
       setLoading(false);
     }
