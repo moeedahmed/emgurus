@@ -309,6 +309,15 @@ export async function reviewPost(id: string, body: {
   }
 }
 
+export async function approveForPublishing(id: string) {
+  try {
+    return await callFunction(`/blogs-api/api/blogs/${id}/approve`, {}, true, "POST");
+  } catch (error: any) {
+    const message = getErrorMessage(error, "Failed to approve post");
+    throw new Error(message);
+  }
+}
+
 export async function publishPost(id: string) {
   try {
     return await callFunction(`/blogs-api/api/blogs/${id}/publish`, {}, true, "POST");

@@ -220,25 +220,26 @@ function AdminBlogQueueContent() {
 
   const publishPost = async (postId: string) => {
     try {
-      // Check if post has reviewer assigned via review assignments
-      const { data: assignments } = await supabase
-        .from('blog_review_assignments')
-        .select('id')
-        .eq('post_id', postId)
-        .eq('status', 'completed');
-      
-      if (!assignments || assignments.length === 0) {
-        toast.error('Cannot publish: No reviewer assigned and approved. Please assign a reviewer first.');
-        return;
-      }
-
       const { error } = await supabase.rpc('review_approve_publish', { p_post_id: postId });
       if (error) throw error;
       toast.success('Post published');
       loadPosts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to publish:', error);
-      toast.error('Failed to publish post');
+      // Show specific error message from database function
+      const errorMessage = error.message || 'Failed to publish post';
+      toast.error(errorMessage);
+    }
+  };
+
+  const approveForPublishing = async (postId: string) => {
+    try {
+      await callFunction(`blogs-api/api/blogs/${postId}/approve`, {});
+      toast.success('Post approved for publishing');
+      loadPosts();
+    } catch (error) {
+      console.error('Failed to approve post:', error);
+      toast.error('Failed to approve post');
     }
   };
 
@@ -379,6 +380,13 @@ function AdminBlogQueueContent() {
           <div className="flex gap-2">
             <Button asChild variant="outline" size="sm">
               <Link to={`/blogs/editor/${post.id}`}>Review</Link>
+            </Button>
+            <Button 
+              onClick={() => approveForPublishing(post.id)}
+              size="sm"
+              variant="default"
+            >
+              Approve
             </Button>
             <Button 
               onClick={() => requestChanges(post.id)}

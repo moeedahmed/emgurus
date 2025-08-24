@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useRoles } from "@/hooks/useRoles";
-import { submitPost, updateDraft } from "@/lib/blogsApi";
+import { submitPost, updateDraft, approveForPublishing } from "@/lib/blogsApi";
 import { isFeatureEnabled } from "@/lib/constants";
 import { Block } from "@/components/blogs/editor/BlocksPalette";
 import BlockEditor from "@/components/blogs/editor/BlockEditor";
@@ -184,7 +184,9 @@ export default function EditorEdit() {
     try {
       setLoading(true);
       if (isAdmin) {
-        await reviewPost(id, { is_featured: isFeatured });
+        // First approve the review assignment
+        await approveForPublishing(id);
+        // Then publish the post
         const { error } = await supabase.rpc('review_approve_publish', { p_post_id: id });
         if (error) throw error as any;
         toast.success('Post published');
