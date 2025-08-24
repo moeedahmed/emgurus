@@ -91,7 +91,7 @@ export default function CollapsibleCard({
       </div>
       
       <div 
-        className="overflow-hidden motion-safe:transition-all motion-safe:duration-300"
+        className="overflow-hidden motion-safe:transition-all motion-safe:duration-300 motion-safe:ease-in-out"
         style={{ 
           maxHeight: `${maxHeight}px`,
           opacity: isOpen ? 1 : 0

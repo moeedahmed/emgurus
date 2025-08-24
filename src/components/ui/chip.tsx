@@ -16,13 +16,13 @@ export type ChipProps = {
 } & VariantProps<typeof chipVariants>;
 
 const chipVariants = cva(
-  "inline-flex items-center gap-1 rounded-full border transition-interactive focus-ring select-none disabled:opacity-50 disabled:pointer-events-none",
+  "inline-flex items-center gap-1 rounded-full border transition-all duration-200 focus-ring select-none disabled:opacity-50 disabled:pointer-events-none",
   {
     variants: {
       variant: {
-        solid: "bg-primary text-primary-foreground border-transparent hover:bg-primary/80",
-        outline: "border-input bg-background text-foreground hover:bg-accent/60",
-        ghost: "border-transparent text-foreground hover:bg-accent/60",
+        solid: "bg-primary text-primary-foreground border-transparent hover:bg-primary/80 hover:scale-105",
+        outline: "border-input bg-background text-foreground hover:bg-accent/60 hover:scale-105",
+        ghost: "border-transparent text-foreground hover:bg-accent/60 hover:scale-105",
       },
       size: {
         sm: "text-xs px-2 py-0.5",

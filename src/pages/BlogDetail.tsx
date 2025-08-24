@@ -10,10 +10,7 @@ import ReactionBar from "@/components/blogs/ReactionBar";
 import CommentThread from "@/components/blogs/CommentThread";
 import ShareButtons from "@/components/blogs/ShareButtons";
 import CollapsibleCard from "@/components/ui/CollapsibleCard";
-import ReactMarkdown from "react-markdown";
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize from "rehype-sanitize";
-import DOMPurify from "dompurify";
+import { renderMarkdownToHtml, generateAuthorBio } from "@/lib/markdownRenderer";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, ThumbsUp, MessageCircle, Share2, Flag, Sparkles, Play, FileText, Image, User } from "lucide-react";
@@ -87,57 +84,11 @@ export default function BlogDetail() {
     fetchProfiles();
   }, [data]);
 
-  const processMediaEmbeds = (html: string): string => {
-    // YouTube embeds
-    html = html.replace(
-      /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/g,
-      '<div class="my-6"><iframe width="100%" height="315" src="https://www.youtube.com/embed/$4" frameborder="0" allowfullscreen class="rounded-lg"></iframe></div>'
-    );
-    
-    // Vimeo embeds
-    html = html.replace(
-      /(https?:\/\/)?(www\.)?vimeo\.com\/(\d+)/g,
-      '<div class="my-6"><iframe width="100%" height="315" src="https://player.vimeo.com/video/$3" frameborder="0" allowfullscreen class="rounded-lg"></iframe></div>'
-    );
-    
-    // Audio embeds
-    html = html.replace(
-      /(https?:\/\/[^\s]+\.(mp3|wav|ogg|m4a))/g,
-      '<div class="my-6"><audio controls class="w-full"><source src="$1" type="audio/mpeg">Your browser does not support the audio element.</audio></div>'
-    );
-    
-    // PDF embeds
-    html = html.replace(
-      /(https?:\/\/[^\s]+\.pdf)/g,
-      '<div class="my-6 p-4 border rounded-lg bg-muted/20"><div class="flex items-center gap-2 mb-2"><FileText className="h-4 w-4" /><span class="font-medium">PDF Document</span></div><embed src="$1" type="application/pdf" width="100%" height="400" class="rounded" /></div>'
-    );
-    
-    return html;
-  };
 
   const contentHtml = useMemo(() => {
     if (!data) return "";
-    let html = data.content_html || data.content || data.content_md || "";
-    
-    // Convert markdown-style content to HTML if needed
-    if (html && typeof html === 'string') {
-      // Basic markdown to HTML conversions
-      html = html
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-        .replace(/\n\n/g, '</p><p>')
-        .replace(/\n/g, '<br/>')
-        .replace(/^(.)/g, '<p>$1')
-        .replace(/(.)$/g, '$1</p>');
-      
-      // Process media embeds
-      html = processMediaEmbeds(html);
-    }
-    
-    return DOMPurify.sanitize(html);
+    const rawContent = data.content_html || data.content || data.content_md || "";
+    return renderMarkdownToHtml(rawContent);
   }, [data]);
 
   const aiSummary = useMemo(() => {
@@ -346,7 +297,9 @@ export default function BlogDetail() {
                   <div className="flex-1">
                     <div className="font-medium text-lg">{authorProfile?.full_name || p.author.name}</div>
                     {authorProfile?.title && <div className="text-sm text-muted-foreground">{authorProfile.title}</div>}
-                    {authorProfile?.bio && <div className="text-sm text-muted-foreground mt-2">{authorProfile.bio}</div>}
+                    <div className="text-sm text-muted-foreground mt-2">
+                      {authorProfile?.bio || generateAuthorBio(authorProfile?.full_name || p.author.name, authorProfile?.specialty)}
+                    </div>
                   </div>
                 </div>
                 
@@ -361,7 +314,9 @@ export default function BlogDetail() {
                     />
                     <div>
                       <div className="font-medium">Reviewed by {reviewerProfile?.full_name || data.reviewer.name}</div>
-                      {reviewerProfile?.bio && <div className="text-sm text-muted-foreground">{reviewerProfile.bio}</div>}
+                      <div className="text-sm text-muted-foreground">
+                        {reviewerProfile?.bio || generateAuthorBio(reviewerProfile?.full_name || data.reviewer.name, reviewerProfile?.specialty)}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -402,13 +357,20 @@ export default function BlogDetail() {
               {engagementCounts.comments}
             </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={() => {
-              const el = document.getElementById('comments');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}>Comment</Button>
-            <ShareButtons title={p.title} url={window.location.href} text={p.excerpt || ""} size="sm" />
-          </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => {
+                        const el = document.getElementById('comments');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="transition-all duration-200 hover:scale-105 hover:bg-accent/60"
+                    >
+                      Comment
+                    </Button>
+                    <ShareButtons title={p.title} url={window.location.href} text={p.excerpt || ""} size="sm" />
+                  </div>
         </div>
       </div>
     </main>

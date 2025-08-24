@@ -142,7 +142,12 @@ export default function CommentThread({
     }
   };
 
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [reactingIds, setReactingIds] = useState<Set<string>>(new Set());
+
   const deleteComment = async (commentId: string) => {
+    setDeletingIds(prev => new Set([...prev, commentId]));
+    
     try {
       const response = await fetch(`/functions/v1/blogs-api/api/blogs/comments/${commentId}`, {
         method: 'DELETE',
@@ -162,6 +167,12 @@ export default function CommentThread({
     } catch (e) {
       console.error(e);
       toast.error('Failed to delete comment');
+    } finally {
+      setDeletingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(commentId);
+        return newSet;
+      });
     }
   };
 
@@ -175,6 +186,8 @@ export default function CommentThread({
       setFeedbackModal({ commentId, open: true });
       return;
     }
+
+    setReactingIds(prev => new Set([...prev, commentId]));
 
     try {
       const response = await fetch(`/functions/v1/blogs-api/api/blogs/comments/${commentId}/react`, {
@@ -194,6 +207,12 @@ export default function CommentThread({
     } catch (e) {
       console.error(e);
       toast.error("Failed to react");
+    } finally {
+      setReactingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(commentId);
+        return newSet;
+      });
     }
   };
 
@@ -252,23 +271,51 @@ export default function CommentThread({
     const isOwner = user?.id && c.author_id === user.id;
     const reactions = c.reactions || { up: 0, down: 0 };
     const hasFeedback = feedbackSubmitted.has(c.id);
+    const isDeleting = deletingIds.has(c.id);
+    const isReacting = reactingIds.has(c.id);
     
     return (
       <div className="flex items-start gap-3">
         <Avatar className="h-8 w-8">
           <AvatarImage src={c.author?.avatar_url || undefined} />
-          <AvatarFallback>{c.author?.full_name?.charAt(0) || '?'}</AvatarFallback>
+          <AvatarFallback className="bg-muted">
+            {c.author?.full_name?.charAt(0) || '?'}
+          </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-sm">{c.author?.full_name || 'Anonymous'}</span>
             <span className="text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
           </div>
-          <p className="text-sm mb-2">{c.content}</p>
+          
+          {isDeleting ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+              <div className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+              <span>Deleting comment...</span>
+            </div>
+          ) : (
+            <p className="text-sm mb-2">{c.content}</p>
+          )}
+          
           <div className="flex items-center gap-2 flex-wrap">
-            <Button size="sm" variant="ghost" onClick={() => setReplyTo(c.id)}>Reply</Button>
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={() => setReplyTo(c.id)}
+              className="transition-all duration-200 hover:scale-105 hover:bg-accent/60"
+            >
+              Reply
+            </Button>
             {isOwner && (
-              <Button size="sm" variant="ghost" onClick={() => deleteComment(c.id)}>Delete</Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => deleteComment(c.id)}
+                disabled={isDeleting}
+                className="transition-all duration-200 hover:scale-105 hover:bg-destructive/10 hover:text-destructive"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
             )}
             
             {/* Reaction buttons */}
@@ -277,30 +324,44 @@ export default function CommentThread({
                 size="sm"
                 variant={c.user_reaction === "up" ? "default" : "ghost"}
                 onClick={() => reactToComment(c.id, "up")}
-                className="h-7 px-2"
+                disabled={isReacting}
+                className="h-7 px-2 transition-all duration-200 hover:scale-105"
               >
-                <ThumbsUp className="h-3 w-3 mr-1" />
+                {isReacting && c.user_reaction !== "up" ? (
+                  <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin mr-1" />
+                ) : (
+                  <ThumbsUp className="h-3 w-3 mr-1" />
+                )}
                 {reactions.up > 0 && <span className="text-xs">{reactions.up}</span>}
               </Button>
               <Button
                 size="sm"
                 variant={c.user_reaction === "down" ? "default" : "ghost"}
                 onClick={() => reactToComment(c.id, "down")}
-                className="h-7 px-2"
-                disabled={hasFeedback}
+                className="h-7 px-2 transition-all duration-200 hover:scale-105"
+                disabled={hasFeedback || isReacting}
               >
                 <ThumbsDown className="h-3 w-3 mr-1" />
                 {reactions.down > 0 && <span className="text-xs">{reactions.down}</span>}
               </Button>
             </div>
           </div>
+          
+          {isReacting && (
+            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+              <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+              Updating reaction...
+            </p>
+          )}
+          
           {hasFeedback && (
             <p className="text-xs text-muted-foreground mt-2">
               ✓ Feedback sent
             </p>
           )}
+          
           {c.replies && c.replies.length > 0 && (
-            <div className="mt-3 space-y-4 border-l sm:pl-6 pl-3">
+            <div className="mt-3 space-y-4 border-l sm:pl-6 pl-3 sm:ml-0 ml-1">
               {c.replies.filter(r => !deletedIds.has(r.id)).map(r => <Item key={r.id} c={r} />)}
             </div>
           )}
