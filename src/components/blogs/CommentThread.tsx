@@ -59,22 +59,28 @@ export default function CommentThread({
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       
-      const url = `https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/blogs-api/api/blogs/${postId}/comments`;
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Only add Authorization header if user is logged in
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await supabase.functions.invoke('blogs-api/api/blogs/' + postId + '/comments', {
+        method: 'GET',
+        headers,
+        body: null
       });
       
-      if (response.ok) {
-        const data = await response.json();
+      if (!response.error) {
+        const data = response.data;
         setComments(data.comments || []);
         onCommentsChange?.(data.comments || []);
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || `HTTP ${response.status}: Failed to load comments`;
-        console.error('Failed to load comments:', response.status, response.statusText);
+        const errorMsg = response.error?.message || 'Failed to load comments';
+        console.error('Failed to load comments:', response.error);
         setErrors(prev => ({ ...prev, load: errorMsg }));
         toast.error(errorMsg);
       }
@@ -138,25 +144,27 @@ export default function CommentThread({
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       
-      const url = `https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/blogs-api/api/blogs/${postId}/comment`;
-      const response = await fetch(url, {
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+      
+      const response = await supabase.functions.invoke('blogs-api/api/blogs/' + postId + '/comment', {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json' 
         },
-        body: JSON.stringify({ content: content.trim(), parent_id: parentId })
+        body: { content: content.trim(), parent_id: parentId }
       });
       
-      if (response.ok) {
+      if (!response.error) {
         await loadComments();
         toast.success("Comment posted");
       } else {
         // Revert optimistic update
         setComments(comments);
         onCommentsChange?.(comments);
-        const errorData = await response.json();
-        const errorMsg = errorData.error || "Failed to post comment";
+        const errorMsg = response.error?.message || "Failed to post comment";
         setErrors(prev => ({ ...prev, submit: errorMsg }));
         toast.error(errorMsg);
       }
@@ -186,23 +194,25 @@ export default function CommentThread({
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       
-      const url = `https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/blogs-api/api/blogs/comments/${commentId}`;
-      const response = await fetch(url, {
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+      
+      const response = await supabase.functions.invoke('blogs-api/api/blogs/comments/' + commentId, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
         }
       });
       
-      if (response.ok) {
+      if (!response.error) {
         toast.success('Comment deleted');
         await loadComments(); // Reload to ensure consistency
       } else {
         // Revert optimistic update
         setComments(originalComments);
         onCommentsChange?.(originalComments);
-        const errorData = await response.json();
-        const errorMsg = errorData.error || 'Failed to delete comment';
+        const errorMsg = response.error?.message || 'Failed to delete comment';
         setErrors(prev => ({ ...prev, [commentId]: errorMsg }));
         toast.error(errorMsg);
       }
@@ -251,24 +261,26 @@ export default function CommentThread({
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       
-      const url = `https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/blogs-api/api/blogs/comments/${commentId}/react`;
-      const response = await fetch(url, {
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+      
+      const response = await supabase.functions.invoke('blogs-api/api/blogs/comments/' + commentId + '/react', {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json' 
         },
-        body: JSON.stringify({ type: "up" })
+        body: { type: "up" }
       });
       
-      if (response.ok) {
+      if (!response.error) {
         await loadComments(); // Get real data
       } else {
         // Revert optimistic update
         setComments(originalComments);
         onCommentsChange?.(originalComments);
-        const errorData = await response.json();
-        const errorMsg = errorData.error || "Failed to react";
+        const errorMsg = response.error?.message || "Failed to react";
         setErrors(prev => ({ ...prev, [commentId]: errorMsg }));
         toast.error(errorMsg);
       }
@@ -311,17 +323,20 @@ export default function CommentThread({
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       
-      const url = `https://cgtvvpzrzwyvsbavboxa.supabase.co/functions/v1/blogs-api/api/blogs/comments/${commentId}`;
-      const response = await fetch(url, {
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+      
+      const response = await supabase.functions.invoke('blogs-api/api/blogs/comments/' + commentId, {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json' 
         },
-        body: JSON.stringify({ content: newContent.trim() })
+        body: { content: newContent.trim() }
       });
       
-      if (response.ok) {
+      if (!response.error) {
         toast.success("Comment updated");
         await loadComments(); // Get real data
       } else {
@@ -329,8 +344,7 @@ export default function CommentThread({
         setComments(originalComments);
         onCommentsChange?.(originalComments);
         setEditingId(commentId);
-        const errorData = await response.json();
-        const errorMsg = errorData.error || "Failed to update comment";
+        const errorMsg = response.error?.message || "Failed to update comment";
         setErrors(prev => ({ ...prev, [commentId]: errorMsg }));
         toast.error(errorMsg);
       }
