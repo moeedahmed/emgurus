@@ -5,42 +5,20 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 // Dynamic CORS allowlist
 function parseAllowlist(): string[] {
   const raw = Deno.env.get("ORIGIN_ALLOWLIST")?.split(",") || [];
-  const origins = raw.map((s) => s.trim()).filter(Boolean);
-  
-  // Always allow Lovable preview domains and localhost
-  const defaultOrigins = [
-    "*"
-  ];
-  
-  return origins.length > 0 ? [...origins, ...defaultOrigins] : defaultOrigins;
+  return raw.map((s) => s.trim()).filter(Boolean);
 }
-
 function isAllowedOrigin(origin: string): boolean {
   const list = parseAllowlist();
+  if (!list.length) return false;
   if (list.includes("*")) return true;
-  if (!origin) return false;
-  
-  // Allow exact matches, wildcard subdomains, and Lovable preview patterns
-  return list.some(allowed => {
-    if (allowed === origin) return true;
-    if (allowed.startsWith("*.")) {
-      const domain = allowed.slice(2);
-      return origin.endsWith(domain);
-    }
-    // Special handling for Lovable preview domains
-    if (origin.includes("lovable.app")) return true;
-    if (origin.includes("localhost")) return true;
-    return false;
-  });
+  return !!origin && list.includes(origin);
 }
-
 function buildCors(origin: string) {
-  const allowedOrigin = isAllowedOrigin(origin) ? origin : "*";
   return {
-    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Origin": origin,
     "Vary": "Origin",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
   } as const;
 }
 
@@ -140,22 +118,27 @@ serve(async (req) => {
   const corsHeaders = buildCors(origin);
 
   if (req.method === "OPTIONS") {
+    if (!allowed) return new Response(JSON.stringify({ error: "Disallowed origin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Allow requests from allowed origins (now more permissive)
-  if (!isAllowedOrigin(origin)) {
-    console.log(`Blocked request from origin: ${origin}`);
-    return new Response(JSON.stringify({ error: "Origin not allowed" }), { 
-      status: 403, 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
+  if (!allowed) {
+    return new Response(JSON.stringify({ error: "Disallowed origin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
   try {
     const supabase = getClient(req);
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const url = new URL(req.url);
-    
     // Normalize path to work with both direct domain and function subpath
     const rawPath = url.pathname;
     let pathname = rawPath
@@ -166,21 +149,7 @@ serve(async (req) => {
     // default root to list endpoint
     if (pathname === "/") pathname = "/api/blogs";
 
-    // Handle authentication for protected endpoints
-    const authHeader = req.headers.get("Authorization");
-    let user = null;
-    let userRoles = { isAdmin: false, isGuru: false };
-    
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user: authUser }, error: userErr } = await supabase.auth.getUser(token);
-      if (!userErr && authUser) {
-        user = authUser;
-        userRoles = await getUserRoleFlags(supabase, authUser.id);
-      }
-    }
-
-    // GET /api/blogs -> list (public endpoint)
+    // GET /api/blogs -> list
     if (req.method === "GET" && pathname === "/api/blogs") {
       const status = (url.searchParams.get("status") ?? "published") as
         | "draft"
@@ -364,7 +333,7 @@ serve(async (req) => {
       );
     }
 
-    // GET /api/blogs/:slug -> details (public endpoint)
+    // GET /api/blogs/:slug -> details
     const slugMatch = pathname.match(/^\/api\/blogs\/([^\/]+)$/);
     if (req.method === "GET" && slugMatch) {
       const slug = decodeURIComponent(slugMatch[1]);
@@ -488,13 +457,9 @@ serve(async (req) => {
       });
     }
 
+    // Auth guard helper
     const requireAuth = () => {
-      if (!user) {
-        throw new Response(JSON.stringify({ error: "Authentication required" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      if (!user) throw new Error("Unauthorized");
     };
 
     // POST /api/blogs/:id/feedback -> create feedback
@@ -710,7 +675,7 @@ serve(async (req) => {
       });
     }
 
-    // GET /api/blogs/:id/comments -> list comments (public)
+    // GET /api/blogs/:id/comments -> list comments
     const commentsListMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/comments$/i);
     if (req.method === "GET" && commentsListMatch) {
       const postId = commentsListMatch[1];
@@ -810,13 +775,7 @@ serve(async (req) => {
     // POST /api/blogs/:id/comment -> create comment
     const commentMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/comment$/i);
     if (req.method === "POST" && commentMatch) {
-      if (!user) {
-        return new Response(JSON.stringify({ error: "Authentication required" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      
+      requireAuth();
       const postId = commentMatch[1];
       const body = commentSchema.parse(await req.json());
       
@@ -880,15 +839,9 @@ serve(async (req) => {
     // DELETE /api/blogs/comments/:id -> delete comment
     const deleteCommentMatch = pathname.match(/^\/api\/blogs\/comments\/([0-9a-f-]{36})$/i);
     if (req.method === "DELETE" && deleteCommentMatch) {
-      if (!user) {
-        return new Response(JSON.stringify({ error: "Authentication required" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      
+      requireAuth();
       const commentId = deleteCommentMatch[1];
-      const { isAdmin } = userRoles;
+      const { isAdmin } = await getUserRoleFlags(supabase, user!.id);
 
       const { data: comment } = await supabase
         .from("blog_comments")
@@ -909,56 +862,7 @@ serve(async (req) => {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-    }
-
-    // PUT /api/blogs/comments/:id -> edit comment
-    const editCommentMatch = pathname.match(/^\/api\/blogs\/comments\/([0-9a-f-]{36})$/i);
-    if (req.method === "PUT" && editCommentMatch) {
-      if (!user) {
-        return new Response(JSON.stringify({ error: "Authentication required" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
       }
-      
-      const commentId = editCommentMatch[1];
-      const body = commentSchema.parse(await req.json());
-      
-      const { data: comment } = await supabase
-        .from("blog_comments")
-        .select("author_id, post_id")
-        .eq("id", commentId)
-        .maybeSingle();
-
-      if (!comment) {
-        return new Response(JSON.stringify({ error: "Comment not found" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Only author can edit
-      if (comment.author_id !== user.id) {
-        return new Response(JSON.stringify({ error: "Forbidden" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const { error } = await supabase
-        .from("blog_comments")
-        .update({ 
-          content: body.content.trim(),
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", commentId);
-
-      if (error) throw error;
-
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
       const { error } = await supabase
         .from("blog_comments")
@@ -975,13 +879,7 @@ serve(async (req) => {
     // POST /api/blogs/comments/:id/react -> toggle reaction
     const reactCommentMatch = pathname.match(/^\/api\/blogs\/comments\/([0-9a-f-]{36})\/react$/i);
     if (req.method === "POST" && reactCommentMatch) {
-      if (!user) {
-        return new Response(JSON.stringify({ error: "Authentication required" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      
+      requireAuth();
       const commentId = reactCommentMatch[1];
       const { type, feedback } = await req.json();
 

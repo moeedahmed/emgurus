@@ -4,9 +4,12 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { callFunction } from "@/lib/functionsUrl";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ThumbsUp, Edit2, Loader2 } from "lucide-react";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
 
 interface CommentNode {
   id: string;
@@ -14,10 +17,9 @@ interface CommentNode {
   parent_id: string | null;
   content: string;
   created_at: string;
-  updated_at?: string;
   author?: { user_id: string; full_name: string; avatar_url: string | null } | null;
   replies?: CommentNode[];
-  reactions?: { up: number };
+  reactions?: { up: number; down: number };
   user_reaction?: string | null;
 }
 
@@ -35,52 +37,45 @@ export default function CommentThread({
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [replyTexts, setReplyTexts] = useState<Record<string, string>>({});
-  const [replyingTo, setReplyingTo] = useState<Record<string, boolean>>({});
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
-  const [reactingIds, setReactingIds] = useState<Set<string>>(new Set());
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [feedbackModal, setFeedbackModal] = useState<{ commentId: string; open: boolean }>({ commentId: "", open: false });
+  const [feedbackReason, setFeedbackReason] = useState("");
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (initialComments.length > 0) {
-      setComments(initialComments);
-    } else {
-      loadComments();
-    }
-  }, [postId]);
+    setComments(initialComments);
+    // Always load comments on mount for immediate rendering
+    loadComments();
+  }, [initialComments]);
 
   const loadComments = async () => {
     try {
       setLoading(true);
-      setErrors(prev => ({ ...prev, load: '' }));
-      
-      const data = await callFunction(`/blogs-api/api/blogs/${postId}/comments`, undefined, !!user, 'GET');
-      setComments(data.comments || []);
-      onCommentsChange?.(data.comments || []);
-    } catch (error: any) {
-      console.error("Failed to load comments:", error);
-      let errorMsg = 'Failed to load comments - please try again';
-      
-      // Parse specific error messages from backend
-      if (error.message?.includes('Post not found')) {
-        errorMsg = 'Post not found or not published';
-      } else if (error.message?.includes('Authentication required')) {
-        errorMsg = 'Authentication required';
+      const response = await fetch(`/functions/v1/blogs-api/api/blogs/${postId}/comments`, {
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setComments(data.comments || []);
+        onCommentsChange?.(data.comments || []);
       }
-      
-      setErrors(prev => ({ ...prev, load: errorMsg }));
-      toast.error(errorMsg);
+    } catch (error) {
+      console.error("Failed to load comments:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const roots = useMemo(() => comments.filter(c => !c.parent_id), [comments]);
+  const roots = useMemo(() => comments.filter(c => !c.parent_id && !deletedIds.has(c.id)), [comments, deletedIds]);
 
-  const submitComment = async (content: string, parentId?: string | null) => {
-    if (!content.trim()) return;
+  const submit = async (parent?: string | null) => {
+    const content = text.trim();
+    if (!content) return;
     if (!user?.id) {
       toast.error("Please log in to comment");
       return;
@@ -90,15 +85,12 @@ export default function CommentThread({
       return;
     }
     
-    // Clear any previous errors
-    setErrors(prev => ({ ...prev, submit: '' }));
-    
-    // Optimistic update
+    // Optimistic update - add comment instantly
     const optimisticComment = {
       id: `temp-${Date.now()}`,
       author_id: user.id,
-      parent_id: parentId || null,
-      content: content.trim(),
+      parent_id: parent,
+      content,
       created_at: new Date().toISOString(),
       author: {
         user_id: user.id,
@@ -106,81 +98,73 @@ export default function CommentThread({
         avatar_url: user.user_metadata?.avatar_url || null
       },
       replies: [],
-      reactions: { up: 0 },
+      reactions: { up: 0, down: 0 },
       user_reaction: null
     };
     
     const updatedComments = [...comments, optimisticComment];
     setComments(updatedComments);
     onCommentsChange?.(updatedComments);
-    
-    // Clear inputs
-    if (parentId) {
-      setReplyTexts(prev => ({ ...prev, [parentId]: '' }));
-      setReplyingTo(prev => ({ ...prev, [parentId]: false }));
-    } else {
-      setText("");
-    }
+    setText("");
+    setReplyTo(null);
     
     try {
       setBusy(true);
-      
-      await callFunction(`/blogs-api/api/blogs/${postId}/comment`, { 
-        content: content.trim(), 
-        parent_id: parentId 
+      const response = await fetch(`/functions/v1/blogs-api/api/blogs/${postId}/comment`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ content, parent_id: parent })
       });
       
-      await loadComments();
-      toast.success("Comment posted");
-    } catch (error: any) {
-      // Revert optimistic update
+      if (response.ok) {
+        await loadComments(); // Reload to get real data
+        toast.success("Comment posted");
+      } else {
+        // Revert optimistic update on error
+        setComments(comments);
+        onCommentsChange?.(comments);
+        const error = await response.json();
+        toast.error(error.error || "Failed to post comment");
+      }
+    } catch (e) {
+      // Revert optimistic update on error
       setComments(comments);
       onCommentsChange?.(comments);
-      
-      let errorMsg = "Failed to post comment";
-      if (error.message?.includes('Authentication required')) {
-        errorMsg = 'Please log in to comment';
-      } else if (error.message?.includes('Replies to replies not allowed')) {
-        errorMsg = 'Replies to replies not allowed';
-      } else if (error.message?.includes('Post not found')) {
-        errorMsg = 'Post not found or not published';
-      }
-      
-      setErrors(prev => ({ ...prev, submit: errorMsg }));
-      toast.error(errorMsg);
+      console.error(e);
+      toast.error("Failed to post comment");
     } finally {
       setBusy(false);
     }
   };
 
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [reactingIds, setReactingIds] = useState<Set<string>>(new Set());
+
   const deleteComment = async (commentId: string) => {
     setDeletingIds(prev => new Set([...prev, commentId]));
-    setErrors(prev => ({ ...prev, [commentId]: '' }));
-    
-    // Optimistic update - remove comment
-    const originalComments = [...comments];
-    const updatedComments = comments.filter(c => c.id !== commentId);
-    setComments(updatedComments);
-    onCommentsChange?.(updatedComments);
     
     try {
-      await callFunction(`/blogs-api/api/blogs/comments/${commentId}`, undefined, true, 'DELETE');
-      toast.success('Comment deleted');
-      await loadComments(); // Reload to ensure consistency
-    } catch (error: any) {
-      // Revert optimistic update
-      setComments(originalComments);
-      onCommentsChange?.(originalComments);
+      const response = await fetch(`/functions/v1/blogs-api/api/blogs/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        }
+      });
       
-      let errorMsg = 'Failed to delete comment';
-      if (error.message?.includes('Authentication required')) {
-        errorMsg = 'Authentication required';
-      } else if (error.message?.includes('Not found')) {
-        errorMsg = 'Comment not found';
+      if (response.ok) {
+        setDeletedIds(prev => new Set([...prev, commentId]));
+        await loadComments(); // Reload comments
+        toast.success('Comment deleted');
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to delete comment');
       }
-      
-      setErrors(prev => ({ ...prev, [commentId]: errorMsg }));
-      toast.error(errorMsg);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to delete comment');
     } finally {
       setDeletingIds(prev => {
         const newSet = new Set(prev);
@@ -190,46 +174,32 @@ export default function CommentThread({
     }
   };
 
-  const reactToComment = async (commentId: string) => {
+  const reactToComment = async (commentId: string, type: "up") => {
     if (!user?.id) {
       toast.error("Please log in to react");
       return;
     }
 
     setReactingIds(prev => new Set([...prev, commentId]));
-    setErrors(prev => ({ ...prev, [commentId]: '' }));
-
-    // Optimistic update
-    const originalComments = [...comments];
-    const updatedComments = comments.map(c => {
-      if (c.id === commentId) {
-        const wasLiked = c.user_reaction === "up";
-        return {
-          ...c,
-          reactions: { up: (c.reactions?.up || 0) + (wasLiked ? -1 : 1) },
-          user_reaction: wasLiked ? null : "up"
-        };
-      }
-      return c;
-    });
-    setComments(updatedComments);
-    onCommentsChange?.(updatedComments);
 
     try {
-      await callFunction(`/blogs-api/api/blogs/comments/${commentId}/react`, { type: "up" });
-      await loadComments(); // Get real data
-    } catch (error: any) {
-      // Revert optimistic update
-      setComments(originalComments);
-      onCommentsChange?.(originalComments);
+      const response = await fetch(`/functions/v1/blogs-api/api/blogs/comments/${commentId}/react`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ type })
+      });
       
-      let errorMsg = "Failed to react";
-      if (error.message?.includes('Authentication required')) {
-        errorMsg = 'Please log in to react';
+      if (response.ok) {
+        await loadComments(); // Reload to get updated reaction counts
+      } else {
+        toast.error("Failed to react");
       }
-      
-      setErrors(prev => ({ ...prev, [commentId]: errorMsg }));
-      toast.error(errorMsg);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to react");
     } finally {
       setReactingIds(prev => {
         const newSet = new Set(prev);
@@ -239,44 +209,39 @@ export default function CommentThread({
     }
   };
 
-  const editComment = async (commentId: string, newContent: string) => {
-    if (!newContent.trim()) {
-      setErrors(prev => ({ ...prev, [commentId]: 'Comment cannot be empty' }));
+  const submitFeedback = async () => {
+    if (!feedbackReason && !feedbackText.trim()) {
+      toast.error("Please select a reason or provide feedback");
       return;
     }
 
-    setErrors(prev => ({ ...prev, [commentId]: '' }));
-    
-    // Optimistic update
-    const originalComments = [...comments];
-    const updatedComments = comments.map(c => 
-      c.id === commentId 
-        ? { ...c, content: newContent.trim(), updated_at: new Date().toISOString() }
-        : c
-    );
-    setComments(updatedComments);
-    onCommentsChange?.(updatedComments);
-    setEditingId(null);
-
     try {
-      await callFunction(`/blogs-api/api/blogs/comments/${commentId}`, { content: newContent.trim() }, true, 'PUT');
-      toast.success("Comment updated");
-      await loadComments(); // Get real data
-    } catch (error: any) {
-      // Revert optimistic update
-      setComments(originalComments);
-      onCommentsChange?.(originalComments);
-      setEditingId(commentId);
+      const feedbackMessage = feedbackReason === "other" 
+        ? feedbackText.trim() 
+        : `${feedbackReason}${feedbackText.trim() ? `: ${feedbackText.trim()}` : ""}`;
+
+      const response = await fetch(`/functions/v1/blogs-api/api/blogs/comments/${feedbackModal.commentId}/react`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ type: "down", feedback: feedbackMessage })
+      });
       
-      let errorMsg = "Failed to update comment";
-      if (error.message?.includes('Authentication required')) {
-        errorMsg = 'Authentication required';
-      } else if (error.message?.includes('Not found')) {
-        errorMsg = 'Comment not found';
+      if (response.ok) {
+        setFeedbackModal({ commentId: "", open: false });
+        setFeedbackReason("");
+        setFeedbackText("");
+        setFeedbackSubmitted(prev => new Set([...prev, feedbackModal.commentId]));
+        await loadComments();
+        toast.success("Feedback submitted");
+      } else {
+        toast.error("Failed to submit feedback");
       }
-      
-      setErrors(prev => ({ ...prev, [commentId]: errorMsg }));
-      toast.error(errorMsg);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to submit feedback");
     }
   };
 
@@ -295,187 +260,92 @@ export default function CommentThread({
 
   const tree = useMemo(() => buildTree(comments), [comments]);
 
-  const startReply = (commentId: string) => {
-    setReplyingTo(prev => ({ ...prev, [commentId]: true }));
-    setReplyTexts(prev => ({ ...prev, [commentId]: prev[commentId] || '' }));
-  };
-
-  const cancelReply = (commentId: string) => {
-    setReplyingTo(prev => ({ ...prev, [commentId]: false }));
-    setReplyTexts(prev => ({ ...prev, [commentId]: '' }));
-  };
-
-  const startEdit = (comment: CommentNode) => {
-    setEditingId(comment.id);
-    setEditText(comment.content);
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditText('');
-  };
-
   const Item = ({ c }: { c: CommentNode }) => {
     const isOwner = user?.id && c.author_id === user.id;
-    const reactions = c.reactions || { up: 0 };
+    const reactions = c.reactions || { up: 0, down: 0 };
+    const hasFeedback = feedbackSubmitted.has(c.id);
     const isDeleting = deletingIds.has(c.id);
     const isReacting = reactingIds.has(c.id);
-    const isReplying = replyingTo[c.id];
-    const replyText = replyTexts[c.id] || '';
-    const isEditing = editingId === c.id;
-    const hasError = errors[c.id];
     
     return (
       <div className="flex items-start gap-3">
-        <Avatar className="h-8 w-8 flex-shrink-0">
+        <Avatar className="h-8 w-8">
           <AvatarImage src={c.author?.avatar_url || undefined} />
-          <AvatarFallback className="bg-muted text-xs">
+          <AvatarFallback className="bg-muted">
             {c.author?.full_name?.charAt(0) || '?'}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-sm">{c.author?.full_name || 'Anonymous'}</span>
-            <span className="text-xs text-muted-foreground">
-              {new Date(c.created_at).toLocaleDateString()}
-              {c.updated_at && c.updated_at !== c.created_at && (
-                <span className="ml-1">(edited)</span>
-              )}
-            </span>
+            <span className="text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
           </div>
           
           {isDeleting ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-              <Loader2 className="w-3 h-3 animate-spin" />
+              <div className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
               <span>Deleting comment...</span>
             </div>
-          ) : isEditing ? (
-            <div className="space-y-2">
-              <Textarea 
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                className="min-h-[80px] text-sm"
-                placeholder="Edit your comment..."
-              />
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  onClick={() => editComment(c.id, editText)}
-                  disabled={!editText.trim()}
-                  className="h-7"
-                >
-                  Save
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  onClick={cancelEdit}
-                  className="h-7"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
           ) : (
-            <div className="space-y-2">
-              <p className="text-sm leading-relaxed">{c.content}</p>
-              
-              {hasError && (
-                <p className="text-xs text-destructive bg-destructive/10 px-2 py-1 rounded">
-                  {hasError}
-                </p>
-              )}
-              
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  onClick={() => startReply(c.id)}
-                  className="h-7 px-2 text-xs transition-all duration-200 hover:scale-105"
-                >
-                  Reply
-                </Button>
-                
-                {isOwner && (
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => startEdit(c)}
-                    className="h-7 px-2 text-xs transition-all duration-200 hover:scale-105"
-                  >
-                    <Edit2 className="w-3 h-3 mr-1" />
-                    Edit
-                  </Button>
-                )}
-                
-                {isOwner && (
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => deleteComment(c.id)}
-                    disabled={isDeleting}
-                    className="h-7 px-2 text-xs transition-all duration-200 hover:scale-105 hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    Delete
-                  </Button>
-                )}
-                
-                <div className="flex items-center gap-1 ml-auto">
-                  <Button
-                    size="sm"
-                    variant={c.user_reaction === "up" ? "default" : "ghost"}
-                    onClick={() => reactToComment(c.id)}
-                    disabled={isReacting}
-                    className="h-7 px-2 transition-all duration-200 hover:scale-105 hover:bg-green-500/10 hover:text-green-600"
-                  >
-                    {isReacting ? (
-                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                    ) : (
-                      <ThumbsUp className="h-3 w-3 mr-1" />
-                    )}
-                    {reactions.up > 0 && <span className="text-xs">{reactions.up}</span>}
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <p className="text-sm mb-2">{c.content}</p>
           )}
           
-          {/* Reply form */}
-          {isReplying && (
-            <div className="mt-3 space-y-2 border-l-2 border-muted pl-4">
-              <Textarea 
-                value={replyText}
-                onChange={(e) => setReplyTexts(prev => ({ ...prev, [c.id]: e.target.value }))}
-                placeholder="Write a reply..."
-                className="min-h-[60px] text-sm"
-                disabled={!user?.email_confirmed_at}
-              />
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  onClick={() => submitComment(replyText, c.id)}
-                  disabled={busy || !replyText.trim() || !user?.email_confirmed_at}
-                  className="h-7"
-                >
-                  {busy ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-                  Reply
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  onClick={() => cancelReply(c.id)}
-                  className="h-7"
-                >
-                  Cancel
-                </Button>
-              </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={() => setReplyTo(c.id)}
+              className="transition-all duration-200 hover:scale-105 hover:bg-accent/60"
+            >
+              Reply
+            </Button>
+            {isOwner && (
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => deleteComment(c.id)}
+                disabled={isDeleting}
+                className="transition-all duration-200 hover:scale-105 hover:bg-destructive/10 hover:text-destructive"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            )}
+            
+            {/* Reaction buttons - Only Like for comments */}
+            <div className="flex items-center gap-1 ml-2">
+              <Button
+                size="sm"
+                variant={c.user_reaction === "up" ? "default" : "ghost"}
+                onClick={() => reactToComment(c.id, "up")}
+                disabled={isReacting}
+                className="h-7 px-2 transition-all duration-200 hover:scale-105 hover:bg-green-500/10 hover:text-green-600"
+              >
+                {isReacting && c.user_reaction !== "up" ? (
+                  <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin mr-1" />
+                ) : (
+                  <ThumbsUp className="h-3 w-3 mr-1" />
+                )}
+                {reactions.up > 0 && <span className="text-xs">{reactions.up}</span>}
+              </Button>
             </div>
+          </div>
+          
+          {isReacting && (
+            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+              <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+              Updating reaction...
+            </p>
           )}
           
-          {/* Nested replies */}
+          {hasFeedback && (
+            <p className="text-xs text-muted-foreground mt-2">
+              ✓ Feedback sent
+            </p>
+          )}
+          
           {c.replies && c.replies.length > 0 && (
-            <div className="mt-4 space-y-4 border-l-2 border-muted pl-4 ml-2">
-              {c.replies.map(r => <Item key={r.id} c={r} />)}
+            <div className="mt-3 space-y-4 border-l sm:pl-6 pl-3 sm:ml-6 ml-3">
+              {c.replies.filter(r => !deletedIds.has(r.id)).map(r => <Item key={r.id} c={r} />)}
             </div>
           )}
         </div>
@@ -484,110 +354,135 @@ export default function CommentThread({
   };
 
   return (
-    <div className="max-w-3xl mx-auto mt-8 space-y-6">
-      <h3 className="text-xl font-semibold">Comments</h3>
-      
-      {user ? (
-        <div className="bg-card border rounded-2xl p-4 shadow-sm">
-          <div className="flex items-start gap-3">
-            <Avatar className="h-10 w-10 flex-shrink-0">
-              <AvatarImage src={user.user_metadata?.avatar_url} />
-              <AvatarFallback className="bg-muted">
-                {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || '?'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 space-y-3">
-              <Textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={user?.email_confirmed_at ? "Share your thoughts..." : "Verify your email to comment"}
-                disabled={!user?.email_confirmed_at}
-                className="min-h-[100px] resize-none border-0 bg-muted/50 focus:bg-background transition-colors"
-              />
-              {errors.submit && (
-                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg flex items-start justify-between">
-                  <span>{errors.submit}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setErrors(prev => ({ ...prev, submit: '' }))}
-                    className="h-auto p-1 text-xs hover:bg-destructive/20"
-                  >
-                    ✕
-                  </Button>
+    <>
+      <div className="space-y-6">
+        {user ? (
+          <div className="flex items-start gap-2">
+            {busy ? (
+              <div className="flex-1 p-3 border rounded-lg bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm text-muted-foreground">Posting comment...</span>
                 </div>
-              )}
-              <div className="flex justify-end">
+              </div>
+            ) : (
+              <>
+                <Textarea 
+                  className="flex-1 rounded-2xl" 
+                  value={text} 
+                  onChange={(e) => setText(e.target.value)} 
+                  placeholder={user?.email_confirmed_at ? "Add a comment" : "Verify your email to comment"}
+                  disabled={!user?.email_confirmed_at}
+                />
                 <Button 
-                  onClick={() => submitComment(text)}
-                  disabled={!text.trim() || busy || !user?.email_confirmed_at}
-                  className="transition-all duration-200 hover:scale-105"
+                  size="sm" 
+                  onClick={() => submit(null)} 
+                  disabled={busy || !user?.email_confirmed_at}
+                  className="rounded-2xl"
                 >
-                  {busy ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Posting...
-                    </>
-                  ) : (
-                    'Post Comment'
-                  )}
+                  Comment
                 </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-muted/30 border rounded-2xl p-6 text-center">
-          <p className="text-muted-foreground">Please sign in to join the discussion.</p>
-        </div>
-      )}
-      
-      <div className="space-y-4">
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-card border rounded-2xl p-4 shadow-sm">
-                <div className="flex items-start gap-3 animate-pulse">
-                  <div className="w-8 h-8 bg-muted rounded-full flex-shrink-0" />
-                  <div className="flex-1 space-y-3">
-                    <div className="h-4 bg-muted rounded w-1/4" />
-                    <div className="space-y-2">
-                      <div className="h-3 bg-muted rounded w-full" />
-                      <div className="h-3 bg-muted rounded w-3/4" />
-                      <div className="h-3 bg-muted rounded w-1/2" />
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="h-6 bg-muted rounded w-12" />
-                      <div className="h-6 bg-muted rounded w-12" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : errors.load ? (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-6 text-center">
-            <p className="text-destructive mb-3">{errors.load}</p>
-            <Button 
-              variant="outline" 
-              onClick={() => loadComments()}
-              className="transition-all duration-200 hover:scale-105"
-            >
-              Try Again
-            </Button>
-          </div>
-        ) : tree.length === 0 ? (
-          <div className="bg-muted/30 border rounded-2xl p-6 text-center">
-            <p className="text-muted-foreground">No comments yet. Be the first to share your thoughts!</p>
+              </>
+            )}
           </div>
         ) : (
-          tree.map((comment) => (
-            <div key={comment.id} className="bg-card border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
-              <Item c={comment} />
-            </div>
-          ))
+          <div className="text-center text-muted-foreground py-4">
+            Sign in to join the discussion
+          </div>
         )}
+        
+        <div className="space-y-6">
+          {loading ? (
+            // Skeleton loader for initial load
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded animate-pulse w-1/4" />
+                    <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+                    <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            roots.map((c) => (
+              <div key={c.id} className="space-y-2">
+                <Item c={c} />
+                {replyTo === c.id && user && (
+                  <div className="sm:ml-11 ml-8">
+                    <Textarea 
+                      value={text} 
+                      onChange={(e) => setText(e.target.value)} 
+                      placeholder={user?.email_confirmed_at ? "Write a reply" : "Verify your email to reply"}
+                      disabled={!user?.email_confirmed_at}
+                    />
+                    <div className="mt-2 flex gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={() => submit(c.id)} 
+                        disabled={busy || !user?.email_confirmed_at}
+                      >
+                        Reply
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setReplyTo(null)}>Cancel</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Feedback Modal */}
+      <Dialog open={feedbackModal.open} onOpenChange={(open) => setFeedbackModal({ ...feedbackModal, open })}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Why are you giving this a thumbs down?</DialogTitle>
+            <DialogDescription>
+              Help us improve by letting us know what's wrong with this comment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <RadioGroup value={feedbackReason} onValueChange={setFeedbackReason}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="unclear" id="unclear" />
+                <Label htmlFor="unclear">Unclear or confusing</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="factually wrong" id="wrong" />
+                <Label htmlFor="wrong">Factually incorrect</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="inappropriate" id="inappropriate" />
+                <Label htmlFor="inappropriate">Inappropriate content</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="other" id="other" />
+                <Label htmlFor="other">Other</Label>
+              </div>
+            </RadioGroup>
+            
+            <div className="space-y-2">
+              <Label htmlFor="feedback">Additional feedback (optional)</Label>
+              <Textarea
+                id="feedback"
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                placeholder="Please explain what's wrong..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFeedbackModal({ commentId: "", open: false })}>
+              Cancel
+            </Button>
+            <Button onClick={submitFeedback}>Submit Feedback</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
