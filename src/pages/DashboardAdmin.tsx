@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import QuestionGenerator from "@/pages/admin/QuestionGenerator";
+import GenerateBlogDraft from "@/pages/tools/GenerateBlogDraft";
+import ExamGenerator from "@/components/dashboard/exams/ExamGenerator";
 
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
@@ -1152,6 +1154,12 @@ export default function DashboardAdmin() {
           render: <AdminAnalyticsPanel /> 
         },
         { 
+          id: "generator", 
+          title: "Generator", 
+          description: "AI-powered blog draft generation.", 
+          render: <div className="p-0"><GenerateBlogDraft /></div> 
+        },
+        { 
           id: "queue", 
           title: "Queue", 
           description: "Triage incoming posts and assign to reviewers.", 
@@ -1176,12 +1184,6 @@ export default function DashboardAdmin() {
           render: <div className="p-0"><AuthoredBlogTabs /></div> 
         },
         { 
-          id: "generator", 
-          title: "Generator", 
-          description: "AI-powered blog draft generation.", 
-          render: <div className="p-4"><iframe src="/tools/generate-blog-draft" className="w-full h-[800px] border rounded-lg" title="Blog Generator" /></div> 
-        },
-        { 
           id: "marked", 
           title: "Marked", 
           description: "Unresolved blog feedback from users.", 
@@ -1203,7 +1205,7 @@ export default function DashboardAdmin() {
           id: "generator", 
           title: "Generator", 
           description: "AI-powered exam question generation.", 
-          render: <div className="p-4"><iframe src="/tools/generate-exam-question" className="w-full h-[800px] border rounded-lg" title="Exam Generator" /></div> 
+          render: <div className="p-0"><ExamGenerator /></div> 
         },
         { 
           id: "review-assignment", 

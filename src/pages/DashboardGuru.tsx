@@ -18,6 +18,8 @@ import { useGuruMetrics } from "@/hooks/metrics/useGuruMetrics";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import BlogsMarkedList from "@/components/dashboard/blogs/BlogsMarkedList";
+import GenerateBlogDraft from "@/pages/tools/GenerateBlogDraft";
+import ExamGenerator from "@/components/dashboard/exams/ExamGenerator";
 
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -295,6 +297,12 @@ export default function DashboardGuru() {
           render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your recent reviews and publishing impact.</div><AnalyticsPanel /></div> 
         },
         { 
+          id: "generator", 
+          title: "Generator", 
+          description: "AI-powered blog draft generation.", 
+          render: <div className="p-0"><GenerateBlogDraft /></div> 
+        },
+        { 
           id: "reviews", 
           title: "Reviews", 
           description: "Edit and approve assigned blog posts.", 
@@ -305,12 +313,6 @@ export default function DashboardGuru() {
           title: "Authored", 
           description: "Your authored blog posts across all stages.", 
           render: <div className="p-0"><AuthoredBlogTabs /></div> 
-        },
-        { 
-          id: "generator", 
-          title: "Generator", 
-          description: "AI-powered blog draft generation.", 
-          render: <div className="p-4"><iframe src="/tools/generate-blog-draft" className="w-full h-[800px] border rounded-lg" title="Blog Generator" /></div> 
         },
         { 
           id: "marked", 
@@ -346,7 +348,7 @@ export default function DashboardGuru() {
           id: "generator", 
           title: "Generator", 
           description: "AI-powered exam question generation.", 
-          render: <div className="p-4"><iframe src="/tools/generate-exam-question" className="w-full h-[800px] border rounded-lg" title="Exam Generator" /></div> 
+          render: <div className="p-0"><ExamGenerator /></div> 
         },
       ],
     },
