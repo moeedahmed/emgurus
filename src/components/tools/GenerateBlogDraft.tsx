@@ -89,18 +89,18 @@ const GenerateBlogDraft: React.FC = () => {
     
     if (!draft.title.trim()) {
       errors.push({ field: "title", message: "Title is required" });
-    } else if (draft.title.trim().length < 3) {
-      errors.push({ field: "title", message: "Title must be at least 3 characters" });
+    } else if (draft.title.trim().length < 5) {
+      errors.push({ field: "title", message: "Title must be at least 5 characters" });
     }
     
     if (!draft.content.trim()) {
       errors.push({ field: "content", message: "Content is required" });
-    } else if (draft.content.trim().length < 10) {
-      errors.push({ field: "content", message: "Content must be at least 10 characters" });
+    } else if (draft.content.trim().length < 50) {
+      errors.push({ field: "content", message: "Content must be at least 50 characters" });
     }
     
-    if (draft.tags.length === 0) {
-      errors.push({ field: "tags", message: "At least one tag is required" });
+    if (draft.tags.length === 0 || !draft.tags.some(tag => tag.trim())) {
+      errors.push({ field: "tags", message: "At least one non-empty tag is required" });
     }
     
     return errors;
@@ -235,11 +235,12 @@ const GenerateBlogDraft: React.FC = () => {
         return;
       }
 
-      // Then assign reviewer
+      // Then assign reviewer using the new multi-reviewer endpoint
       const assignResponse = await callFunction("/blogs-api", {
-        action: "assign_reviewer",
+        action: "assign_reviewers",
         post_id: saveResponse.post.id,
-        reviewer_id: selectedGuru,
+        reviewer_ids: [selectedGuru],
+        note: "Assigned via Blog Generator"
       }, true);
 
       if (assignResponse.success) {
@@ -498,7 +499,7 @@ const GenerateBlogDraft: React.FC = () => {
                 </TabsContent>
                 
                 <TabsContent value="multimedia" className="space-y-4">
-                  <div className="text-center p-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                  <div className="relative text-center p-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
                     <div className="flex justify-center space-x-4 mb-4">
                       <Image className="h-8 w-8 text-muted-foreground" />
                       <Video className="h-8 w-8 text-muted-foreground" />
@@ -506,16 +507,55 @@ const GenerateBlogDraft: React.FC = () => {
                     </div>
                     <p className="text-muted-foreground">Drop multimedia files here or click to browse</p>
                     <p className="text-sm text-muted-foreground mt-2">Support for images, videos, and audio</p>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,video/*,audio/*"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        setAttachments(prev => [
+                          ...prev,
+                          ...files.map(file => ({
+                            name: file.name,
+                            file,
+                            type: file.type,
+                            size: file.size
+                          }))
+                        ]);
+                        setHasUnsavedChanges(true);
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
                   </div>
                   
-                  {attachments.map((attachment, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-muted rounded">
-                      <span className="text-sm">{attachment.name}</span>
-                      <Button size="sm" variant="ghost" onClick={() => setAttachments(prev => prev.filter((_, index) => index !== i))}>
-                        <X className="h-4 w-4" />
-                      </Button>
+                  {attachments.length > 0 && (
+                    <div>
+                      <Label>Attached Media ({attachments.length})</Label>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {attachments.map((attachment, i) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              {attachment.type?.startsWith('image/') && <Image className="h-4 w-4 text-blue-500" />}
+                              {attachment.type?.startsWith('video/') && <Video className="h-4 w-4 text-green-500" />}
+                              {attachment.type?.startsWith('audio/') && <Music className="h-4 w-4 text-purple-500" />}
+                              <div>
+                                <p className="text-sm font-medium">{attachment.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {attachment.type} • {Math.round((attachment.size || 0) / 1024)} KB
+                                </p>
+                              </div>
+                            </div>
+                            <Button size="sm" variant="ghost" onClick={() => {
+                              setAttachments(prev => prev.filter((_, index) => index !== i));
+                              setHasUnsavedChanges(true);
+                            }}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                  )}
                 </TabsContent>
               </Tabs>
 

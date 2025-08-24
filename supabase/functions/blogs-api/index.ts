@@ -548,6 +548,87 @@ serve(async (req) => {
         });
       }
 
+      if (body.action === "assign_reviewers") {
+        if (!body.post_id || !body.reviewer_ids || !Array.isArray(body.reviewer_ids) || body.reviewer_ids.length === 0) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            errors: [{ field: "reviewer_ids", message: "Post ID and at least one reviewer ID are required" }] 
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Check if user can assign reviewers (admin only for now)
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+        
+        const userRoles = (roles || []).map(r => r.role);
+        if (!userRoles.includes('admin')) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            errors: [{ field: "authorization", message: "Admin role required to assign reviewers" }] 
+          }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        // Create assignment records for each reviewer
+        const assignments = body.reviewer_ids.map((reviewer_id: string) => ({
+          post_id: body.post_id,
+          reviewer_id,
+          assigned_by: user.id,
+          status: 'pending' as const,
+          assigned_at: new Date().toISOString(),
+          notes: body.note || 'Assigned via Blog Generator'
+        }));
+
+        const { data: assignmentData, error: assignError } = await supabase
+          .from("blog_review_assignments")
+          .insert(assignments)
+          .select("*");
+
+        if (assignError) {
+          console.error("Assignment error:", assignError);
+          return new Response(JSON.stringify({ 
+            success: false, 
+            errors: [{ field: "assignment", message: "Failed to create reviewer assignments" }] 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        // Update post status
+        const { error: updateError } = await supabase
+          .from("blog_posts")
+          .update({
+            status: 'in_review',
+            submitted_at: new Date().toISOString(),
+            assigned_by: user.id,
+            assigned_at: new Date().toISOString()
+          })
+          .eq('id', body.post_id);
+
+        if (updateError) {
+          console.error("Update error:", updateError);
+          return new Response(JSON.stringify({ 
+            success: false, 
+            errors: [{ field: "update", message: "Failed to update post status" }] 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true, assignments: assignmentData }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
       // Generate blog draft
       const parsed = createDraftSchema.partial().parse(body);
       
@@ -564,12 +645,25 @@ serve(async (req) => {
       // Generate content based on parameters
       let generatedContent = `# ${body.topic}\n\nThis is a generated blog post about ${body.topic}.`;
       
-      // Process files and URLs if provided
+      // Process files and URLs with error tracking
+      const sourceErrors: Array<{ source: string; error: string }> = [];
+      
       if (body.files && body.files.length > 0) {
         generatedContent += "\n\n## Referenced Content\n\n";
         for (const file of body.files) {
-          if (file.content) {
+          try {
+            if (!file.content || file.content.trim().length === 0) {
+              sourceErrors.push({ source: file.name, error: "File content is empty or invalid" });
+              continue;
+            }
+            // Basic content validation
+            if (file.content.length < 10) {
+              sourceErrors.push({ source: file.name, error: "File content too short to be useful" });
+              continue;
+            }
             generatedContent += `### From ${file.name}\n\n${file.content.substring(0, 500)}...\n\n`;
+          } catch (err) {
+            sourceErrors.push({ source: file.name, error: `Failed to process file: ${err}` });
           }
         }
       }
@@ -577,8 +671,46 @@ serve(async (req) => {
       if (body.urls && body.urls.length > 0) {
         generatedContent += "\n\n## Referenced URLs\n\n";
         for (const url of body.urls) {
-          if (url.trim()) {
-            generatedContent += `- ${url}\n`;
+          try {
+            if (!url.trim()) continue;
+            
+            // Basic URL validation
+            if (!url.match(/^https?:\/\/.+/)) {
+              sourceErrors.push({ source: url, error: "Invalid URL format - must start with http:// or https://" });
+              continue;
+            }
+            
+            // Try to fetch content if searchOnline is enabled
+            if (body.searchOnline) {
+              try {
+                const response = await fetch(url, { 
+                  signal: AbortSignal.timeout(5000) // 5 second timeout
+                });
+                if (!response.ok) {
+                  sourceErrors.push({ source: url, error: `Failed to fetch: ${response.status} ${response.statusText}` });
+                  continue;
+                }
+                const text = await response.text();
+                const cleanText = text
+                  .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                  .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+                  .replace(/<[^>]*>/g, '')
+                  .replace(/\s+/g, ' ')
+                  .trim();
+                
+                if (cleanText.length > 50) {
+                  generatedContent += `### From ${url}\n\n${cleanText.substring(0, 800)}...\n\n`;
+                } else {
+                  sourceErrors.push({ source: url, error: "URL content too short or empty" });
+                }
+              } catch (fetchErr) {
+                sourceErrors.push({ source: url, error: `Failed to scrape URL: ${fetchErr}` });
+              }
+            } else {
+              generatedContent += `- ${url}\n`;
+            }
+          } catch (err) {
+            sourceErrors.push({ source: url, error: `Failed to process URL: ${err}` });
           }
         }
       }
@@ -590,6 +722,29 @@ serve(async (req) => {
         generatedContent += "\n\nHope this helps clarify things!";
       }
 
+      // Validate generated content
+      const contentErrors: Array<{ field: string; message: string }> = [];
+      
+      if (!body.topic?.trim()) {
+        contentErrors.push({ field: "topic", message: "Topic is required" });
+      }
+      
+      if (generatedContent.length < 100) {
+        contentErrors.push({ field: "content", message: "Generated content is too short" });
+      }
+
+      // Return errors if any validation failed
+      if (contentErrors.length > 0 || sourceErrors.length > 0) {
+        return new Response(JSON.stringify({
+          success: false,
+          errors: contentErrors,
+          sourceErrors: sourceErrors
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const response = {
         success: true,
         draft: {
@@ -598,6 +753,7 @@ serve(async (req) => {
           tags: [body.topic.toLowerCase().replace(/\s+/g, "-")],
           excerpt: `A comprehensive guide to ${body.topic}`,
         },
+        sourceErrors: sourceErrors.length > 0 ? sourceErrors : undefined
       };
 
       return new Response(JSON.stringify(response), {

@@ -244,10 +244,11 @@ Return ONLY this JSON schema:
     }
 
     if (body.action === "bulk_generate") {
-      const { exam_type, topic, difficulty, count = 5, persistAsDraft = true, reviewer_assign_to, searchOnline = false, files = [], urls = [] } = body as BulkGenerateBody & { 
+      const { exam_type, topic, difficulty, count = 5, persistAsDraft = true, reviewer_assign_to, searchOnline = false, files = [], urls = [], preGenerated } = body as BulkGenerateBody & { 
         searchOnline?: boolean; 
         files?: Array<{ name: string; content: string; type: string }>; 
-        urls?: string[] 
+        urls?: string[];
+        preGenerated?: { question: string; options: string[]; correct: string; explanation?: string; reference?: string; }
       };
       
       // Check if user is admin or guru
@@ -329,8 +330,24 @@ Return ONLY this JSON schema:
 
       for (let i = 0; i < safeCount; i++) {
         try {
-          const systemPrompt = `You are a medical education expert writing Emergency Medicine MCQs. Return strict JSON only.`;
-          const userPrompt = `Generate one MCQ for ${exam_type}.
+          let obj: any;
+
+          // Use pre-generated content if provided (from Exam Generator)
+          if (preGenerated && i === 0) {
+            obj = {
+              question: preGenerated.question,
+              options: Array.isArray(preGenerated.options) 
+                ? { A: preGenerated.options[0], B: preGenerated.options[1], C: preGenerated.options[2], D: preGenerated.options[3], E: preGenerated.options[4] }
+                : preGenerated.options,
+              correct: preGenerated.correct,
+              explanation: preGenerated.explanation || '',
+              reference: preGenerated.reference || '',
+              topic: topic || 'General',
+              subtopic: topic || 'General'
+            };
+          } else {
+            const systemPrompt = `You are a medical education expert writing Emergency Medicine MCQs. Return strict JSON only.`;
+            const userPrompt = `Generate one MCQ for ${exam_type}.
 Constraints:
 - Topic focus: ${topic || "random across the EM curriculum"}
 - Difficulty: ${difficulty || "mixed"}
@@ -350,16 +367,17 @@ Return ONLY this JSON schema:
   "subtopic": "string"
 }`;
 
-          const result = await chat({
-            system: systemPrompt,
-            messages: [{ role: 'user', content: userPrompt }],
-            model,
-            responseFormat: 'json_object',
-            temperature: 0.4,
-            maxTokens: 800
-          });
+            const result = await chat({
+              system: systemPrompt,
+              messages: [{ role: 'user', content: userPrompt }],
+              model,
+              responseFormat: 'json_object',
+              temperature: 0.4,
+              maxTokens: 800
+            });
 
-          const obj = JSON.parse(result);
+            obj = JSON.parse(result);
+          }
           
           // Validate generated content - drop empty or malformed questions
           if (!obj.question || !obj.options || !obj.correct || !obj.explanation) {
@@ -389,7 +407,7 @@ Return ONLY this JSON schema:
 
             // Create assignment if reviewer specified
             if (reviewer_assign_to && saved) {
-              await supabase
+              const { error: assignError } = await supabase
                 .from("exam_review_assignments")
                 .insert({
                   question_id: saved.id,
@@ -397,18 +415,24 @@ Return ONLY this JSON schema:
                   assigned_by: user.id,
                   status: 'pending_review',
                   assigned_at: new Date().toISOString(),
-                  notes: `Auto-assigned via bulk generation`
+                  notes: `Auto-assigned via ${preGenerated ? 'Exam Generator' : 'bulk generation'}`
                 });
 
-              // Update question metadata
-              await supabase
-                .from("review_exam_questions")
-                .update({
-                  status: 'under_review',
-                  assigned_to: reviewer_assign_to,
-                  assigned_by: user.id
-                })
-                .eq('id', saved.id);
+              if (assignError) {
+                console.error('Assignment error:', assignError);
+                // Don't fail the whole operation for assignment errors
+              } else {
+                // Update question metadata only if assignment succeeded
+                await supabase
+                  .from("review_exam_questions")
+                  .update({
+                    status: 'under_review',
+                    assigned_to: reviewer_assign_to,
+                    assigned_by: user.id,
+                    assigned_at: new Date().toISOString()
+                  })
+                  .eq('id', saved.id);
+              }
             }
           } else {
             generated.push(obj);

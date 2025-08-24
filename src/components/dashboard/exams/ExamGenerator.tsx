@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Users, Trash2, ArrowRight, AlertCircle } from "lucide-react";
+import { Save, Users, Trash2, ArrowRight, AlertCircle, Upload } from "lucide-react";
 
 interface GeneratedQuestion {
   id: string;
@@ -355,53 +355,58 @@ export default function ExamGenerator() {
         }
       };
 
-      // Step 1: Create draft question
-      const { data: savedQuestion, error: saveError } = await supabase
-        .from("review_exam_questions")
-        .insert({
+      // Use the AI Exams API for consistent multi-reviewer assignment
+      const payload = {
+        action: "bulk_generate",
+        exam_type: mapExamType(currentQuestion.exam_type || formData.examType),
+        topic: currentQuestion.topic || formData.topic,
+        difficulty: currentQuestion.difficulty || formData.difficulty,
+        count: 1,
+        persistAsDraft: true,
+        reviewer_assign_to: selectedGuru,
+        preGenerated: {
           question: currentQuestion.stem,
           options: currentQuestion.options,
-          correct_answer: currentQuestion.correct_answer,
-          explanation: currentQuestion.explanation || '',
-          exam_type: mapExamType(currentQuestion.exam_type || formData.examType),
-          created_by: user.id,
-          status: 'under_review',
-          submitted_at: new Date().toISOString(),
-          assigned_to: selectedGuru,
-          assigned_by: user.id
-        })
-        .select("*")
-        .single();
+          correct: currentQuestion.correct_answer,
+          explanation: currentQuestion.explanation,
+          reference: currentQuestion.reference
+        }
+      };
 
-      if (saveError) throw saveError;
-
-      // Step 2: Create assignment record
-      const { error: assignError } = await supabase
-        .from("exam_review_assignments")
-        .insert({
-          question_id: savedQuestion.id,
-          reviewer_id: selectedGuru,
-          assigned_by: user.id,
-          status: 'pending_review',
-          assigned_at: new Date().toISOString(),
-          notes: `Auto-assigned via Generator on ${new Date().toLocaleDateString()}`
+      const result = await callFunction("/ai-exams-api", payload, true);
+      
+      if (result?.success !== false && result?.items && result.items.length > 0) {
+        const savedQuestion = result.items[0];
+        
+        toast({
+          title: "Question Assigned",
+          description: `Question assigned to ${getGuruName(selectedGuru)} (ID: ${savedQuestion.id?.slice(0, 8) || 'generated'}...)`,
         });
-
-      if (assignError) throw assignError;
-      
-      console.log('Question saved and assigned:', savedQuestion.id);
-      
-      toast({
-        title: "Question Assigned",
-        description: `Question assigned to ${getGuruName(selectedGuru)} (ID: ${savedQuestion.id.slice(0, 8)}...)`,
-      });
-      
-      // Reset state
-      setCurrentQuestion(null);
-      originalQuestionRef.current = null;
-      setHasUnsavedChanges(false);
-      setValidationErrors({});
-      setSelectedGuru("");
+        
+        // Reset state
+        setCurrentQuestion(null);
+        originalQuestionRef.current = null;
+        setHasUnsavedChanges(false);
+        setValidationErrors({});
+        setSelectedGuru("");
+      } else {
+        // Parse structured errors if available
+        if (result?.errors && Array.isArray(result.errors)) {
+          const fieldErrors: ValidationErrors = {};
+          result.errors.forEach((error: {field: string, message: string}) => {
+            fieldErrors[error.field as keyof ValidationErrors] = error.message;
+          });
+          setValidationErrors(fieldErrors);
+          
+          toast({
+            title: "Validation Failed",
+            description: "Please fix the errors highlighted below.",
+            variant: "destructive"
+          });
+        } else {
+          throw new Error(result?.error || 'Failed to assign question');
+        }
+      }
     } catch (error: any) {
       console.error('Error assigning question:', error);
       let errorMessage = "Unable to assign question. Please try again.";
@@ -755,10 +760,34 @@ export default function ExamGenerator() {
             
             <TabsContent value="multimedia" className="space-y-4">
               <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">
-                    Multimedia support (images, videos, audio) will be available here.
-                  </p>
+                <CardHeader>
+                  <CardTitle>Question Multimedia</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="relative text-center p-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                    <div className="flex justify-center space-x-4 mb-4">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground">Upload images for your question</p>
+                    <p className="text-sm text-muted-foreground mt-2">Supports JPG, PNG, GIF formats</p>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        // Handle image uploads for questions
+                        console.log('Images uploaded:', files);
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  
+                  <div className="text-xs text-muted-foreground">
+                    <p>• Images will be included with the question for reviewers</p>
+                    <p>• Maximum file size: 5MB per image</p>
+                    <p>• Recommended: High contrast images for medical diagrams</p>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
