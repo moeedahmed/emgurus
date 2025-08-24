@@ -220,6 +220,18 @@ function AdminBlogQueueContent() {
 
   const publishPost = async (postId: string) => {
     try {
+      // Check if post has reviewer assigned via review assignments
+      const { data: assignments } = await supabase
+        .from('blog_review_assignments')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('status', 'completed');
+      
+      if (!assignments || assignments.length === 0) {
+        toast.error('Cannot publish: No reviewer assigned and approved. Please assign a reviewer first.');
+        return;
+      }
+
       const { error } = await supabase.rpc('review_approve_publish', { p_post_id: postId });
       if (error) throw error;
       toast.success('Post published');

@@ -297,23 +297,25 @@ export async function submitPost(id: string) {
   }
 }
 
-export async function reviewPost(id: string, body: { note?: string; is_featured?: boolean }) {
-  const res = await fetch(`${BASE}/api/blogs/${id}/review`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(await authHeader()) },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+export async function reviewPost(id: string, body: {
+  action: "approve" | "reject" | "request_changes";
+  note?: string;
+}) {
+  try {
+    return await callFunction(`/blogs-api/api/blogs/${id}/review`, body, true, "POST");
+  } catch (error: any) {
+    const message = getErrorMessage(error, "Failed to review post");
+    throw new Error(message);
+  }
 }
 
 export async function publishPost(id: string) {
-  const res = await fetch(`${BASE}/api/blogs/${id}/publish`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(await authHeader()) },
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  try {
+    return await callFunction(`/blogs-api/api/blogs/${id}/publish`, {}, true, "POST");
+  } catch (error: any) {
+    const message = getErrorMessage(error, "Failed to publish post");
+    throw new Error(message);
+  }
 }
 
 export async function reactToPost(id: string, reaction: ReactionKey) {
