@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { CheckCircle, Star, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -139,8 +140,93 @@ const Pricing = () => {
           </p>
         </div>
 
-        {/* Pricing Cards */}
-        <div className="grid lg:grid-cols-4 gap-8">
+        {/* Mobile Carousel */}
+        <div className="md:hidden">
+          <Carousel className="w-full">
+            <CarouselContent className="-ml-2 md:-ml-4">
+              {plans.map((plan, index) => (
+                <CarouselItem key={index} className="pl-2 md:pl-4 basis-[85%]">
+                  <Card 
+                    className={`relative overflow-hidden transition-all duration-300 hover:shadow-strong ${
+                      plan.popular 
+                        ? 'border-primary shadow-medium scale-105' 
+                        : plan.premium
+                        ? 'border-accent shadow-medium bg-gradient-card'
+                        : 'hover:scale-105'
+                    }`}
+                  >
+                    {plan.popular && (
+                      <div className="absolute top-0 left-0 right-0 bg-gradient-primary text-primary-foreground text-center py-2 text-sm font-medium">
+                        <Star className="w-4 h-4 inline mr-1" />
+                        Most Popular
+                      </div>
+                    )}
+                    
+                    {plan.premium && (
+                      <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-accent to-accent/80 text-accent-foreground text-center py-2 text-sm font-medium">
+                        <Crown className="w-4 h-4 inline mr-1" />
+                        Premium
+                      </div>
+                    )}
+
+                    <div className={`p-6 ${plan.popular || plan.premium ? 'pt-12' : ''}`}>
+                      {/* Plan Header */}
+                      <div className="text-center mb-6">
+                        <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
+                        <div className="mb-2">
+                          <span className="heading-lg">{plan.price}</span>
+                          <span className="text-muted-foreground">/{plan.period}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{plan.description}</p>
+                      </div>
+
+                      {/* Features */}
+                      <div className="mb-6">
+                        <ul className="space-y-3">
+                          {plan.features.map((feature, idx) => (
+                            <li key={idx} className="flex items-start text-sm">
+                              <CheckCircle className="w-4 h-4 text-success mr-3 mt-0.5 flex-shrink-0" />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Button */}
+                      <Button 
+                        variant={plan.buttonVariant} 
+                        className="w-full"
+                        size="lg"
+                        onClick={() => handlePlanClick(plan.name)}
+                      >
+                        {plan.buttonText}
+                      </Button>
+
+                      {/* Not Included (for lower tiers) */}
+                      {plan.notIncluded.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-border">
+                          <p className="text-xs text-muted-foreground mb-2">Not included:</p>
+                          <ul className="space-y-1">
+                            {plan.notIncluded.map((feature, idx) => (
+                              <li key={idx} className="text-xs text-muted-foreground">
+                                • {feature}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="left-2" />
+            <CarouselNext className="right-2" />
+          </Carousel>
+        </div>
+
+        {/* Desktop Grid */}
+        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {plans.map((plan, index) => (
             <Card 
               key={index} 
