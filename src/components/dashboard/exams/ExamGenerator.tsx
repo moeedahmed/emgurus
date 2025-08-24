@@ -7,8 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
+import { Save, Users, Trash2, ArrowRight } from "lucide-react";
 
 interface GeneratedQuestion {
   id: string;
@@ -19,16 +21,22 @@ interface GeneratedQuestion {
   exam_type?: string;
   topic?: string;
   difficulty?: string;
+  tags?: string[];
+  reference?: string;
+}
+
+interface EditableQuestion extends GeneratedQuestion {
+  isEditing: boolean;
 }
 
 export default function ExamGenerator() {
   const { user, loading: userLoading } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
+  const [currentQuestion, setCurrentQuestion] = useState<EditableQuestion | null>(null);
+  const [generationCount, setGenerationCount] = useState(0);
   const [formData, setFormData] = useState({
     topic: '',
     difficulty: 'medium',
-    count: '5',
     examType: 'mrcem_sba',
     instructions: ''
   });
@@ -59,29 +67,34 @@ export default function ExamGenerator() {
         exam_type: formData.examType,
         topic: formData.topic,
         difficulty: formData.difficulty,
-        count: parseInt(formData.count),
+        count: 1, // Always generate one question at a time
         instructions: formData.instructions || undefined
       };
 
       const result = await callFunction("/ai-exams-api", payload, true);
       
-      if (result?.questions && Array.isArray(result.questions)) {
-        const questions = result.questions.map((q: any, index: number) => ({
-          id: `generated-${Date.now()}-${index}`,
-          stem: q.question || q.stem || '',
-          options: q.options || q.choices || [],
-          correct_answer: q.correct_answer || q.answer || '',
-          explanation: q.explanation || '',
+      if (result?.questions && Array.isArray(result.questions) && result.questions.length > 0) {
+        const question = result.questions[0];
+        const newQuestion: EditableQuestion = {
+          id: `generated-${Date.now()}`,
+          stem: question.question || question.stem || '',
+          options: question.options || question.choices || [],
+          correct_answer: question.correct_answer || question.answer || '',
+          explanation: question.explanation || '',
           exam_type: formData.examType,
           topic: formData.topic,
-          difficulty: formData.difficulty
-        }));
+          difficulty: formData.difficulty,
+          tags: [],
+          reference: '',
+          isEditing: true
+        };
         
-        setGeneratedQuestions(questions);
+        setCurrentQuestion(newQuestion);
+        setGenerationCount(prev => prev + 1);
         
         toast({
-          title: "Questions Generated",
-          description: `${questions.length} questions created for ${formData.topic}`,
+          title: "Question Generated",
+          description: `New question created for ${formData.topic}`,
         });
       } else {
         throw new Error('Invalid response format');
@@ -90,7 +103,7 @@ export default function ExamGenerator() {
       console.error('Error generating questions:', error);
       toast({
         title: "Generation Failed",
-        description: error?.message || "Unable to generate questions. Please try again.",
+        description: error?.message || "Unable to generate question. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -98,7 +111,9 @@ export default function ExamGenerator() {
     }
   };
 
-  const handleSaveQuestion = async (question: GeneratedQuestion) => {
+  const handleSaveQuestion = async () => {
+    if (!currentQuestion) return;
+    
     try {
       // Save as draft using existing exam draft creation flow
       toast({
@@ -106,8 +121,8 @@ export default function ExamGenerator() {
         description: "Question saved to drafts successfully.",
       });
       
-      // Remove from generated questions
-      setGeneratedQuestions(prev => prev.filter(q => q.id !== question.id));
+      // Clear current question
+      setCurrentQuestion(null);
     } catch (error) {
       console.error('Error saving question:', error);
       toast({
@@ -118,18 +133,69 @@ export default function ExamGenerator() {
     }
   };
 
+  const handleAssignGuru = async () => {
+    if (!currentQuestion) return;
+    
+    try {
+      // TODO: Implement guru assignment logic
+      toast({
+        title: "Question Assigned",
+        description: "Question assigned to guru for review.",
+      });
+      
+      // Clear current question
+      setCurrentQuestion(null);
+    } catch (error) {
+      console.error('Error assigning question:', error);
+      toast({
+        title: "Assignment Failed",
+        description: "Unable to assign question. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDiscard = () => {
+    setCurrentQuestion(null);
+    toast({
+      description: "Question discarded.",
+    });
+  };
+
+  const updateQuestionField = (field: keyof EditableQuestion, value: any) => {
+    if (!currentQuestion) return;
+    setCurrentQuestion({ ...currentQuestion, [field]: value });
+  };
+
+  const updateOption = (index: number, value: string) => {
+    if (!currentQuestion) return;
+    const newOptions = [...currentQuestion.options];
+    newOptions[index] = value;
+    setCurrentQuestion({ ...currentQuestion, options: newOptions });
+  };
+
+  const setCorrectAnswer = (option: string) => {
+    if (!currentQuestion) return;
+    setCurrentQuestion({ ...currentQuestion, correct_answer: option });
+  };
+
   return (
     <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left Panel - Generator Form */}
       <div>
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-1">AI Question Generator</h2>
-          <p className="text-sm text-muted-foreground">Generate exam questions using AI assistance.</p>
+          <p className="text-sm text-muted-foreground">Generate one question at a time for review and editing.</p>
+          {generationCount > 0 && (
+            <div className="mt-2">
+              <Badge variant="secondary">{generationCount} questions generated so far</Badge>
+            </div>
+          )}
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Generate Questions</CardTitle>
+            <CardTitle>Generate Question</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -179,24 +245,6 @@ export default function ExamGenerator() {
             </div>
 
             <div>
-              <Label htmlFor="count">Number of Questions</Label>
-              <Select 
-                value={formData.count} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, count: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1</SelectItem>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
               <Label htmlFor="instructions">Additional Instructions</Label>
               <Textarea
                 id="instructions"
@@ -207,46 +255,59 @@ export default function ExamGenerator() {
               />
             </div>
 
-            <Button onClick={handleGenerate} disabled={loading} className="w-full">
-              {loading ? "Generating..." : "Generate Questions"}
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleGenerate} disabled={loading} className="flex-1">
+                {loading ? "Generating..." : "Generate Question"}
+              </Button>
+              {currentQuestion && (
+                <Button onClick={handleGenerate} disabled={loading} variant="outline">
+                  <ArrowRight className="w-4 h-4 mr-2" />
+                  Next
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Right Panel - Generated Questions Preview */}
+      {/* Right Panel - Question Editor */}
       <div>
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-1">Generated Questions</h3>
+          <h3 className="text-lg font-semibold mb-1">Question Editor</h3>
           <p className="text-sm text-muted-foreground">
-            {generatedQuestions.length > 0 
-              ? `${generatedQuestions.length} question(s) ready for review`
-              : "Generated questions will appear here"
+            {currentQuestion 
+              ? "Review and edit the generated question before saving or assigning"
+              : "Generated question will appear here for editing"
             }
           </p>
         </div>
 
-        <div className="space-y-4">
-          {generatedQuestions.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="p-8 text-center">
-                <p className="text-muted-foreground">
-                  No questions generated yet. Use the form to create some questions.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            generatedQuestions.map((question, index) => (
-              <Card key={question.id} className="border">
+        {!currentQuestion ? (
+          <Card className="border-dashed">
+            <CardContent className="p-8 text-center">
+              <p className="text-muted-foreground">
+                No question generated yet. Use the form to create a question.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Tabs defaultValue="content" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="content">Content</TabsTrigger>
+              <TabsTrigger value="multimedia">Multimedia</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="content" className="space-y-4">
+              <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
-                    <CardTitle className="text-sm">Question {index + 1}</CardTitle>
+                    <CardTitle className="text-sm">Question Content</CardTitle>
                     <div className="flex gap-2">
                       <Badge variant="secondary" className="text-xs">
-                        {question.difficulty}
+                        {currentQuestion.difficulty}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
-                        {question.exam_type}
+                        {currentQuestion.exam_type}
                       </Badge>
                     </div>
                   </div>
@@ -254,64 +315,110 @@ export default function ExamGenerator() {
                 <CardContent className="space-y-4">
                   {/* Question Stem */}
                   <div>
-                    <h4 className="font-medium mb-2">Question:</h4>
-                    <p className="text-sm">{question.stem}</p>
+                    <Label htmlFor="stem">Question Stem</Label>
+                    <Textarea
+                      id="stem"
+                      value={currentQuestion.stem}
+                      onChange={(e) => updateQuestionField('stem', e.target.value)}
+                      className="mt-1"
+                      rows={4}
+                    />
                   </div>
 
                   {/* Options */}
                   <div>
-                    <h4 className="font-medium mb-2">Options:</h4>
-                    <div className="space-y-1">
-                      {question.options.map((option, optIndex) => (
-                        <div
-                          key={optIndex}
-                          className={`text-sm p-2 rounded ${
-                            option === question.correct_answer
-                              ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800'
-                              : 'bg-muted/50'
-                          }`}
-                        >
-                          <span className="font-medium">{String.fromCharCode(65 + optIndex)}. </span>
-                          {option}
-                          {option === question.correct_answer && (
-                            <Badge variant="default" className="ml-2 text-xs">Correct</Badge>
-                          )}
+                    <Label>Answer Options</Label>
+                    <div className="space-y-2 mt-2">
+                      {currentQuestion.options.map((option, index) => (
+                        <div key={index} className={`p-3 border rounded-lg ${
+                          option === currentQuestion.correct_answer 
+                            ? 'border-green-500 bg-green-50 dark:bg-green-950' 
+                            : 'border-border'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-medium">{String.fromCharCode(65 + index)}.</span>
+                            <Button
+                              size="sm"
+                              variant={option === currentQuestion.correct_answer ? "default" : "outline"}
+                              onClick={() => setCorrectAnswer(option)}
+                            >
+                              {option === currentQuestion.correct_answer ? "Correct" : "Mark Correct"}
+                            </Button>
+                          </div>
+                          <Input
+                            value={option}
+                            onChange={(e) => updateOption(index, e.target.value)}
+                            placeholder="Option text"
+                          />
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Explanation */}
-                  {question.explanation && (
-                    <div>
-                      <h4 className="font-medium mb-2">Explanation:</h4>
-                      <p className="text-sm text-muted-foreground">{question.explanation}</p>
-                    </div>
-                  )}
+                  <div>
+                    <Label htmlFor="explanation">Explanation</Label>
+                    <Textarea
+                      id="explanation"
+                      value={currentQuestion.explanation || ''}
+                      onChange={(e) => updateQuestionField('explanation', e.target.value)}
+                      className="mt-1"
+                      rows={3}
+                      placeholder="Explanation of the correct answer"
+                    />
+                  </div>
+
+                  {/* Tags */}
+                  <div>
+                    <Label htmlFor="tags">Tags (comma-separated)</Label>
+                    <Input
+                      id="tags"
+                      value={currentQuestion.tags?.join(', ') || ''}
+                      onChange={(e) => updateQuestionField('tags', e.target.value.split(',').map(t => t.trim()))}
+                      placeholder="e.g., cardiology, myocardial infarction"
+                    />
+                  </div>
+
+                  {/* Reference */}
+                  <div>
+                    <Label htmlFor="reference">Reference (Optional)</Label>
+                    <Input
+                      id="reference"
+                      value={currentQuestion.reference || ''}
+                      onChange={(e) => updateQuestionField('reference', e.target.value)}
+                      placeholder="Citation or reference"
+                    />
+                  </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 pt-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleSaveQuestion(question)}
-                      className="flex-1"
-                    >
-                      Save to Drafts
+                  <div className="flex gap-2 pt-4 border-t">
+                    <Button onClick={handleSaveQuestion} className="flex-1">
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Draft
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => setGeneratedQuestions(prev => prev.filter(q => q.id !== question.id))}
-                      className="flex-1"
-                    >
-                      Discard
+                    <Button onClick={handleAssignGuru} variant="secondary" className="flex-1">
+                      <Users className="w-4 h-4 mr-2" />
+                      Assign Guru
+                    </Button>
+                    <Button onClick={handleDiscard} variant="outline" size="sm">
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
+            </TabsContent>
+            
+            <TabsContent value="multimedia" className="space-y-4">
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <p className="text-muted-foreground">
+                    Multimedia support (images, videos, audio) will be available here.
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </div>
   );
