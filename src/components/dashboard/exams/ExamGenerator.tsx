@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Users, Trash2, ArrowRight } from "lucide-react";
+import { Save, Users, Trash2, ArrowRight, AlertCircle } from "lucide-react";
 
 interface GeneratedQuestion {
   id: string;
@@ -30,11 +30,22 @@ interface EditableQuestion extends GeneratedQuestion {
   isEditing: boolean;
 }
 
+interface ValidationErrors {
+  stem?: string;
+  options?: string;
+  correct_answer?: string;
+  explanation?: string;
+  tags?: string;
+}
+
 export default function ExamGenerator() {
   const { user, loading: userLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<EditableQuestion | null>(null);
   const [generationCount, setGenerationCount] = useState(0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const originalQuestionRef = useRef<EditableQuestion | null>(null);
   const [formData, setFormData] = useState({
     topic: '',
     difficulty: 'medium',
@@ -52,7 +63,65 @@ export default function ExamGenerator() {
     return <div className="p-4">Please sign in to use the exam generator.</div>;
   }
 
+  const validateQuestion = (question: EditableQuestion): ValidationErrors => {
+    const errors: ValidationErrors = {};
+    
+    if (!question.stem?.trim()) {
+      errors.stem = "Question stem is required";
+    } else if (question.stem.trim().length < 10) {
+      errors.stem = "Question stem must be at least 10 characters";
+    }
+    
+    if (!question.options || question.options.length < 2) {
+      errors.options = "At least 2 answer options are required";
+    } else if (question.options.some(opt => !opt?.trim())) {
+      errors.options = "All answer options must be non-empty";
+    }
+    
+    if (!question.correct_answer?.trim()) {
+      errors.correct_answer = "A correct answer must be selected";
+    } else if (!question.options.includes(question.correct_answer)) {
+      errors.correct_answer = "Correct answer must match one of the options";
+    }
+    
+    if (!question.explanation?.trim()) {
+      errors.explanation = "Explanation is required";
+    } else if (question.explanation.trim().length < 10) {
+      errors.explanation = "Explanation must be at least 10 characters";
+    }
+    
+    if (!question.tags || question.tags.length === 0 || !question.tags.some(tag => tag.trim())) {
+      errors.tags = "At least one tag is required";
+    }
+    
+    return errors;
+  };
+
+  const checkForUnsavedChanges = (): boolean => {
+    if (!currentQuestion || !originalQuestionRef.current) return false;
+    
+    const original = originalQuestionRef.current;
+    const current = currentQuestion;
+    
+    return (
+      original.stem !== current.stem ||
+      JSON.stringify(original.options) !== JSON.stringify(current.options) ||
+      original.correct_answer !== current.correct_answer ||
+      original.explanation !== current.explanation ||
+      JSON.stringify(original.tags) !== JSON.stringify(current.tags) ||
+      original.reference !== current.reference
+    );
+  };
+
   const handleGenerate = async () => {
+    // Check for unsaved changes
+    if (currentQuestion && checkForUnsavedChanges()) {
+      const confirmGenerate = window.confirm(
+        "You have unsaved changes to the current question. Are you sure you want to generate a new question? Your changes will be lost."
+      );
+      if (!confirmGenerate) return;
+    }
+
     if (!formData.topic.trim()) {
       toast({
         title: "Missing Topic",
@@ -63,6 +132,7 @@ export default function ExamGenerator() {
     }
 
     setLoading(true);
+    setValidationErrors({});
     try {
     const payload = {
       action: "bulk_generate",
@@ -97,6 +167,8 @@ export default function ExamGenerator() {
         };
         
         setCurrentQuestion(newQuestion);
+        originalQuestionRef.current = { ...newQuestion };
+        setHasUnsavedChanges(false);
         setGenerationCount(prev => prev + 1);
         
         toast({
@@ -121,56 +193,18 @@ export default function ExamGenerator() {
   const handleSaveQuestion = async () => {
     if (!currentQuestion) return;
     
-    setLoading(true);
-    try {
-      // Map exam type to proper enum value
-      const mapExamType = (type: string) => {
-        switch (type) {
-          case 'mrcem_sba': return 'MRCEM_SBA';
-          case 'frcem_sba': return 'FRCEM_SBA';
-          case 'mrcem_primary': return 'MRCEM_PRIMARY';
-          case 'fcps_part1': return 'FCPS_PART1';
-          case 'fcps_imm': return 'FCPS_IMM';
-          default: return 'OTHER';
-        }
-      };
-
-      // Create draft using supabase RPC
-      const { data, error } = await supabase.rpc('create_exam_draft', {
-        p_stem: currentQuestion.stem,
-        p_choices: currentQuestion.options.map((opt) => ({ 
-          text: opt, 
-          explanation: '' 
-        })),
-        p_correct_index: Math.max(0, currentQuestion.options.indexOf(currentQuestion.correct_answer)),
-        p_explanation: currentQuestion.explanation || '',
-        p_tags: currentQuestion.tags || [],
-        p_exam_type: mapExamType(currentQuestion.exam_type || formData.examType) as any
-      });
-
-      if (error) throw error;
-      
+    // Validate question
+    const errors = validateQuestion(currentQuestion);
+    setValidationErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
       toast({
-        title: "Question Saved",
-        description: "Question saved to drafts successfully.",
-      });
-      
-      // Clear current question
-      setCurrentQuestion(null);
-    } catch (error: any) {
-      console.error('Error saving question:', error);
-      toast({
-        title: "Save Failed",
-        description: error?.message || "Unable to save question. Please try again.",
+        title: "Validation Failed",
+        description: "Please fix the errors below before saving.",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
-
-  const handleAssignGuru = async () => {
-    if (!currentQuestion) return;
     
     setLoading(true);
     try {
@@ -186,39 +220,112 @@ export default function ExamGenerator() {
         }
       };
 
-      // First save as draft
-      const { data: draftData, error: draftError } = await supabase.rpc('create_exam_draft', {
-        p_stem: currentQuestion.stem,
-        p_choices: currentQuestion.options.map((opt) => ({ 
-          text: opt, 
-          explanation: '' 
-        })),
-        p_correct_index: Math.max(0, currentQuestion.options.indexOf(currentQuestion.correct_answer)),
-        p_explanation: currentQuestion.explanation || '',
-        p_tags: currentQuestion.tags || [],
-        p_exam_type: mapExamType(currentQuestion.exam_type || formData.examType) as any
+      // Save directly to review_exam_questions table as draft
+      const { data, error } = await supabase
+        .from('review_exam_questions')
+        .insert({
+          question: currentQuestion.stem,
+          options: currentQuestion.options,
+          correct_answer: currentQuestion.correct_answer,
+          explanation: currentQuestion.explanation || '',
+          tags: currentQuestion.tags || [],
+          exam_type: mapExamType(currentQuestion.exam_type || formData.examType),
+          topic: currentQuestion.topic,
+          reference: currentQuestion.reference,
+          status: 'draft',
+          created_by: user?.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      console.log('Draft saved successfully:', data);
+      
+      toast({
+        title: "Question Saved",
+        description: `Question saved to drafts (ID: ${data.id.slice(0, 8)}...)`,
       });
+      
+      // Reset state
+      setCurrentQuestion(null);
+      originalQuestionRef.current = null;
+      setHasUnsavedChanges(false);
+      setValidationErrors({});
+    } catch (error: any) {
+      console.error('Error saving question:', error);
+      toast({
+        title: "Save Failed",
+        description: error?.message || "Unable to save question. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAssignGuru = async () => {
+    if (!currentQuestion) return;
+    
+    // Validate question first
+    const errors = validateQuestion(currentQuestion);
+    setValidationErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
+      toast({
+        title: "Validation Failed",
+        description: "Please fix the errors below before assigning.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Map exam type to proper enum value
+      const mapExamType = (type: string) => {
+        switch (type) {
+          case 'mrcem_sba': return 'MRCEM_SBA';
+          case 'frcem_sba': return 'FRCEM_SBA';
+          case 'mrcem_primary': return 'MRCEM_PRIMARY';
+          case 'fcps_part1': return 'FCPS_PART1';
+          case 'fcps_imm': return 'FCPS_IMM';
+          default: return 'OTHER';
+        }
+      };
+
+      // Save as draft and submit for review in one step
+      const { data: draftData, error: draftError } = await supabase
+        .from('review_exam_questions')
+        .insert({
+          question: currentQuestion.stem,
+          options: currentQuestion.options,
+          correct_answer: currentQuestion.correct_answer,
+          explanation: currentQuestion.explanation || '',
+          tags: currentQuestion.tags || [],
+          exam_type: mapExamType(currentQuestion.exam_type || formData.examType),
+          topic: currentQuestion.topic,
+          reference: currentQuestion.reference,
+          status: 'under_review',
+          created_by: user?.id
+        })
+        .select()
+        .single();
 
       if (draftError) throw draftError;
       
-      if (!draftData || draftData.length === 0) {
-        throw new Error('No question ID returned from draft creation');
-      }
-
-      // Submit for review
-      const { error: submitError } = await supabase.rpc('submit_exam_for_review', {
-        p_question_id: draftData[0].id
-      });
-
-      if (submitError) throw submitError;
+      console.log('Question saved and submitted for review:', draftData);
       
       toast({
         title: "Question Assigned",
-        description: "Question saved and submitted for guru review.",
+        description: `Question submitted for guru review (ID: ${draftData.id.slice(0, 8)}...)`,
       });
       
-      // Clear current question
+      // Reset state
       setCurrentQuestion(null);
+      originalQuestionRef.current = null;
+      setHasUnsavedChanges(false);
+      setValidationErrors({});
     } catch (error: any) {
       console.error('Error assigning question:', error);
       toast({
@@ -233,6 +340,9 @@ export default function ExamGenerator() {
 
   const handleDiscard = () => {
     setCurrentQuestion(null);
+    originalQuestionRef.current = null;
+    setHasUnsavedChanges(false);
+    setValidationErrors({});
     toast({
       description: "Question discarded.",
     });
@@ -240,19 +350,40 @@ export default function ExamGenerator() {
 
   const updateQuestionField = (field: keyof EditableQuestion, value: any) => {
     if (!currentQuestion) return;
-    setCurrentQuestion({ ...currentQuestion, [field]: value });
+    const updated = { ...currentQuestion, [field]: value };
+    setCurrentQuestion(updated);
+    setHasUnsavedChanges(checkForUnsavedChanges());
+    
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[field as keyof ValidationErrors]) {
+      setValidationErrors(prev => ({ ...prev, [field]: undefined }));
+    }
   };
 
   const updateOption = (index: number, value: string) => {
     if (!currentQuestion) return;
     const newOptions = [...currentQuestion.options];
     newOptions[index] = value;
-    setCurrentQuestion({ ...currentQuestion, options: newOptions });
+    const updated = { ...currentQuestion, options: newOptions };
+    setCurrentQuestion(updated);
+    setHasUnsavedChanges(checkForUnsavedChanges());
+    
+    // Clear validation errors for options
+    if (validationErrors.options) {
+      setValidationErrors(prev => ({ ...prev, options: undefined }));
+    }
   };
 
   const setCorrectAnswer = (option: string) => {
     if (!currentQuestion) return;
-    setCurrentQuestion({ ...currentQuestion, correct_answer: option });
+    const updated = { ...currentQuestion, correct_answer: option };
+    setCurrentQuestion(updated);
+    setHasUnsavedChanges(checkForUnsavedChanges());
+    
+    // Clear validation error for correct answer
+    if (validationErrors.correct_answer) {
+      setValidationErrors(prev => ({ ...prev, correct_answer: undefined }));
+    }
   };
 
   return (
@@ -396,9 +527,15 @@ export default function ExamGenerator() {
                       id="stem"
                       value={currentQuestion.stem}
                       onChange={(e) => updateQuestionField('stem', e.target.value)}
-                      className="mt-1"
+                      className={`mt-1 ${validationErrors.stem ? 'border-red-500' : ''}`}
                       rows={4}
                     />
+                    {validationErrors.stem && (
+                      <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
+                        <AlertCircle className="w-4 h-4" />
+                        {validationErrors.stem}
+                      </div>
+                    )}
                   </div>
 
                   {/* Options */}
@@ -425,10 +562,23 @@ export default function ExamGenerator() {
                             value={option}
                             onChange={(e) => updateOption(index, e.target.value)}
                             placeholder="Option text"
+                            className={validationErrors.options ? 'border-red-500' : ''}
                           />
                         </div>
                       ))}
                     </div>
+                    {validationErrors.options && (
+                      <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
+                        <AlertCircle className="w-4 h-4" />
+                        {validationErrors.options}
+                      </div>
+                    )}
+                    {validationErrors.correct_answer && (
+                      <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
+                        <AlertCircle className="w-4 h-4" />
+                        {validationErrors.correct_answer}
+                      </div>
+                    )}
                   </div>
 
                   {/* Explanation */}
@@ -438,10 +588,16 @@ export default function ExamGenerator() {
                       id="explanation"
                       value={currentQuestion.explanation || ''}
                       onChange={(e) => updateQuestionField('explanation', e.target.value)}
-                      className="mt-1"
+                      className={`mt-1 ${validationErrors.explanation ? 'border-red-500' : ''}`}
                       rows={3}
                       placeholder="Explanation of the correct answer"
                     />
+                    {validationErrors.explanation && (
+                      <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
+                        <AlertCircle className="w-4 h-4" />
+                        {validationErrors.explanation}
+                      </div>
+                    )}
                   </div>
 
                   {/* Tags */}
@@ -450,9 +606,16 @@ export default function ExamGenerator() {
                     <Input
                       id="tags"
                       value={currentQuestion.tags?.join(', ') || ''}
-                      onChange={(e) => updateQuestionField('tags', e.target.value.split(',').map(t => t.trim()))}
+                      onChange={(e) => updateQuestionField('tags', e.target.value.split(',').map(t => t.trim()).filter(t => t))}
                       placeholder="e.g., cardiology, myocardial infarction"
+                      className={validationErrors.tags ? 'border-red-500' : ''}
                     />
+                    {validationErrors.tags && (
+                      <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
+                        <AlertCircle className="w-4 h-4" />
+                        {validationErrors.tags}
+                      </div>
+                    )}
                   </div>
 
                   {/* Reference */}
@@ -474,7 +637,7 @@ export default function ExamGenerator() {
                     </Button>
                     <Button onClick={handleAssignGuru} disabled={loading} variant="secondary" className="flex-1">
                       <Users className="w-4 h-4 mr-2" />
-                      Assign Guru
+                      Assign for Review
                     </Button>
                     <Button onClick={handleDiscard} variant="outline" size="sm">
                       <Trash2 className="w-4 h-4" />
