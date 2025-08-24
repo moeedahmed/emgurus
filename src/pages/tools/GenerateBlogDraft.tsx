@@ -10,8 +10,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createDraft } from "@/lib/blogsApi";
-import { ChevronDown, X, Plus, FileText, ExternalLink, History } from "lucide-react";
+import { ChevronDown, X, Plus, FileText, ExternalLink, History, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { getErrorMessage, FieldError } from "@/lib/errors";
 
 interface Guru {
   user_id: string;
@@ -43,6 +45,11 @@ interface SourceFile {
   size: number;
 }
 
+interface SourceError {
+  source: string;
+  error: string;
+}
+
 interface GenerationLog {
   ts: string;
   topic: string;
@@ -65,7 +72,10 @@ export default function GenerateBlogDraft() {
     topic: '',
     instructions_text: ''
   });
-  const [assignedGuru, setAssignedGuru] = useState('');
+  const [selectedGurus, setSelectedGurus] = useState<string[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<FieldError[]>([]);
+  const [sourceErrors, setSourceErrors] = useState<SourceError[]>([]);
   
   // Source-related state
   const [sourceUrls, setSourceUrls] = useState<string[]>([]);
@@ -106,6 +116,19 @@ export default function GenerateBlogDraft() {
     loadData();
   }, [user]);
 
+  // Unsaved changes guard
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   // Guard against loading states
   if (userLoading) {
     return <div className="p-4">Loading generator…</div>;
@@ -136,6 +159,44 @@ export default function GenerateBlogDraft() {
     });
 
     return Array.from(enriched);
+  };
+
+  const validateBlocks = (blocks: ContentBlock[]): FieldError[] => {
+    const errors: FieldError[] = [];
+    let hasHeading = false;
+    let hasText = false;
+
+    blocks.forEach((block, index) => {
+      if (block.type === 'heading') {
+        if (!block.content?.trim()) {
+          errors.push({ field: `heading_${index}`, message: "Heading cannot be empty" });
+        } else {
+          hasHeading = true;
+        }
+      }
+      
+      if (block.type === 'text') {
+        if (!block.content?.trim()) {
+          errors.push({ field: `text_${index}`, message: "Text block cannot be empty" });
+        } else {
+          hasText = true;
+        }
+      }
+    });
+
+    if (!hasHeading) {
+      errors.push({ field: "content", message: "At least one heading is required" });
+    }
+    if (!hasText) {
+      errors.push({ field: "content", message: "At least one text paragraph is required" });
+    }
+
+    // Check if we have tags from the current draft
+    if (generatedDraft && generatedDraft.tags.length === 0) {
+      errors.push({ field: "tags", message: "At least one tag is required" });
+    }
+
+    return errors;
   };
 
   const handleUploadImage = async (blockIndex: number, file: File) => {
@@ -399,6 +460,11 @@ export default function GenerateBlogDraft() {
         throw new Error(result.error || 'Blog generation failed');
       }
       
+      // Handle source errors
+      if (result.source_errors && Array.isArray(result.source_errors)) {
+        setSourceErrors(result.source_errors);
+      }
+      
       // Validate that backend returned expected structure
       if (!result || typeof result !== 'object' || !result.title) {
         throw new Error('Invalid response format from backend');
@@ -416,6 +482,7 @@ export default function GenerateBlogDraft() {
       };
 
       setGeneratedDraft(generatedContent);
+      setHasUnsavedChanges(true);
 
       // Log successful generation
       const contentChars = result.blocks.reduce((acc: number, block: ContentBlock) => 
@@ -462,6 +529,18 @@ export default function GenerateBlogDraft() {
   const handleSaveDraft = async () => {
     if (!generatedDraft) return;
     
+    // Validate blocks before saving
+    const errors = validateBlocks(generatedDraft.blocks);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      toast({
+        title: "Validation Error",
+        description: "Please fix the highlighted errors before saving.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setLoading(true);
     try {
       // Convert blocks to markdown for storage
@@ -496,109 +575,163 @@ export default function GenerateBlogDraft() {
         tag_slugs: generatedDraft.tags
       });
 
+      setHasUnsavedChanges(false);
+      setValidationErrors([]);
       toast({
         title: "Draft Saved",
         description: "Blog draft has been saved successfully.",
       });
 
-      // Reset form and generated content
-      setFormData({
-        topic: '',
-        instructions_text: ''
-      });
-      setGeneratedDraft(null);
-      setAssignedGuru('');
-      setSourceUrls([]);
-      setSourceFiles([]);
-      
       return id;
     } catch (error) {
       console.error('Error saving draft:', error);
+      
+      // Handle structured errors from backend
+      if (error && typeof error === 'object' && 'errors' in error) {
+        setValidationErrors(error.errors as FieldError[]);
+      }
+      
       toast({
         title: "Save Failed",
-        description: "Unable to save blog draft. Please try again.",
+        description: getErrorMessage(error, "Unable to save draft. Please try again."),
         variant: "destructive"
       });
-      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAssignToGuru = async () => {
-    if (!generatedDraft || !assignedGuru) {
+  const handleAssignGurus = async () => {
+    if (!generatedDraft || selectedGurus.length === 0) {
       toast({
-        title: "Missing Assignment",
-        description: "Please select a guru to assign this draft to.",
+        title: "Assignment Error",
+        description: "Please generate a draft and select at least one guru.",
         variant: "destructive"
       });
       return;
     }
 
-    try {
-      // First save the draft if not already saved
-      const draftId = await handleSaveDraft();
-      
-      if (draftId) {
-        // Assign to guru by updating the post
-        const { error: assignError } = await supabase
-          .from('blog_posts')
-          .update({ 
-            author_id: assignedGuru
-          })
-          .eq('id', draftId);
-
-        if (assignError) throw assignError;
-        
-        // Create assignment in blog_review_assignments table
-        const response = await fetch(`https://cgtvvpzrzwyvsbavboxa.functions.supabase.co/blogs-api/api/blogs/${draftId}/assign`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-          },
-          body: JSON.stringify({
-            reviewer_id: user.id, // Admin who generated it becomes reviewer
-            note: 'Assigned via AI generation tool'
-          })
-        });
-        
-        if (!response.ok) {
-          console.error('Failed to create review assignment');
-        }
-
-        toast({
-          title: "Draft Assigned",
-          description: "Blog draft has been assigned to the selected guru.",
-        });
-      }
-    } catch (error) {
-      console.error('Error assigning draft:', error);
+    // Validate blocks before assigning
+    const errors = validateBlocks(generatedDraft.blocks);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       toast({
-        title: "Assignment Failed",
-        description: "Unable to assign blog draft. Please try again.",
+        title: "Validation Error",
+        description: "Please fix the highlighted errors before assigning.",
         variant: "destructive"
       });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // First save the draft
+      const content_md = generatedDraft.blocks.map(block => {
+        switch (block.type) {
+          case 'text':
+            return block.content || '';
+          case 'heading':
+            const level = block.level === 'h3' ? '###' : '##';
+            return `${level} ${block.content || ''}`;
+          case 'image':
+            return `*[Image needed: ${block.description || 'Medical illustration'}]*`;
+          case 'video':
+            return `*[Video placeholder: ${block.description || 'Educational video'}]*`;
+          case 'audio':
+            return `*[Audio placeholder: ${block.description || 'Audio content'}]*`;
+          case 'quote':
+            return `> ${block.content || ''}`;
+          case 'divider':
+            return '---';
+          default:
+            return '';
+        }
+      }).join('\n\n');
+
+      const { id } = await createDraft({
+        title: generatedDraft.title,
+        content_md: content_md,
+        category_id: undefined,
+        tag_slugs: generatedDraft.tags
+      });
+
+      // Call blogs API to handle multi-reviewer assignments
+      const response = await supabase.functions.invoke('blogs-api', {
+        body: {
+          action: 'assign_multi_reviewers',
+          post_id: id,
+          reviewer_ids: selectedGurus,
+          note: "Blog draft assigned for multi-reviewer review"
+        }
+      });
+
+      if (response.error) throw response.error;
+
+      toast({
+        title: "Draft Assigned",
+        description: `Draft has been saved and assigned to ${selectedGurus.length} reviewer(s).`,
+      });
+
+      // Reset state
+      setGeneratedDraft(null);
+      setSelectedGurus([]);
+      setFormData({ topic: '', instructions_text: '' });
+      setSourceUrls([]);
+      setSourceFiles([]);
+      setHasUnsavedChanges(false);
+      setValidationErrors([]);
+      setSourceErrors([]);
+    } catch (error) {
+      console.error('Error assigning gurus:', error);
+      
+      // Handle structured errors from backend
+      if (error && typeof error === 'object' && 'errors' in error) {
+        setValidationErrors(error.errors as FieldError[]);
+      }
+      
+      toast({
+        title: "Assignment Failed",
+        description: getErrorMessage(error, "Unable to assign draft. Please try again."),
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEditDraft = async () => {
-    try {
-      const draftId = await handleSaveDraft();
-      if (draftId) {
-        // Navigate to editor with the draft ID
-        window.open(`/blogs/editor/${draftId}`, '_blank');
-      }
-    } catch (error) {
-      // Error already handled in handleSaveDraft
-    }
+  const handleDiscard = () => {
+    setGeneratedDraft(null);
+    setFormData({ topic: '', instructions_text: '' });
+    setSourceUrls([]);
+    setSourceFiles([]);
+    setSelectedGurus([]);
+    setHasUnsavedChanges(false);
+    setValidationErrors([]);
+    setSourceErrors([]);
+  };
+
+  const handleBlockChange = (blockIndex: number, newContent: string) => {
+    if (!generatedDraft) return;
+    
+    const newBlocks = [...generatedDraft.blocks];
+    newBlocks[blockIndex] = { ...newBlocks[blockIndex], content: newContent };
+    
+    setGeneratedDraft({
+      ...generatedDraft,
+      blocks: newBlocks
+    });
+    setHasUnsavedChanges(true);
+  };
+
+  const getFieldError = (field: string): string | undefined => {
+    return validationErrors.find(e => e.field === field)?.message;
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
+    <div className="container mx-auto py-6 max-w-6xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">AI Blog Generator (Experimental)</h1>
-        <p className="text-muted-foreground">Generate AI-powered blog drafts with optional source grounding and assign them to Gurus for review.</p>
+        <h1 className="text-3xl font-bold mb-2">Blog Generator</h1>
+        <p className="text-muted-foreground">Generate AI-powered blog drafts and assign them for review.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -608,180 +741,50 @@ export default function GenerateBlogDraft() {
             <CardTitle>Generate Blog Draft</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Source Errors Display */}
+            {sourceErrors.length > 0 && (
+              <div className="p-3 border border-destructive/20 rounded-md bg-destructive/5">
+                <div className="flex items-center gap-2 text-sm font-medium text-destructive mb-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Source Processing Errors
+                </div>
+                {sourceErrors.map((error, index) => (
+                  <div key={index} className="text-xs text-muted-foreground mb-1">
+                    <span className="font-medium">{error.source}:</span> {error.error}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Topic Input */}
             <div>
               <Label htmlFor="topic">Topic *</Label>
               <Input
                 id="topic"
                 value={formData.topic}
-                onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
-                placeholder="e.g., Acute MI Management, Sepsis Protocols"
+                onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                placeholder="e.g., Acute MI management, Sepsis protocols..."
+                className="mt-1"
               />
+              {getFieldError('topic') && (
+                <p className="text-xs text-destructive mt-1">{getFieldError('topic')}</p>
+              )}
             </div>
 
+            {/* Instructions */}
             <div>
-              <Label htmlFor="instructions_text">What to include *</Label>
+              <Label htmlFor="instructions">Instructions *</Label>
               <Textarea
-                id="instructions_text"
+                id="instructions"
                 value={formData.instructions_text}
-                onChange={(e) => setFormData(prev => ({ ...prev, instructions_text: e.target.value }))}
-                placeholder="Describe what you want in the blog — sections, keywords, tone, focus areas, or specific requirements."
-                rows={4}
+                onChange={(e) => setFormData({ ...formData, instructions_text: e.target.value })}
+                placeholder="Describe the key points to cover, target audience, style preferences..."
+                className="mt-1 min-h-[100px]"
               />
+              {getFieldError('instructions_text') && (
+                <p className="text-xs text-destructive mt-1">{getFieldError('instructions_text')}</p>
+              )}
             </div>
-
-            {/* Sources Section */}
-            <Collapsible open={!sourcesCollapsed} onOpenChange={setSourcesCollapsed}>
-              <CollapsibleTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-between p-0 h-auto font-semibold"
-                >
-                  Sources (optional)
-                  <ChevronDown className={`h-4 w-4 transition-transform ${sourcesCollapsed ? 'rotate-180' : ''}`} />
-                </Button>
-              </CollapsibleTrigger>
-              
-              <CollapsibleContent className="space-y-4 mt-4">
-                {/* URLs */}
-                <div>
-                  <Label className="text-sm font-medium">Links</Label>
-                  <div className="flex gap-2 mt-1">
-                    <Input
-                      value={newUrl}
-                      onChange={(e) => setNewUrl(e.target.value)}
-                      placeholder="https://example.com/article"
-                      onKeyPress={(e) => e.key === 'Enter' && addUrl()}
-                    />
-                    <Button onClick={addUrl} size="sm" disabled={!newUrl.trim()}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  {sourceUrls.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {sourceUrls.map((url, index) => (
-                        <div key={index} className="flex items-center gap-1 bg-secondary rounded-md px-2 py-1 text-sm">
-                          <ExternalLink className="h-3 w-3" />
-                          <span className="truncate max-w-32">{url}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-4 w-4 p-0"
-                            onClick={() => removeUrl(index)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* File Upload */}
-                <div>
-                  <Label className="text-sm font-medium">Supporting Documents</Label>
-                  <div className="mt-1">
-                    <input
-                      type="file"
-                      multiple
-                      accept=".pdf,.docx,.pptx,.txt,.md"
-                      onChange={handleFileUpload}
-                      className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Upload .pdf, .docx, .pptx, .txt, .md — max 10 MB each, up to 5 files
-                    </p>
-                  </div>
-                  
-                  {sourceFiles.length > 0 && (
-                    <div className="space-y-1 mt-2">
-                      {sourceFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between bg-secondary rounded-md px-2 py-1 text-sm">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-3 w-3" />
-                            <span className="truncate">{file.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              ({Math.round(file.size / 1024)}KB)
-                            </span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-4 w-4 p-0"
-                            onClick={() => removeFile(index)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Search Online Toggle */}
-                <div className="flex items-center space-x-2 p-3 bg-accent/30 rounded-md">
-                  <input
-                    type="checkbox"
-                    id="searchOnline"
-                    checked={searchOnline}
-                    onChange={(e) => setSearchOnline(e.target.checked)}
-                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                  />
-                  <Label htmlFor="searchOnline" className="text-sm font-medium">
-                    Search Online
-                  </Label>
-                  <span className="text-xs text-muted-foreground">
-                    (Enable AI web search enrichment)
-                  </span>
-                </div>
-
-                {/* Generation History Link */}
-                <div className="flex justify-end">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="link" size="sm" className="h-auto p-0 text-xs">
-                        <History className="h-3 w-3 mr-1" />
-                        View last 5 runs
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Generation History</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-2 max-h-96 overflow-y-auto">
-                        {getGenerationHistory().map((log, index) => (
-                          <div key={index} className="p-3 border rounded-md text-sm">
-                            <div className="flex justify-between items-start mb-2">
-                              <span className={`px-2 py-1 rounded text-xs ${log.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                {log.success ? 'Success' : 'Failed'}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(log.ts).toLocaleString()}
-                              </span>
-                            </div>
-                            <div>
-                              <strong>Topic:</strong> {log.topic}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              URLs: {log.urlCount} | Files: {log.fileCount} 
-                              {log.contentChars && ` | Generated: ${log.contentChars} chars`}
-                              {log.error && (
-                                <div className="text-red-600 mt-1">Error: {log.error}</div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                        {getGenerationHistory().length === 0 && (
-                          <div className="text-center text-muted-foreground py-4">
-                            No generation history yet
-                          </div>
-                        )}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
 
             <Button 
               onClick={handleGenerate} 
@@ -800,185 +803,197 @@ export default function GenerateBlogDraft() {
           </CardContent>
         </Card>
 
-        {/* Preview/Results */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Generated Draft Preview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {generatedDraft ? (
-              <div className="space-y-6">
-                {/* Title */}
-                <div>
-                  <h2 className="text-xl font-semibold">{generatedDraft.title}</h2>
-                </div>
+        {/* Generated Draft */}
+        {generatedDraft && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Generated Draft</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Title */}
+              <div>
+                <Label className="text-sm font-medium">Title</Label>
+                <Input
+                  value={generatedDraft.title}
+                  onChange={(e) => {
+                    setGeneratedDraft({ ...generatedDraft, title: e.target.value });
+                    setHasUnsavedChanges(true);
+                  }}
+                  className="mt-1"
+                />
+              </div>
 
-                {/* Suggested Tags */}
-                {generatedDraft.tags.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">Suggested Tags</h4>
+              {/* Content Blocks */}
+              <div>
+                <Label className="text-sm font-medium">Content Blocks</Label>
+                <div className="space-y-3 mt-2 max-h-96 overflow-y-auto">
+                  {generatedDraft.blocks.map((block, index) => (
+                    <Card key={index} className="p-3">
+                      <div className="text-xs text-muted-foreground mb-2 capitalize">{block.type}</div>
+                      {block.type === 'text' ? (
+                        <div>
+                          <Textarea
+                            value={block.content || ''}
+                            onChange={(e) => handleBlockChange(index, e.target.value)}
+                            className="min-h-[100px]"
+                          />
+                          {getFieldError(`text_${index}`) && (
+                            <p className="text-xs text-destructive mt-1">{getFieldError(`text_${index}`)}</p>
+                          )}
+                        </div>
+                      ) : block.type === 'heading' ? (
+                        <div>
+                          <Input
+                            value={block.content || ''}
+                            onChange={(e) => handleBlockChange(index, e.target.value)}
+                            placeholder="Enter heading text"
+                          />
+                          {getFieldError(`heading_${index}`) && (
+                            <p className="text-xs text-destructive mt-1">{getFieldError(`heading_${index}`)}</p>
+                          )}
+                          <Select
+                            value={block.level || 'h2'}
+                            onValueChange={(value) => {
+                              const newBlocks = [...generatedDraft.blocks];
+                              newBlocks[index] = { ...block, level: value };
+                              setGeneratedDraft({ ...generatedDraft, blocks: newBlocks });
+                              setHasUnsavedChanges(true);
+                            }}
+                          >
+                            <SelectTrigger className="mt-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="h2">Heading 2</SelectItem>
+                              <SelectItem value="h3">Heading 3</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : block.type === 'image' ? (
+                        <div className="border-2 border-dashed border-primary/30 p-4 rounded-lg text-center bg-primary/5">
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {block.description || 'Medical illustration needed'}
+                          </p>
+                          <div className="flex gap-2 justify-center">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              disabled={loading}
+                              onClick={() => {
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = 'image/*';
+                                input.onchange = (e) => {
+                                  const file = (e.target as HTMLInputElement).files?.[0];
+                                  if (file) handleUploadImage(index, file);
+                                };
+                                input.click();
+                              }}
+                            >
+                              Upload Image
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              disabled={loading}
+                              onClick={() => handleGenerateImage(index, block.description || 'Medical illustration')}
+                            >
+                              Generate with AI
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">
+                          {block.content || block.description || 'No content'}
+                        </div>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <Label className="text-sm font-medium">Tags</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {generatedDraft.tags.map((tag, index) => (
+                    <span key={index} className="bg-primary/10 text-primary px-2 py-1 rounded-md text-sm">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                {getFieldError('tags') && (
+                  <p className="text-xs text-destructive mt-1">{getFieldError('tags')}</p>
+                )}
+              </div>
+
+              {/* Validation Errors Summary */}
+              {validationErrors.length > 0 && (
+                <div className="p-3 border border-destructive/20 rounded-md bg-destructive/5">
+                  <div className="flex items-center gap-2 text-sm font-medium text-destructive mb-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Validation Errors
+                  </div>
+                  {validationErrors.map((error, index) => (
+                    <div key={index} className="text-xs text-muted-foreground mb-1">
+                      <span className="font-medium">{error.field}:</span> {error.message}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2 mt-6">
+                <Button onClick={handleSaveDraft} disabled={loading}>
+                  {loading ? "Saving..." : "Save Draft"}
+                </Button>
+                
+                {gurus.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-sm font-medium">Assign Reviewers</Label>
                     <div className="flex flex-wrap gap-2">
-                      {generatedDraft.tags.map((tag, index) => (
-                        <span key={index} className="bg-primary/10 text-primary px-2 py-1 rounded-md text-sm">
-                          {tag}
-                        </span>
+                      {gurus.map((guru) => (
+                        <div key={guru.user_id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={guru.user_id}
+                            checked={selectedGurus.includes(guru.user_id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedGurus([...selectedGurus, guru.user_id]);
+                              } else {
+                                setSelectedGurus(selectedGurus.filter(id => id !== guru.user_id));
+                              }
+                            }}
+                          />
+                          <Label
+                            htmlFor={guru.user_id}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {guru.full_name}
+                          </Label>
+                        </div>
                       ))}
                     </div>
+                    <Button 
+                      onClick={handleAssignGurus} 
+                      disabled={loading || selectedGurus.length === 0}
+                      variant="secondary"
+                      className="w-fit"
+                    >
+                      Assign to {selectedGurus.length} Reviewer{selectedGurus.length !== 1 ? 's' : ''}
+                    </Button>
                   </div>
                 )}
-
-                {/* Sources Used */}
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Sources Used</h4>
-                  {sourceUrls.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {sourceUrls.map((url, index) => (
-                        <a 
-                          key={index}
-                          href={url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 bg-secondary hover:bg-secondary/80 rounded-md px-2 py-1 text-sm transition-colors"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          <span className="truncate max-w-32">{url}</span>
-                        </a>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No sources provided.</p>
-                  )}
-                </div>
-
-                {/* Content Blocks */}
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Content Blocks</h4>
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {generatedDraft.blocks.map((block, index) => (
-                      <Card key={index} className="border-l-4 border-l-primary/20">
-                        <CardContent className="p-4">
-                          {block.type === 'text' && (
-                            <div className="prose prose-sm max-w-none">
-                              <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
-                                {block.content}
-                              </p>
-                            </div>
-                          )}
-                          {block.type === 'image' && (
-                            <div className="border-2 border-dashed border-primary/30 p-4 rounded-lg text-center bg-primary/5">
-                              <div className="text-sm font-medium text-primary mb-2 flex items-center justify-center gap-2">
-                                📸 Image Request
-                              </div>
-                              <p className="text-xs text-muted-foreground mb-3">
-                                {block.description || 'Medical illustration needed'}
-                              </p>
-                              <div className="flex gap-2 justify-center">
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  className="text-xs"
-                                  disabled={loading}
-                                  onClick={() => {
-                                    const input = document.createElement('input');
-                                    input.type = 'file';
-                                    input.accept = 'image/*';
-                                    input.onchange = (e) => {
-                                      const file = (e.target as HTMLInputElement).files?.[0];
-                                      if (file) handleUploadImage(index, file);
-                                    };
-                                    input.click();
-                                  }}
-                                >
-                                  Upload Image
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  className="text-xs"
-                                  disabled={loading}
-                                  onClick={() => handleGenerateImage(index, block.description || 'Medical illustration')}
-                                >
-                                  Generate with AI
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                          {block.type === 'video' && (
-                            <div className="border-2 border-dashed border-secondary/30 p-4 rounded-lg bg-secondary/5">
-                              <div className="text-sm font-medium text-secondary mb-2 flex items-center justify-center gap-2">
-                                🎥 Video Placeholder
-                              </div>
-                              <p className="text-xs text-muted-foreground mb-3">
-                                {block.description || 'Educational video content'}
-                              </p>
-                              <Input 
-                                placeholder="Paste YouTube URL here..."
-                                className="text-xs"
-                              />
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Assignment Section */}
-                <div className="border-t pt-4">
-                  <Label className="text-sm font-medium mb-3 block">Assign to Guru</Label>
-                  <Select 
-                    value={assignedGuru} 
-                    onValueChange={setAssignedGuru}
-                  >
-                    <SelectTrigger className="mb-3">
-                      <SelectValue placeholder="Select a guru to assign" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {gurus.map(guru => (
-                        <SelectItem key={guru.user_id} value={guru.user_id}>
-                          {guru.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-2">
-                  <Button 
-                    onClick={handleSaveDraft} 
-                    disabled={loading}
-                    variant="outline"
-                    size="sm"
-                  >
-                    {loading ? "Saving..." : "Save Draft"}
-                  </Button>
-                  
-                  <Button 
-                    onClick={handleAssignToGuru} 
-                    disabled={loading || !assignedGuru}
-                    size="sm"
-                  >
-                    Assign to Guru
-                  </Button>
-                  
-                  <Button 
-                    onClick={handleEditDraft} 
-                    disabled={loading}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    Edit Draft
-                  </Button>
-                </div>
+                
+                <Button onClick={handleDiscard} variant="outline">
+                  Discard
+                </Button>
               </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
-                <p>Generated blog draft will appear here</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

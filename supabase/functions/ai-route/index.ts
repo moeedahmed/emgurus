@@ -190,16 +190,21 @@ serve(async (req) => {
         let sourceTexts: string[] = [];
         if (hasFiles) {
           for (const file of source_files) {
-            if (file.content && file.content.trim()) {
-              // Client-parsed .txt/.md files
-              sourceTexts.push(file.content);
-            } else if (file.name && !file.content) {
-              // Files that need server-side processing (.pdf, .docx, .pptx)
-              // For now, just add a placeholder - future enhancement could implement actual parsing
-              const fileName = file.name.toLowerCase();
-              if (fileName.endsWith('.pdf') || fileName.endsWith('.docx') || fileName.endsWith('.pptx')) {
-                sourceTexts.push(`[Document: ${file.name} - content parsing not yet implemented]`);
+            try {
+              if (file.content && file.content.trim()) {
+                // Client-parsed .txt/.md files
+                sourceTexts.push(file.content);
+              } else if (file.name && !file.content) {
+                // Files that need server-side processing (.pdf, .docx, .pptx)
+                const fileName = file.name.toLowerCase();
+                if (fileName.endsWith('.pdf') || fileName.endsWith('.docx') || fileName.endsWith('.pptx')) {
+                  sourceErrors.push({ source: file.name, error: "Server-side file parsing not yet implemented" });
+                } else {
+                  sourceErrors.push({ source: file.name, error: "Unknown file type or empty content" });
+                }
               }
+            } catch (error) {
+              sourceErrors.push({ source: file.name || 'Unknown file', error: `File processing failed: ${error instanceof Error ? error.message : 'Unknown error'}` });
             }
           }
         }
@@ -329,12 +334,23 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
             }).filter(Boolean)
           : [{ type: 'text', content: 'No content generated' }];
 
+        // Validate final blocks
+        const validBlocks = normalizedBlocks.filter(block => {
+          if (block.type === 'text' && (!block.content || block.content.trim().length === 0)) {
+            return false;
+          }
+          if (block.type === 'heading' && (!block.content || block.content.trim().length === 0)) {
+            return false;
+          }
+          return true;
+        });
+
         // Ensure required fields exist with defaults and return success format
         const finalData = {
           success: true,
           title: structuredData.title || `Blog on ${topic}`,
           tags: Array.isArray(structuredData.tags) ? structuredData.tags : [],
-          blocks: normalizedBlocks,
+          blocks: validBlocks.length > 0 ? validBlocks : [{ type: 'text', content: 'Generated content is empty. Please try again with different parameters.' }],
           source_errors: sourceErrors.length > 0 ? sourceErrors : undefined
         };
 

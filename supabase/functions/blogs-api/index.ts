@@ -45,14 +45,20 @@ async function getUserRoleFlags(supabase: ReturnType<typeof getClient>, userId?:
 
 const createDraftSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
-  content_md: z.string().optional(),
+  content_md: z.string().min(10, "Content must be at least 10 characters").optional(),
   content_html: z.string().optional(),
   content: z.string().optional(),
   category_id: z.string().uuid().optional(),
-  tag_slugs: z.array(z.string()).optional(),
+  tag_slugs: z.array(z.string()).min(1, "At least one tag is required").optional(),
   tags: z.array(z.string()).optional(),
   cover_image_url: z.string().url().optional(),
   excerpt: z.string().optional(),
+});
+
+const assignMultiReviewersSchema = z.object({
+  post_id: z.string().uuid(),
+  reviewer_ids: z.array(z.string().uuid()).min(1, "At least one reviewer is required"),
+  note: z.string().optional(),
 });
 
 function validateBlocks(content: string): { field: string; message: string }[] {
