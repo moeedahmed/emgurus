@@ -2454,8 +2454,8 @@ async function trackShare(postId: string, req: Request): Promise<Response> {
           { method: "POST", path: "/api/blogs/feedback/:id/resolve" },
           { method: "GET", path: "/api/blogs/:id/discussions" },
           { method: "POST", path: "/api/blogs/:id/discussions" },
-          { method: "DELETE", path: "/api/blogs/discussions/:id" },
-        ],
+          { method: "DELETE", path: "/api/blogs/discussions/:id" }
+        ]
       };
       return new Response(JSON.stringify(docs), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
