@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,7 +52,52 @@ export default function ExamGenerator() {
     examType: 'mrcem_sba',
     instructions: ''
   });
+  const [gurus, setGurus] = useState<Array<{ user_id: string; full_name: string }>>([]);
+  const [selectedGuru, setSelectedGuru] = useState("");
   const { toast } = useToast();
+
+  // Load gurus on component mount
+  useEffect(() => {
+    loadGurus();
+  }, []);
+
+  // Add beforeunload protection
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  const loadGurus = async () => {
+    try {
+      const { data: userRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'guru');
+
+      if (!userRoles?.length) return;
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', userRoles.map(ur => ur.user_id));
+
+      setGurus(profiles || []);
+    } catch (error) {
+      console.error('Failed to load gurus:', error);
+    }
+  };
+
+  const getGuruName = (guruId: string) => {
+    return gurus.find(g => g.user_id === guruId)?.full_name || 'Unknown';
+  };
 
   // Guard against loading states
   if (userLoading) {
@@ -221,27 +266,28 @@ export default function ExamGenerator() {
       };
 
       // Use the create_exam_draft RPC function for proper draft creation
-      const { data, error } = await supabase.rpc('create_exam_draft', {
-        p_stem: currentQuestion.stem,
-        p_choices: currentQuestion.options,
-        p_correct_index: Math.max(0, currentQuestion.options.indexOf(currentQuestion.correct_answer)),
-        p_explanation: currentQuestion.explanation || '',
-        p_tags: currentQuestion.tags || [],
-        p_exam_type: mapExamType(currentQuestion.exam_type || formData.examType)
-      });
+      const { data, error } = await supabase
+        .from("review_exam_questions")
+        .insert({
+          question: currentQuestion.stem,
+          options: currentQuestion.options,
+          correct_answer: currentQuestion.correct_answer,
+          explanation: currentQuestion.explanation || '',
+          exam_type: mapExamType(currentQuestion.exam_type || formData.examType),
+          created_by: user.id,
+          status: 'draft',
+          submitted_at: new Date().toISOString()
+        })
+        .select("*")
+        .single();
 
       if (error) throw error;
       
-      if (!data || data.length === 0) {
-        throw new Error('No question data returned from draft creation');
-      }
-      
-      const savedQuestion = data[0];
-      console.log('Draft saved successfully:', savedQuestion);
+      console.log('Draft saved successfully:', data);
       
       toast({
         title: "Question Saved",
-        description: `Question saved to drafts (ID: ${savedQuestion.id.slice(0, 8)}...)`,
+        description: `Question saved to drafts (ID: ${data.id.slice(0, 8)}...)`,
       });
       
       // Reset state
@@ -273,7 +319,14 @@ export default function ExamGenerator() {
   };
 
   const handleAssignGuru = async () => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || !selectedGuru) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a guru and ensure a question is generated.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     // Validate question first
     const errors = validateQuestion(currentQuestion);
@@ -302,36 +355,45 @@ export default function ExamGenerator() {
         }
       };
 
-      // Step 1: Create draft using the RPC function
-      const { data: draftData, error: draftError } = await supabase.rpc('create_exam_draft', {
-        p_stem: currentQuestion.stem,
-        p_choices: currentQuestion.options,
-        p_correct_index: Math.max(0, currentQuestion.options.indexOf(currentQuestion.correct_answer)),
-        p_explanation: currentQuestion.explanation || '',
-        p_tags: currentQuestion.tags || [],
-        p_exam_type: mapExamType(currentQuestion.exam_type || formData.examType)
-      });
+      // Step 1: Create draft question
+      const { data: savedQuestion, error: saveError } = await supabase
+        .from("review_exam_questions")
+        .insert({
+          question: currentQuestion.stem,
+          options: currentQuestion.options,
+          correct_answer: currentQuestion.correct_answer,
+          explanation: currentQuestion.explanation || '',
+          exam_type: mapExamType(currentQuestion.exam_type || formData.examType),
+          created_by: user.id,
+          status: 'under_review',
+          submitted_at: new Date().toISOString(),
+          assigned_to: selectedGuru,
+          assigned_by: user.id
+        })
+        .select("*")
+        .single();
 
-      if (draftError) throw draftError;
+      if (saveError) throw saveError;
+
+      // Step 2: Create assignment record
+      const { error: assignError } = await supabase
+        .from("exam_review_assignments")
+        .insert({
+          question_id: savedQuestion.id,
+          reviewer_id: selectedGuru,
+          assigned_by: user.id,
+          status: 'pending_review',
+          assigned_at: new Date().toISOString(),
+          notes: `Auto-assigned via Generator on ${new Date().toLocaleDateString()}`
+        });
+
+      if (assignError) throw assignError;
       
-      if (!draftData || draftData.length === 0) {
-        throw new Error('No question ID returned from draft creation');
-      }
-
-      const questionId = draftData[0].id;
-
-      // Step 2: Submit for review to make it available to gurus
-      const { error: submitError } = await supabase.rpc('submit_exam_for_review', {
-        p_question_id: questionId
-      });
-
-      if (submitError) throw submitError;
-      
-      console.log('Question saved and submitted for review:', questionId);
+      console.log('Question saved and assigned:', savedQuestion.id);
       
       toast({
         title: "Question Assigned",
-        description: `Question submitted for guru review (ID: ${questionId.slice(0, 8)}...)`,
+        description: `Question assigned to ${getGuruName(selectedGuru)} (ID: ${savedQuestion.id.slice(0, 8)}...)`,
       });
       
       // Reset state
@@ -339,6 +401,7 @@ export default function ExamGenerator() {
       originalQuestionRef.current = null;
       setHasUnsavedChanges(false);
       setValidationErrors({});
+      setSelectedGuru("");
     } catch (error: any) {
       console.error('Error assigning question:', error);
       let errorMessage = "Unable to assign question. Please try again.";
@@ -655,20 +718,37 @@ export default function ExamGenerator() {
                     />
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-4 border-t">
-                    <Button onClick={handleSaveQuestion} disabled={loading} className="flex-1">
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Draft
-                    </Button>
-                    <Button onClick={handleAssignGuru} disabled={loading} variant="secondary" className="flex-1">
-                      <Users className="w-4 h-4 mr-2" />
-                      Assign for Review
-                    </Button>
-                    <Button onClick={handleDiscard} variant="outline" size="sm">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+                   {/* Guru Assignment */}
+                   <div>
+                     <Label htmlFor="assignGuru">Assign to Guru (Optional)</Label>
+                     <Select value={selectedGuru} onValueChange={setSelectedGuru}>
+                       <SelectTrigger className="mt-1">
+                         <SelectValue placeholder="Select a guru for assignment" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {gurus.map(guru => (
+                           <SelectItem key={guru.user_id} value={guru.user_id}>
+                             {guru.full_name}
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                   </div>
+
+                   {/* Actions */}
+                   <div className="flex gap-2 pt-4 border-t">
+                     <Button onClick={handleSaveQuestion} disabled={loading} className="flex-1">
+                       <Save className="w-4 h-4 mr-2" />
+                       Save Draft
+                     </Button>
+                     <Button onClick={handleAssignGuru} disabled={loading || !selectedGuru} variant="secondary" className="flex-1">
+                       <Users className="w-4 h-4 mr-2" />
+                       {selectedGuru ? `Assign to ${getGuruName(selectedGuru)}` : "Assign for Review"}
+                     </Button>
+                     <Button onClick={handleDiscard} variant="outline" size="sm">
+                       <Trash2 className="w-4 h-4" />
+                     </Button>
+                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
