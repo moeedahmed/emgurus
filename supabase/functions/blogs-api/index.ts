@@ -825,8 +825,10 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    function requireAuth() {
       if (!user) throw new Error("Unauthorized");
-    };
+    }
 
     // POST /api/blogs/:id/feedback -> create feedback
     const feedbackMatch = pathname.match(/^\/api\/blogs\/([0-9a-f-]{36})\/feedback$/i);
@@ -1898,9 +1900,8 @@ async function trackShare(postId: string, req: Request): Promise<Response> {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
-      } catch (notifyError) {
-        console.warn("Failed to send publication notification:", notifyError);
-      }
+
+      // Notification sending completed
 
       // Try to auto-generate AI summary (non-blocking)
       try {
