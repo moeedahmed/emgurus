@@ -54,6 +54,8 @@ export default function CommentThread({
   const loadComments = async () => {
     try {
       setLoading(true);
+      setErrors(prev => ({ ...prev, load: '' }));
+      
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       
@@ -70,12 +72,17 @@ export default function CommentThread({
         setComments(data.comments || []);
         onCommentsChange?.(data.comments || []);
       } else {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || `HTTP ${response.status}: Failed to load comments`;
         console.error('Failed to load comments:', response.status, response.statusText);
-        setErrors(prev => ({ ...prev, load: 'Failed to load comments' }));
+        setErrors(prev => ({ ...prev, load: errorMsg }));
+        toast.error(errorMsg);
       }
     } catch (error) {
       console.error("Failed to load comments:", error);
-      setErrors(prev => ({ ...prev, load: 'Failed to load comments' }));
+      const errorMsg = 'Failed to load comments - please try again';
+      setErrors(prev => ({ ...prev, load: errorMsg }));
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -542,94 +549,106 @@ export default function CommentThread({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Main comment form */}
+    <div className="max-w-3xl mx-auto mt-8 space-y-6">
+      <h3 className="text-xl font-semibold">Comments</h3>
+      
       {user ? (
-        <div className="space-y-2">
-          {busy ? (
-            <div className="flex-1 p-4 border rounded-2xl bg-muted/50">
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm text-muted-foreground">Posting comment...</span>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <Textarea 
-                className="rounded-2xl min-h-[80px] resize-none" 
-                value={text} 
-                onChange={(e) => setText(e.target.value)} 
+        <div className="bg-card border rounded-2xl p-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <Avatar className="h-10 w-10 flex-shrink-0">
+              <AvatarImage src={user.user_metadata?.avatar_url} />
+              <AvatarFallback className="bg-muted">
+                {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 space-y-3">
+              <Textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
                 placeholder={user?.email_confirmed_at ? "Share your thoughts..." : "Verify your email to comment"}
                 disabled={!user?.email_confirmed_at}
+                className="min-h-[100px] resize-none border-0 bg-muted/50 focus:bg-background transition-colors"
               />
-              <div className="flex justify-between items-center">
-                <div className="flex-1">
-                  {errors.submit && (
-                    <p className="text-xs text-destructive bg-destructive/10 px-2 py-1 rounded">
-                      {errors.submit}
-                    </p>
-                  )}
+              {errors.submit && (
+                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg flex items-start justify-between">
+                  <span>{errors.submit}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setErrors(prev => ({ ...prev, submit: '' }))}
+                    className="h-auto p-1 text-xs hover:bg-destructive/20"
+                  >
+                    ✕
+                  </Button>
                 </div>
+              )}
+              <div className="flex justify-end">
                 <Button 
-                  onClick={() => submitComment(text)} 
-                  disabled={busy || !text.trim() || !user?.email_confirmed_at}
-                  className="rounded-2xl"
+                  onClick={() => submitComment(text)}
+                  disabled={!text.trim() || busy || !user?.email_confirmed_at}
+                  className="transition-all duration-200 hover:scale-105"
                 >
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Comment
+                  {busy ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Posting...
+                    </>
+                  ) : (
+                    'Post Comment'
+                  )}
                 </Button>
               </div>
             </div>
-          )}
+          </div>
         </div>
       ) : (
-        <div className="text-center text-muted-foreground py-8 border rounded-2xl bg-muted/20">
-          <p>Sign in to join the discussion</p>
+        <div className="bg-muted/30 border rounded-2xl p-6 text-center">
+          <p className="text-muted-foreground">Please sign in to join the discussion.</p>
         </div>
       )}
       
-      {/* Comments section */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {loading ? (
-          // Skeleton loader for initial load
-          <div className="space-y-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-full bg-muted animate-pulse flex-shrink-0" />
-                <div className="flex-1 space-y-3">
-                  <div className="space-y-1">
-                    <div className="h-3 bg-muted rounded animate-pulse w-32" />
-                    <div className="h-4 bg-muted rounded animate-pulse w-full" />
-                    <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="h-6 bg-muted rounded animate-pulse w-12" />
-                    <div className="h-6 bg-muted rounded animate-pulse w-12" />
-                    <div className="h-6 bg-muted rounded animate-pulse w-16" />
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-card border rounded-2xl p-4 shadow-sm">
+                <div className="flex items-start gap-3 animate-pulse">
+                  <div className="w-8 h-8 bg-muted rounded-full flex-shrink-0" />
+                  <div className="flex-1 space-y-3">
+                    <div className="h-4 bg-muted rounded w-1/4" />
+                    <div className="space-y-2">
+                      <div className="h-3 bg-muted rounded w-full" />
+                      <div className="h-3 bg-muted rounded w-3/4" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="h-6 bg-muted rounded w-12" />
+                      <div className="h-6 bg-muted rounded w-12" />
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : errors.load ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <p>{errors.load}</p>
+          <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-6 text-center">
+            <p className="text-destructive mb-3">{errors.load}</p>
             <Button 
               variant="outline" 
-              onClick={loadComments}
-              className="mt-2"
+              onClick={() => loadComments()}
+              className="transition-all duration-200 hover:scale-105"
             >
               Try Again
             </Button>
           </div>
-        ) : roots.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground border rounded-2xl bg-muted/10">
-            <p>No comments yet. Be the first to share your thoughts!</p>
+        ) : tree.length === 0 ? (
+          <div className="bg-muted/30 border rounded-2xl p-6 text-center">
+            <p className="text-muted-foreground">No comments yet. Be the first to share your thoughts!</p>
           </div>
         ) : (
-          roots.map((c) => (
-            <div key={c.id}>
-              <Item c={c} />
+          tree.map((comment) => (
+            <div key={comment.id} className="bg-card border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
+              <Item c={comment} />
             </div>
           ))
         )}

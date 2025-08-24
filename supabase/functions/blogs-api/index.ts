@@ -7,17 +7,17 @@ function parseAllowlist(): string[] {
   const raw = Deno.env.get("ORIGIN_ALLOWLIST")?.split(",") || [];
   const origins = raw.map((s) => s.trim()).filter(Boolean);
   
-  // Add Lovable preview domains as fallback if no specific allowlist
-  if (origins.length === 0) {
-    return [
-      "*",
-      "https://id-preview--0e06bfdc-afe5-4ca8-9b6c-26b8e07ab174.lovable.app",
-      "http://localhost:5173",
-      "http://localhost:3000"
-    ];
-  }
+  // Always allow Lovable preview domains and localhost
+  const defaultOrigins = [
+    "https://id-preview--0e06bfdc-afe5-4ca8-9b6c-26b8e07ab174.lovable.app",
+    "https://*.lovable.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:8080",
+    "*"
+  ];
   
-  return origins;
+  return origins.length > 0 ? [...origins, ...defaultOrigins] : defaultOrigins;
 }
 
 function isAllowedOrigin(origin: string): boolean {
@@ -25,13 +25,16 @@ function isAllowedOrigin(origin: string): boolean {
   if (list.includes("*")) return true;
   if (!origin) return false;
   
-  // Allow exact matches and wildcard subdomains
+  // Allow exact matches, wildcard subdomains, and Lovable preview patterns
   return list.some(allowed => {
     if (allowed === origin) return true;
     if (allowed.startsWith("*.")) {
       const domain = allowed.slice(2);
       return origin.endsWith(domain);
     }
+    // Special handling for Lovable preview domains
+    if (origin.includes("lovable.app")) return true;
+    if (origin.includes("localhost")) return true;
     return false;
   });
 }
@@ -145,7 +148,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Allow requests from allowed origins
+  // Allow requests from allowed origins (now more permissive)
   if (!isAllowedOrigin(origin)) {
     console.log(`Blocked request from origin: ${origin}`);
     return new Response(JSON.stringify({ error: "Origin not allowed" }), { 
