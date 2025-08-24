@@ -220,31 +220,28 @@ export default function ExamGenerator() {
         }
       };
 
-      // Save directly to review_exam_questions table as draft
-      const { data, error } = await supabase
-        .from('review_exam_questions')
-        .insert({
-          question: currentQuestion.stem,
-          options: currentQuestion.options,
-          correct_answer: currentQuestion.correct_answer,
-          explanation: currentQuestion.explanation || '',
-          tags: currentQuestion.tags || [],
-          exam_type: mapExamType(currentQuestion.exam_type || formData.examType),
-          topic: currentQuestion.topic,
-          reference: currentQuestion.reference,
-          status: 'draft',
-          created_by: user?.id
-        })
-        .select()
-        .single();
+      // Use the create_exam_draft RPC function for proper draft creation
+      const { data, error } = await supabase.rpc('create_exam_draft', {
+        p_stem: currentQuestion.stem,
+        p_choices: currentQuestion.options,
+        p_correct_index: Math.max(0, currentQuestion.options.indexOf(currentQuestion.correct_answer)),
+        p_explanation: currentQuestion.explanation || '',
+        p_tags: currentQuestion.tags || [],
+        p_exam_type: mapExamType(currentQuestion.exam_type || formData.examType)
+      });
 
       if (error) throw error;
       
-      console.log('Draft saved successfully:', data);
+      if (!data || data.length === 0) {
+        throw new Error('No question data returned from draft creation');
+      }
+      
+      const savedQuestion = data[0];
+      console.log('Draft saved successfully:', savedQuestion);
       
       toast({
         title: "Question Saved",
-        description: `Question saved to drafts (ID: ${data.id.slice(0, 8)}...)`,
+        description: `Question saved to drafts (ID: ${savedQuestion.id.slice(0, 8)}...)`,
       });
       
       // Reset state
@@ -254,9 +251,20 @@ export default function ExamGenerator() {
       setValidationErrors({});
     } catch (error: any) {
       console.error('Error saving question:', error);
+      let errorMessage = "Unable to save question. Please try again.";
+      
+      // Parse specific error messages
+      if (error?.message?.includes('foreign key')) {
+        errorMessage = "Invalid exam type selected.";
+      } else if (error?.message?.includes('NOT NULL')) {
+        errorMessage = "Required fields are missing.";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Save Failed",
-        description: error?.message || "Unable to save question. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -294,31 +302,36 @@ export default function ExamGenerator() {
         }
       };
 
-      // Save as draft and submit for review in one step
-      const { data: draftData, error: draftError } = await supabase
-        .from('review_exam_questions')
-        .insert({
-          question: currentQuestion.stem,
-          options: currentQuestion.options,
-          correct_answer: currentQuestion.correct_answer,
-          explanation: currentQuestion.explanation || '',
-          tags: currentQuestion.tags || [],
-          exam_type: mapExamType(currentQuestion.exam_type || formData.examType),
-          topic: currentQuestion.topic,
-          reference: currentQuestion.reference,
-          status: 'under_review',
-          created_by: user?.id
-        })
-        .select()
-        .single();
+      // Step 1: Create draft using the RPC function
+      const { data: draftData, error: draftError } = await supabase.rpc('create_exam_draft', {
+        p_stem: currentQuestion.stem,
+        p_choices: currentQuestion.options,
+        p_correct_index: Math.max(0, currentQuestion.options.indexOf(currentQuestion.correct_answer)),
+        p_explanation: currentQuestion.explanation || '',
+        p_tags: currentQuestion.tags || [],
+        p_exam_type: mapExamType(currentQuestion.exam_type || formData.examType)
+      });
 
       if (draftError) throw draftError;
       
-      console.log('Question saved and submitted for review:', draftData);
+      if (!draftData || draftData.length === 0) {
+        throw new Error('No question ID returned from draft creation');
+      }
+
+      const questionId = draftData[0].id;
+
+      // Step 2: Submit for review to make it available to gurus
+      const { error: submitError } = await supabase.rpc('submit_exam_for_review', {
+        p_question_id: questionId
+      });
+
+      if (submitError) throw submitError;
+      
+      console.log('Question saved and submitted for review:', questionId);
       
       toast({
         title: "Question Assigned",
-        description: `Question submitted for guru review (ID: ${draftData.id.slice(0, 8)}...)`,
+        description: `Question submitted for guru review (ID: ${questionId.slice(0, 8)}...)`,
       });
       
       // Reset state
@@ -328,9 +341,22 @@ export default function ExamGenerator() {
       setValidationErrors({});
     } catch (error: any) {
       console.error('Error assigning question:', error);
+      let errorMessage = "Unable to assign question. Please try again.";
+      
+      // Parse specific error messages
+      if (error?.message?.includes('foreign key')) {
+        errorMessage = "Invalid exam type selected.";
+      } else if (error?.message?.includes('NOT NULL')) {
+        errorMessage = "Required fields are missing.";
+      } else if (error?.message?.includes('Forbidden')) {
+        errorMessage = "You don't have permission to assign questions.";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Assignment Failed",
-        description: error?.message || "Unable to assign question. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
