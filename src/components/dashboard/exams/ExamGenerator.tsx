@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
+import { supabase } from "@/integrations/supabase/client";
 import { Save, Users, Trash2, ArrowRight } from "lucide-react";
 
 interface GeneratedQuestion {
@@ -63,29 +64,35 @@ export default function ExamGenerator() {
 
     setLoading(true);
     try {
-      const payload = {
-        exam_type: formData.examType,
-        topic: formData.topic,
-        difficulty: formData.difficulty,
-        count: 1, // Always generate one question at a time
-        instructions: formData.instructions || undefined
-      };
+    const payload = {
+      action: "bulk_generate",
+      exam_type: formData.examType,
+      topic: formData.topic,
+      difficulty: formData.difficulty,
+      count: 1,
+      persistAsDraft: false, // Don't auto-save, let user decide
+      instructions: formData.instructions || undefined
+    };
 
       const result = await callFunction("/ai-exams-api", payload, true);
       
-      if (result?.questions && Array.isArray(result.questions) && result.questions.length > 0) {
-        const question = result.questions[0];
+      if (result?.items && Array.isArray(result.items) && result.items.length > 0) {
+        const question = result.items[0];
+        const optionsArray = question.options && typeof question.options === 'object' && !Array.isArray(question.options)
+          ? Object.values(question.options)
+          : question.options || [];
+        
         const newQuestion: EditableQuestion = {
           id: `generated-${Date.now()}`,
           stem: question.question || question.stem || '',
-          options: question.options || question.choices || [],
-          correct_answer: question.correct_answer || question.answer || '',
+          options: optionsArray,
+          correct_answer: question.correct || question.correct_answer || question.answer || '',
           explanation: question.explanation || '',
           exam_type: formData.examType,
-          topic: formData.topic,
+          topic: question.topic || formData.topic,
           difficulty: formData.difficulty,
-          tags: [],
-          reference: '',
+          tags: question.subtopic ? [question.subtopic] : [],
+          reference: question.reference || question.source || '',
           isEditing: true
         };
         
@@ -114,8 +121,23 @@ export default function ExamGenerator() {
   const handleSaveQuestion = async () => {
     if (!currentQuestion) return;
     
+    setLoading(true);
     try {
-      // Save as draft using existing exam draft creation flow
+      // Create draft using supabase RPC
+      const { data, error } = await supabase.rpc('create_exam_draft', {
+        p_stem: currentQuestion.stem,
+        p_choices: currentQuestion.options.map((opt, idx) => ({ 
+          text: opt, 
+          explanation: '' 
+        })),
+        p_correct_index: Math.max(0, currentQuestion.options.indexOf(currentQuestion.correct_answer)),
+        p_explanation: currentQuestion.explanation || '',
+        p_tags: currentQuestion.tags || [],
+        p_exam_type: 'OTHER' as any
+      });
+
+      if (error) throw error;
+      
       toast({
         title: "Question Saved",
         description: "Question saved to drafts successfully.",
@@ -123,35 +145,61 @@ export default function ExamGenerator() {
       
       // Clear current question
       setCurrentQuestion(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving question:', error);
       toast({
         title: "Save Failed",
-        description: "Unable to save question. Please try again.",
+        description: error?.message || "Unable to save question. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleAssignGuru = async () => {
     if (!currentQuestion) return;
     
+    setLoading(true);
     try {
-      // TODO: Implement guru assignment logic
+      // First save as draft
+      const { data: draftData, error: draftError } = await supabase.rpc('create_exam_draft', {
+        p_stem: currentQuestion.stem,
+        p_choices: currentQuestion.options.map((opt, idx) => ({ 
+          text: opt, 
+          explanation: '' 
+        })),
+        p_correct_index: Math.max(0, currentQuestion.options.indexOf(currentQuestion.correct_answer)),
+        p_explanation: currentQuestion.explanation || '',
+        p_tags: currentQuestion.tags || [],
+        p_exam_type: 'OTHER' as any
+      });
+
+      if (draftError) throw draftError;
+      
+      // Submit for review
+      const { error: submitError } = await supabase.rpc('submit_exam_for_review', {
+        p_question_id: draftData[0]?.id
+      });
+
+      if (submitError) throw submitError;
+      
       toast({
         title: "Question Assigned",
-        description: "Question assigned to guru for review.",
+        description: "Question saved and submitted for guru review.",
       });
       
       // Clear current question
       setCurrentQuestion(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error assigning question:', error);
       toast({
         title: "Assignment Failed",
-        description: "Unable to assign question. Please try again.",
+        description: error?.message || "Unable to assign question. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -392,11 +440,11 @@ export default function ExamGenerator() {
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-4 border-t">
-                    <Button onClick={handleSaveQuestion} className="flex-1">
+                    <Button onClick={handleSaveQuestion} disabled={loading} className="flex-1">
                       <Save className="w-4 h-4 mr-2" />
                       Save Draft
                     </Button>
-                    <Button onClick={handleAssignGuru} variant="secondary" className="flex-1">
+                    <Button onClick={handleAssignGuru} disabled={loading} variant="secondary" className="flex-1">
                       <Users className="w-4 h-4 mr-2" />
                       Assign Guru
                     </Button>
