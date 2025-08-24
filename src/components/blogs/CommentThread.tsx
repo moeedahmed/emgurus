@@ -176,14 +176,9 @@ export default function CommentThread({
     }
   };
 
-  const reactToComment = async (commentId: string, type: "up" | "down") => {
+  const reactToComment = async (commentId: string, type: "up") => {
     if (!user?.id) {
       toast.error("Please log in to react");
-      return;
-    }
-
-    if (type === "down") {
-      setFeedbackModal({ commentId, open: true });
       return;
     }
 
@@ -318,14 +313,14 @@ export default function CommentThread({
               </Button>
             )}
             
-            {/* Reaction buttons */}
+            {/* Reaction buttons - Only Like for comments */}
             <div className="flex items-center gap-1 ml-2">
               <Button
                 size="sm"
                 variant={c.user_reaction === "up" ? "default" : "ghost"}
                 onClick={() => reactToComment(c.id, "up")}
                 disabled={isReacting}
-                className="h-7 px-2 transition-all duration-200 hover:scale-105"
+                className="h-7 px-2 transition-all duration-200 hover:scale-105 hover:bg-green-500/10 hover:text-green-600"
               >
                 {isReacting && c.user_reaction !== "up" ? (
                   <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin mr-1" />
@@ -333,16 +328,6 @@ export default function CommentThread({
                   <ThumbsUp className="h-3 w-3 mr-1" />
                 )}
                 {reactions.up > 0 && <span className="text-xs">{reactions.up}</span>}
-              </Button>
-              <Button
-                size="sm"
-                variant={c.user_reaction === "down" ? "default" : "ghost"}
-                onClick={() => reactToComment(c.id, "down")}
-                className="h-7 px-2 transition-all duration-200 hover:scale-105"
-                disabled={hasFeedback || isReacting}
-              >
-                <ThumbsDown className="h-3 w-3 mr-1" />
-                {reactions.down > 0 && <span className="text-xs">{reactions.down}</span>}
               </Button>
             </div>
           </div>

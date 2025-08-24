@@ -24,7 +24,7 @@ export default function CollapsibleCard({
   actions
 }: CollapsibleCardProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const [maxHeight, setMaxHeight] = useState<number>(defaultOpen ? 2000 : 0);
+  const [maxHeight, setMaxHeight] = useState<number>(0);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const toggleOpen = () => {
@@ -38,11 +38,11 @@ export default function CollapsibleCard({
 
   useEffect(() => {
     // Set initial height after mount
-    if (contentRef.current && defaultOpen) {
+    if (contentRef.current) {
       const height = contentRef.current.scrollHeight;
-      setMaxHeight(height + 32);
+      setMaxHeight(defaultOpen ? height + 32 : 0);
     }
-  }, [defaultOpen]);
+  }, [defaultOpen, children]); // Include children to recalculate when content changes
 
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'Enter' || event.key === ' ') {

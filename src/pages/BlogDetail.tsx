@@ -10,15 +10,18 @@ import ReactionBar from "@/components/blogs/ReactionBar";
 import CommentThread from "@/components/blogs/CommentThread";
 import ShareButtons from "@/components/blogs/ShareButtons";
 import CollapsibleCard from "@/components/ui/CollapsibleCard";
-import { renderMarkdownToHtml, generateAuthorBio } from "@/lib/markdownRenderer";
+import { parseContentIntoSections, generateAuthorBio, ContentSection } from "@/lib/markdownRenderer";
+import AuthorCard from "@/components/blogs/AuthorCard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, ThumbsUp, MessageCircle, Share2, Flag, Sparkles, Play, FileText, Image, User } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Eye, ThumbsUp, ThumbsDown, MessageCircle, Share2, Flag, Sparkles, Play, FileText, Image, User } from "lucide-react";
 import ReportIssueModal from "@/components/blogs/ReportIssueModal";
 
 export default function BlogDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [authorProfile, setAuthorProfile] = useState<any | null>(null);
@@ -85,10 +88,10 @@ export default function BlogDetail() {
   }, [data]);
 
 
-  const contentHtml = useMemo(() => {
-    if (!data) return "";
+  const contentSections = useMemo(() => {
+    if (!data) return [];
     const rawContent = data.content_html || data.content || data.content_md || "";
-    return renderMarkdownToHtml(rawContent);
+    return parseContentIntoSections(rawContent);
   }, [data]);
 
   const aiSummary = useMemo(() => {
@@ -110,6 +113,46 @@ export default function BlogDetail() {
   const handleEngagementUpdate = (newCounts: any) => {
     setEngagementCounts(prev => ({ ...prev, ...newCounts }));
   };
+
+  const handleLikeBlog = async () => {
+    if (!user?.id) {
+      toast.error("Please log in to like this post");
+      return;
+    }
+    
+    // Optimistic update
+    setEngagementCounts(prev => ({ ...prev, likes: prev.likes + 1 }));
+    
+    try {
+      const response = await fetch(`/functions/v1/blog-toggle-like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ postId: data.id })
+      });
+      
+      if (!response.ok) {
+        // Revert on error
+        setEngagementCounts(prev => ({ ...prev, likes: prev.likes - 1 }));
+        toast.error("Failed to like post");
+      } else {
+        toast.success("Post liked!");
+      }
+    } catch (error) {
+      // Revert on error  
+      setEngagementCounts(prev => ({ ...prev, likes: prev.likes - 1 }));
+      toast.error("Failed to like post");
+    }
+  };
+
+  const handleDislikeBlog = () => {
+    // Open feedback modal for blog-level feedback
+    setFeedbackModal({ postId: data.id, open: true });
+  };
+
+  const [feedbackModal, setFeedbackModal] = useState<{ postId: string; open: boolean }>({ postId: "", open: false });
 
   if (loading) return (
     <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -243,6 +286,22 @@ export default function BlogDetail() {
                 </div>
                 
                 <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleLikeBlog}
+                    className="h-8 px-3 transition-all duration-200 hover:scale-105 hover:bg-green-500/10 hover:text-green-600"
+                  >
+                    <ThumbsUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleDislikeBlog}
+                    className="h-8 px-3 transition-all duration-200 hover:scale-105 hover:bg-red-500/10 hover:text-red-600"
+                  >
+                    <ThumbsDown className="h-4 w-4" />
+                  </Button>
                   <ShareButtons
                     title={p.title}
                     url={window.location.href}
@@ -273,54 +332,83 @@ export default function BlogDetail() {
               </div>
             </CollapsibleCard>
 
-            {/* Main Content */}
-            <CollapsibleCard
-              title="Article Content"
-              className="transition-all duration-300 ease-in-out"
-              defaultOpen={true}
-            >
-              <div className="prose prose-lg dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: contentHtml }} />
-            </CollapsibleCard>
+            {/* Content Sections */}
+            {contentSections.map((section, index) => {
+              if (section.type === 'media') {
+                // Standalone media cards
+                return (
+                  <CollapsibleCard
+                    key={index}
+                    title={section.mediaType === 'youtube' ? "YouTube Video" : 
+                           section.mediaType === 'vimeo' ? "Vimeo Video" :
+                           section.mediaType === 'audio' ? "Audio Content" :
+                           section.mediaType === 'pdf' ? "PDF Document" : "Media Content"}
+                    titleIcon={section.mediaType === 'youtube' || section.mediaType === 'vimeo' ? 
+                              <Play className="h-4 w-4 text-primary" /> :
+                              section.mediaType === 'pdf' ? 
+                              <FileText className="h-4 w-4 text-primary" /> :
+                              <Image className="h-4 w-4 text-primary" />}
+                    className="transition-all duration-300 ease-in-out"
+                    defaultOpen={true}
+                  >
+                    <div dangerouslySetInnerHTML={{ __html: section.content }} />
+                  </CollapsibleCard>
+                );
+              }
+              
+              // Text sections
+              return (
+                <CollapsibleCard
+                  key={index}
+                  title={section.title || `Section ${index + 1}`}
+                  className="transition-all duration-300 ease-in-out"
+                  defaultOpen={index === 0} // First section open by default
+                >
+                  <div className="prose prose-lg dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: section.content }} />
+                </CollapsibleCard>
+              );
+            })}
+            
+            {/* Fallback if no sections */}
+            {contentSections.length === 0 && (
+              <CollapsibleCard
+                title="Article Content"
+                className="transition-all duration-300 ease-in-out"
+                defaultOpen={true}
+              >
+                <div className="prose prose-lg dark:prose-invert max-w-none">
+                  <p className="text-muted-foreground">Content is being processed...</p>
+                </div>
+              </CollapsibleCard>
+            )}
             
             </div> {/* Close prose container */}
 
             {/* Author Card */}
-            <section className="mt-8">
-              <Card className="p-6 rounded-2xl">
-                <div className="flex items-start gap-4">
-                  <AuthorChip 
-                    id={p.author.id} 
-                    name={authorProfile?.full_name || p.author.name} 
-                    avatar={authorProfile?.avatar_url || p.author.avatar} 
-                    onClick={(id) => navigate(`/profile/${id}`)} 
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium text-lg">{authorProfile?.full_name || p.author.name}</div>
-                    {authorProfile?.title && <div className="text-sm text-muted-foreground">{authorProfile.title}</div>}
-                    <div className="text-sm text-muted-foreground mt-2">
-                      {authorProfile?.bio || generateAuthorBio(authorProfile?.full_name || p.author.name, authorProfile?.specialty)}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Reviewer Attribution */}
-                {data.reviewer && (
-                  <div className="mt-4 pt-4 border-t flex items-start gap-4">
-                    <AuthorChip 
-                      id={data.reviewer.id} 
-                      name={reviewerProfile?.full_name || data.reviewer.name} 
-                      avatar={reviewerProfile?.avatar_url || data.reviewer.avatar} 
-                      onClick={(id) => navigate(`/profile/${id}`)} 
-                    />
-                    <div>
-                      <div className="font-medium">Reviewed by {reviewerProfile?.full_name || data.reviewer.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {reviewerProfile?.bio || generateAuthorBio(reviewerProfile?.full_name || data.reviewer.name, reviewerProfile?.specialty)}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </Card>
+            <section className="mt-8 space-y-4">
+              <AuthorCard
+                id={p.author.id}
+                name={authorProfile?.full_name || p.author.name}
+                avatar={authorProfile?.avatar_url || p.author.avatar}
+                title={authorProfile?.title}
+                bio={authorProfile?.bio}
+                specialty={authorProfile?.specialty}
+                onClick={(id) => navigate(`/profile/${id}`)}
+              />
+              
+              {/* Reviewer Attribution */}
+              {data.reviewer && (
+                <AuthorCard
+                  id={data.reviewer.id}
+                  name={reviewerProfile?.full_name || data.reviewer.name}
+                  avatar={reviewerProfile?.avatar_url || data.reviewer.avatar}
+                  title={reviewerProfile?.title}
+                  bio={reviewerProfile?.bio}
+                  specialty={reviewerProfile?.specialty}
+                  role="reviewer"
+                  onClick={(id) => navigate(`/profile/${id}`)}
+                />
+              )}
             </section>
 
             {/* Comments with optimistic updates */}

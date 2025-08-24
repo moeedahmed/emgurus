@@ -151,26 +151,44 @@ export default function BlogBaseCard({
           </div>
           {/* Engagement Bar for Hero */}
           {counts && (
-            <div className="flex items-center gap-4 mt-3 pt-3 border-t text-xs text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Eye className="h-3 w-3" />
-                <span>{counts.views || 0}</span>
+            <div className="flex items-center justify-between mt-3 pt-3 border-t">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  <span>{counts.views || 0}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <ThumbsUp className="h-3 w-3" />
+                  <span>{counts.likes || 0}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <MessageCircle className="h-3 w-3" />
+                  <span>{counts.comments || 0}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Share2 className="h-3 w-3" />
+                  <span>{counts.shares || 0}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Flag className="h-3 w-3" />
+                  <span>{counts.feedback || 0}</span>
+                </div>
               </div>
               <div className="flex items-center gap-1">
-                <ThumbsUp className="h-3 w-3" />
-                <span>{counts.likes || 0}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <MessageCircle className="h-3 w-3" />
-                <span>{counts.comments || 0}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Share2 className="h-3 w-3" />
-                <span>{counts.shares || 0}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Flag className="h-3 w-3" />
-                <span>{counts.feedback || 0}</span>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-6 w-6 p-0 hover:bg-accent/60 hover:scale-105 motion-safe:transition-all"
+                >
+                  <Share2 className="h-3 w-3" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-6 w-6 p-0 hover:bg-accent/60 hover:scale-105 motion-safe:transition-all"
+                >
+                  <Flag className="h-3 w-3" />
+                </Button>
               </div>
             </div>
           )}
@@ -269,26 +287,44 @@ export default function BlogBaseCard({
         
         {/* Engagement Bar */}
         {counts && (
-          <div className="flex items-center gap-4 mt-3 pt-3 border-t text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Eye className="h-3 w-3" />
-              <span>{counts.views || 0}</span>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Eye className="h-3 w-3" />
+                <span>{counts.views || 0}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <ThumbsUp className="h-3 w-3" />
+                <span>{counts.likes || 0}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <MessageCircle className="h-3 w-3" />
+                <span>{counts.comments || 0}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Share2 className="h-3 w-3" />
+                <span>{counts.shares || 0}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Flag className="h-3 w-3" />
+                <span>{counts.feedback || 0}</span>
+              </div>
             </div>
             <div className="flex items-center gap-1">
-              <ThumbsUp className="h-3 w-3" />
-              <span>{counts.likes || 0}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <MessageCircle className="h-3 w-3" />
-              <span>{counts.comments || 0}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Share2 className="h-3 w-3" />
-              <span>{counts.shares || 0}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Flag className="h-3 w-3" />
-              <span>{counts.feedback || 0}</span>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="h-6 w-6 p-0 hover:bg-accent/60 hover:scale-105 motion-safe:transition-all"
+              >
+                <Share2 className="h-3 w-3" />
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="h-6 w-6 p-0 hover:bg-accent/60 hover:scale-105 motion-safe:transition-all"
+              >
+                <Flag className="h-3 w-3" />
+              </Button>
             </div>
           </div>
         )}
