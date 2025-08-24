@@ -1,5 +1,5 @@
 import Hero from "@/components/Hero";
-import Features from "@/components/Features";
+import FeatureCarousel from "@/components/FeatureCarousel";
 import Pricing from "@/components/Pricing";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,7 +91,7 @@ const Index = () => {
   return (
     <main>
       <Hero />
-      <Features />
+      <FeatureCarousel />
       <Pricing />
     </main>
   );

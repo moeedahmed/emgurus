@@ -8,11 +8,11 @@ const Hero = () => {
   
   const navigate = useNavigate();
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-background via-secondary/20 to-accent/10 py-16 lg:py-20">
+    <section className="relative overflow-hidden bg-gradient-to-br from-background via-secondary/20 to-accent/10 py-16 lg:py-20 pt-24">
       <div className="page-container">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content */}
-          <div className="animate-fade-in content-spacing text-center">
+          <div className="animate-fade-in content-spacing text-center lg:text-left flex flex-col justify-center">
             {/* Hero title with grey background like other sections */}
             <div className="relative mb-6">
               <span className="pointer-events-none absolute -top-10 right-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
@@ -28,11 +28,11 @@ const Hero = () => {
               Prepare, practice, and succeed with structured exam resources and expert guidance.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg mx-auto">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start max-w-lg mx-auto lg:mx-0">
               <Button
                 variant="default"
                 size="lg"
-                className="group w-full bg-primary text-white rounded-xl px-4 py-3 hover:bg-primary/90 hover-lift focus-ring touch-target"
+                className="group"
                 onClick={() => navigate('/exams')}
                 role="button"
                 aria-label="Start exam preparation"
@@ -41,9 +41,9 @@ const Hero = () => {
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button
-                variant="default"
+                variant="outline"
                 size="lg"
-                className="group w-full bg-primary text-white rounded-xl px-4 py-3 hover:bg-primary/90 hover-lift focus-ring touch-target"
+                className="group"
                 onClick={() => navigate('/consultations')}
                 role="button"
                 aria-label="Book a Guru consultation"
@@ -51,24 +51,14 @@ const Hero = () => {
                 Book a Guru
               </Button>
               <Button
-                variant="default"
+                variant="outline"
                 size="lg"
-                className="group w-full bg-primary text-white rounded-xl px-4 py-3 hover:bg-primary/90 hover-lift focus-ring touch-target"
-                onClick={() => navigate('/blogs')}
+                className="group"
+                onClick={() => navigate('/pricing')}
                 role="button"
-                aria-label="Read clinical blogs"
+                aria-label="See pricing"
               >
-                Read Blogs
-              </Button>
-              <Button
-                variant="default"
-                size="lg"
-                className="group w-full bg-primary text-white rounded-xl px-4 py-3 hover:bg-primary/90 hover-lift focus-ring touch-target"
-                onClick={() => navigate('/forums')}
-                role="button"
-                aria-label="Join discussion forums"
-              >
-                Join Forum
+                See Pricing
               </Button>
             </div>
           </div>
