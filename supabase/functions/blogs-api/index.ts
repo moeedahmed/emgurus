@@ -1898,7 +1898,6 @@ async function trackShare(postId: string, req: Request): Promise<Response> {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
-}
       } catch (notifyError) {
         console.warn("Failed to send publication notification:", notifyError);
       }
