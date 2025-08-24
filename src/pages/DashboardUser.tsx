@@ -12,8 +12,6 @@ import ConsultationsOverview from "@/components/dashboard/consultations/Consulta
 import ForumsOverview from "@/components/dashboard/forums/ForumsOverview";
 import AuthoredBlogTabs from "@/components/dashboard/blogs/AuthoredBlogTabs";
 import MyThreadsWithChips from "@/components/dashboard/forums/MyThreadsWithChips";
-import GenerateBlogDraft from "@/pages/tools/GenerateBlogDraft";
-import ExamGenerator from "@/components/dashboard/exams/ExamGenerator";
 
 export default function DashboardUser() {
   useEffect(() => { document.title = "Learner Workspace | EMGurus"; }, []);

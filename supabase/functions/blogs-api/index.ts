@@ -44,14 +44,60 @@ async function getUserRoleFlags(supabase: ReturnType<typeof getClient>, userId?:
 }
 
 const createDraftSchema = z.object({
-  title: z.string().min(3),
+  title: z.string().min(3, "Title must be at least 3 characters"),
   content_md: z.string().optional(),
   content_html: z.string().optional(),
+  content: z.string().optional(),
   category_id: z.string().uuid().optional(),
   tag_slugs: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
   cover_image_url: z.string().url().optional(),
   excerpt: z.string().optional(),
 });
+
+function validateBlocks(content: string): { field: string; message: string }[] {
+  const errors: { field: string; message: string }[] = [];
+  
+  try {
+    const blocks = JSON.parse(content || '[]');
+    if (!Array.isArray(blocks)) {
+      errors.push({ field: "content", message: "Invalid content format" });
+      return errors;
+    }
+
+    let hasHeading = false;
+    let hasText = false;
+    
+    blocks.forEach((block: any, index: number) => {
+      if (block.type === 'heading') {
+        if (!block.data?.text?.trim()) {
+          errors.push({ field: `heading_${index}`, message: "Heading cannot be empty" });
+        } else {
+          hasHeading = true;
+        }
+      }
+      
+      if (block.type === 'paragraph') {
+        if (!block.data?.text?.trim()) {
+          errors.push({ field: `paragraph_${index}`, message: "Text block cannot be empty" });
+        } else {
+          hasText = true;
+        }
+      }
+    });
+
+    if (!hasHeading) {
+      errors.push({ field: "content", message: "At least one heading is required" });
+    }
+    if (!hasText) {
+      errors.push({ field: "content", message: "At least one text paragraph is required" });
+    }
+  } catch {
+    errors.push({ field: "content", message: "Invalid content format" });
+  }
+
+  return errors;
+}
 
 const reviewSchema = z.object({
   notes: z.string().optional(),
@@ -485,6 +531,16 @@ serve(async (req) => {
         }
         if (!body.tags || body.tags.length === 0) {
           errors.push({ field: "tags", message: "At least one tag is required" });
+        }
+        
+        // Validate blocks if content is JSON
+        if (body.content && typeof body.content === 'string') {
+          try {
+            const blockErrors = validateBlocks(body.content);
+            errors.push(...blockErrors);
+          } catch {
+            // If not JSON, treat as markdown - skip block validation
+          }
         }
         
         if (errors.length > 0) {

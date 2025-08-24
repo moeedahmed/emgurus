@@ -18,8 +18,6 @@ import { useGuruMetrics } from "@/hooks/metrics/useGuruMetrics";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import BlogsMarkedList from "@/components/dashboard/blogs/BlogsMarkedList";
-import GenerateBlogDraft from "@/pages/tools/GenerateBlogDraft";
-import ExamGenerator from "@/components/dashboard/exams/ExamGenerator";
 
 import { useAuth } from "@/contexts/AuthContext";
 

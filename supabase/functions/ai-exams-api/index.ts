@@ -52,18 +52,22 @@ serve(async (req) => {
       });
     }
 
-    // Add simple validation for bulk_generate and practice_generate actions
+    // Add structured validation for bulk_generate and practice_generate actions
     if (body.action === "bulk_generate" || body.action === "practice_generate") {
       const { exam_type, count = 1 } = body as BulkGenerateBody | PracticeGenerateBody;
+      const errors: { field: string; message: string }[] = [];
+      
       if (!exam_type || typeof exam_type !== 'string') {
-        return new Response(JSON.stringify({ error: "Invalid payload: exam_type required" }), { 
-          status: 400, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        });
+        errors.push({ field: "exam_type", message: "Exam type is required" });
       }
+      
       const maxCount = body.action === "practice_generate" ? 1 : 20;
       if (typeof count !== 'number' || count < 1 || count > maxCount) {
-        return new Response(JSON.stringify({ error: `Invalid payload: count must be 1-${maxCount}` }), { 
+        errors.push({ field: "count", message: `Count must be between 1 and ${maxCount}` });
+      }
+      
+      if (errors.length > 0) {
+        return new Response(JSON.stringify({ success: false, errors }), { 
           status: 400, 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         });

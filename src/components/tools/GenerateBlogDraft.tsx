@@ -99,6 +99,46 @@ const GenerateBlogDraft: React.FC = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
+  const validateBlocks = useCallback((content: string): FieldError[] => {
+    const errors: FieldError[] = [];
+    
+    try {
+      const blocks = JSON.parse(content || '[]');
+      if (!Array.isArray(blocks)) {
+        errors.push({ field: "content", message: "Invalid content format" });
+        return errors;
+      }
+
+      let hasHeading = false;
+      let hasText = false;
+      
+      blocks.forEach((block: any, index: number) => {
+        if (block.type === 'heading' && block.data?.text?.trim()) {
+          hasHeading = true;
+        } else if (block.type === 'heading') {
+          errors.push({ field: `heading_${index}`, message: "Heading cannot be empty" });
+        }
+        
+        if (block.type === 'paragraph' && block.data?.text?.trim()) {
+          hasText = true;
+        } else if (block.type === 'paragraph' && !block.data?.text?.trim()) {
+          errors.push({ field: `paragraph_${index}`, message: "Text block cannot be empty" });
+        }
+      });
+
+      if (!hasHeading) {
+        errors.push({ field: "content", message: "At least one heading is required" });
+      }
+      if (!hasText) {
+        errors.push({ field: "content", message: "At least one text paragraph is required" });
+      }
+    } catch {
+      errors.push({ field: "content", message: "Invalid content format" });
+    }
+
+    return errors;
+  }, []);
+
   const validateForm = useCallback((): FieldError[] => {
     const errors: FieldError[] = [];
     
@@ -108,18 +148,16 @@ const GenerateBlogDraft: React.FC = () => {
       errors.push({ field: "title", message: "Title must be at least 5 characters" });
     }
     
-    if (!draft.content.trim()) {
-      errors.push({ field: "content", message: "Content is required" });
-    } else if (draft.content.trim().length < 50) {
-      errors.push({ field: "content", message: "Content must be at least 50 characters" });
-    }
+    // Validate content blocks
+    const blockErrors = validateBlocks(draft.content);
+    errors.push(...blockErrors);
     
     if (draft.tags.length === 0 || !draft.tags.some(tag => tag.trim())) {
       errors.push({ field: "tags", message: "At least one non-empty tag is required" });
     }
     
     return errors;
-  }, [draft]);
+  }, [draft, validateBlocks]);
 
   const updateFieldErrors = useCallback((errors: FieldError[]) => {
     const errorMap: Record<string, string> = {};

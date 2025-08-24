@@ -60,11 +60,14 @@ serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const browsing: boolean = !!body.browsing;
+    const searchOnline: boolean = !!body.searchOnline;
     const sessionId: string | null = body.session_id || null;
     const anonId: string | null = body.anon_id || null;
     const pageContext: any = body.pageContext || body.page_context || {};
     const messages: MessageIn[] = Array.isArray(body.messages) ? body.messages.slice(-20) : [];
     const purpose: string = typeof body.purpose === 'string' ? body.purpose : 'chatbot';
+    const urls: string[] = Array.isArray(body.urls) ? body.urls : [];
+    const files: Array<{name: string; content: string}> = Array.isArray(body.files) ? body.files : [];
     // Map requested purpose to real OpenAI models compatible with Chat Completions
     // "gpt-5.0-nano/pro" are project-level labels; route to OpenAI equivalents
     const requested = (purpose === 'exam-generation' || purpose === 'blog_generation') ? 'gpt-5.0-pro' : 'gpt-5.0-nano';
@@ -85,6 +88,39 @@ serve(async (req) => {
       }
     } catch (_) {
       dbSessionId = null; // non-fatal
+    }
+
+    // Source ingestion tracking
+    const sourceErrors: Array<{source: string; error: string}> = [];
+    
+    // Process URLs if searchOnline is enabled
+    if (searchOnline && urls.length > 0) {
+      for (const url of urls) {
+        try {
+          // Simulate URL processing - replace with actual web scraping
+          if (!url.trim()) continue;
+          console.log(`Processing URL: ${url}`);
+          // Add actual URL processing here
+        } catch (error) {
+          sourceErrors.push({ source: url, error: `Failed to process URL: ${error}` });
+        }
+      }
+    }
+    
+    // Process files
+    if (files.length > 0) {
+      for (const file of files) {
+        try {
+          if (!file.content?.trim()) {
+            sourceErrors.push({ source: file.name, error: "File content is empty" });
+            continue;
+          }
+          console.log(`Processing file: ${file.name}`);
+          // Add actual file processing here
+        } catch (error) {
+          sourceErrors.push({ source: file.name, error: `Failed to process file: ${error}` });
+        }
+      }
     }
 
     // Build retrieval context if browsing allowed
