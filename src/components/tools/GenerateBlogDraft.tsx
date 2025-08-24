@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { callFunction } from "@/lib/functionsUrl";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,8 +63,22 @@ const GenerateBlogDraft: React.FC = () => {
   useEffect(() => {
     const loadGurus = async () => {
       try {
-        const response = await callFunction("/guru-applications", { action: "list_approved" }, true);
-        setGurus(response.gurus || []);
+        const { data: userRoles } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'guru');
+
+        if (!userRoles?.length) return;
+
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', userRoles.map(ur => ur.user_id));
+
+        setGurus((profiles || []).map(p => ({ 
+          id: p.user_id, 
+          name: p.full_name 
+        })));
       } catch (error) {
         console.error("Failed to load gurus:", error);
       }
@@ -144,23 +159,23 @@ const GenerateBlogDraft: React.FC = () => {
         files: files.map(f => ({ name: f.file.name, content: f.content })),
       };
 
-      const response = await callFunction("/blogs-api", payload, true);
+      const response = await supabase.functions.invoke('blogs-api', { body: payload });
       
-      if (response.success) {
+      if (response.data?.success) {
         setDraft({
-          title: response.draft.title || "",
-          content: response.draft.content || "",
-          category_id: response.draft.category_id,
-          tags: response.draft.tags || [],
-          cover_image_url: response.draft.cover_image_url,
-          excerpt: response.draft.excerpt,
+          title: response.data.draft.title || "",
+          content: response.data.draft.content || "",
+          category_id: response.data.draft.category_id,
+          tags: response.data.draft.tags || [],
+          cover_image_url: response.data.draft.cover_image_url,
+          excerpt: response.data.draft.excerpt,
         });
         setHasUnsavedChanges(true);
         toast({ description: "Blog draft generated successfully" });
       } else {
-        const errors = getFieldErrors(response);
+        const errors = getFieldErrors(response.data);
         updateFieldErrors(errors);
-        showErrorToast(response, "Failed to generate blog draft");
+        showErrorToast(response.data, "Failed to generate blog draft");
       }
     } catch (error) {
       const errors = getFieldErrors(error);
@@ -183,19 +198,21 @@ const GenerateBlogDraft: React.FC = () => {
     }
 
     try {
-      const response = await callFunction("/blogs-api", {
-        action: "create_draft",
-        ...draft,
-      }, true);
+      const response = await supabase.functions.invoke('blogs-api', {
+        body: {
+          action: "create_draft",
+          ...draft,
+        }
+      });
 
-      if (response.success) {
+      if (response.data?.success) {
         setHasUnsavedChanges(false);
-        toast({ description: `Draft saved successfully (ID: ${response.post.id})` });
+        toast({ description: `Draft saved successfully (ID: ${response.data.post.id})` });
         navigate("/blogs/dashboard");
       } else {
-        const errors = getFieldErrors(response);
+        const errors = getFieldErrors(response.data);
         updateFieldErrors(errors);
-        showErrorToast(response, "Failed to save draft");
+        showErrorToast(response.data, "Failed to save draft");
       }
     } catch (error) {
       const errors = getFieldErrors(error);
@@ -223,34 +240,38 @@ const GenerateBlogDraft: React.FC = () => {
 
     try {
       // First save the draft
-      const saveResponse = await callFunction("/blogs-api", {
-        action: "create_draft",
-        ...draft,
-      }, true);
+      const saveResponse = await supabase.functions.invoke('blogs-api', {
+        body: {
+          action: "create_draft",
+          ...draft,
+        }
+      });
 
-      if (!saveResponse.success) {
-        const errors = getFieldErrors(saveResponse);
+      if (!saveResponse.data?.success) {
+        const errors = getFieldErrors(saveResponse.data);
         updateFieldErrors(errors);
-        showErrorToast(saveResponse, "Failed to save draft");
+        showErrorToast(saveResponse.data, "Failed to save draft");
         return;
       }
 
       // Then assign reviewer using the new multi-reviewer endpoint
-      const assignResponse = await callFunction("/blogs-api", {
-        action: "assign_reviewers",
-        post_id: saveResponse.post.id,
-        reviewer_ids: [selectedGuru],
-        note: "Assigned via Blog Generator"
-      }, true);
+      const assignResponse = await supabase.functions.invoke('blogs-api', {
+        body: {
+          action: "assign_reviewers",
+          post_id: saveResponse.data.post.id,
+          reviewer_ids: [selectedGuru],
+          note: "Assigned via Blog Generator"
+        }
+      });
 
-      if (assignResponse.success) {
+      if (assignResponse.data?.success) {
         setHasUnsavedChanges(false);
         toast({ description: "Draft saved and assigned for review" });
         navigate("/blogs/dashboard");
       } else {
-        const errors = getFieldErrors(assignResponse);
+        const errors = getFieldErrors(assignResponse.data);
         updateFieldErrors(errors);
-        showErrorToast(assignResponse, "Failed to assign reviewer");
+        showErrorToast(assignResponse.data, "Failed to assign reviewer");
       }
     } catch (error) {
       const errors = getFieldErrors(error);
@@ -576,8 +597,8 @@ const GenerateBlogDraft: React.FC = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {gurus.map((guru) => (
-                          <SelectItem key={guru.user_id} value={guru.user_id}>
-                            {guru.full_name}
+                          <SelectItem key={guru.id} value={guru.id}>
+                            {guru.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

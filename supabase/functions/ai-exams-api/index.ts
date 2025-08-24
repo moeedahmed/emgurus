@@ -11,7 +11,7 @@ const corsHeaders = {
 type StartSessionBody = { action: "start_session"; examType: string };
 type GenerateQuestionBody = { action: "generate_question"; session_id: string; curriculum_ids?: string[]; topic?: string; count?: number };
 type SubmitAnswerBody = { action: "submit_answer"; question_id: string; selected_answer: string; feedback?: "none"|"too_easy"|"hallucinated"|"wrong"|"not_relevant" };
-type BulkGenerateBody = { action: "bulk_generate"; exam_type: string; topic?: string; difficulty?: string; count?: number; persistAsDraft?: boolean; reviewer_assign_to?: string };
+type BulkGenerateBody = { action: "bulk_generate"; exam_type: string; topic?: string; topic_id?: string; difficulty?: string; count?: number; persistAsDraft?: boolean; reviewer_assign_to?: string[]; preGenerated?: any };
 type PracticeGenerateBody = { action: "practice_generate"; exam_type: string; topic?: string; difficulty?: string; count?: number };
 
 type RequestBody = StartSessionBody | GenerateQuestionBody | SubmitAnswerBody | BulkGenerateBody | PracticeGenerateBody;
@@ -244,12 +244,29 @@ Return ONLY this JSON schema:
     }
 
     if (body.action === "bulk_generate") {
-      const { exam_type, topic, difficulty, count = 5, persistAsDraft = true, reviewer_assign_to, searchOnline = false, files = [], urls = [], preGenerated } = body as BulkGenerateBody & { 
+      const { exam_type, topic, topic_id, difficulty, count = 5, persistAsDraft = true, reviewer_assign_to, searchOnline = false, files = [], urls = [], preGenerated } = body as BulkGenerateBody & { 
         searchOnline?: boolean; 
         files?: Array<{ name: string; content: string; type: string }>; 
         urls?: string[];
         preGenerated?: { question: string; options: string[]; correct: string; explanation?: string; reference?: string; }
       };
+      
+      // Resolve topic from topic_id if provided
+      let topicTitle = topic;
+      if (topic_id) {
+        try {
+          const { data: topicData } = await supabase
+            .from('curriculum_map')
+            .select('slo_title')
+            .eq('id', topic_id)
+            .single();
+          if (topicData) {
+            topicTitle = topicData.slo_title;
+          }
+        } catch (err) {
+          console.error('Failed to resolve topic_id:', err);
+        }
+      }
       
       // Check if user is admin or guru
       const { data: roles } = await supabase
@@ -349,7 +366,7 @@ Return ONLY this JSON schema:
             const systemPrompt = `You are a medical education expert writing Emergency Medicine MCQs. Return strict JSON only.`;
             const userPrompt = `Generate one MCQ for ${exam_type}.
 Constraints:
-- Topic focus: ${topic || "random across the EM curriculum"}
+- Topic focus: ${topicTitle || "random across the EM curriculum"}
 - Difficulty: ${difficulty || "mixed"}
 - 5 options (A–E), exactly one correct
 - Concise, high-yield explanation
@@ -405,8 +422,37 @@ Return ONLY this JSON schema:
             if (iErr) throw iErr;
             generated.push(saved);
 
-            // Create assignment if reviewer specified
-            if (reviewer_assign_to && saved) {
+            // Create assignments if reviewers specified (support multi-reviewer)
+            if (reviewer_assign_to && Array.isArray(reviewer_assign_to) && reviewer_assign_to.length > 0 && saved) {
+              const assignments = reviewer_assign_to.map(reviewerId => ({
+                question_id: saved.id,
+                reviewer_id: reviewerId,
+                assigned_by: user.id,
+                status: 'pending_review',
+                assigned_at: new Date().toISOString(),
+                notes: `Auto-assigned via ${preGenerated ? 'Exam Generator' : 'bulk generation'}`
+              }));
+
+              const { error: assignError } = await supabase
+                .from("exam_review_assignments")
+                .insert(assignments);
+
+              if (assignError) {
+                console.error('Assignment error:', assignError);
+                // Don't fail the whole operation for assignment errors
+              } else {
+                // Update question metadata only if assignment succeeded
+                await supabase
+                  .from("review_exam_questions")
+                  .update({
+                    status: 'under_review',
+                    assigned_by: user.id,
+                    assigned_at: new Date().toISOString()
+                  })
+                  .eq('id', saved.id);
+              }
+            } else if (reviewer_assign_to && typeof reviewer_assign_to === 'string' && saved) {
+              // Legacy single reviewer support
               const { error: assignError } = await supabase
                 .from("exam_review_assignments")
                 .insert({
@@ -427,7 +473,6 @@ Return ONLY this JSON schema:
                   .from("review_exam_questions")
                   .update({
                     status: 'under_review',
-                    assigned_to: reviewer_assign_to,
                     assigned_by: user.id,
                     assigned_at: new Date().toISOString()
                   })
@@ -447,7 +492,7 @@ Return ONLY this JSON schema:
         user_id: user.id,
         source: "admin_bulk",
         exam: exam_type,
-        slo: topic || null,
+        slo: topicTitle || topic || null,
         count: safeCount,
         model_used: model,
         success: generated.length > 0,

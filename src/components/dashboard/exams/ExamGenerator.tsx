@@ -48,18 +48,26 @@ export default function ExamGenerator() {
   const originalQuestionRef = useRef<EditableQuestion | null>(null);
   const [formData, setFormData] = useState({
     topic: '',
+    topicId: '',
     difficulty: 'medium',
     examType: 'mrcem_sba',
     instructions: ''
   });
+  const [topics, setTopics] = useState<Array<{ id: string; title: string; exam_type: string }>>([]);
   const [gurus, setGurus] = useState<Array<{ user_id: string; full_name: string }>>([]);
   const [selectedGuru, setSelectedGuru] = useState("");
   const { toast } = useToast();
 
-  // Load gurus on component mount
+  // Load gurus and topics on component mount
   useEffect(() => {
     loadGurus();
+    loadTopics();
   }, []);
+
+  // Load topics when exam type changes
+  useEffect(() => {
+    loadTopics();
+  }, [formData.examType]);
 
   // Add beforeunload protection
   useEffect(() => {
@@ -92,6 +100,39 @@ export default function ExamGenerator() {
       setGurus(profiles || []);
     } catch (error) {
       console.error('Failed to load gurus:', error);
+    }
+  };
+
+  const loadTopics = async () => {
+    try {
+      // Map form exam type to enum
+      const examTypeEnum = mapExamTypeToEnum(formData.examType);
+      
+      const { data } = await supabase
+        .from('curriculum_map')
+        .select('id, slo_title, exam_type')
+        .eq('exam_type', examTypeEnum)
+        .order('slo_title');
+      
+      setTopics((data || []).map(item => ({
+        id: item.id,
+        title: item.slo_title,
+        exam_type: item.exam_type
+      })));
+    } catch (error) {
+      console.error('Failed to load topics:', error);
+      setTopics([]);
+    }
+  };
+
+  const mapExamTypeToEnum = (type: string) => {
+    switch (type) {
+      case 'mrcem_sba': return 'MRCEM_SBA';
+      case 'frcem_sba': return 'FRCEM_SBA';
+      case 'mrcem_primary': return 'MRCEM_PRIMARY';
+      case 'fcps_part1': return 'FCPS_PART1';
+      case 'fcps_imm': return 'FCPS_IMM';
+      default: return 'OTHER';
     }
   };
 
@@ -167,10 +208,10 @@ export default function ExamGenerator() {
       if (!confirmGenerate) return;
     }
 
-    if (!formData.topic.trim()) {
+    if (!formData.topicId) {
       toast({
         title: "Missing Topic",
-        description: "Please enter a topic for question generation.",
+        description: "Please select a topic for question generation.",
         variant: "destructive"
       });
       return;
@@ -182,17 +223,17 @@ export default function ExamGenerator() {
     const payload = {
       action: "bulk_generate",
       exam_type: formData.examType,
-      topic: formData.topic,
+      topic_id: formData.topicId,
       difficulty: formData.difficulty,
       count: 1,
       persistAsDraft: false, // Don't auto-save, let user decide
       instructions: formData.instructions || undefined
     };
 
-      const result = await callFunction("/ai-exams-api", payload, true);
+      const result = await supabase.functions.invoke('ai-exams-api', { body: payload });
       
-      if (result?.items && Array.isArray(result.items) && result.items.length > 0) {
-        const question = result.items[0];
+      if (result.data?.items && Array.isArray(result.data.items) && result.data.items.length > 0) {
+        const question = result.data.items[0];
         const optionsArray = question.options && typeof question.options === 'object' && !Array.isArray(question.options)
           ? Object.values(question.options)
           : question.options || [];
@@ -204,7 +245,7 @@ export default function ExamGenerator() {
           correct_answer: question.correct || question.correct_answer || question.answer || '',
           explanation: question.explanation || '',
           exam_type: formData.examType,
-          topic: question.topic || formData.topic,
+          topic: question.topic || topics.find(t => t.id === formData.topicId)?.title || '',
           difficulty: formData.difficulty,
           tags: question.subtopic ? [question.subtopic] : [],
           reference: question.reference || question.source || '',
@@ -218,13 +259,31 @@ export default function ExamGenerator() {
         
         toast({
           title: "Question Generated",
-          description: `New question created for ${formData.topic}`,
+          description: `New question created for ${topics.find(t => t.id === formData.topicId)?.title || 'selected topic'}`,
         });
+      } else if (result.data?.errors && Array.isArray(result.data.errors)) {
+        // Handle structured errors
+        const fieldErrors: ValidationErrors = {};
+        result.data.errors.forEach((error: {field: string, message: string}) => {
+          fieldErrors[error.field as keyof ValidationErrors] = error.message;
+        });
+        setValidationErrors(fieldErrors);
+        throw new Error('Please fix the validation errors highlighted below.');
       } else {
-        throw new Error('Invalid response format');
+        throw new Error(result.data?.error || 'Invalid response format');
       }
     } catch (error: any) {
       console.error('Error generating questions:', error);
+      
+      // Handle structured errors
+      if (error?.data?.errors && Array.isArray(error.data.errors)) {
+        const fieldErrors: ValidationErrors = {};
+        error.data.errors.forEach((err: {field: string, message: string}) => {
+          fieldErrors[err.field as keyof ValidationErrors] = err.message;
+        });
+        setValidationErrors(fieldErrors);
+      }
+      
       toast({
         title: "Generation Failed",
         description: error?.message || "Unable to generate question. Please try again.",
@@ -253,18 +312,6 @@ export default function ExamGenerator() {
     
     setLoading(true);
     try {
-      // Map exam type to proper enum value
-      const mapExamType = (type: string) => {
-        switch (type) {
-          case 'mrcem_sba': return 'MRCEM_SBA';
-          case 'frcem_sba': return 'FRCEM_SBA';
-          case 'mrcem_primary': return 'MRCEM_PRIMARY';
-          case 'fcps_part1': return 'FCPS_PART1';
-          case 'fcps_imm': return 'FCPS_IMM';
-          default: return 'OTHER';
-        }
-      };
-
       // Use the create_exam_draft RPC function for proper draft creation
       const { data, error } = await supabase
         .from("review_exam_questions")
@@ -273,7 +320,7 @@ export default function ExamGenerator() {
           options: currentQuestion.options,
           correct_answer: currentQuestion.correct_answer,
           explanation: currentQuestion.explanation || '',
-          exam_type: mapExamType(currentQuestion.exam_type || formData.examType),
+          exam_type: mapExamTypeToEnum(currentQuestion.exam_type || formData.examType),
           created_by: user.id,
           status: 'draft',
           submitted_at: new Date().toISOString()
@@ -343,27 +390,15 @@ export default function ExamGenerator() {
     
     setLoading(true);
     try {
-      // Map exam type to proper enum value
-      const mapExamType = (type: string) => {
-        switch (type) {
-          case 'mrcem_sba': return 'MRCEM_SBA';
-          case 'frcem_sba': return 'FRCEM_SBA';
-          case 'mrcem_primary': return 'MRCEM_PRIMARY';
-          case 'fcps_part1': return 'FCPS_PART1';
-          case 'fcps_imm': return 'FCPS_IMM';
-          default: return 'OTHER';
-        }
-      };
-
       // Use the AI Exams API for consistent multi-reviewer assignment
       const payload = {
         action: "bulk_generate",
-        exam_type: mapExamType(currentQuestion.exam_type || formData.examType),
-        topic: currentQuestion.topic || formData.topic,
+        exam_type: mapExamTypeToEnum(currentQuestion.exam_type || formData.examType),
+        topic_id: formData.topicId,
         difficulty: currentQuestion.difficulty || formData.difficulty,
         count: 1,
         persistAsDraft: true,
-        reviewer_assign_to: selectedGuru,
+        reviewer_assign_to: [selectedGuru], // Multi-reviewer support
         preGenerated: {
           question: currentQuestion.stem,
           options: currentQuestion.options,
@@ -373,10 +408,10 @@ export default function ExamGenerator() {
         }
       };
 
-      const result = await callFunction("/ai-exams-api", payload, true);
+      const result = await supabase.functions.invoke('ai-exams-api', { body: payload });
       
-      if (result?.success !== false && result?.items && result.items.length > 0) {
-        const savedQuestion = result.items[0];
+      if (result.data?.success !== false && result.data?.items && result.data.items.length > 0) {
+        const savedQuestion = result.data.items[0];
         
         toast({
           title: "Question Assigned",
@@ -391,9 +426,9 @@ export default function ExamGenerator() {
         setSelectedGuru("");
       } else {
         // Parse structured errors if available
-        if (result?.errors && Array.isArray(result.errors)) {
+        if (result.data?.errors && Array.isArray(result.data.errors)) {
           const fieldErrors: ValidationErrors = {};
-          result.errors.forEach((error: {field: string, message: string}) => {
+          result.data.errors.forEach((error: {field: string, message: string}) => {
             fieldErrors[error.field as keyof ValidationErrors] = error.message;
           });
           setValidationErrors(fieldErrors);
@@ -404,7 +439,7 @@ export default function ExamGenerator() {
             variant: "destructive"
           });
         } else {
-          throw new Error(result?.error || 'Failed to assign question');
+          throw new Error(result.data?.error || 'Failed to assign question');
         }
       }
     } catch (error: any) {
@@ -520,12 +555,27 @@ export default function ExamGenerator() {
 
             <div>
               <Label htmlFor="topic">Topic</Label>
-              <Input
-                id="topic"
-                value={formData.topic}
-                onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
-                placeholder="e.g., Cardiology, Emergency Medicine"
-              />
+              <Select 
+                value={formData.topicId} 
+                onValueChange={(value) => {
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    topicId: value,
+                    topic: topics.find(t => t.id === value)?.title || ''
+                  }));
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a curriculum topic" />
+                </SelectTrigger>
+                <SelectContent>
+                  {topics.map(topic => (
+                    <SelectItem key={topic.id} value={topic.id}>
+                      {topic.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
