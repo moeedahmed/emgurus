@@ -10,7 +10,7 @@ import BlogsOverview from "@/components/dashboard/blogs/BlogsOverview";
 import BlogsFeedbackList from "@/components/dashboard/blogs/BlogsFeedbackList";
 import ConsultationsOverview from "@/components/dashboard/consultations/ConsultationsOverview";
 import ForumsOverview from "@/components/dashboard/forums/ForumsOverview";
-import MyBlogs from "@/components/dashboard/blogs/MyBlogs";
+import AuthoredBlogTabs from "@/components/dashboard/blogs/AuthoredBlogTabs";
 import MyThreadsWithChips from "@/components/dashboard/forums/MyThreadsWithChips";
 
 export default function DashboardUser() {
@@ -23,11 +23,8 @@ export default function DashboardUser() {
       icon: BookOpen,
       tabs: [
         { id: "overview", title: "Overview", render: <div className="p-0"><BlogsOverview /></div> },
-        { id: "drafts", title: "Drafts", description: "Private posts you're still working on.", render: <MyBlogs filter="draft" /> },
-        { id: "submitted", title: "Submitted", description: "Posts awaiting review by the team.", render: <MyBlogs filter="in_review" /> },
-        { id: "published", title: "Published", description: "Your posts that are live on EMGurus.", render: <MyBlogs filter="published" /> },
-        { id: "rejected", title: "Rejected", description: "Changes requested. Edit and resubmit when ready.", render: <MyBlogs filter="rejected" /> },
-        { id: "feedback", title: "Feedback", description: "Blog feedback you've submitted.", render: <div className="p-0"><BlogsFeedbackList /></div> },
+        { id: "authored", title: "Authored", description: "Your authored blog posts across all stages.", render: <AuthoredBlogTabs /> },
+        { id: "generator", title: "Generator", description: "AI-powered blog draft generation.", render: <div className="p-4"><iframe src="/tools/generate-blog-draft" className="w-full h-[800px] border rounded-lg" title="Blog Generator" /></div> },
       ],
     },
     {
@@ -39,6 +36,7 @@ export default function DashboardUser() {
         { id: "attempts", title: "Attempts", description: "Your recent practice and exam sessions.", render: <div className="p-0"><ExamsAttempts /></div> },
         { id: "progress", title: "Progress", description: "Where you're strong or need work.", render: <div className="p-0"><ExamsProgressMatrix /></div> },
         { id: "feedback", title: "Feedback", description: "Questions you flagged and your notes.", render: <div className="p-0"><ExamsFeedbackList /></div> },
+        { id: "generator", title: "Generator", description: "AI-powered exam question generation.", render: <div className="p-4"><iframe src="/tools/generate-exam-question" className="w-full h-[800px] border rounded-lg" title="Exam Generator" /></div> },
       ],
     },
     {

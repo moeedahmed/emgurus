@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
 import { BookOpen, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings, Stethoscope, Brain, Eye, ThumbsUp, MessageCircle, Share2, Flag } from "lucide-react";
+import AuthoredBlogTabs from "@/components/dashboard/blogs/AuthoredBlogTabs";
 import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
 import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
 import ForumsModerationQueue from "@/components/dashboard/forums/ForumsModerationQueue";
@@ -1169,10 +1170,16 @@ export default function DashboardAdmin() {
           render: <BlogTaxonomyManager /> 
         },
         { 
-          id: "myblogs", 
-          title: "MyBlogs", 
-          description: "Your authored posts.", 
-          render: <MyBlogsAdmin /> 
+          id: "authored", 
+          title: "Authored", 
+          description: "Your authored blog posts across all stages.", 
+          render: <div className="p-0"><AuthoredBlogTabs /></div> 
+        },
+        { 
+          id: "generator", 
+          title: "Generator", 
+          description: "AI-powered blog draft generation.", 
+          render: <div className="p-4"><iframe src="/tools/generate-blog-draft" className="w-full h-[800px] border rounded-lg" title="Blog Generator" /></div> 
         },
         { 
           id: "marked", 
@@ -1193,10 +1200,10 @@ export default function DashboardAdmin() {
           render: <div className="p-4 grid gap-4 md:grid-cols-5"><KpiCard title="Generated (7d)" value="0" isLoading={false} /><KpiCard title="In Review" value={examKpis.under_review} isLoading={false} /><KpiCard title="Published" value={examKpis.approved} isLoading={false} /><KpiCard title="Quality Flags Open" value={examKpis.flaggedOpen} isLoading={false} /><div className="text-sm text-muted-foreground">Coverage chart coming soon</div></div> 
         },
         { 
-          id: "generation", 
-          title: "Generation", 
-          description: "Generate AI questions by exam/topic/difficulty.", 
-          render: <ExamGeneration /> 
+          id: "generator", 
+          title: "Generator", 
+          description: "AI-powered exam question generation.", 
+          render: <div className="p-4"><iframe src="/tools/generate-exam-question" className="w-full h-[800px] border rounded-lg" title="Exam Generator" /></div> 
         },
         { 
           id: "review-assignment", 
@@ -1319,37 +1326,6 @@ export default function DashboardAdmin() {
           title: "Feature Flags / Branding", 
           description: "Admin toggles and customization.", 
           render: <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">Feature flags coming soon.</Card></div> 
-        },
-      ],
-    },
-    {
-      id: "experimental",
-      title: "🧪 Experimental",
-      icon: Brain,
-      tabs: [
-        { 
-          id: "question-generator", 
-          title: "Question Generator 🧠", 
-          description: "Modern AI question generation interface (Beta).", 
-          render: <QuestionGenerator />
-        },
-        { 
-          id: "blog-generator", 
-          title: "Blog Generator 🤖", 
-          description: "AI-powered blog generation and assignment tool (Experimental).", 
-          render: <div className="p-4">
-            <div className="mb-4">
-              <Button asChild>
-                <a href="/tools/generate-blog-draft">Launch Blog Generator</a>
-              </Button>
-            </div>
-            <Card className="p-4">
-              <p className="text-sm text-muted-foreground">
-                Generate AI-written blog drafts and assign them to Gurus for review. 
-                This experimental tool helps admins create high-quality content efficiently.
-              </p>
-            </Card>
-          </div>
         },
       ],
     },

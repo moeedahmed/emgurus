@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
 import { BookOpen, Stethoscope, GraduationCap, MessageSquare, Eye, ThumbsUp, MessageCircle, Share2, Flag, Clock, CheckCircle } from "lucide-react";
+import AuthoredBlogTabs from "@/components/dashboard/blogs/AuthoredBlogTabs";
 import ReviewedByMe from "@/pages/guru/ReviewedByMe";
 import GuruReviewQueue from "@/pages/guru/ReviewQueue";
 import MyExamDrafts from "@/pages/tools/MyExamDrafts";
@@ -300,10 +301,16 @@ export default function DashboardGuru() {
           render: <BlogReviews /> 
         },
         { 
-          id: "myblogs", 
-          title: "MyBlogs", 
-          description: "Write or continue your own posts.", 
-          render: <MyBlogStatusPanel filter="draft" /> 
+          id: "authored", 
+          title: "Authored", 
+          description: "Your authored blog posts across all stages.", 
+          render: <div className="p-0"><AuthoredBlogTabs /></div> 
+        },
+        { 
+          id: "generator", 
+          title: "Generator", 
+          description: "AI-powered blog draft generation.", 
+          render: <div className="p-4"><iframe src="/tools/generate-blog-draft" className="w-full h-[800px] border rounded-lg" title="Blog Generator" /></div> 
         },
         { 
           id: "marked", 
@@ -334,6 +341,12 @@ export default function DashboardGuru() {
           title: "My Submissions", 
           description: "Questions you wrote or edited.", 
           render: <div className="p-0"><MySubmittedPanel /></div> 
+        },
+        { 
+          id: "generator", 
+          title: "Generator", 
+          description: "AI-powered exam question generation.", 
+          render: <div className="p-4"><iframe src="/tools/generate-exam-question" className="w-full h-[800px] border rounded-lg" title="Exam Generator" /></div> 
         },
       ],
     },
