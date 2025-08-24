@@ -53,6 +53,7 @@ const GenerateBlogDraft: React.FC = () => {
   const [generating, setGenerating] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [sourceErrors, setSourceErrors] = useState<Array<{source: string; error: string}>>([]);
   const [selectedGuru, setSelectedGuru] = useState<string>("");
   const [gurus, setGurus] = useState<any[]>([]);
   
@@ -113,16 +114,31 @@ const GenerateBlogDraft: React.FC = () => {
       let hasText = false;
       
       blocks.forEach((block: any, index: number) => {
-        if (block.type === 'heading' && block.data?.text?.trim()) {
-          hasHeading = true;
-        } else if (block.type === 'heading') {
-          errors.push({ field: `heading_${index}`, message: "Heading cannot be empty" });
+        // Validate heading blocks
+        if (block.type === 'heading') {
+          if (!block.content?.trim()) {
+            errors.push({ field: `heading_${index}`, message: "Heading cannot be empty" });
+          } else {
+            hasHeading = true;
+          }
         }
         
-        if (block.type === 'paragraph' && block.data?.text?.trim()) {
-          hasText = true;
-        } else if (block.type === 'paragraph' && !block.data?.text?.trim()) {
-          errors.push({ field: `paragraph_${index}`, message: "Text block cannot be empty" });
+        // Validate text blocks
+        if (block.type === 'text') {
+          if (!block.content?.trim()) {
+            errors.push({ field: `text_${index}`, message: "Text block cannot be empty" });
+          } else {
+            hasText = true;
+          }
+        }
+        
+        // Legacy paragraph support
+        if (block.type === 'paragraph') {
+          if (!block.data?.text?.trim()) {
+            errors.push({ field: `paragraph_${index}`, message: "Text block cannot be empty" });
+          } else {
+            hasText = true;
+          }
         }
       });
 
@@ -186,33 +202,66 @@ const GenerateBlogDraft: React.FC = () => {
 
     setGenerating(true);
     setFieldErrors({});
+    setSourceErrors([]);
     
     try {
       const payload = {
+        purpose: 'blog_generation',
         topic: topic.trim(),
-        tone,
-        length,
+        instructions_text: `Generate a ${tone} ${length}-length blog post about ${topic}`,
+        source_links: urls.filter(url => url.trim()),
+        source_files: files.map(f => ({ name: f.file.name, content: f.content })),
         searchOnline,
-        urls: urls.filter(url => url.trim()),
-        files: files.map(f => ({ name: f.file.name, content: f.content })),
       };
 
-      const response = await supabase.functions.invoke('blogs-api', { body: payload });
+      const response = await supabase.functions.invoke('ai-route', { body: payload });
       
       if (response.data?.success) {
+        // Convert AI-generated blocks to Editor.js format
+        const editorBlocks = response.data.blocks?.map((block: any) => {
+          switch (block.type) {
+            case 'heading':
+              return {
+                type: 'header',
+                data: { text: block.content, level: block.level === 'h3' ? 3 : 2 }
+              };
+            case 'text':
+              return {
+                type: 'paragraph',
+                data: { text: block.content }
+              };
+            case 'image':
+              return {
+                type: 'image',
+                data: { description: block.description, url: '', file: null }
+              };
+            default:
+              return {
+                type: 'paragraph',
+                data: { text: block.content || '' }
+              };
+          }
+        }).filter((block: any) => block.data.text || block.data.description) || [];
+
         setDraft({
-          title: response.data.draft.title || "",
-          content: response.data.draft.content || "",
-          category_id: response.data.draft.category_id,
-          tags: response.data.draft.tags || [],
-          cover_image_url: response.data.draft.cover_image_url,
-          excerpt: response.data.draft.excerpt,
+          title: response.data.title || "",
+          content: JSON.stringify(editorBlocks),
+          tags: response.data.tags || [],
+          category_id: "",
+          cover_image_url: "",
+          excerpt: "",
         });
         setHasUnsavedChanges(true);
         toast({ description: "Blog draft generated successfully" });
       } else {
+        // Handle structured errors and source errors
         const errors = getFieldErrors(response.data);
         updateFieldErrors(errors);
+        
+        if (response.data?.source_errors) {
+          setSourceErrors(response.data.source_errors);
+        }
+        
         showErrorToast(response.data, "Failed to generate blog draft");
       }
     } catch (error) {
@@ -467,6 +516,20 @@ const GenerateBlogDraft: React.FC = () => {
               >
                 {generating ? "Generating..." : "Generate Draft"}
               </Button>
+
+              {/* Source Error Display */}
+              {sourceErrors.length > 0 && (
+                <div className="mt-4 p-3 border border-destructive/20 rounded-lg bg-destructive/5">
+                  <h4 className="text-sm font-medium text-destructive mb-2">Source Processing Errors:</h4>
+                  <div className="space-y-1">
+                    {sourceErrors.map((error, i) => (
+                      <p key={i} className="text-xs text-destructive">
+                        <strong>{error.source}:</strong> {error.error}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

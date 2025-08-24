@@ -69,17 +69,20 @@ function validateBlocks(content: string): { field: string; message: string }[] {
     let hasText = false;
     
     blocks.forEach((block: any, index: number) => {
-      if (block.type === 'heading') {
-        if (!block.data?.text?.trim()) {
+      // Support both new format (content) and legacy format (data.text)
+      if (block.type === 'heading' || block.type === 'header') {
+        const text = block.content || block.data?.text;
+        if (!text?.trim()) {
           errors.push({ field: `heading_${index}`, message: "Heading cannot be empty" });
         } else {
           hasHeading = true;
         }
       }
       
-      if (block.type === 'paragraph') {
-        if (!block.data?.text?.trim()) {
-          errors.push({ field: `paragraph_${index}`, message: "Text block cannot be empty" });
+      if (block.type === 'text' || block.type === 'paragraph') {
+        const text = block.content || block.data?.text;
+        if (!text?.trim()) {
+          errors.push({ field: `text_${index}`, message: "Text block cannot be empty" });
         } else {
           hasText = true;
         }

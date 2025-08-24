@@ -67,7 +67,11 @@ serve(async (req) => {
       }
       
       if (errors.length > 0) {
-        return new Response(JSON.stringify({ success: false, errors }), { 
+        return new Response(JSON.stringify({ 
+          success: false, 
+          errors,
+          message: `Validation failed: ${errors.map(e => `${e.field}: ${e.message}`).join(', ')}`
+        }), { 
           status: 400, 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         });

@@ -97,12 +97,21 @@ serve(async (req) => {
     if (searchOnline && urls.length > 0) {
       for (const url of urls) {
         try {
-          // Simulate URL processing - replace with actual web scraping
           if (!url.trim()) continue;
+          
+          // Basic URL validation
+          try {
+            new URL(url);
+          } catch {
+            sourceErrors.push({ source: url, error: "Invalid URL format" });
+            continue;
+          }
+          
           console.log(`Processing URL: ${url}`);
-          // Add actual URL processing here
+          // TODO: Add actual web scraping here
+          // For now, just simulate processing
         } catch (error) {
-          sourceErrors.push({ source: url, error: `Failed to process URL: ${error}` });
+          sourceErrors.push({ source: url, error: `Failed to process URL: ${error instanceof Error ? error.message : 'Unknown error'}` });
         }
       }
     }
@@ -111,14 +120,24 @@ serve(async (req) => {
     if (files.length > 0) {
       for (const file of files) {
         try {
+          if (!file.name?.trim()) {
+            sourceErrors.push({ source: file.name || 'Unknown file', error: "Missing file name" });
+            continue;
+          }
+          
           if (!file.content?.trim()) {
             sourceErrors.push({ source: file.name, error: "File content is empty" });
             continue;
           }
+          
           console.log(`Processing file: ${file.name}`);
-          // Add actual file processing here
+          // TODO: Add actual file processing here
+          // For now, just validate content length
+          if (file.content.length < 10) {
+            sourceErrors.push({ source: file.name, error: "File content too short" });
+          }
         } catch (error) {
-          sourceErrors.push({ source: file.name, error: `Failed to process file: ${error}` });
+          sourceErrors.push({ source: file.name || 'Unknown file', error: `Failed to process file: ${error instanceof Error ? error.message : 'Unknown error'}` });
         }
       }
     }
@@ -315,7 +334,8 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
           success: true,
           title: structuredData.title || `Blog on ${topic}`,
           tags: Array.isArray(structuredData.tags) ? structuredData.tags : [],
-          blocks: normalizedBlocks
+          blocks: normalizedBlocks,
+          source_errors: sourceErrors.length > 0 ? sourceErrors : undefined
         };
 
         return new Response(JSON.stringify(finalData), {
@@ -325,7 +345,8 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
         console.error('Blog generation error:', error);
         return new Response(JSON.stringify({ 
           success: false, 
-          error: error instanceof Error ? error.message : 'Blog generation failed' 
+          error: error instanceof Error ? error.message : 'Blog generation failed',
+          source_errors: sourceErrors.length > 0 ? sourceErrors : undefined
         }), {
           status: 500,
           headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
