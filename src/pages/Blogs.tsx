@@ -252,7 +252,11 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
             {/* Featured posts carousel */}
             {featuredItems.length > 0 && (
               <div className="mb-8">
-                <FeaturedBlogCarousel posts={featuredItems} />
+                <FeaturedBlogCarousel 
+                  posts={featuredItems} 
+                  onTagClick={(tag) => toggleParam('tag', tag)}
+                  onCategoryClick={(category) => toggleParam('category', category)}
+                />
               </div>
             )}
             

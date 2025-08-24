@@ -43,6 +43,7 @@ interface BlogBaseCardProps {
   counts?: EngagementCounts;
   topBadge?: string;
   isFeatured?: boolean;
+  isHero?: boolean;
   className?: string;
   onTagClick?: (tag: string) => void;
   onCategoryClick?: (category: string) => void;
@@ -61,6 +62,7 @@ export default function BlogBaseCard({
   counts,
   topBadge,
   isFeatured = false,
+  isHero = false,
   className,
   onTagClick,
   onCategoryClick
@@ -93,6 +95,91 @@ export default function BlogBaseCard({
 
   const badges = generateBadges();
 
+  // Hero layout for featured single posts
+  if (isHero) {
+    return (
+      <Card className={cn(
+        "relative overflow-hidden rounded-2xl border group hover-scale motion-safe:transition-all motion-safe:duration-200",
+        className
+      )}>
+        <img
+          src={cover_image_url || "/placeholder.svg"}
+          alt={`${title} cover image`}
+          className="w-full h-[260px] sm:h-[360px] lg:h-[420px] object-cover"
+          loading="lazy"
+          decoding="async"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 lg:p-8 text-foreground">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {badges.map((badge, index) => (
+              <Badge key={index} variant={badge.variant} className="text-xs">
+                {badge.label}
+              </Badge>
+            ))}
+            {category?.title && (
+              <Chip
+                name={category.title}
+                value={category.title}
+                selected={false}
+                onSelect={() => onCategoryClick?.(category.title!)}
+                variant="outline"
+                size="sm"
+              >
+                {category.title}
+              </Chip>
+            )}
+            {date && <span className="text-xs text-muted-foreground">{date}</span>}
+          </div>
+          <Link to={`/blogs/${slug}`}>
+            <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold max-w-3xl mb-2 group-hover:text-primary motion-safe:transition-colors">
+              {title}
+            </h3>
+          </Link>
+          {excerpt && (
+            <p className="mt-2 max-w-2xl line-clamp-2 text-sm sm:text-base text-muted-foreground">
+              {excerpt}
+            </p>
+          )}
+          <div className="mt-4 flex items-center gap-3 flex-wrap">
+            {author && (
+              <AuthorChip id={author.id} name={author.name} avatar={author.avatar || null} />
+            )}
+            <Button asChild size="sm" variant="secondary" className="ml-auto">
+              <Link to={`/blogs/${slug}`}>Read Article</Link>
+            </Button>
+          </div>
+          {/* Engagement Bar for Hero */}
+          {counts && (
+            <div className="flex items-center gap-4 mt-3 pt-3 border-t text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Eye className="h-3 w-3" />
+                <span>{counts.views || 0}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <ThumbsUp className="h-3 w-3" />
+                <span>{counts.likes || 0}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <MessageCircle className="h-3 w-3" />
+                <span>{counts.comments || 0}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Share2 className="h-3 w-3" />
+                <span>{counts.shares || 0}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Flag className="h-3 w-3" />
+                <span>{counts.feedback || 0}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    );
+  }
+
+  // Regular card layout
   return (
     <Card className={cn(
       "overflow-hidden group hover-scale motion-safe:transition-all motion-safe:duration-200",
