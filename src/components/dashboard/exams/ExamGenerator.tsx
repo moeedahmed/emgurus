@@ -123,17 +123,29 @@ export default function ExamGenerator() {
     
     setLoading(true);
     try {
+      // Map exam type to proper enum value
+      const mapExamType = (type: string) => {
+        switch (type) {
+          case 'mrcem_sba': return 'MRCEM_SBA';
+          case 'frcem_sba': return 'FRCEM_SBA';
+          case 'mrcem_primary': return 'MRCEM_PRIMARY';
+          case 'fcps_part1': return 'FCPS_PART1';
+          case 'fcps_imm': return 'FCPS_IMM';
+          default: return 'OTHER';
+        }
+      };
+
       // Create draft using supabase RPC
       const { data, error } = await supabase.rpc('create_exam_draft', {
         p_stem: currentQuestion.stem,
-        p_choices: currentQuestion.options.map((opt, idx) => ({ 
+        p_choices: currentQuestion.options.map((opt) => ({ 
           text: opt, 
           explanation: '' 
         })),
         p_correct_index: Math.max(0, currentQuestion.options.indexOf(currentQuestion.correct_answer)),
         p_explanation: currentQuestion.explanation || '',
         p_tags: currentQuestion.tags || [],
-        p_exam_type: 'OTHER' as any
+        p_exam_type: mapExamType(currentQuestion.exam_type || formData.examType) as any
       });
 
       if (error) throw error;
@@ -162,24 +174,40 @@ export default function ExamGenerator() {
     
     setLoading(true);
     try {
+      // Map exam type to proper enum value
+      const mapExamType = (type: string) => {
+        switch (type) {
+          case 'mrcem_sba': return 'MRCEM_SBA';
+          case 'frcem_sba': return 'FRCEM_SBA';
+          case 'mrcem_primary': return 'MRCEM_PRIMARY';
+          case 'fcps_part1': return 'FCPS_PART1';
+          case 'fcps_imm': return 'FCPS_IMM';
+          default: return 'OTHER';
+        }
+      };
+
       // First save as draft
       const { data: draftData, error: draftError } = await supabase.rpc('create_exam_draft', {
         p_stem: currentQuestion.stem,
-        p_choices: currentQuestion.options.map((opt, idx) => ({ 
+        p_choices: currentQuestion.options.map((opt) => ({ 
           text: opt, 
           explanation: '' 
         })),
         p_correct_index: Math.max(0, currentQuestion.options.indexOf(currentQuestion.correct_answer)),
         p_explanation: currentQuestion.explanation || '',
         p_tags: currentQuestion.tags || [],
-        p_exam_type: 'OTHER' as any
+        p_exam_type: mapExamType(currentQuestion.exam_type || formData.examType) as any
       });
 
       if (draftError) throw draftError;
       
+      if (!draftData || draftData.length === 0) {
+        throw new Error('No question ID returned from draft creation');
+      }
+
       // Submit for review
       const { error: submitError } = await supabase.rpc('submit_exam_for_review', {
-        p_question_id: draftData[0]?.id
+        p_question_id: draftData[0].id
       });
 
       if (submitError) throw submitError;
