@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import AuthorChip from "@/components/blogs/AuthorChip";
+import BlogBaseCard from "@/components/blogs/BlogBaseCard";
 
 interface FeaturedPost {
   id: string;
@@ -15,6 +16,13 @@ interface FeaturedPost {
   tags?: { slug?: string; title?: string }[];
   author?: { id: string; name: string; avatar?: string | null };
   published_at?: string | null;
+  counts?: {
+    views?: number;
+    likes?: number;
+    comments?: number;
+    shares?: number;
+    feedback?: number;
+  };
 }
 
 interface FeaturedBlogCarouselProps {
@@ -86,53 +94,23 @@ export default function FeaturedBlogCarousel({ posts }: FeaturedBlogCarouselProp
       <div className="md:hidden">
         <Carousel className="w-full">
           <CarouselContent className="-ml-2 md:-ml-4">
-            {posts.map((post) => {
-              const date = post.published_at ? new Date(post.published_at).toLocaleDateString() : "";
-              return (
-                <CarouselItem key={post.id} className="pl-2 md:pl-4 basis-[85%]">
-                  <Card className="overflow-hidden">
-                    <div className="relative">
-                      <img
-                        src={post.cover_image_url || "/placeholder.svg"}
-                        alt={`${post.title} cover image`}
-                        className="w-full h-48 object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                      <div className="absolute top-2 left-2">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/90 text-primary-foreground">Featured</span>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        {post.category?.title && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                            {post.category.title}
-                          </span>
-                        )}
-                        {date && <span className="text-xs text-muted-foreground">{date}</span>}
-                      </div>
-                      <h3 className="font-bold text-lg mb-2 line-clamp-2">
-                        {post.title}
-                      </h3>
-                      {post.excerpt && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                          {post.excerpt}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-between">
-                        {post.author && (
-                          <AuthorChip id={post.author.id} name={post.author.name} avatar={post.author.avatar || null} />
-                        )}
-                        <Button asChild size="sm" variant="outline">
-                          <Link to={`/blogs/${post.slug}`}>Read</Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                </CarouselItem>
-              );
-            })}
+            {posts.map((post) => (
+              <CarouselItem key={post.id} className="pl-2 md:pl-4 basis-[85%]">
+                <BlogBaseCard
+                  id={post.id}
+                  title={post.title}
+                  slug={post.slug}
+                  excerpt={post.excerpt}
+                  cover_image_url={post.cover_image_url}
+                  category={post.category}
+                  tags={post.tags}
+                  author={post.author}
+                  published_at={post.published_at}
+                  counts={post.counts}
+                  isFeatured={true}
+                />
+              </CarouselItem>
+            ))}
           </CarouselContent>
           <CarouselPrevious className="left-2" />
           <CarouselNext className="right-2" />
@@ -141,51 +119,22 @@ export default function FeaturedBlogCarousel({ posts }: FeaturedBlogCarouselProp
 
       {/* Desktop Grid */}
       <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {posts.map((post) => {
-          const date = post.published_at ? new Date(post.published_at).toLocaleDateString() : "";
-          return (
-            <Card key={post.id} className="overflow-hidden">
-              <div className="relative">
-                <img
-                  src={post.cover_image_url || "/placeholder.svg"}
-                  alt={`${post.title} cover image`}
-                  className="w-full h-48 object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <div className="absolute top-2 left-2">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary/90 text-primary-foreground">Featured</span>
-                </div>
-              </div>
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  {post.category?.title && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                      {post.category.title}
-                    </span>
-                  )}
-                  {date && <span className="text-xs text-muted-foreground">{date}</span>}
-                </div>
-                <h3 className="font-bold text-lg mb-2 line-clamp-2">
-                  {post.title}
-                </h3>
-                {post.excerpt && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                    {post.excerpt}
-                  </p>
-                )}
-                <div className="flex items-center justify-between">
-                  {post.author && (
-                    <AuthorChip id={post.author.id} name={post.author.name} avatar={post.author.avatar || null} />
-                  )}
-                  <Button asChild size="sm" variant="outline">
-                    <Link to={`/blogs/${post.slug}`}>Read</Link>
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
+        {posts.map((post) => (
+          <BlogBaseCard
+            key={post.id}
+            id={post.id}
+            title={post.title}
+            slug={post.slug}
+            excerpt={post.excerpt}
+            cover_image_url={post.cover_image_url}
+            category={post.category}
+            tags={post.tags}
+            author={post.author}
+            published_at={post.published_at}
+            counts={post.counts}
+            isFeatured={true}
+          />
+        ))}
       </div>
     </section>
   );

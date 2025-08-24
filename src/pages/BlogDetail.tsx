@@ -4,15 +4,19 @@ import { getBlog } from "@/lib/blogsApi";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import AuthorChip from "@/components/blogs/AuthorChip";
 import ReactionBar from "@/components/blogs/ReactionBar";
 import CommentThread from "@/components/blogs/CommentThread";
 import ShareButtons from "@/components/blogs/ShareButtons";
 import CollapsibleCard from "@/components/ui/CollapsibleCard";
+import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import DOMPurify from "dompurify";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, ThumbsUp, MessageCircle, Share2, Flag, Sparkles, Play, FileText, Image } from "lucide-react";
+import { Eye, ThumbsUp, MessageCircle, Share2, Flag, Sparkles, Play, FileText, Image, User } from "lucide-react";
 import ReportIssueModal from "@/components/blogs/ReportIssueModal";
 
 export default function BlogDetail() {

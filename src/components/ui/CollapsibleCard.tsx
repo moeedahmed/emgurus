@@ -73,13 +73,19 @@ export default function CollapsibleCard({
         </div>
       </div>
       
-      {isOpen && (
-        <div className="px-4 pb-4 sm:px-6 sm:pb-6" id={`collapsible-content-${title.replace(/\s+/g, '-').toLowerCase()}`}>
+      <div 
+        className={cn(
+          "overflow-hidden motion-safe:transition-all motion-safe:duration-300",
+          isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+        )}
+        id={`collapsible-content-${title.replace(/\s+/g, '-').toLowerCase()}`}
+      >
+        <div className="px-4 pb-4 sm:px-6 sm:pb-6">
           <div className="border-t pt-4">
             {children}
           </div>
         </div>
-      )}
+      </div>
     </Card>
   );
 }

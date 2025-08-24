@@ -58,7 +58,7 @@ export default function QuestionCard({
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-foreground/90 break-words overflow-x-hidden">
                       <span className="font-medium">{o.key}. </span>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} className="inline">{o.text}</ReactMarkdown>
+                      <span className="inline"><ReactMarkdown remarkPlugins={[remarkGfm]}>{o.text}</ReactMarkdown></span>
                     </div>
                   </div>
                 </label>
