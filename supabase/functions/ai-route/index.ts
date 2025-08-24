@@ -412,7 +412,15 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
         // Check if we have a valid image URL
         if (!imageData?.url) {
           console.error('Image generation error: No image URL returned', result);
-          throw new Error('Image generation returned no URL');
+          return new Response(JSON.stringify({ 
+            success: false, 
+            image_url: null,
+            image_data: null,
+            error: 'Image generation returned no URL' 
+          }), {
+            status: 500,
+            headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+          });
         }
         
         return new Response(JSON.stringify({ 

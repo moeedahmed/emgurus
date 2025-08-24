@@ -10,14 +10,19 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createDraft } from "@/lib/blogsApi";
-import { ChevronDown, X, Plus, FileText, ExternalLink, History, AlertTriangle } from "lucide-react";
+import { ChevronDown, X, Plus, FileText, ExternalLink, History, AlertTriangle, Search, User } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getErrorMessage, FieldError } from "@/lib/errors";
 
 interface Guru {
   user_id: string;
   full_name: string;
+  avatar_url?: string;
 }
 
 interface BlogCategory {
@@ -80,9 +85,11 @@ export default function GenerateBlogDraft() {
   // Source-related state
   const [sourceUrls, setSourceUrls] = useState<string[]>([]);
   const [newUrl, setNewUrl] = useState('');
+  const [urlError, setUrlError] = useState('');
   const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([]);
   const [sourcesCollapsed, setSourcesCollapsed] = useState(false);
   const [searchOnline, setSearchOnline] = useState(false);
+  const [guruDropdownOpen, setGuruDropdownOpen] = useState(false);
   
   const { toast } = useToast();
 
@@ -100,11 +107,11 @@ export default function GenerateBlogDraft() {
         
         if (guruRoles?.length) {
           const guruIds = guruRoles.map(r => r.user_id);
-          const { data: guruProfiles } = await supabase
-            .from('profiles')
-            .select('user_id, full_name')
-            .in('user_id', guruIds)
-            .order('full_name');
+        const { data: guruProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, avatar_url')
+          .in('user_id', guruIds)
+          .order('full_name');
           
           setGurus(guruProfiles || []);
         }
@@ -213,6 +220,10 @@ export default function GenerateBlogDraft() {
       
       const { data } = supabase.storage.from('blog-covers').getPublicUrl(path);
       
+      if (!data?.publicUrl) {
+        throw new Error('No public URL returned from storage');
+      }
+      
       // Update the block with the uploaded image
       setGeneratedDraft(prev => {
         if (!prev) return prev;
@@ -232,7 +243,7 @@ export default function GenerateBlogDraft() {
       console.error('Upload failed:', error);
       toast({
         title: "Upload Failed",
-        description: "Unable to upload image. Please try again.",
+        description: getErrorMessage(error) || "Unable to upload image. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -254,7 +265,7 @@ export default function GenerateBlogDraft() {
 
       const result = response.data;
       
-      if (result.success === true) {
+      if (result.success === true && (result.image_url || result.image_data)) {
         let imageMarkdown = '';
         
         // Handle both URL and base64 responses
@@ -309,12 +320,34 @@ export default function GenerateBlogDraft() {
     }
   };
 
+  // URL validation function
+  const isValidUrl = (url: string): boolean => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
   // Source management functions
   const addUrl = () => {
-    if (newUrl.trim() && !sourceUrls.includes(newUrl.trim())) {
-      setSourceUrls([...sourceUrls, newUrl.trim()]);
-      setNewUrl('');
+    const trimmedUrl = newUrl.trim();
+    if (!trimmedUrl) return;
+
+    if (!isValidUrl(trimmedUrl)) {
+      setUrlError('Please enter a valid URL (http:// or https://)');
+      return;
     }
+
+    if (sourceUrls.includes(trimmedUrl)) {
+      setUrlError('This URL has already been added');
+      return;
+    }
+
+    setSourceUrls([...sourceUrls, trimmedUrl]);
+    setNewUrl('');
+    setUrlError('');
   };
 
   const removeUrl = (index: number) => {
@@ -426,6 +459,17 @@ export default function GenerateBlogDraft() {
       toast({
         title: "Missing Instructions",
         description: "Please describe what you want to include in the blog.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate all URLs before submission
+    const invalidUrls = sourceUrls.filter(url => !isValidUrl(url));
+    if (invalidUrls.length > 0) {
+      toast({
+        title: "Invalid URLs",
+        description: `Please fix the following invalid URLs: ${invalidUrls.join(', ')}`,
         variant: "destructive"
       });
       return;
@@ -856,7 +900,10 @@ export default function GenerateBlogDraft() {
                   <div className="flex gap-2 mt-1">
                     <Input
                       value={newUrl}
-                      onChange={(e) => setNewUrl(e.target.value)}
+                      onChange={(e) => {
+                        setNewUrl(e.target.value);
+                        if (urlError) setUrlError(''); // Clear error when typing
+                      }}
                       placeholder="https://example.com/article"
                       onKeyPress={(e) => e.key === 'Enter' && addUrl()}
                     />
@@ -864,6 +911,9 @@ export default function GenerateBlogDraft() {
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
+                  {urlError && (
+                    <p className="text-xs text-destructive mt-1">{urlError}</p>
+                  )}
                   
                   {sourceUrls.length > 0 && (
                     <div className="mt-2 space-y-1">
@@ -1065,32 +1115,89 @@ export default function GenerateBlogDraft() {
                   {loading ? "Saving..." : "Save Draft"}
                 </Button>
                 
-                {gurus.length > 0 && (
+{gurus.length > 0 && (
                   <div className="flex flex-col gap-2">
                     <Label className="text-sm font-medium">Assign Reviewers</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {gurus.map((guru) => (
-                        <div key={guru.user_id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={guru.user_id}
-                            checked={selectedGurus.includes(guru.user_id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedGurus([...selectedGurus, guru.user_id]);
-                              } else {
-                                setSelectedGurus(selectedGurus.filter(id => id !== guru.user_id));
-                              }
-                            }}
-                          />
-                          <Label
-                            htmlFor={guru.user_id}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            {guru.full_name}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
+                    
+                    {/* Searchable Guru Dropdown */}
+                    <Popover open={guruDropdownOpen} onOpenChange={setGuruDropdownOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" role="combobox" className="justify-between">
+                          <div className="flex items-center gap-2">
+                            <Search className="h-4 w-4" />
+                            Select Reviewers
+                          </div>
+                          <ChevronDown className="h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-0">
+                        <Command>
+                          <CommandInput placeholder="Search gurus..." />
+                          <CommandList>
+                            <CommandEmpty>No gurus found.</CommandEmpty>
+                            <CommandGroup>
+                              {gurus.map((guru) => (
+                                <CommandItem
+                                  key={guru.user_id}
+                                  onSelect={() => {
+                                    if (selectedGurus.includes(guru.user_id)) {
+                                      setSelectedGurus(selectedGurus.filter(id => id !== guru.user_id));
+                                    } else {
+                                      setSelectedGurus([...selectedGurus, guru.user_id]);
+                                    }
+                                  }}
+                                  className="flex items-center gap-2 cursor-pointer"
+                                >
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={guru.avatar_url} />
+                                    <AvatarFallback className="text-xs">
+                                      {guru.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="flex-1">{guru.full_name}</span>
+                                  {selectedGurus.includes(guru.user_id) && (
+                                    <div className="h-4 w-4 rounded bg-primary text-primary-foreground flex items-center justify-center">
+                                      ✓
+                                    </div>
+                                  )}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+
+                    {/* Selected Gurus Tags */}
+                    {selectedGurus.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedGurus.map((guruId) => {
+                          const guru = gurus.find(g => g.user_id === guruId);
+                          if (!guru) return null;
+                          
+                          return (
+                            <Badge key={guruId} variant="secondary" className="flex items-center gap-2">
+                              <Avatar className="h-4 w-4">
+                                <AvatarImage src={guru.avatar_url} />
+                                <AvatarFallback className="text-xs">
+                                  {guru.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs">{guru.full_name}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                                onClick={() => setSelectedGurus(selectedGurus.filter(id => id !== guruId))}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
+
                     <Button 
                       onClick={handleAssignGurus} 
                       disabled={loading || selectedGurus.length === 0}
