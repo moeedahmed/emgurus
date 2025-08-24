@@ -1,4 +1,4 @@
-import { ReactNode, useState, KeyboardEvent } from "react";
+import { ReactNode, useState, KeyboardEvent, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -24,8 +24,25 @@ export default function CollapsibleCard({
   actions
 }: CollapsibleCardProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [maxHeight, setMaxHeight] = useState<number>(defaultOpen ? 2000 : 0);
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  const toggleOpen = () => setIsOpen(!isOpen);
+  const toggleOpen = () => {
+    setIsOpen(!isOpen);
+    // Measure content height dynamically
+    if (contentRef.current) {
+      const height = contentRef.current.scrollHeight;
+      setMaxHeight(isOpen ? 0 : height + 32); // Add padding
+    }
+  };
+
+  useEffect(() => {
+    // Set initial height after mount
+    if (contentRef.current && defaultOpen) {
+      const height = contentRef.current.scrollHeight;
+      setMaxHeight(height + 32);
+    }
+  }, [defaultOpen]);
 
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -74,13 +91,14 @@ export default function CollapsibleCard({
       </div>
       
       <div 
-        className={cn(
-          "overflow-hidden motion-safe:transition-all motion-safe:duration-300",
-          isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-        )}
+        className="overflow-hidden motion-safe:transition-all motion-safe:duration-300"
+        style={{ 
+          maxHeight: `${maxHeight}px`,
+          opacity: isOpen ? 1 : 0
+        }}
         id={`collapsible-content-${title.replace(/\s+/g, '-').toLowerCase()}`}
       >
-        <div className="px-4 pb-4 sm:px-6 sm:pb-6">
+        <div ref={contentRef} className="px-4 pb-4 sm:px-6 sm:pb-6">
           <div className="border-t pt-4">
             {children}
           </div>

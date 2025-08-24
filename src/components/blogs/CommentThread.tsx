@@ -36,6 +36,7 @@ export default function CommentThread({
   const [comments, setComments] = useState<CommentNode[]>(initialComments);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [feedbackModal, setFeedbackModal] = useState<{ commentId: string; open: boolean }>({ commentId: "", open: false });
@@ -45,10 +46,15 @@ export default function CommentThread({
 
   useEffect(() => {
     setComments(initialComments);
+    // Load comments on mount if not provided
+    if (initialComments.length === 0) {
+      loadComments();
+    }
   }, [initialComments]);
 
   const loadComments = async () => {
     try {
+      setLoading(true);
       const response = await fetch(`/functions/v1/blogs-api/api/blogs/${postId}/comments`, {
         headers: {
           'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
@@ -62,6 +68,8 @@ export default function CommentThread({
       }
     } catch (error) {
       console.error("Failed to load comments:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -292,7 +300,7 @@ export default function CommentThread({
             </p>
           )}
           {c.replies && c.replies.length > 0 && (
-            <div className="mt-3 space-y-4 border-l pl-4">
+            <div className="mt-3 space-y-4 border-l sm:pl-6 pl-3">
               {c.replies.filter(r => !deletedIds.has(r.id)).map(r => <Item key={r.id} c={r} />)}
             </div>
           )}
@@ -340,31 +348,47 @@ export default function CommentThread({
         )}
         
         <div className="space-y-6">
-          {roots.map((c) => (
-            <div key={c.id} className="space-y-2">
-              <Item c={c} />
-              {replyTo === c.id && user && (
-                <div className="ml-11">
-                  <Textarea 
-                    value={text} 
-                    onChange={(e) => setText(e.target.value)} 
-                    placeholder={user?.email_confirmed_at ? "Write a reply" : "Verify your email to reply"}
-                    disabled={!user?.email_confirmed_at}
-                  />
-                  <div className="mt-2 flex gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => submit(c.id)} 
-                      disabled={busy || !user?.email_confirmed_at}
-                    >
-                      Reply
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setReplyTo(null)}>Cancel</Button>
+          {loading ? (
+            // Skeleton loader for initial load
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded animate-pulse w-1/4" />
+                    <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+                    <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
                   </div>
                 </div>
-              )}
+              ))}
             </div>
-          ))}
+          ) : (
+            roots.map((c) => (
+              <div key={c.id} className="space-y-2">
+                <Item c={c} />
+                {replyTo === c.id && user && (
+                  <div className="sm:ml-11 ml-8">
+                    <Textarea 
+                      value={text} 
+                      onChange={(e) => setText(e.target.value)} 
+                      placeholder={user?.email_confirmed_at ? "Write a reply" : "Verify your email to reply"}
+                      disabled={!user?.email_confirmed_at}
+                    />
+                    <div className="mt-2 flex gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={() => submit(c.id)} 
+                        disabled={busy || !user?.email_confirmed_at}
+                      >
+                        Reply
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setReplyTo(null)}>Cancel</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
 

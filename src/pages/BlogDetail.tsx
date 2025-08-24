@@ -231,11 +231,11 @@ export default function BlogDetail() {
           <span className="text-foreground">{p.title}</span>
         </nav>
 
-        {/* No cover image fallback - show title */}
+            {/* No cover image fallback - show title */}
         {!p.cover_image_url && (
           <div className="mb-8">
             <h1 className="text-4xl lg:text-5xl font-bold mb-4">{p.title}</h1>
-            <div className="flex items-center gap-4 text-muted-foreground">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <AuthorChip 
                 id={p.author.id} 
                 name={authorProfile?.full_name || p.author.name} 
@@ -252,6 +252,7 @@ export default function BlogDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <article className="lg:col-span-8 space-y-6">
+            <div className="prose prose-lg mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
             
             {/* Standardized Engagement Bar */}
             <div className="p-4 sm:p-6 bg-muted/30 rounded-2xl">
@@ -329,6 +330,8 @@ export default function BlogDetail() {
             >
               <div className="prose prose-lg dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: contentHtml }} />
             </CollapsibleCard>
+            
+            </div> {/* Close prose container */}
 
             {/* Author Card */}
             <section className="mt-8">
