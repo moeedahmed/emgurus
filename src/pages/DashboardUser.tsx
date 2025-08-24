@@ -25,7 +25,6 @@ export default function DashboardUser() {
       icon: BookOpen,
       tabs: [
         { id: "overview", title: "Overview", render: <div className="p-0"><BlogsOverview /></div> },
-        { id: "generator", title: "Generator", description: "AI-powered blog draft generation.", render: <div className="p-0"><GenerateBlogDraft /></div> },
         { id: "authored", title: "Authored", description: "Your authored blog posts across all stages.", render: <AuthoredBlogTabs /> },
       ],
     },
@@ -38,7 +37,6 @@ export default function DashboardUser() {
         { id: "attempts", title: "Attempts", description: "Your recent practice and exam sessions.", render: <div className="p-0"><ExamsAttempts /></div> },
         { id: "progress", title: "Progress", description: "Where you're strong or need work.", render: <div className="p-0"><ExamsProgressMatrix /></div> },
         { id: "feedback", title: "Feedback", description: "Questions you flagged and your notes.", render: <div className="p-0"><ExamsFeedbackList /></div> },
-        { id: "generator", title: "Generator", description: "AI-powered exam question generation.", render: <div className="p-0"><ExamGenerator /></div> },
       ],
     },
     {

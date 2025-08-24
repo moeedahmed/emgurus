@@ -297,12 +297,6 @@ export default function DashboardGuru() {
           render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your recent reviews and publishing impact.</div><AnalyticsPanel /></div> 
         },
         { 
-          id: "generator", 
-          title: "Generator", 
-          description: "AI-powered blog draft generation.", 
-          render: <div className="p-0"><GenerateBlogDraft /></div> 
-        },
-        { 
           id: "reviews", 
           title: "Reviews", 
           description: "Edit and approve assigned blog posts.", 
@@ -343,12 +337,6 @@ export default function DashboardGuru() {
           title: "My Submissions", 
           description: "Questions you wrote or edited.", 
           render: <div className="p-0"><MySubmittedPanel /></div> 
-        },
-        { 
-          id: "generator", 
-          title: "Generator", 
-          description: "AI-powered exam question generation.", 
-          render: <div className="p-0"><ExamGenerator /></div> 
         },
       ],
     },
