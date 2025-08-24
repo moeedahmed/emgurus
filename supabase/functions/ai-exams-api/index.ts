@@ -244,7 +244,11 @@ Return ONLY this JSON schema:
     }
 
     if (body.action === "bulk_generate") {
-      const { exam_type, topic, difficulty, count = 5, persistAsDraft = true, reviewer_assign_to } = body as BulkGenerateBody;
+      const { exam_type, topic, difficulty, count = 5, persistAsDraft = true, reviewer_assign_to, searchOnline = false, files = [], urls = [] } = body as BulkGenerateBody & { 
+        searchOnline?: boolean; 
+        files?: Array<{ name: string; content: string; type: string }>; 
+        urls?: string[] 
+      };
       
       // Check if user is admin or guru
       const { data: roles } = await supabase
@@ -268,6 +272,58 @@ Return ONLY this JSON schema:
         throw new Error("OpenAI key not configured");
       }
 
+      // Process uploaded files and URLs for content enrichment
+      let additionalContext = "";
+      
+      // Parse files (PDF/DOCX/TXT)
+      for (const file of files || []) {
+        try {
+          if (file.type === 'text/plain') {
+            additionalContext += `\n\nFile Content (${file.name}):\n${file.content}`;
+          } else if (file.type === 'application/pdf') {
+            // Simple text extraction - in production, use proper PDF parser
+            additionalContext += `\n\nPDF Content (${file.name}):\n${file.content}`;
+          } else if (file.type.includes('document')) {
+            // Simple DOCX extraction - in production, use proper DOCX parser
+            additionalContext += `\n\nDocument Content (${file.name}):\n${file.content}`;
+          }
+        } catch (err) {
+          console.error(`Failed to parse file ${file.name}:`, err);
+        }
+      }
+
+      // Scrape URLs
+      for (const url of urls || []) {
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            const text = await response.text();
+            // Basic HTML cleaning
+            const cleanText = text
+              .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+              .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+              .replace(/<[^>]*>/g, '')
+              .replace(/\s+/g, ' ')
+              .trim()
+              .slice(0, 5000); // Limit content length
+            
+            additionalContext += `\n\nURL Content (${url}):\n${cleanText}`;
+          }
+        } catch (err) {
+          console.error(`Failed to scrape URL ${url}:`, err);
+        }
+      }
+
+      // Online search enrichment
+      if (searchOnline && topic) {
+        try {
+          // Placeholder for web search - integrate with search API
+          additionalContext += `\n\nOnline Search Results for "${topic}":\n[Search integration needed]`;
+        } catch (err) {
+          console.error("Online search failed:", err);
+        }
+      }
+
       const generated = [];
       const model = Deno.env.get("OPENAI_MODEL_EXAM") || "gpt-4o-mini";
 
@@ -281,6 +337,7 @@ Constraints:
 - 5 options (A–E), exactly one correct
 - Concise, high-yield explanation
 - Add a short credible reference hint (e.g., NICE/RCEM/UpToDate)
+${additionalContext ? `\n\nAdditional Context (use as reference):\n${additionalContext.slice(0, 2000)}` : ''}
 
 Return ONLY this JSON schema:
 {
@@ -304,6 +361,12 @@ Return ONLY this JSON schema:
 
           const obj = JSON.parse(result);
           
+          // Validate generated content - drop empty or malformed questions
+          if (!obj.question || !obj.options || !obj.correct || !obj.explanation) {
+            console.warn(`Dropping malformed question ${i + 1}:`, obj);
+            continue;
+          }
+          
           if (persistAsDraft) {
             // Insert into review_exam_questions as draft
             const { data: saved, error: iErr } = await supabase
@@ -315,7 +378,8 @@ Return ONLY this JSON schema:
                 explanation: obj.explanation,
                 exam_type: exam_type,
                 created_by: user.id,
-                status: 'draft'
+                status: 'draft',
+                submitted_at: persistAsDraft ? new Date().toISOString() : null
               })
               .select("*")
               .single();
@@ -331,8 +395,20 @@ Return ONLY this JSON schema:
                   question_id: saved.id,
                   reviewer_id: reviewer_assign_to,
                   assigned_by: user.id,
-                  status: 'assigned'
+                  status: 'pending_review',
+                  assigned_at: new Date().toISOString(),
+                  notes: `Auto-assigned via bulk generation`
                 });
+
+              // Update question metadata
+              await supabase
+                .from("review_exam_questions")
+                .update({
+                  status: 'under_review',
+                  assigned_to: reviewer_assign_to,
+                  assigned_by: user.id
+                })
+                .eq('id', saved.id);
             }
           } else {
             generated.push(obj);
