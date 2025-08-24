@@ -37,7 +37,7 @@ export default function CollapsibleCard({
   };
 
   useEffect(() => {
-    // Set initial height after mount
+    // Set initial height after mount without hardcoded value
     if (contentRef.current) {
       const height = contentRef.current.scrollHeight;
       setMaxHeight(defaultOpen ? height + 32 : 0);

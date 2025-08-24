@@ -46,10 +46,8 @@ export default function CommentThread({
 
   useEffect(() => {
     setComments(initialComments);
-    // Load comments on mount if not provided
-    if (initialComments.length === 0) {
-      loadComments();
-    }
+    // Always load comments on mount for immediate rendering
+    loadComments();
   }, [initialComments]);
 
   const loadComments = async () => {
@@ -346,7 +344,7 @@ export default function CommentThread({
           )}
           
           {c.replies && c.replies.length > 0 && (
-            <div className="mt-3 space-y-4 border-l sm:pl-6 pl-3 sm:ml-0 ml-1">
+            <div className="mt-3 space-y-4 border-l sm:pl-6 pl-3 sm:ml-6 ml-3">
               {c.replies.filter(r => !deletedIds.has(r.id)).map(r => <Item key={r.id} c={r} />)}
             </div>
           )}

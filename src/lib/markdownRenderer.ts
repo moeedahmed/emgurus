@@ -19,16 +19,16 @@ export function processMediaEmbeds(html: string): string {
     '<div class="my-6"><iframe width="100%" height="315" src="https://player.vimeo.com/video/$3" frameborder="0" allowfullscreen class="rounded-lg"></iframe></div>'
   );
   
-  // Audio embeds
+  // Audio embeds - compact card format
   html = html.replace(
     /(https?:\/\/[^\s]+\.(mp3|wav|ogg|m4a))/g,
-    '<div class="my-6"><audio controls class="w-full"><source src="$1" type="audio/mpeg">Your browser does not support the audio element.</audio></div>'
+    '<div class="my-4 p-4 border rounded-lg bg-muted/20"><div class="flex items-center justify-between"><div class="flex items-center gap-2"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M9 12h1l4 4V8l-4 4H9z"></path></svg><span class="font-medium">Audio File</span></div><audio controls class="max-w-xs"><source src="$1" type="audio/mpeg"></audio></div></div>'
   );
   
-  // PDF embeds
+  // PDF embeds - compact card format
   html = html.replace(
     /(https?:\/\/[^\s]+\.pdf)/g,
-    '<div class="my-6 p-4 border rounded-lg bg-muted/20"><div class="flex items-center gap-2 mb-2"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span class="font-medium">PDF Document</span></div><embed src="$1" type="application/pdf" width="100%" height="400" class="rounded" /></div>'
+    '<div class="my-4 p-4 border rounded-lg bg-muted/20"><div class="flex items-center justify-between"><div class="flex items-center gap-2"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span class="font-medium">PDF Document</span></div><a href="$1" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary text-primary-foreground px-3 py-1 rounded hover:bg-primary/90 transition-colors">Open PDF</a></div></div>'
   );
   
   return html;
@@ -125,10 +125,10 @@ export function parseContentIntoSections(content: string): ContentSection[] {
         mediaContent = `<iframe width="100%" height="315" src="https://player.vimeo.com/video/${vimeoMatch[3]}" frameborder="0" allowfullscreen class="rounded-lg"></iframe>`;
       } else if (audioMatch) {
         mediaType = 'audio';
-        mediaContent = `<audio controls class="w-full"><source src="${audioMatch[1]}" type="audio/mpeg">Your browser does not support the audio element.</audio>`;
+        mediaContent = `<div class="flex items-center justify-between"><div class="flex items-center gap-2"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M9 12h1l4 4V8l-4 4H9z"></path></svg><span class="font-medium">Audio File</span></div><audio controls class="max-w-xs"><source src="${audioMatch[1]}" type="audio/mpeg"></audio></div>`;
       } else if (pdfMatch) {
         mediaType = 'pdf';
-        mediaContent = `<div class="flex items-center gap-2 mb-4"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span class="font-medium">PDF Document</span></div><embed src="${pdfMatch[1]}" type="application/pdf" width="100%" height="400" class="rounded" />`;
+        mediaContent = `<div class="flex items-center justify-between"><div class="flex items-center gap-2"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span class="font-medium">PDF Document</span></div><a href="${pdfMatch[1]}" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary text-primary-foreground px-3 py-1 rounded hover:bg-primary/90 transition-colors">Open PDF</a></div>`;
       }
       
       sections.push({

@@ -248,74 +248,40 @@ export default function BlogDetail() {
           <article className="lg:col-span-8 space-y-6">
             <div className="prose prose-lg mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
             
-            {/* Standardized Engagement Bar */}
-            <div className="p-4 sm:p-6 bg-muted/30 rounded-2xl">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-4 sm:gap-6 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Eye className="h-4 w-4" />
-                    <span className="hidden sm:inline">Views: </span>
-                    {engagementCounts.views}
-                  </span>
-                  
-                  <span className="flex items-center gap-1">
-                    <ThumbsUp className="h-4 w-4" />
-                    <span className="hidden sm:inline">Likes: </span>
-                    {engagementCounts.likes}
-                  </span>
-                  
-                  <span className="flex items-center gap-1">
-                    <MessageCircle className="h-4 w-4" />
-                    <span className="hidden sm:inline">Comments: </span>
-                    {engagementCounts.comments}
-                  </span>
-                  
-                  <span className="flex items-center gap-1">
-                    <Share2 className="h-4 w-4" />
-                    <span className="hidden sm:inline">Shares: </span>
-                    {engagementCounts.shares}
-                  </span>
-                  
-                  {engagementCounts.feedback > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Flag className="h-4 w-4" />
-                      <span className="hidden sm:inline">Feedback: </span>
-                      {engagementCounts.feedback}
-                    </span>
-                  )}
-                </div>
+            {/* Top Engagement Counts Only */}
+            <div className="p-4 sm:p-6 bg-muted/30 rounded-2xl mb-6">
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Eye className="h-4 w-4" />
+                  <span className="hidden sm:inline">Views: </span>
+                  {engagementCounts.views}
+                </span>
                 
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleLikeBlog}
-                    className="h-8 px-3 transition-all duration-200 hover:scale-105 hover:bg-green-500/10 hover:text-green-600"
-                  >
-                    <ThumbsUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleDislikeBlog}
-                    className="h-8 px-3 transition-all duration-200 hover:scale-105 hover:bg-red-500/10 hover:text-red-600"
-                  >
-                    <ThumbsDown className="h-4 w-4" />
-                  </Button>
-                  <ShareButtons
-                    title={p.title}
-                    url={window.location.href}
-                    text={p.excerpt || "Check out this blog post on EMGurus"}
-                    postId={p.id}
-                    shareCount={engagementCounts.shares}
-                    onShare={(platform: string) => {
-                      setEngagementCounts(prev => ({ ...prev, shares: prev.shares + 1 }));
-                      toast.success(`Shared on ${platform}`);
-                    }}
-                    variant="inline"
-                  />
-                  <ReportIssueModal postId={p.id} postTitle={p.title} />
-                </div>
+                <span className="flex items-center gap-1">
+                  <ThumbsUp className="h-4 w-4" />
+                  <span className="hidden sm:inline">Likes: </span>
+                  {engagementCounts.likes}
+                </span>
+                
+                <span className="flex items-center gap-1">
+                  <MessageCircle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Comments: </span>
+                  {engagementCounts.comments}
+                </span>
+                
+                <span className="flex items-center gap-1">
+                  <Share2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Shares: </span>
+                  {engagementCounts.shares}
+                </span>
+                
+                {engagementCounts.feedback > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Flag className="h-4 w-4" />
+                    <span className="hidden sm:inline">Feedback: </span>
+                    {engagementCounts.feedback}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -384,8 +350,50 @@ export default function BlogDetail() {
             
             </div> {/* Close prose container */}
 
+            {/* Bottom Engagement Actions */}
+            <div className="mt-8 p-4 sm:p-6 bg-muted/30 rounded-2xl max-w-3xl mx-auto">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleLikeBlog}
+                    className="h-8 px-3 transition-all duration-200 hover:scale-105 hover:bg-green-500/10 hover:text-green-600"
+                  >
+                    <ThumbsUp className="h-4 w-4 mr-1" />
+                    Like
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleDislikeBlog}
+                    className="h-8 px-3 transition-all duration-200 hover:scale-105 hover:bg-red-500/10 hover:text-red-600"
+                  >
+                    <ThumbsDown className="h-4 w-4 mr-1" />
+                    Dislike
+                  </Button>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <ShareButtons
+                    title={p.title}
+                    url={window.location.href}
+                    text={p.excerpt || "Check out this blog post on EMGurus"}
+                    postId={p.id}
+                    shareCount={engagementCounts.shares}
+                    onShare={(platform: string) => {
+                      setEngagementCounts(prev => ({ ...prev, shares: prev.shares + 1 }));
+                      toast.success(`Shared on ${platform}`);
+                    }}
+                    variant="inline"
+                  />
+                  <ReportIssueModal postId={p.id} postTitle={p.title} />
+                </div>
+              </div>
+            </div>
+
             {/* Author Card */}
-            <section className="mt-8 space-y-4">
+            <section className="mt-8 space-y-4 max-w-3xl mx-auto">
               <AuthorCard
                 id={p.author.id}
                 name={authorProfile?.full_name || p.author.name}
@@ -394,6 +402,7 @@ export default function BlogDetail() {
                 bio={authorProfile?.bio}
                 specialty={authorProfile?.specialty}
                 onClick={(id) => navigate(`/profile/${id}`)}
+                className="rounded-2xl shadow p-6"
               />
               
               {/* Reviewer Attribution */}
@@ -407,6 +416,7 @@ export default function BlogDetail() {
                   specialty={reviewerProfile?.specialty}
                   role="reviewer"
                   onClick={(id) => navigate(`/profile/${id}`)}
+                  className="rounded-2xl shadow p-6"
                 />
               )}
             </section>

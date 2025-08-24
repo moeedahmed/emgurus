@@ -199,10 +199,11 @@ export default function BlogBaseCard({
 
   // Regular card layout
   return (
-    <Card className={cn(
-      "overflow-hidden group hover-scale motion-safe:transition-all motion-safe:duration-200",
-      className
-    )}>
+    <Link to={`/blogs/${slug}`} className="block">
+      <Card className={cn(
+        "overflow-hidden group hover-scale motion-safe:transition-all motion-safe:duration-200",
+        className
+      )}>
       <div className="relative">
         <img
           src={cover_image_url || "/placeholder.svg"}
@@ -238,11 +239,9 @@ export default function BlogBaseCard({
         </div>
         
         {/* Title */}
-        <Link to={`/blogs/${slug}`}>
-          <h3 className="font-bold text-lg mb-2 line-clamp-2 group-hover:text-primary motion-safe:transition-colors">
-            {title}
-          </h3>
-        </Link>
+        <h3 className="font-bold text-lg mb-2 line-clamp-2 group-hover:text-primary motion-safe:transition-colors">
+          {title}
+        </h3>
         
         {/* Excerpt */}
         {excerpt && (
@@ -271,19 +270,16 @@ export default function BlogBaseCard({
           </div>
         )}
         
-        {/* Author and Engagement */}
-        <div className="flex items-center justify-between">
-          {author && (
+        {/* Author */}
+        {author && (
+          <div className="mb-3">
             <AuthorChip 
               id={author.id} 
               name={author.name} 
               avatar={author.avatar || null} 
             />
-          )}
-          <Button asChild size="sm" variant="outline">
-            <Link to={`/blogs/${slug}`}>Read Article</Link>
-          </Button>
-        </div>
+          </div>
+        )}
         
         {/* Engagement Bar */}
         {counts && (
@@ -330,5 +326,6 @@ export default function BlogBaseCard({
         )}
       </div>
     </Card>
+    </Link>
   );
 }
