@@ -9,11 +9,6 @@ function parseAllowlist(): string[] {
   
   // Always allow Lovable preview domains and localhost
   const defaultOrigins = [
-    "https://id-preview--0e06bfdc-afe5-4ca8-9b6c-26b8e07ab174.lovable.app",
-    "https://*.lovable.app",
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "http://localhost:8080",
     "*"
   ];
   
