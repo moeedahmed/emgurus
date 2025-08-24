@@ -32,7 +32,6 @@ export default function BlogReviewQueue() {
             post_id,
             status,
             created_at,
-            assigned_at,
             blog_posts!inner(
               title,
               status,
@@ -41,7 +40,7 @@ export default function BlogReviewQueue() {
             )
           `)
           .eq('reviewer_id', user.id)
-          .in('status', ['pending', 'pending_review'])
+          .eq('status', 'pending')
           .order('created_at', { ascending: false });
 
         // Get author info separately

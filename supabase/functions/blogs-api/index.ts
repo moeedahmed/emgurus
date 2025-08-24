@@ -460,6 +460,151 @@ serve(async (req) => {
     // Auth guard helper
     const requireAuth = () => {
       if (!user) throw new Error("Unauthorized");
+      return user;
+    };
+
+    // POST /api/blogs (create draft)
+    if (req.method === "POST" && pathname === "/api/blogs") {
+      requireAuth();
+      const body = await req.json();
+      
+      // Handle different actions
+      if (body.action === "create_draft") {
+        const parsed = createDraftSchema.parse(body);
+        
+        // Validation
+        const errors: { field: string; message: string }[] = [];
+        if (!parsed.title?.trim()) {
+          errors.push({ field: "title", message: "Title is required" });
+        }
+        if (parsed.title && parsed.title.length < 3) {
+          errors.push({ field: "title", message: "Title must be at least 3 characters" });
+        }
+        if (!body.content?.trim()) {
+          errors.push({ field: "content", message: "Content is required" });
+        }
+        if (!body.tags || body.tags.length === 0) {
+          errors.push({ field: "tags", message: "At least one tag is required" });
+        }
+        
+        if (errors.length > 0) {
+          return new Response(JSON.stringify({ success: false, errors }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const result = await supabase.rpc("create_blog_draft", {
+          p_title: parsed.title,
+          p_content_md: body.content,
+          p_category_id: parsed.category_id || null,
+          p_tags: body.tags || [],
+        });
+
+        if (result.error) throw result.error;
+
+        return new Response(JSON.stringify({ success: true, post: result.data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (body.action === "assign_reviewer") {
+        if (!body.post_id || !body.reviewer_id) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            errors: [{ field: "reviewer_id", message: "Post ID and reviewer ID are required" }] 
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Insert assignment
+        const { error: assignError } = await supabase
+          .from("blog_review_assignments")
+          .insert({
+            post_id: body.post_id,
+            reviewer_id: body.reviewer_id,
+            assigned_by: user.id,
+            status: "pending",
+          });
+
+        if (assignError) throw assignError;
+
+        // Update post status
+        const { error: updateError } = await supabase
+          .from("blog_posts")
+          .update({ 
+            status: "in_review",
+            assigned_by: user.id,
+            assigned_at: new Date().toISOString()
+          })
+          .eq("id", body.post_id);
+
+        if (updateError) throw updateError;
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Generate blog draft
+      const parsed = createDraftSchema.partial().parse(body);
+      
+      if (!body.topic?.trim()) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          errors: [{ field: "topic", message: "Topic is required for generation" }] 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Generate content based on parameters
+      let generatedContent = `# ${body.topic}\n\nThis is a generated blog post about ${body.topic}.`;
+      
+      // Process files and URLs if provided
+      if (body.files && body.files.length > 0) {
+        generatedContent += "\n\n## Referenced Content\n\n";
+        for (const file of body.files) {
+          if (file.content) {
+            generatedContent += `### From ${file.name}\n\n${file.content.substring(0, 500)}...\n\n`;
+          }
+        }
+      }
+
+      if (body.urls && body.urls.length > 0) {
+        generatedContent += "\n\n## Referenced URLs\n\n";
+        for (const url of body.urls) {
+          if (url.trim()) {
+            generatedContent += `- ${url}\n`;
+          }
+        }
+      }
+
+      // Apply tone and length adjustments
+      if (body.tone === "academic") {
+        generatedContent += "\n\nThis analysis demonstrates the significance of the aforementioned concepts.";
+      } else if (body.tone === "casual") {
+        generatedContent += "\n\nHope this helps clarify things!";
+      }
+
+      const response = {
+        success: true,
+        draft: {
+          title: body.topic,
+          content: generatedContent,
+          tags: [body.topic.toLowerCase().replace(/\s+/g, "-")],
+          excerpt: `A comprehensive guide to ${body.topic}`,
+        },
+      };
+
+      return new Response(JSON.stringify(response), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+      if (!user) throw new Error("Unauthorized");
     };
 
     // POST /api/blogs/:id/feedback -> create feedback
