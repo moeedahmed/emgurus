@@ -17,6 +17,7 @@ type PracticeGenerateBody = { action: "practice_generate"; exam_type: string; to
 type RequestBody = StartSessionBody | GenerateQuestionBody | SubmitAnswerBody | BulkGenerateBody | PracticeGenerateBody;
 
 serve(async (req) => {
+  console.log(`ai-exams-api: ${req.method} ${req.url}`);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   // Check OpenAI key first
@@ -530,12 +531,15 @@ Return ONLY this JSON schema:
     }
 
     if (body.action === "practice_generate") {
+      console.log("Practice generate request:", body);
       const { exam_type, topic, difficulty, count = 1 } = body as PracticeGenerateBody;
       
       // No role restriction for practice - anyone can use it
       try {
         getOpenAI();
+        console.log("OpenAI key validated successfully");
       } catch (error) {
+        console.error("OpenAI key validation failed:", error);
         throw new Error("OpenAI key not configured");
       }
 

@@ -135,6 +135,7 @@ function generateAutoSummary(content: any): string {
 }
 
 serve(async (req) => {
+  console.log(`blogs-api: ${req.method} ${req.url}`);
   const origin = req.headers.get("Origin") ?? "";
   const allowed = isAllowedOrigin(origin);
   const corsHeaders = buildCors(origin);
@@ -174,7 +175,7 @@ serve(async (req) => {
     const userRoles = await getUserRoleFlags(supabase, userId);
 
     // Routes
-    if (path === "/api/blogs" && req.method === "GET") {
+    if ((path === "/api/blogs" || path === "/" || path === "") && req.method === "GET") {
       // List blogs with filtering
       const status = url.searchParams.get("status");
       const category = url.searchParams.get("category");
@@ -259,7 +260,7 @@ serve(async (req) => {
       });
     }
 
-    if (path === "/api/blogs" && req.method === "POST") {
+    if ((path === "/api/blogs" || path === "/" || path === "") && req.method === "POST") {
       const body = await req.json();
       
       // Handle multi-reviewer assignment
@@ -406,7 +407,7 @@ serve(async (req) => {
         }
       }
 
-      return new Response(JSON.stringify({ blog: post }), {
+      return new Response(JSON.stringify({ blog: post, id: post.id }), {
         status: 201,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
