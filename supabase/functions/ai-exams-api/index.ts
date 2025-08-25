@@ -576,7 +576,22 @@ Return ONLY this JSON schema:
         error_code: generated.length === 0 ? "all_failed" : null
       });
 
+      // Always return structured response with success/error
+      if (generated.length === 0) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: "Failed to generate any valid questions. Please try again with different parameters.",
+          items: [],
+          count: 0,
+          requested: count
+        }), { 
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
       return new Response(JSON.stringify({ 
+        success: true,
         items: generated, 
         count: generated.length,
         requested: count 

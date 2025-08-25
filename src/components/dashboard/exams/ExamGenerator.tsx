@@ -11,7 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Users, Trash2, ArrowRight, AlertCircle, Upload } from "lucide-react";
+import { Save, Users, Trash2, ArrowRight, AlertCircle, Upload, Plus, X, FileText, ExternalLink, Search } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface GeneratedQuestion {
   id: string;
@@ -53,6 +55,14 @@ export default function ExamGenerator() {
     examType: 'mrcem_sba',
     instructions: ''
   });
+  
+  // Sources state (parity with Blog Generator)
+  const [sourceUrls, setSourceUrls] = useState<string[]>([]);
+  const [newUrl, setNewUrl] = useState('');
+  const [urlError, setUrlError] = useState('');
+  const [sourceFiles, setSourceFiles] = useState<Array<{name: string; content: string; size: number}>>([]);
+  const [searchOnline, setSearchOnline] = useState(false);
+  
   const [topics, setTopics] = useState<Array<{ id: string; title: string; exam_type: string }>>([]);
   const [gurus, setGurus] = useState<Array<{ user_id: string; full_name: string }>>([]);
   const [selectedGuru, setSelectedGuru] = useState("");
@@ -123,6 +133,101 @@ export default function ExamGenerator() {
       console.error('Failed to load topics:', error);
       setTopics([]);
     }
+  };
+
+  // Source management functions (parity with Blog Generator)
+  const isValidUrl = (url: string): boolean => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
+  const addUrl = () => {
+    const trimmedUrl = newUrl.trim();
+    if (!trimmedUrl) return;
+
+    if (!isValidUrl(trimmedUrl)) {
+      setUrlError('Please enter a valid URL (http:// or https://)');
+      return;
+    }
+
+    if (sourceUrls.includes(trimmedUrl)) {
+      setUrlError('This URL has already been added');
+      return;
+    }
+
+    setSourceUrls([...sourceUrls, trimmedUrl]);
+    setNewUrl('');
+    setUrlError('');
+  };
+
+  const removeUrl = (index: number) => {
+    setSourceUrls(sourceUrls.filter((_, i) => i !== index));
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    
+    files.forEach(file => {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast({
+          title: "File Too Large",
+          description: `${file.name} is larger than 10MB. Please choose a smaller file.`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const content = reader.result as string;
+        setSourceFiles(prev => [...prev, {
+          name: file.name,
+          content: content,
+          size: file.size
+        }]);
+      };
+      reader.readAsText(file);
+    });
+  };
+
+  const removeFile = (index: number) => {
+    setSourceFiles(sourceFiles.filter((_, i) => i !== index));
+  };
+
+  // Helper function to add sources to explanation
+  const addSourcestoExplanation = (explanation: string, urls: string[], files: Array<{name: string; content: string; size: number}>): string => {
+    if (urls.length === 0 && files.length === 0) return explanation;
+    
+    const sourceParts = [explanation];
+    
+    if (urls.length > 0 || files.length > 0) {
+      sourceParts.push('\n\n**Sources:**');
+      
+      if (urls.length > 0) {
+        urls.forEach((url, index) => {
+          try {
+            const urlObj = new URL(url);
+            const displayText = `${urlObj.hostname}${urlObj.pathname.slice(0, 30)}${urlObj.pathname.length > 30 ? '...' : ''}`;
+            sourceParts.push(`${index + 1}. ${displayText}`);
+          } catch {
+            sourceParts.push(`${index + 1}. ${url}`);
+          }
+        });
+      }
+      
+      if (files.length > 0) {
+        const urlCount = urls.length;
+        files.forEach((file, index) => {
+          sourceParts.push(`${urlCount + index + 1}. ${file.name}`);
+        });
+      }
+    }
+    
+    return sourceParts.join('\n');
   };
 
   const mapExamTypeToEnum = (type: string) => {
@@ -227,7 +332,11 @@ export default function ExamGenerator() {
       difficulty: formData.difficulty,
       count: 1,
       persistAsDraft: false, // Don't auto-save, let user decide
-      instructions: formData.instructions || undefined
+      instructions: formData.instructions || undefined,
+      // Add sources to payload (parity with Blog Generator)
+      source_files: sourceFiles,
+      source_links: sourceUrls,
+      browsing: searchOnline
     };
 
       const result = await supabase.functions.invoke('ai-exams-api', { body: payload });
@@ -243,7 +352,7 @@ export default function ExamGenerator() {
           stem: question.question || question.stem || '',
           options: optionsArray,
           correct_answer: question.correct || question.correct_answer || question.answer || '',
-          explanation: question.explanation || '',
+          explanation: addSourcestoExplanation(question.explanation || '', sourceUrls, sourceFiles),
           exam_type: formData.examType,
           topic: question.topic || topics.find(t => t.id === formData.topicId)?.title || '',
           difficulty: formData.difficulty,
@@ -605,6 +714,111 @@ export default function ExamGenerator() {
                 rows={3}
               />
             </div>
+
+            {/* Sources Section (parity with Blog Generator) */}
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  <span>Sources (Optional)</span>
+                  <Search className="h-4 w-4" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 mt-4 p-4 border rounded-lg">
+                {/* File Upload */}
+                <div>
+                  <Label className="text-sm font-medium">Upload Reference Files</Label>
+                  <div className="mt-1">
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.txt"
+                      onChange={handleFileUpload}
+                      className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      PDF, DOC, DOCX, TXT files up to 10MB
+                    </p>
+                  </div>
+                  
+                  {sourceFiles.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {sourceFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded text-sm">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3 w-3" />
+                            <span className="truncate max-w-[200px]">{file.name}</span>
+                            <span className="text-xs text-muted-foreground">({(file.size / 1024).toFixed(1)}KB)</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* URL Input */}
+                <div>
+                  <Label className="text-sm font-medium">Reference URLs</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      value={newUrl}
+                      onChange={(e) => {
+                        setNewUrl(e.target.value);
+                        if (urlError) setUrlError('');
+                      }}
+                      placeholder="https://example.com/article"
+                      onKeyPress={(e) => e.key === 'Enter' && addUrl()}
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={addUrl}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {urlError && (
+                    <p className="text-xs text-destructive mt-1">{urlError}</p>
+                  )}
+                  
+                  {sourceUrls.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {sourceUrls.map((url, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded text-sm">
+                          <div className="flex items-center gap-2">
+                            <ExternalLink className="h-3 w-3" />
+                            <span className="truncate max-w-[250px]">{url}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeUrl(index)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Search Online Toggle */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="search-online-exam"
+                    checked={searchOnline}
+                    onCheckedChange={(checked) => setSearchOnline(checked === true)}
+                  />
+                  <Label htmlFor="search-online-exam" className="text-sm">
+                    Search online for additional context
+                  </Label>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             <div className="flex gap-2">
               <Button onClick={handleGenerate} disabled={loading} className="flex-1">

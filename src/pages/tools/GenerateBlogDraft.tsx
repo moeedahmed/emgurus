@@ -320,6 +320,36 @@ export default function GenerateBlogDraft() {
     }
   };
 
+  // Helper function to create sources text
+  const createSourcesText = (urls: string[], files: SourceFile[]): string => {
+    const sourceParts: string[] = [];
+    
+    // Add URLs with prettified display
+    if (urls.length > 0) {
+      sourceParts.push("**Reference URLs:**");
+      urls.forEach((url, index) => {
+        try {
+          const urlObj = new URL(url);
+          const displayText = `${urlObj.hostname}${urlObj.pathname.slice(0, 30)}${urlObj.pathname.length > 30 ? '...' : ''}`;
+          sourceParts.push(`${index + 1}. [${displayText}](${url})`);
+        } catch {
+          sourceParts.push(`${index + 1}. ${url}`);
+        }
+      });
+    }
+    
+    // Add files
+    if (files.length > 0) {
+      if (urls.length > 0) sourceParts.push(""); // Add spacing
+      sourceParts.push("**Reference Files:**");
+      files.forEach((file, index) => {
+        sourceParts.push(`${index + 1}. ${file.name} (${(file.size / 1024).toFixed(1)}KB)`);
+      });
+    }
+    
+    return sourceParts.join('\n');
+  };
+
   // URL validation function
   const isValidUrl = (url: string): boolean => {
     try {
@@ -519,9 +549,23 @@ export default function GenerateBlogDraft() {
         ? enrichTags(result.tags) 
         : [];
 
+      // Add sources section to the generated blocks
+      const blocksWithSources = [...result.blocks];
+      
+      // Create sources section if we have any sources
+      if (sourceUrls.length > 0 || sourceFiles.length > 0) {
+        blocksWithSources.push(
+          { type: 'heading', content: 'Sources', level: 'h2' },
+          { 
+            type: 'text', 
+            content: createSourcesText(sourceUrls, sourceFiles) 
+          }
+        );
+      }
+
       const generatedContent = {
         title: result.title,
-        blocks: result.blocks,
+        blocks: blocksWithSources,
         tags: enrichedTags
       };
 
