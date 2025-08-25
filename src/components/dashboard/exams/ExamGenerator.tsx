@@ -423,10 +423,14 @@ export default function ExamGenerator() {
       count: 1,
       persistAsDraft: false, // Don't auto-save, let user decide
       instructions: formData.instructions || undefined,
-      // Add sources to payload (parity with Blog Generator)
-      source_files: sourceFiles,
-      source_links: sourceUrls,
-      browsing: searchOnline
+      // Use correct parameter names that match the backend
+      files: sourceFiles.map(file => ({
+        name: file.name,
+        content: file.content,
+        type: 'text/plain'
+      })),
+      urls: sourceUrls,
+      searchOnline: searchOnline
     };
 
       const result = await supabase.functions.invoke('ai-exams-api', { body: payload });

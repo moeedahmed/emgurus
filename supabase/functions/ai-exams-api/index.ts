@@ -569,6 +569,7 @@ Return ONLY this JSON schema:
             messages: [{ role: 'user', content: userPrompt }],
             model,
             responseFormat: 'json_object',
+            temperature: 0.4,
             maxTokens: 800
           });
 
