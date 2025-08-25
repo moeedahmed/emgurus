@@ -151,6 +151,7 @@ serve(async (req) => {
 
   const url = new URL(req.url);
   const path = url.pathname;
+  console.log(`blogs-api path: "${path}", method: ${req.method}`);
   const supabase = getClient(req);
 
   try {
@@ -174,7 +175,7 @@ serve(async (req) => {
     const userId = user.id;
     const userRoles = await getUserRoleFlags(supabase, userId);
 
-    // Routes
+    // Routes - handle both /api/blogs and root path
     if ((path === "/api/blogs" || path === "/" || path === "") && req.method === "GET") {
       // List blogs with filtering
       const status = url.searchParams.get("status");
@@ -261,7 +262,9 @@ serve(async (req) => {
     }
 
     if ((path === "/api/blogs" || path === "/" || path === "") && req.method === "POST") {
+      console.log(`blogs-api POST handler: path="${path}"`);
       const body = await req.json();
+      console.log(`blogs-api POST body:`, body);
       
       // Handle multi-reviewer assignment
       if (body.action === "assign_reviewers") {
@@ -1162,6 +1165,7 @@ serve(async (req) => {
     }
 
     // Default 404 response
+    console.log(`blogs-api: No route matched for path "${path}" method ${req.method}`);
     return new Response(JSON.stringify({ error: "Not found" }), {
       status: 404,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

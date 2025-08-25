@@ -18,6 +18,7 @@ type RequestBody = StartSessionBody | GenerateQuestionBody | SubmitAnswerBody | 
 
 serve(async (req) => {
   console.log(`ai-exams-api: ${req.method} ${req.url}`);
+  console.log(`ai-exams-api: ${req.method} ${req.url}`);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   // Check OpenAI key first
