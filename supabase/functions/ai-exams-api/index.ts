@@ -22,7 +22,7 @@ serve(async (req) => {
   // Check OpenAI key first
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
   if (!openaiKey) {
-    return new Response(JSON.stringify({ error: "OpenAI key not configured" }), { 
+    return new Response(JSON.stringify({ success: false, error: "OpenAI key not configured" }), { 
       status: 500, 
       headers: { ...corsHeaders, "Content-Type": "application/json" } 
     });
@@ -46,7 +46,7 @@ serve(async (req) => {
     try {
       body = (await req.json()) as RequestBody;
     } catch (e) {
-      return new Response(JSON.stringify({ error: "Invalid JSON payload" }), { 
+      return new Response(JSON.stringify({ success: false, error: "Invalid JSON payload" }), { 
         status: 400, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
@@ -90,7 +90,7 @@ serve(async (req) => {
         .select("*")
         .single();
       if (error) throw error;
-      return new Response(JSON.stringify({ session: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true, session: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (body.action === "generate_question") {
@@ -213,7 +213,7 @@ Return ONLY this JSON schema:
           error_code: null
         });
 
-        return new Response(JSON.stringify({ question: saved }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ success: true, question: saved }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       } catch (err: any) {
         // Log failure
         await supabase.from("ai_gen_logs").insert({
@@ -248,7 +248,7 @@ Return ONLY this JSON schema:
         .single();
       if (aErr) throw aErr;
 
-      return new Response(JSON.stringify({ result: { is_correct }, answer }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true, result: { is_correct }, answer }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (body.action === "bulk_generate") {
@@ -507,7 +507,22 @@ Return ONLY this JSON schema:
         error_code: generated.length === 0 ? "all_failed" : null
       });
 
+      // Return consistent schema with success field
+      if (generated.length === 0) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: "Failed to generate any valid questions. Please try again with different parameters.",
+          items: [],
+          count: 0,
+          requested: safeCount
+        }), { 
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
       return new Response(JSON.stringify({ 
+        success: true,
         items: generated, 
         count: generated.length,
         requested: safeCount 
@@ -601,6 +616,12 @@ Return ONLY this JSON schema:
     throw new Error("Unknown action");
   } catch (e) {
     console.error("ai-exams-api error", e);
-    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: String(e?.message ?? e) 
+    }), { 
+      status: 500, 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
   }
 });
