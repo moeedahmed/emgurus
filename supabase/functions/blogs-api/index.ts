@@ -2509,7 +2509,7 @@ async function trackShare(postId: string, req: Request): Promise<Response> {
           { method: "POST", path: "/api/blogs/:id/reject" },
           { method: "POST", path: "/api/blogs/:id/publish" },
           { method: "POST", path: "/api/blogs/:id/react", body: "ReactRequest" },
-          { method: "POST", path: "/api/blogs/:id/comment", body: "CommentRequest" }
+          { method: "POST", path: "/api/blogs/:id/comment", body: "CommentRequest" },
           { method: "POST", path: "/api/blogs/:id/ai-summary" },
           { method: "POST", path: "/api/blogs/:id/share" },
           { method: "GET", path: "/api/blogs/metrics" },
