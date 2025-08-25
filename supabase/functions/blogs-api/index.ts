@@ -2529,7 +2529,6 @@ async function trackShare(postId: string, req: Request): Promise<Response> {
       status: 404,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  
   } catch (e: any) {
     console.error("blogs-api error", e);
     return new Response(JSON.stringify({ error: e.message ?? "Unexpected error" }), {
