@@ -265,7 +265,7 @@ export async function createDraft(body: {
   excerpt?: string;
 }) {
   try {
-    return await callFunction("/api/blogs", body, true, "POST");
+    return await callFunction("/blogs-api/api/blogs", body, true, "POST");
   } catch (error: any) {
     const message = getErrorMessage(error, "Failed to create draft");
     throw new Error(message);

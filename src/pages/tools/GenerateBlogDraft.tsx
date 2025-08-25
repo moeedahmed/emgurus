@@ -225,7 +225,7 @@ export default function GenerateBlogDraft() {
     
     try {
       setLoading(true);
-      const path = `${user.id}/${Date.now()}-${file.name}`;
+      const path = `blog-generator/${user.id}/${Date.now()}-${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from('blog-covers')
         .upload(path, file, { upsert: false });
@@ -791,7 +791,7 @@ export default function GenerateBlogDraft() {
       });
 
       // Call blogs API to handle multi-reviewer assignments
-      const response = await callFunction("/api/blogs", {
+      const response = await callFunction("/blogs-api/api/blogs", {
         action: 'assign_reviewers',
         post_id: id,
         reviewer_ids: selectedGurus,
