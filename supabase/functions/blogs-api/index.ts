@@ -2502,14 +2502,14 @@ async function trackShare(postId: string, req: Request): Promise<Response> {
         endpoints: [
           { method: "GET", path: "/api/blogs", query: ["status", "category", "tag", "q", "page", "page_size"] },
           { method: "GET", path: "/api/blogs/:slug" },
-          { method: "POST", path: "/api/blogs", body: createDraftSchema.shape },
+          { method: "POST", path: "/api/blogs", body: "CreateDraftRequest" },
           { method: "POST", path: "/api/blogs/:id/submit" },
-          { method: "POST", path: "/api/blogs/:id/review", body: reviewSchema.shape },
+          { method: "POST", path: "/api/blogs/:id/review", body: "ReviewRequest" },
           { method: "POST", path: "/api/blogs/:id/request-changes" },
           { method: "POST", path: "/api/blogs/:id/reject" },
           { method: "POST", path: "/api/blogs/:id/publish" },
-          { method: "POST", path: "/api/blogs/:id/react", body: reactSchema.shape },
-          { method: "POST", path: "/api/blogs/:id/comment", body: commentSchema.shape },
+          { method: "POST", path: "/api/blogs/:id/react", body: "ReactRequest" },
+          { method: "POST", path: "/api/blogs/:id/comment", body: "CommentRequest" }
           { method: "POST", path: "/api/blogs/:id/ai-summary" },
           { method: "POST", path: "/api/blogs/:id/share" },
           { method: "GET", path: "/api/blogs/metrics" },
