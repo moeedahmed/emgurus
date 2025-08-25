@@ -13,36 +13,46 @@ const DIFFICULTIES = [
   { value: "hard", label: "Hard" }
 ];
 
+interface Topic {
+  id: string;
+  title: string;
+  exam_type: string;
+}
+
 interface FloatingSettingsProps {
-  currentExam: ExamName;
-  currentCount: number;
-  currentTopic: string;
-  currentDifficulty: string;
-  onUpdate: (settings: {
+  currentSettings: {
     exam: ExamName;
     count: number;
-    topic: string;
+    topic_id: string;
+    difficulty: string;
+  };
+  onSettingsChange: (settings: {
+    exam: ExamName;
+    count: number;
+    topic_id: string;
     difficulty: string;
   }) => void;
+  topics?: Topic[];
 }
 
 export default function FloatingSettings({
-  currentExam,
-  currentCount,
-  currentTopic,
-  currentDifficulty,
-  onUpdate
+  currentSettings,
+  onSettingsChange,
+  topics = []
 }: FloatingSettingsProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [exam, setExam] = useState<ExamName>(currentExam);
-  const [count, setCount] = useState(currentCount);
-  const [topic, setTopic] = useState(currentTopic);
-  const [difficulty, setDifficulty] = useState(currentDifficulty);
+  const [exam, setExam] = useState<ExamName>(currentSettings.exam);
+  const [count, setCount] = useState(currentSettings.count);
+  const [topicId, setTopicId] = useState(currentSettings.topic_id);
+  const [difficulty, setDifficulty] = useState(currentSettings.difficulty);
 
-  const areas = exam ? ["All areas", ...CURRICULA[exam]] : ["All areas"];
+  // Use topics from curriculum_map or fallback to CURRICULA
+  const availableTopics = topics.length > 0 
+    ? [{ id: "", title: "All areas", exam_type: "" }, ...topics]
+    : [{ id: "", title: "All areas", exam_type: "" }, ...(exam ? CURRICULA[exam].map(topic => ({ id: topic, title: topic, exam_type: "" })) : [])];
 
   const handleApply = () => {
-    onUpdate({ exam, count, topic, difficulty });
+    onSettingsChange({ exam, count, topic_id: topicId, difficulty });
     setIsOpen(false);
   };
 
@@ -98,13 +108,15 @@ export default function FloatingSettings({
             </div>
             <div>
               <Label className="text-xs">Topic</Label>
-              <Select value={topic} onValueChange={setTopic}>
+              <Select value={topicId} onValueChange={setTopicId}>
                 <SelectTrigger className="h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {areas.map(a => (
-                    <SelectItem key={a} value={a}>{a}</SelectItem>
+                  {availableTopics.map(topic => (
+                    <SelectItem key={topic.id || topic.title} value={topic.id}>
+                      {topic.title}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

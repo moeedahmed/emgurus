@@ -30,7 +30,7 @@ export default function AiPracticeSession() {
   const { toast } = useToast();
 
   const exam = search.get("exam");
-  const topic = search.get("topic");
+  const topic_id = search.get("topic_id");
   const difficulty = search.get("difficulty") || "medium";
   const total = useMemo(() => {
     const n = Number(search.get("count") || 10);
@@ -52,13 +52,72 @@ export default function AiPracticeSession() {
   const [currentSettings, setCurrentSettings] = useState({
     exam: exam as ExamName,
     count: total,
-    topic: topic || "All areas",
+    topic_id: topic_id || "",
     difficulty
   });
+  const [topics, setTopics] = useState<Array<{ id: string; title: string; exam_type: string }>>([]);
+  const [currentTopicTitle, setCurrentTopicTitle] = useState<string>("All areas");
 
   useEffect(() => {
     document.title = "AI Practice Session • EM Gurus";
   }, []);
+
+  // Load topics when exam changes
+  useEffect(() => {
+    if (exam) {
+      loadTopics();
+    }
+  }, [exam]);
+
+  // Update topic title when topic_id changes
+  useEffect(() => {
+    if (topic_id && topics.length > 0) {
+      const topicTitle = topics.find(t => t.id === topic_id)?.title || "Unknown Topic";
+      setCurrentTopicTitle(topicTitle);
+    } else {
+      setCurrentTopicTitle("All areas");
+    }
+  }, [topic_id, topics]);
+
+  const mapExamTypeToEnum = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case 'mrcem intermediate sba': return 'MRCEM_SBA';
+      case 'frcem sba': return 'FRCEM_SBA';
+      case 'mrcem primary': return 'MRCEM_PRIMARY';
+      case 'fcps part 1 – pakistan': return 'FCPS_PART1';
+      case 'fcps imm – pakistan': return 'FCPS_IMM';
+      case 'fcps part 2 – pakistan': return 'FCPS_PART2';
+      default: return 'OTHER';
+    }
+  };
+
+  const loadTopics = async () => {
+    if (!exam) return;
+    
+    try {
+      const examTypeEnum = mapExamTypeToEnum(exam);
+      
+      const { data } = await supabase
+        .from('curriculum_map')
+        .select('id, slo_title, exam_type')
+        .eq('exam_type', examTypeEnum)
+        .order('slo_title');
+      
+      setTopics((data || []).map(item => ({
+        id: item.id,
+        title: item.slo_title,
+        exam_type: item.exam_type
+      })));
+    } catch (error) {
+      console.error('Failed to load topics:', error);
+      setTopics([]);
+      toast({
+        title: 'Error loading topics',
+        description: 'Could not load curriculum topics. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
 
   // Check auth and redirect if missing required params
   useEffect(() => {
@@ -90,11 +149,16 @@ export default function AiPracticeSession() {
     try {
       setLoading(true);
       setError("");
+      // Validate topic_id if provided
+      if (topic_id && !topics.find(t => t.id === topic_id)) {
+        throw new Error('Invalid topic selected. Please choose a valid topic.');
+      }
+
       const { data, error: apiError } = await supabase.functions.invoke('ai-exams-api', {
         body: { 
           action: 'practice_generate', 
           exam_type: exam, 
-          topic: topic || undefined,
+          topic_id: topic_id || undefined,
           difficulty,
           count: 1
         }
@@ -191,7 +255,7 @@ export default function AiPracticeSession() {
             options: q.options,
             correct_answer: q.correct,
             explanation: q.explanation,
-            topic: q.topic || topic || 'General',
+            topic: q.topic || currentTopicTitle || 'General',
             subtopic: q.subtopic
           });
           
@@ -212,7 +276,7 @@ export default function AiPracticeSession() {
           user_id: user.id,
           selected_key: selected,
           correct_key: q.correct,
-          topic: q.topic || topic || 'General',
+          topic: q.topic || currentTopicTitle || 'General',
           position: idx + 1
         });
 
@@ -245,16 +309,16 @@ export default function AiPracticeSession() {
     }
   }
 
-  function updateSettings(newSettings: { exam: ExamName; count: number; topic: string; difficulty: string }) {
+  function updateSettings(newSettings: { exam: ExamName; count: number; topic_id: string; difficulty: string }) {
     setCurrentSettings(newSettings);
     // Update search params without navigation
     const params = new URLSearchParams(window.location.search);
     params.set('exam', newSettings.exam);
     params.set('count', String(newSettings.count));
-    if (newSettings.topic !== 'All areas') {
-      params.set('topic', newSettings.topic);
+    if (newSettings.topic_id) {
+      params.set('topic_id', newSettings.topic_id);
     } else {
-      params.delete('topic');
+      params.delete('topic_id');
     }
     params.set('difficulty', newSettings.difficulty);
   window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
@@ -443,7 +507,7 @@ export default function AiPracticeSession() {
           <div>
             <h1 className="text-lg font-semibold">AI Practice Session</h1>
             <div className="text-sm text-muted-foreground">
-              Question {idx + 1} of {total} • {exam} • {topic || 'All topics'} • {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+              Question {idx + 1} of {total} • {exam} • {currentTopicTitle} • {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -599,11 +663,9 @@ export default function AiPracticeSession() {
       </Card>
       
       <FloatingSettings
-        currentExam={currentSettings.exam}
-        currentCount={currentSettings.count}
-        currentTopic={currentSettings.topic}
-        currentDifficulty={currentSettings.difficulty}
-        onUpdate={updateSettings}
+        currentSettings={currentSettings}
+        onSettingsChange={updateSettings}
+        topics={topics}
       />
     </div>
   );

@@ -730,14 +730,16 @@ export default function PracticeSession() {
   </div>
 
       <FloatingSettings
-        currentExam={'MRCEM Intermediate SBA' as const}
-        currentCount={questions.length}
-        currentTopic={sessionState?.topic || 'All areas'}
-        currentDifficulty="medium"
-        onUpdate={(settings) => {
+        currentSettings={{
+          exam: 'MRCEM Intermediate SBA' as const,
+          count: questions.length,
+          topic_id: '',
+          difficulty: 'medium'
+        }}
+        onSettingsChange={(settings) => {
           // Navigate back to practice config with new settings
           navigate('/exams/practice', { 
-            state: settings,
+            state: { exam: settings.exam, count: settings.count, topic: 'All areas', difficulty: settings.difficulty },
             replace: false 
           });
         }}
