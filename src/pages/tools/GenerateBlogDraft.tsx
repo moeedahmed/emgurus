@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createDraft } from "@/lib/blogsApi";
+import { callFunction } from "@/lib/functionsUrl";
 import { ChevronDown, X, Plus, FileText, ExternalLink, History, AlertTriangle, Search, User, Clock, CheckCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -224,7 +225,7 @@ export default function GenerateBlogDraft() {
     
     try {
       setLoading(true);
-      const path = `blog-generator/${user.id}/${Date.now()}-${file.name}`;
+      const path = `${user.id}/${Date.now()}-${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from('blog-covers')
         .upload(path, file, { upsert: false });
@@ -790,14 +791,12 @@ export default function GenerateBlogDraft() {
       });
 
       // Call blogs API to handle multi-reviewer assignments
-      const response = await supabase.functions.invoke('blogs-api', {
-        body: {
-          action: 'assign_reviewers',
-          post_id: id,
-          reviewer_ids: selectedGurus,
-          note: "Blog draft assigned for multi-reviewer review"
-        }
-      });
+      const response = await callFunction("/api/blogs", {
+        action: 'assign_reviewers',
+        post_id: id,
+        reviewer_ids: selectedGurus,
+        note: "Blog draft assigned for multi-reviewer review"
+      }, true, "POST");
 
       if (response.error) throw response.error;
 

@@ -396,7 +396,7 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
           body: JSON.stringify({
             model: 'gpt-image-1',
             prompt: `Medical illustration: ${description}. Professional, clinical style suitable for medical education.`,
-            size: '512x512'
+            size: '1024x1024'
           })
         });
 
