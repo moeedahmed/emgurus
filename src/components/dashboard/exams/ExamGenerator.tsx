@@ -375,6 +375,46 @@ export default function ExamGenerator() {
     setLoading(true);
     setValidationErrors({});
     try {
+    // Schema validation before sending payload
+    if (!Array.isArray(sourceFiles)) {
+      toast({
+        title: "Invalid Source Files",
+        description: "Source files must be provided as an array.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!Array.isArray(sourceUrls)) {
+      toast({
+        title: "Invalid Source URLs",
+        description: "Source URLs must be provided as an array.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate URLs
+    for (const url of sourceUrls) {
+      if (!isValidUrl(url)) {
+        toast({
+          title: "Invalid URL",
+          description: `Please provide a valid URL: ${url}`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    if (typeof searchOnline !== 'boolean') {
+      toast({
+        title: "Invalid Browse Setting",
+        description: "Browse online setting must be true or false.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const payload = {
       action: "bulk_generate",
       exam_type: formData.examType,
@@ -391,7 +431,14 @@ export default function ExamGenerator() {
 
       const result = await supabase.functions.invoke('ai-exams-api', { body: payload });
       
-      if (result.data?.items && Array.isArray(result.data.items) && result.data.items.length > 0) {
+      // Explicitly check for success before accessing items
+      if (!result.data?.success) {
+        throw new Error(result.data?.error || 'AI generation failed, please try again');
+      }
+      
+      if (!result.data?.items || !Array.isArray(result.data.items) || result.data.items.length === 0) {
+        throw new Error('No questions were generated, please try again');
+      }
         const question = result.data.items[0];
         const optionsArray = question.options && typeof question.options === 'object' && !Array.isArray(question.options)
           ? Object.values(question.options)
@@ -433,17 +480,6 @@ export default function ExamGenerator() {
           title: "Question Generated",
           description: `New question created for ${topics.find(t => t.id === formData.topicId)?.title || 'selected topic'}`,
         });
-      } else if (result.data?.errors && Array.isArray(result.data.errors)) {
-        // Handle structured errors
-        const fieldErrors: ValidationErrors = {};
-        result.data.errors.forEach((error: {field: string, message: string}) => {
-          fieldErrors[error.field as keyof ValidationErrors] = error.message;
-        });
-        setValidationErrors(fieldErrors);
-        throw new Error('Please fix the validation errors highlighted below.');
-      } else {
-        throw new Error(result.data?.error || 'Invalid response format');
-      }
     } catch (error: any) {
       console.error('Error generating questions:', error);
       

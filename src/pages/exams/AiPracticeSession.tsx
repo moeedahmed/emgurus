@@ -102,8 +102,16 @@ export default function AiPracticeSession() {
       
       if (apiError) throw apiError;
       
-      const items = data?.items || [];
-      if (!items[0]) throw new Error('No question generated');
+      // Explicitly check for success before accessing items
+      if (!data?.success) {
+        throw new Error(data?.error || 'AI generation failed, please try again');
+      }
+      
+      if (!data?.items || !Array.isArray(data.items) || data.items.length === 0) {
+        throw new Error('No questions were generated, please try again');
+      }
+      
+      const items = data.items;
       
       const saved = items[0];
       setQuestions((prev) => {
