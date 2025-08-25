@@ -31,6 +31,21 @@ function getClient(req: Request) {
   });
 }
 
+// Response helpers for consistent API responses
+function okResponse(data: any, status = 200, corsHeaders: any) {
+  return new Response(JSON.stringify({ success: true, ...data }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function errorResponse(error: string, status = 400, corsHeaders: any) {
+  return new Response(JSON.stringify({ success: false, error }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 async function getUserRoleFlags(supabase: any, userId: string) {
   const { data, error } = await supabase.rpc('get_user_role_flags', { p_user_id: userId });
   if (error) {
@@ -141,12 +156,12 @@ serve(async (req) => {
   const corsHeaders = buildCors(origin);
 
   if (req.method === "OPTIONS") {
-    if (!allowed) return new Response(JSON.stringify({ error: "Disallowed origin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!allowed) return errorResponse("Disallowed origin", 403, corsHeaders);
     return new Response(null, { headers: corsHeaders });
   }
 
   if (!allowed) {
-    return new Response(JSON.stringify({ error: "Disallowed origin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return errorResponse("Disallowed origin", 403, corsHeaders);
   }
 
   const url = new URL(req.url);
@@ -158,18 +173,12 @@ serve(async (req) => {
     // Get user ID from auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("No authorization header", 401, corsHeaders);
     }
 
     const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("Unauthorized", 401, corsHeaders);
     }
 
     const userId = user.id;
@@ -221,16 +230,10 @@ serve(async (req) => {
       const { data, error } = await query;
 
       if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(error.message, 400, corsHeaders);
       }
 
-      return new Response(JSON.stringify({ blogs: data }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ blogs: data }, 200, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+$/) && req.method === "GET") {
@@ -249,16 +252,10 @@ serve(async (req) => {
         .single();
 
       if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(error.message, 404, corsHeaders);
       }
 
-      return new Response(JSON.stringify({ blog: data }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ blog: data }, 200, corsHeaders);
     }
 
     if ((path === "/api/blogs" || path === "/" || path === "") && req.method === "POST") {
@@ -271,10 +268,7 @@ serve(async (req) => {
         const { post_id, reviewer_ids, note } = assignMultiReviewersSchema.parse(body);
         
         if (!userRoles.is_admin) {
-          return new Response(JSON.stringify({ error: "Only admins can assign reviewers" }), {
-            status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return errorResponse("Only admins can assign reviewers", 403, corsHeaders);
         }
 
         // Insert multiple review assignments
@@ -291,10 +285,7 @@ serve(async (req) => {
           .insert(assignments);
 
         if (assignmentError) {
-          return new Response(JSON.stringify({ error: assignmentError.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return errorResponse(assignmentError.message, 400, corsHeaders);
         }
 
         // Update the blog post with the first reviewer for backward compatibility
@@ -304,16 +295,10 @@ serve(async (req) => {
           .eq("id", post_id);
 
         if (updateError) {
-          return new Response(JSON.stringify({ error: updateError.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return errorResponse(updateError.message, 400, corsHeaders);
         }
 
-        return new Response(JSON.stringify({ success: true, message: "Reviewers assigned successfully" }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return okResponse({ message: "Reviewers assigned successfully" }, 200, corsHeaders);
       }
 
       // Create blog draft
@@ -348,10 +333,7 @@ serve(async (req) => {
         readingTime = readingMinutesFrom({ md: content });
       } else if (Array.isArray(content)) {
         if (!validateBlocks(content)) {
-          return new Response(JSON.stringify({ error: "Invalid content format" }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return errorResponse("Invalid content format", 400, corsHeaders);
         }
         // Convert blocks to markdown or keep as is
         contentMd = content.map(block => block.data?.text || "").join("\n");
@@ -379,10 +361,7 @@ serve(async (req) => {
         .single();
 
       if (createError) {
-        return new Response(JSON.stringify({ error: createError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(createError.message, 400, corsHeaders);
       }
 
       // Handle tags
@@ -410,10 +389,7 @@ serve(async (req) => {
         }
       }
 
-      return new Response(JSON.stringify({ blog: post, id: post.id }), {
-        status: 201,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ blog: post, id: post.id }, 201, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+$/) && req.method === "PUT") {
@@ -430,17 +406,11 @@ serve(async (req) => {
         .single();
 
       if (!existingPost) {
-        return new Response(JSON.stringify({ error: "Post not found" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Post not found", 404, corsHeaders);
       }
 
       if (existingPost.author_id !== userId && !userRoles.is_admin) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Unauthorized", 403, corsHeaders);
       }
 
       // Process content and calculate reading time
@@ -452,10 +422,7 @@ serve(async (req) => {
         readingTime = readingMinutesFrom({ md: content });
       } else if (Array.isArray(content)) {
         if (!validateBlocks(content)) {
-          return new Response(JSON.stringify({ error: "Invalid content format" }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return errorResponse("Invalid content format", 400, corsHeaders);
         }
         contentMd = content.map(block => block.data?.text || "").join("\n");
         readingTime = readingMinutesFrom({ md: contentMd });
@@ -480,10 +447,7 @@ serve(async (req) => {
         .single();
 
       if (updateError) {
-        return new Response(JSON.stringify({ error: updateError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(updateError.message, 400, corsHeaders);
       }
 
       // Update tags
@@ -514,10 +478,7 @@ serve(async (req) => {
         }
       }
 
-      return new Response(JSON.stringify({ blog: post }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ blog: post }, 200, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/submit$/) && req.method === "POST") {
@@ -532,24 +493,15 @@ serve(async (req) => {
         .single();
 
       if (!existingPost) {
-        return new Response(JSON.stringify({ error: "Post not found" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Post not found", 404, corsHeaders);
       }
 
       if (existingPost.author_id !== userId) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Unauthorized", 403, corsHeaders);
       }
 
       if (existingPost.status !== "draft") {
-        return new Response(JSON.stringify({ error: "Only drafts can be submitted for review" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Only drafts can be submitted for review", 400, corsHeaders);
       }
 
       // Update status to in_review
@@ -562,16 +514,10 @@ serve(async (req) => {
         .eq("id", id);
 
       if (updateError) {
-        return new Response(JSON.stringify({ error: updateError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(updateError.message, 400, corsHeaders);
       }
 
-      return new Response(JSON.stringify({ success: true, message: "Blog submitted for review" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ message: "Blog submitted for review" }, 200, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/review$/) && req.method === "POST") {
@@ -591,10 +537,7 @@ serve(async (req) => {
         .single();
 
       if (!canReview && !isAssignedReviewer.data) {
-        return new Response(JSON.stringify({ error: "Unauthorized to review this post" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Unauthorized to review this post", 403, corsHeaders);
       }
 
       if (action === "approve_publish") {
@@ -624,13 +567,9 @@ serve(async (req) => {
           const nowAllApproved = updatedAssignments.every(a => a.status === "completed");
 
           if (!nowAllApproved) {
-            return new Response(JSON.stringify({ 
-              success: true, 
+            return okResponse({ 
               message: "Your review has been recorded. Waiting for other reviewers." 
-            }), {
-              status: 200,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+            }, 200, corsHeaders);
           }
         }
 
@@ -647,16 +586,10 @@ serve(async (req) => {
           .eq("id", id);
 
         if (publishError) {
-          return new Response(JSON.stringify({ error: publishError.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return errorResponse(publishError.message, 400, corsHeaders);
         }
 
-        return new Response(JSON.stringify({ success: true, message: "Blog published successfully" }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return okResponse({ message: "Blog published successfully" }, 200, corsHeaders);
 
       } else if (action === "request_changes") {
         // Request changes - set back to draft
@@ -669,16 +602,9 @@ serve(async (req) => {
           .eq("id", id);
 
         if (updateError) {
-          return new Response(JSON.stringify({ error: updateError.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return errorResponse(updateError.message, 400, corsHeaders);
         }
-
-        return new Response(JSON.stringify({ success: true, message: "Changes requested" }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return okResponse({ message: "Changes requested" }, 200, corsHeaders);
       }
     }
 
@@ -690,10 +616,7 @@ serve(async (req) => {
       // Check permissions
       const canReview = userRoles.is_admin || userRoles.is_guru;
       if (!canReview) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Unauthorized", 403, corsHeaders);
       }
 
       const { error: updateError } = await supabase
@@ -705,16 +628,10 @@ serve(async (req) => {
         .eq("id", id);
 
       if (updateError) {
-        return new Response(JSON.stringify({ error: updateError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(updateError.message, 400, corsHeaders);
       }
 
-      return new Response(JSON.stringify({ success: true, message: "Changes requested" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ message: "Changes requested" }, 200, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/reject$/) && req.method === "POST") {
@@ -725,10 +642,7 @@ serve(async (req) => {
       // Check permissions
       const canReview = userRoles.is_admin || userRoles.is_guru;
       if (!canReview) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Unauthorized", 403, corsHeaders);
       }
 
       const { error: updateError } = await supabase
@@ -740,16 +654,10 @@ serve(async (req) => {
         .eq("id", id);
 
       if (updateError) {
-        return new Response(JSON.stringify({ error: updateError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(updateError.message, 400, corsHeaders);
       }
 
-      return new Response(JSON.stringify({ success: true, message: "Post rejected" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ message: "Post rejected" }, 200, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/publish$/) && req.method === "POST") {
@@ -757,10 +665,7 @@ serve(async (req) => {
 
       // Only admins can publish directly
       if (!userRoles.is_admin) {
-        return new Response(JSON.stringify({ error: "Only admins can publish posts" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Only admins can publish posts", 403, corsHeaders);
       }
 
       const { error: publishError } = await supabase
@@ -772,16 +677,10 @@ serve(async (req) => {
         .eq("id", id);
 
       if (publishError) {
-        return new Response(JSON.stringify({ error: publishError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(publishError.message, 400, corsHeaders);
       }
 
-      return new Response(JSON.stringify({ success: true, message: "Post published" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ message: "Post published" }, 200, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/react$/) && req.method === "POST") {
@@ -805,10 +704,7 @@ serve(async (req) => {
             .delete()
             .eq("id", existingReaction.id);
 
-          return new Response(JSON.stringify({ success: true, action: "removed" }), {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return okResponse({ action: "removed" }, 200, corsHeaders);
         } else {
           // Update reaction type
           await supabase
@@ -816,10 +712,7 @@ serve(async (req) => {
             .update({ type })
             .eq("id", existingReaction.id);
 
-          return new Response(JSON.stringify({ success: true, action: "updated" }), {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return okResponse({ action: "updated" }, 200, corsHeaders);
         }
       } else {
         // Create new reaction
@@ -828,16 +721,10 @@ serve(async (req) => {
           .insert({ post_id: id, user_id: userId, type });
 
         if (createError) {
-          return new Response(JSON.stringify({ error: createError.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return errorResponse(createError.message, 400, corsHeaders);
         }
 
-        return new Response(JSON.stringify({ success: true, action: "created" }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return okResponse({ action: "created" }, 200, corsHeaders);
       }
     }
 
@@ -861,16 +748,10 @@ serve(async (req) => {
         .single();
 
       if (createError) {
-        return new Response(JSON.stringify({ error: createError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(createError.message, 400, corsHeaders);
       }
 
-      return new Response(JSON.stringify({ comment }), {
-        status: 201,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ comment }, 201, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/comments$/) && req.method === "GET") {
@@ -886,16 +767,10 @@ serve(async (req) => {
         .order("created_at", { ascending: true });
 
       if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(error.message, 400, corsHeaders);
       }
 
-      return new Response(JSON.stringify({ comments }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ comments }, 200, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/comments\/[^\/]+$/) && req.method === "DELETE") {
@@ -909,17 +784,11 @@ serve(async (req) => {
         .single();
 
       if (!comment) {
-        return new Response(JSON.stringify({ error: "Comment not found" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Comment not found", 404, corsHeaders);
       }
 
       if (comment.user_id !== userId && !userRoles.is_admin) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Unauthorized", 403, corsHeaders);
       }
 
       const { error: deleteError } = await supabase
@@ -928,16 +797,10 @@ serve(async (req) => {
         .eq("id", commentId);
 
       if (deleteError) {
-        return new Response(JSON.stringify({ error: deleteError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(deleteError.message, 400, corsHeaders);
       }
 
-      return new Response(JSON.stringify({ success: true, message: "Comment deleted" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ message: "Comment deleted" }, 200, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/feedback\/[^\/]+\/resolve$/) && req.method === "POST") {
@@ -945,10 +808,7 @@ serve(async (req) => {
 
       // Only admins and gurus can resolve feedback
       if (!userRoles.is_admin && !userRoles.is_guru) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Unauthorized", 403, corsHeaders);
       }
 
       const { error: updateError } = await supabase
@@ -961,16 +821,10 @@ serve(async (req) => {
         .eq("id", feedbackId);
 
       if (updateError) {
-        return new Response(JSON.stringify({ error: updateError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(updateError.message, 400, corsHeaders);
       }
 
-      return new Response(JSON.stringify({ success: true, message: "Feedback resolved" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ message: "Feedback resolved" }, 200, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/feedback$/) && req.method === "GET") {
@@ -978,10 +832,7 @@ serve(async (req) => {
 
       // Only admins and gurus can view feedback
       if (!userRoles.is_admin && !userRoles.is_guru) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Unauthorized", 403, corsHeaders);
       }
 
       const { data: feedback, error } = await supabase
@@ -995,16 +846,10 @@ serve(async (req) => {
         .order("created_at", { ascending: false });
 
       if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse(error.message, 400, corsHeaders);
       }
 
-      return new Response(JSON.stringify({ feedback }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ feedback }, 200, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/ai-summary$/) && req.method === "POST") {
@@ -1018,26 +863,17 @@ serve(async (req) => {
         .single();
 
       if (postError || !post) {
-        return new Response(JSON.stringify({ error: "Post not found" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Post not found", 404, corsHeaders);
       }
 
       // Check if user can generate summary (author, admin, or guru)
       if (post.author_id !== userId && !userRoles.is_admin && !userRoles.is_guru) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Unauthorized", 403, corsHeaders);
       }
 
       const summary = generateAutoSummary(post.content);
 
-      return new Response(JSON.stringify({ summary }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ summary }, 200, corsHeaders);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/share$/) && req.method === "POST") {
@@ -1058,19 +894,13 @@ serve(async (req) => {
         console.warn("Failed to track share:", shareError);
       }
 
-      return new Response(JSON.stringify({ success: true, message: "Share tracked" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ message: "Share tracked" }, 200, corsHeaders);
     }
 
     if (path === "/api/blogs/metrics" && req.method === "GET") {
       // Only admins can view metrics
       if (!userRoles.is_admin) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return errorResponse("Unauthorized", 403, corsHeaders);
       }
 
       // Get various metrics
@@ -1100,10 +930,7 @@ serve(async (req) => {
         reviewPosts: reviewPosts?.length || 0
       };
 
-      return new Response(JSON.stringify({ metrics }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse({ metrics }, 200, corsHeaders);
     }
 
     if (path === "/api/blogs/docs" && req.method === "GET") {
@@ -1158,24 +985,15 @@ serve(async (req) => {
         ]
       };
 
-      return new Response(JSON.stringify(docs), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return okResponse(docs, 200, corsHeaders);
     }
 
     // Default 404 response
     console.log(`blogs-api: No route matched for path "${path}" method ${req.method}`);
-    return new Response(JSON.stringify({ error: "Not found" }), {
-      status: 404,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return errorResponse("Not found", 404, corsHeaders);
 
   } catch (e: any) {
     console.error("blogs-api error", e);
-    return new Response(JSON.stringify({ error: e.message ?? "Unexpected error" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return errorResponse(e.message ?? "Unexpected error", 400, corsHeaders);
   }
 });
