@@ -225,7 +225,7 @@ export default function GenerateBlogDraft() {
     
     try {
       setLoading(true);
-      const path = `blog-generator/${user.id}/${Date.now()}-${file.name}`;
+      const path = `blog-covers/${user.id}/${Date.now()}-${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from('blog-covers')
         .upload(path, file, { upsert: false });
