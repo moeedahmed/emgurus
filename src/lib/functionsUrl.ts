@@ -5,7 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const envBase = (import.meta as any).env?.VITE_FUNCTIONS_BASE_URL as string | undefined;
-const fallbackBase = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.functions.supabase.co`;
+const fallbackBase = `https://cgtvvpzrzwyvsbavboxa.functions.supabase.co`;
 
 export function getFunctionsBaseUrl() {
   const base = (envBase && envBase.replace(/\/$/, "")) || fallbackBase;
