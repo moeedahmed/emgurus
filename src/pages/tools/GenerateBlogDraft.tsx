@@ -791,7 +791,7 @@ export default function GenerateBlogDraft() {
       });
 
       // Call blogs API to handle multi-reviewer assignments
-      const response = await callFunction("/blogs-api", {
+      const response = await callFunction("/blogs-api/api/blogs", {
         action: 'assign_reviewers',
         post_id: id,
         reviewer_ids: selectedGurus,
