@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Users, Trash2, ArrowRight, AlertCircle, Upload, Plus, X, FileText, ExternalLink, Search } from "lucide-react";
+import { Save, Users, Trash2, ArrowRight, AlertCircle, Upload, Plus, X, FileText, ExternalLink, Search, Clock, CheckCircle, History } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -40,6 +40,18 @@ interface ValidationErrors {
   tags?: string;
 }
 
+interface GenerationLog {
+  ts: string;
+  topic: string;
+  instructions: string;
+  urlCount: number;
+  fileCount: number;
+  success: boolean;
+  error?: string;
+  question?: EditableQuestion;
+  sources?: {urls: string[], files: Array<{name: string; content: string; size: number}>};
+}
+
 export default function ExamGenerator() {
   const { user, loading: userLoading } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -62,6 +74,8 @@ export default function ExamGenerator() {
   const [urlError, setUrlError] = useState('');
   const [sourceFiles, setSourceFiles] = useState<Array<{name: string; content: string; size: number}>>([]);
   const [searchOnline, setSearchOnline] = useState(false);
+  const [currentTab, setCurrentTab] = useState<'generate' | 'history'>('generate');
+  const [sourcesCollapsed, setSourcesCollapsed] = useState(false);
   
   const [topics, setTopics] = useState<Array<{ id: string; title: string; exam_type: string }>>([]);
   const [gurus, setGurus] = useState<Array<{ user_id: string; full_name: string }>>([]);
@@ -196,6 +210,42 @@ export default function ExamGenerator() {
 
   const removeFile = (index: number) => {
     setSourceFiles(sourceFiles.filter((_, i) => i !== index));
+  };
+
+  // History management
+  const saveGenerationLog = (logEntry: GenerationLog) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('examGen:history') || '[]');
+      const updated = [logEntry, ...existing].slice(0, 10); // Keep last 10
+      localStorage.setItem('examGen:history', JSON.stringify(updated));
+    } catch (error) {
+      console.error('Failed to save generation log:', error);
+    }
+  };
+
+  const getGenerationHistory = (): GenerationLog[] => {
+    try {
+      return JSON.parse(localStorage.getItem('examGen:history') || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  const loadFromHistory = (logEntry: GenerationLog) => {
+    if (logEntry.question) {
+      setCurrentQuestion(logEntry.question);
+      originalQuestionRef.current = { ...logEntry.question };
+      setHasUnsavedChanges(true);
+    }
+    if (logEntry.sources) {
+      setSourceUrls(logEntry.sources.urls);
+      setSourceFiles(logEntry.sources.files);
+    }
+    setFormData(prev => ({
+      ...prev,
+      instructions: logEntry.instructions
+    }));
+    setCurrentTab('generate');
   };
 
   // Helper function to add sources to explanation
@@ -366,6 +416,19 @@ export default function ExamGenerator() {
         setHasUnsavedChanges(false);
         setGenerationCount(prev => prev + 1);
         
+        // Log successful generation
+        const logEntry: GenerationLog = {
+          ts: new Date().toISOString(),
+          topic: topics.find(t => t.id === formData.topicId)?.title || 'Unknown Topic',
+          instructions: formData.instructions,
+          urlCount: sourceUrls.length,
+          fileCount: sourceFiles.length,
+          success: true,
+          question: newQuestion,
+          sources: { urls: sourceUrls, files: sourceFiles }
+        };
+        saveGenerationLog(logEntry);
+        
         toast({
           title: "Question Generated",
           description: `New question created for ${topics.find(t => t.id === formData.topicId)?.title || 'selected topic'}`,
@@ -383,6 +446,18 @@ export default function ExamGenerator() {
       }
     } catch (error: any) {
       console.error('Error generating questions:', error);
+      
+      // Log failed generation
+      const logEntry: GenerationLog = {
+        ts: new Date().toISOString(),
+        topic: topics.find(t => t.id === formData.topicId)?.title || 'Unknown Topic',
+        instructions: formData.instructions,
+        urlCount: sourceUrls.length,
+        fileCount: sourceFiles.length,
+        success: false,
+        error: error?.message || "Generation failed"
+      };
+      saveGenerationLog(logEntry);
       
       // Handle structured errors
       if (error?.data?.errors && Array.isArray(error.data.errors)) {
@@ -625,18 +700,34 @@ export default function ExamGenerator() {
   };
 
   return (
-    <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Left Panel - Generator Form */}
-      <div>
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-1">AI Question Generator</h2>
-          <p className="text-sm text-muted-foreground">Generate one question at a time for review and editing.</p>
-          {generationCount > 0 && (
-            <div className="mt-2">
-              <Badge variant="secondary">{generationCount} questions generated so far</Badge>
-            </div>
-          )}
-        </div>
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Exam Generator</h1>
+        <p className="text-muted-foreground">Generate AI-powered exam questions and assign them for review.</p>
+      </div>
+
+      <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as 'generate' | 'history')}>
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="generate">Generate</TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            History
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="generate">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Panel - Generator Form */}
+            <div>
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold mb-1">AI Question Generator</h2>
+                <p className="text-sm text-muted-foreground">Generate one question at a time for review and editing.</p>
+                {generationCount > 0 && (
+                  <div className="mt-2">
+                    <Badge variant="secondary">{generationCount} questions generated so far</Badge>
+                  </div>
+                )}
+              </div>
 
         <Card>
           <CardHeader>
@@ -1057,7 +1148,71 @@ export default function ExamGenerator() {
             </TabsContent>
           </Tabs>
         )}
-      </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <div className="space-y-6">
+            {/* Generation History */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Question Generation History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {getGenerationHistory().length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    No generation history yet. Generate your first question to see it here.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {getGenerationHistory().map((log, index) => (
+                      <Card key={index} className="p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {log.success ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <AlertCircle className="h-4 w-4 text-destructive" />
+                              )}
+                              <h4 className="font-semibold truncate">{log.topic}</h4>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                              {log.instructions || 'No specific instructions'}
+                            </p>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <span>{new Date(log.ts).toLocaleDateString()}</span>
+                              <span>{log.urlCount} URLs</span>
+                              <span>{log.fileCount} files</span>
+                            </div>
+                            {log.error && (
+                              <p className="text-xs text-destructive mt-1">{log.error}</p>
+                            )}
+                          </div>
+                          {log.success && log.question && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => loadFromHistory(log)}
+                              className="ml-4"
+                            >
+                              Load
+                            </Button>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

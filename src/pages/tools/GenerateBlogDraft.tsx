@@ -10,7 +10,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createDraft } from "@/lib/blogsApi";
-import { ChevronDown, X, Plus, FileText, ExternalLink, History, AlertTriangle, Search, User } from "lucide-react";
+import { ChevronDown, X, Plus, FileText, ExternalLink, History, AlertTriangle, Search, User, Clock, CheckCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -64,6 +65,15 @@ interface GenerationLog {
   contentChars?: number;
   success: boolean;
   error?: string;
+  draft?: GeneratedDraft;
+  sources?: {urls: string[], files: SourceFile[]};
+}
+
+interface CachedImage {
+  id: string;
+  description: string;
+  url: string;
+  timestamp: string;
 }
 
 export default function GenerateBlogDraft() {
@@ -90,6 +100,9 @@ export default function GenerateBlogDraft() {
   const [sourcesCollapsed, setSourcesCollapsed] = useState(false);
   const [searchOnline, setSearchOnline] = useState(false);
   const [guruDropdownOpen, setGuruDropdownOpen] = useState(false);
+  const [currentTab, setCurrentTab] = useState<'generate' | 'history'>('generate');
+  const [cachedImages, setCachedImages] = useState<CachedImage[]>([]);
+  const [guruSearchTerm, setGuruSearchTerm] = useState('');
   
   const { toast } = useToast();
 
@@ -289,6 +302,15 @@ export default function GenerateBlogDraft() {
           return { ...prev, blocks: newBlocks };
         });
 
+        // Cache the generated image
+        const cachedImage: CachedImage = {
+          id: `img-${Date.now()}`,
+          description: description,
+          url: result.image_url || `data:image/png;base64,${result.image_data}`,
+          timestamp: new Date().toISOString()
+        };
+        saveCachedImage(cachedImage);
+
         toast({
           title: "Image Generated",
           description: "AI image has been generated successfully.",
@@ -456,11 +478,11 @@ export default function GenerateBlogDraft() {
     setSourceFiles(sourceFiles.filter((_, i) => i !== index));
   };
 
-  // Local logging functions
+  // Local logging and caching functions
   const saveGenerationLog = (logEntry: GenerationLog) => {
     try {
       const existing = JSON.parse(localStorage.getItem('blogGen:history') || '[]');
-      const updated = [logEntry, ...existing].slice(0, 5); // Keep only last 5
+      const updated = [logEntry, ...existing].slice(0, 10); // Keep last 10
       localStorage.setItem('blogGen:history', JSON.stringify(updated));
     } catch (error) {
       console.error('Failed to save generation log:', error);
@@ -474,6 +496,30 @@ export default function GenerateBlogDraft() {
       return [];
     }
   };
+
+  const saveCachedImage = (image: CachedImage) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('blogGen:images') || '[]');
+      const updated = [image, ...existing].slice(0, 20); // Keep last 20 images
+      localStorage.setItem('blogGen:images', JSON.stringify(updated));
+      setCachedImages(updated);
+    } catch (error) {
+      console.error('Failed to save cached image:', error);
+    }
+  };
+
+  const getCachedImages = (): CachedImage[] => {
+    try {
+      return JSON.parse(localStorage.getItem('blogGen:images') || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  // Load cached images on mount
+  useEffect(() => {
+    setCachedImages(getCachedImages());
+  }, []);
 
   const handleGenerate = async () => {
     if (!formData.topic.trim()) {
@@ -815,6 +861,28 @@ export default function GenerateBlogDraft() {
     return validationErrors.find(e => e.field === field)?.message;
   };
 
+  // Load from history
+  const loadFromHistory = (logEntry: GenerationLog) => {
+    if (logEntry.draft) {
+      setGeneratedDraft(logEntry.draft);
+      setHasUnsavedChanges(true);
+    }
+    if (logEntry.sources) {
+      setSourceUrls(logEntry.sources.urls);
+      setSourceFiles(logEntry.sources.files);
+    }
+    setFormData({
+      topic: logEntry.topic,
+      instructions_text: logEntry.instructions_text
+    });
+    setCurrentTab('generate');
+  };
+
+  // Filtered gurus with search
+  const filteredGurus = gurus.filter(guru => 
+    guru.full_name.toLowerCase().includes(guruSearchTerm.toLowerCase())
+  );
+
   return (
     <div className="container mx-auto py-6 max-w-6xl">
       <div className="mb-6">
@@ -822,7 +890,17 @@ export default function GenerateBlogDraft() {
         <p className="text-muted-foreground">Generate AI-powered blog drafts and assign them for review.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as 'generate' | 'history')}>
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="generate">Generate</TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            History
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="generate">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Generation Form */}
         <Card>
           <CardHeader>
@@ -1163,7 +1241,10 @@ export default function GenerateBlogDraft() {
                   <div className="flex flex-col gap-2">
                     <Label className="text-sm font-medium">Assign Reviewers</Label>
                     
-                    {/* Searchable Guru Dropdown */}
+                    {/* Enhanced Reviewer Picker with Selection Count */}
+                    <div className="text-xs text-muted-foreground mb-2">
+                      Selected ({selectedGurus.length}) reviewers
+                    </div>
                     <Popover open={guruDropdownOpen} onOpenChange={setGuruDropdownOpen}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" role="combobox" className="justify-between">
@@ -1174,13 +1255,17 @@ export default function GenerateBlogDraft() {
                           <ChevronDown className="h-4 w-4 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-80 p-0">
+                      <PopoverContent className="w-80 p-0 max-h-[300px]">
                         <Command>
-                          <CommandInput placeholder="Search gurus..." />
-                          <CommandList>
+                          <CommandInput 
+                            placeholder="Search gurus..." 
+                            value={guruSearchTerm}
+                            onValueChange={setGuruSearchTerm}
+                          />
+                          <CommandList className="max-h-[200px] overflow-y-auto">
                             <CommandEmpty>No gurus found.</CommandEmpty>
                             <CommandGroup>
-                              {gurus.map((guru) => (
+                              {filteredGurus.map((guru) => (
                                 <CommandItem
                                   key={guru.user_id}
                                   onSelect={() => {
@@ -1260,7 +1345,122 @@ export default function GenerateBlogDraft() {
             </CardContent>
           </Card>
         )}
-      </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <div className="space-y-6">
+            {/* Generation History */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Generation History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {getGenerationHistory().length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    No generation history yet. Generate your first blog to see it here.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {getGenerationHistory().map((log, index) => (
+                      <Card key={index} className="p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {log.success ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <AlertTriangle className="h-4 w-4 text-destructive" />
+                              )}
+                              <h4 className="font-semibold truncate">{log.topic}</h4>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                              {log.instructions_text}
+                            </p>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <span>{new Date(log.ts).toLocaleDateString()}</span>
+                              <span>{log.urlCount} URLs</span>
+                              <span>{log.fileCount} files</span>
+                              {log.contentChars && <span>{log.contentChars} chars</span>}
+                            </div>
+                            {log.error && (
+                              <p className="text-xs text-destructive mt-1">{log.error}</p>
+                            )}
+                          </div>
+                          {log.success && log.draft && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => loadFromHistory(log)}
+                              className="ml-4"
+                            >
+                              Load
+                            </Button>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Cached Images */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Generated Images
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {cachedImages.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    No generated images yet. Create an AI image to see it here.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {cachedImages.map((image) => (
+                      <Card key={image.id} className="p-3 hover:shadow-md transition-shadow">
+                        <div className="aspect-square rounded-lg overflow-hidden mb-2">
+                          <img
+                            src={image.url}
+                            alt={image.description}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {image.description}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(image.timestamp).toLocaleDateString()}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`![${image.description}](${image.url})`);
+                            toast({
+                              title: "Copied",
+                              description: "Image markdown copied to clipboard.",
+                            });
+                          }}
+                        >
+                          Copy Markdown
+                        </Button>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
