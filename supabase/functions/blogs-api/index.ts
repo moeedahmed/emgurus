@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { okWithCors, failWithCors } from "../_shared/response.ts";
 
 // Dynamic CORS allowlist
 function parseAllowlist(): string[] {
@@ -31,20 +32,7 @@ function getClient(req: Request) {
   });
 }
 
-// Response helpers for consistent API responses
-function okResponse(data: any, status = 200, corsHeaders: any) {
-  return new Response(JSON.stringify({ success: true, ...data }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
-function errorResponse(error: string, status = 400, corsHeaders: any) {
-  return new Response(JSON.stringify({ success: false, error }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
+// Use shared response helpers for consistency
 
 async function getUserRoleFlags(supabase: any, userId: string) {
   const { data, error } = await supabase.rpc('get_user_role_flags', { p_user_id: userId });
@@ -156,12 +144,12 @@ serve(async (req) => {
   const corsHeaders = buildCors(origin);
 
   if (req.method === "OPTIONS") {
-    if (!allowed) return errorResponse("Disallowed origin", 403, corsHeaders);
+    if (!allowed) return failWithCors("Disallowed origin", corsHeaders, 403);
     return new Response(null, { headers: corsHeaders });
   }
 
   if (!allowed) {
-    return errorResponse("Disallowed origin", 403, corsHeaders);
+    return failWithCors("Disallowed origin", corsHeaders, 403);
   }
 
   const url = new URL(req.url);
@@ -173,12 +161,12 @@ serve(async (req) => {
     // Get user ID from auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return errorResponse("No authorization header", 401, corsHeaders);
+      return failWithCors("No authorization header", corsHeaders, 401);
     }
 
     const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authError || !user) {
-      return errorResponse("Unauthorized", 401, corsHeaders);
+      return failWithCors("Unauthorized", corsHeaders, 401);
     }
 
     const userId = user.id;
@@ -230,10 +218,10 @@ serve(async (req) => {
       const { data, error } = await query;
 
       if (error) {
-        return errorResponse(error.message, 400, corsHeaders);
+        return failWithCors(error.message, corsHeaders, 400);
       }
 
-      return okResponse({ blogs: data }, 200, corsHeaders);
+      return okWithCors({ blogs: data }, corsHeaders, 200);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+$/) && req.method === "GET") {
@@ -252,10 +240,10 @@ serve(async (req) => {
         .single();
 
       if (error) {
-        return errorResponse(error.message, 404, corsHeaders);
+        return failWithCors(error.message, corsHeaders, 404);
       }
 
-      return okResponse({ blog: data }, 200, corsHeaders);
+      return okWithCors({ blog: data }, corsHeaders, 200);
     }
 
     if ((path === "/api/blogs" || path === "/" || path === "") && req.method === "POST") {
@@ -268,7 +256,7 @@ serve(async (req) => {
         const { post_id, reviewer_ids, note } = assignMultiReviewersSchema.parse(body);
         
         if (!userRoles.is_admin) {
-          return errorResponse("Only admins can assign reviewers", 403, corsHeaders);
+          return failWithCors("Only admins can assign reviewers", corsHeaders, 403);
         }
 
         // Insert multiple review assignments
@@ -285,7 +273,7 @@ serve(async (req) => {
           .insert(assignments);
 
         if (assignmentError) {
-          return errorResponse(assignmentError.message, 400, corsHeaders);
+          return failWithCors(assignmentError.message, corsHeaders, 400);
         }
 
         // Update the blog post with the first reviewer for backward compatibility
@@ -295,10 +283,10 @@ serve(async (req) => {
           .eq("id", post_id);
 
         if (updateError) {
-          return errorResponse(updateError.message, 400, corsHeaders);
+          return failWithCors(updateError.message, corsHeaders, 400);
         }
 
-        return okResponse({ message: "Reviewers assigned successfully" }, 200, corsHeaders);
+        return okWithCors({ message: "Reviewers assigned successfully" }, corsHeaders, 200);
       }
 
       // Create blog draft
@@ -333,7 +321,7 @@ serve(async (req) => {
         readingTime = readingMinutesFrom({ md: content });
       } else if (Array.isArray(content)) {
         if (!validateBlocks(content)) {
-          return errorResponse("Invalid content format", 400, corsHeaders);
+          return failWithCors("Invalid content format", corsHeaders, 400);
         }
         // Convert blocks to markdown or keep as is
         contentMd = content.map(block => block.data?.text || "").join("\n");
@@ -361,7 +349,7 @@ serve(async (req) => {
         .single();
 
       if (createError) {
-        return errorResponse(createError.message, 400, corsHeaders);
+        return failWithCors(createError.message, corsHeaders, 400);
       }
 
       // Handle tags
@@ -389,7 +377,7 @@ serve(async (req) => {
         }
       }
 
-      return okResponse({ blog: post, id: post.id }, 201, corsHeaders);
+      return okWithCors({ blog: post, id: post.id }, corsHeaders, 201);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+$/) && req.method === "PUT") {
@@ -406,11 +394,11 @@ serve(async (req) => {
         .single();
 
       if (!existingPost) {
-        return errorResponse("Post not found", 404, corsHeaders);
+        return failWithCors("Post not found", corsHeaders, 404);
       }
 
       if (existingPost.author_id !== userId && !userRoles.is_admin) {
-        return errorResponse("Unauthorized", 403, corsHeaders);
+        return failWithCors("Unauthorized", corsHeaders, 403);
       }
 
       // Process content and calculate reading time
@@ -422,7 +410,7 @@ serve(async (req) => {
         readingTime = readingMinutesFrom({ md: content });
       } else if (Array.isArray(content)) {
         if (!validateBlocks(content)) {
-          return errorResponse("Invalid content format", 400, corsHeaders);
+          return failWithCors("Invalid content format", corsHeaders, 400);
         }
         contentMd = content.map(block => block.data?.text || "").join("\n");
         readingTime = readingMinutesFrom({ md: contentMd });
@@ -447,7 +435,7 @@ serve(async (req) => {
         .single();
 
       if (updateError) {
-        return errorResponse(updateError.message, 400, corsHeaders);
+        return failWithCors(updateError.message, corsHeaders, 400);
       }
 
       // Update tags
@@ -478,7 +466,7 @@ serve(async (req) => {
         }
       }
 
-      return okResponse({ blog: post }, 200, corsHeaders);
+      return okWithCors({ blog: post }, corsHeaders, 200);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/submit$/) && req.method === "POST") {
@@ -493,15 +481,15 @@ serve(async (req) => {
         .single();
 
       if (!existingPost) {
-        return errorResponse("Post not found", 404, corsHeaders);
+        return failWithCors("Post not found", corsHeaders, 404);
       }
 
       if (existingPost.author_id !== userId) {
-        return errorResponse("Unauthorized", 403, corsHeaders);
+        return failWithCors("Unauthorized", corsHeaders, 403);
       }
 
       if (existingPost.status !== "draft") {
-        return errorResponse("Only drafts can be submitted for review", 400, corsHeaders);
+        return failWithCors("Only drafts can be submitted for review", corsHeaders, 400);
       }
 
       // Update status to in_review
@@ -514,10 +502,10 @@ serve(async (req) => {
         .eq("id", id);
 
       if (updateError) {
-        return errorResponse(updateError.message, 400, corsHeaders);
+        return failWithCors(updateError.message, corsHeaders, 400);
       }
 
-      return okResponse({ message: "Blog submitted for review" }, 200, corsHeaders);
+      return okWithCors({ message: "Blog submitted for review" }, corsHeaders, 200);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/review$/) && req.method === "POST") {
@@ -537,7 +525,7 @@ serve(async (req) => {
         .single();
 
       if (!canReview && !isAssignedReviewer.data) {
-        return errorResponse("Unauthorized to review this post", 403, corsHeaders);
+        return failWithCors("Unauthorized to review this post", corsHeaders, 403);
       }
 
       if (action === "approve_publish") {
@@ -567,9 +555,9 @@ serve(async (req) => {
           const nowAllApproved = updatedAssignments.every(a => a.status === "completed");
 
           if (!nowAllApproved) {
-            return okResponse({ 
+            return okWithCors({ 
               message: "Your review has been recorded. Waiting for other reviewers." 
-            }, 200, corsHeaders);
+            }, corsHeaders, 200);
           }
         }
 
@@ -586,10 +574,10 @@ serve(async (req) => {
           .eq("id", id);
 
         if (publishError) {
-          return errorResponse(publishError.message, 400, corsHeaders);
+          return failWithCors(publishError.message, corsHeaders, 400);
         }
 
-        return okResponse({ message: "Blog published successfully" }, 200, corsHeaders);
+        return okWithCors({ message: "Blog published successfully" }, corsHeaders, 200);
 
       } else if (action === "request_changes") {
         // Request changes - set back to draft
@@ -602,9 +590,9 @@ serve(async (req) => {
           .eq("id", id);
 
         if (updateError) {
-          return errorResponse(updateError.message, 400, corsHeaders);
+          return failWithCors(updateError.message, corsHeaders, 400);
         }
-        return okResponse({ message: "Changes requested" }, 200, corsHeaders);
+        return okWithCors({ message: "Changes requested" }, corsHeaders, 200);
       }
     }
 
@@ -616,7 +604,7 @@ serve(async (req) => {
       // Check permissions
       const canReview = userRoles.is_admin || userRoles.is_guru;
       if (!canReview) {
-        return errorResponse("Unauthorized", 403, corsHeaders);
+        return failWithCors("Unauthorized", corsHeaders, 403);
       }
 
       const { error: updateError } = await supabase
@@ -628,10 +616,10 @@ serve(async (req) => {
         .eq("id", id);
 
       if (updateError) {
-        return errorResponse(updateError.message, 400, corsHeaders);
+        return failWithCors(updateError.message, corsHeaders, 400);
       }
 
-      return okResponse({ message: "Changes requested" }, 200, corsHeaders);
+      return okWithCors({ message: "Changes requested" }, corsHeaders, 200);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/reject$/) && req.method === "POST") {
@@ -642,7 +630,7 @@ serve(async (req) => {
       // Check permissions
       const canReview = userRoles.is_admin || userRoles.is_guru;
       if (!canReview) {
-        return errorResponse("Unauthorized", 403, corsHeaders);
+        return failWithCors("Unauthorized", corsHeaders, 403);
       }
 
       const { error: updateError } = await supabase
@@ -654,10 +642,10 @@ serve(async (req) => {
         .eq("id", id);
 
       if (updateError) {
-        return errorResponse(updateError.message, 400, corsHeaders);
+        return failWithCors(updateError.message, corsHeaders, 400);
       }
 
-      return okResponse({ message: "Post rejected" }, 200, corsHeaders);
+      return okWithCors({ message: "Post rejected" }, corsHeaders, 200);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/publish$/) && req.method === "POST") {
@@ -665,7 +653,7 @@ serve(async (req) => {
 
       // Only admins can publish directly
       if (!userRoles.is_admin) {
-        return errorResponse("Only admins can publish posts", 403, corsHeaders);
+        return failWithCors("Only admins can publish posts", corsHeaders, 403);
       }
 
       const { error: publishError } = await supabase
@@ -677,10 +665,10 @@ serve(async (req) => {
         .eq("id", id);
 
       if (publishError) {
-        return errorResponse(publishError.message, 400, corsHeaders);
+        return failWithCors(publishError.message, corsHeaders, 400);
       }
 
-      return okResponse({ message: "Post published" }, 200, corsHeaders);
+      return okWithCors({ message: "Post published" }, corsHeaders, 200);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/react$/) && req.method === "POST") {
@@ -704,7 +692,7 @@ serve(async (req) => {
             .delete()
             .eq("id", existingReaction.id);
 
-          return okResponse({ action: "removed" }, 200, corsHeaders);
+          return okWithCors({ action: "removed" }, corsHeaders, 200);
         } else {
           // Update reaction type
           await supabase
@@ -712,7 +700,7 @@ serve(async (req) => {
             .update({ type })
             .eq("id", existingReaction.id);
 
-          return okResponse({ action: "updated" }, 200, corsHeaders);
+          return okWithCors({ action: "updated" }, corsHeaders, 200);
         }
       } else {
         // Create new reaction
@@ -721,10 +709,10 @@ serve(async (req) => {
           .insert({ post_id: id, user_id: userId, type });
 
         if (createError) {
-          return errorResponse(createError.message, 400, corsHeaders);
+          return failWithCors(createError.message, corsHeaders, 400);
         }
 
-        return okResponse({ action: "created" }, 200, corsHeaders);
+        return okWithCors({ action: "created" }, corsHeaders, 200);
       }
     }
 
@@ -748,10 +736,10 @@ serve(async (req) => {
         .single();
 
       if (createError) {
-        return errorResponse(createError.message, 400, corsHeaders);
+        return failWithCors(createError.message, corsHeaders, 400);
       }
 
-      return okResponse({ comment }, 201, corsHeaders);
+      return okWithCors({ comment }, corsHeaders, 201);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/comments$/) && req.method === "GET") {
@@ -767,10 +755,10 @@ serve(async (req) => {
         .order("created_at", { ascending: true });
 
       if (error) {
-        return errorResponse(error.message, 400, corsHeaders);
+        return failWithCors(error.message, corsHeaders, 400);
       }
 
-      return okResponse({ comments }, 200, corsHeaders);
+      return okWithCors({ comments }, corsHeaders, 200);
     }
 
     if (path.match(/^\/api\/blogs\/comments\/[^\/]+$/) && req.method === "DELETE") {
@@ -784,11 +772,11 @@ serve(async (req) => {
         .single();
 
       if (!comment) {
-        return errorResponse("Comment not found", 404, corsHeaders);
+        return failWithCors("Comment not found", corsHeaders, 404);
       }
 
       if (comment.user_id !== userId && !userRoles.is_admin) {
-        return errorResponse("Unauthorized", 403, corsHeaders);
+        return failWithCors("Unauthorized", corsHeaders, 403);
       }
 
       const { error: deleteError } = await supabase
@@ -797,10 +785,10 @@ serve(async (req) => {
         .eq("id", commentId);
 
       if (deleteError) {
-        return errorResponse(deleteError.message, 400, corsHeaders);
+        return failWithCors(deleteError.message, corsHeaders, 400);
       }
 
-      return okResponse({ message: "Comment deleted" }, 200, corsHeaders);
+      return okWithCors({ message: "Comment deleted" }, corsHeaders, 200);
     }
 
     if (path.match(/^\/api\/blogs\/feedback\/[^\/]+\/resolve$/) && req.method === "POST") {
@@ -808,7 +796,7 @@ serve(async (req) => {
 
       // Only admins and gurus can resolve feedback
       if (!userRoles.is_admin && !userRoles.is_guru) {
-        return errorResponse("Unauthorized", 403, corsHeaders);
+        return failWithCors("Unauthorized", corsHeaders, 403);
       }
 
       const { error: updateError } = await supabase
@@ -821,10 +809,10 @@ serve(async (req) => {
         .eq("id", feedbackId);
 
       if (updateError) {
-        return errorResponse(updateError.message, 400, corsHeaders);
+        return failWithCors(updateError.message, corsHeaders, 400);
       }
 
-      return okResponse({ message: "Feedback resolved" }, 200, corsHeaders);
+      return okWithCors({ message: "Feedback resolved" }, corsHeaders, 200);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/feedback$/) && req.method === "GET") {
@@ -832,7 +820,7 @@ serve(async (req) => {
 
       // Only admins and gurus can view feedback
       if (!userRoles.is_admin && !userRoles.is_guru) {
-        return errorResponse("Unauthorized", 403, corsHeaders);
+        return failWithCors("Unauthorized", corsHeaders, 403);
       }
 
       const { data: feedback, error } = await supabase
@@ -846,10 +834,10 @@ serve(async (req) => {
         .order("created_at", { ascending: false });
 
       if (error) {
-        return errorResponse(error.message, 400, corsHeaders);
+        return failWithCors(error.message, corsHeaders, 400);
       }
 
-      return okResponse({ feedback }, 200, corsHeaders);
+      return okWithCors({ feedback }, corsHeaders, 200);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/ai-summary$/) && req.method === "POST") {
@@ -863,17 +851,17 @@ serve(async (req) => {
         .single();
 
       if (postError || !post) {
-        return errorResponse("Post not found", 404, corsHeaders);
+        return failWithCors("Post not found", corsHeaders, 404);
       }
 
       // Check if user can generate summary (author, admin, or guru)
       if (post.author_id !== userId && !userRoles.is_admin && !userRoles.is_guru) {
-        return errorResponse("Unauthorized", 403, corsHeaders);
+        return failWithCors("Unauthorized", corsHeaders, 403);
       }
 
       const summary = generateAutoSummary(post.content);
 
-      return okResponse({ summary }, 200, corsHeaders);
+      return okWithCors({ summary }, corsHeaders, 200);
     }
 
     if (path.match(/^\/api\/blogs\/[^\/]+\/share$/) && req.method === "POST") {
@@ -894,13 +882,13 @@ serve(async (req) => {
         console.warn("Failed to track share:", shareError);
       }
 
-      return okResponse({ message: "Share tracked" }, 200, corsHeaders);
+      return okWithCors({ message: "Share tracked" }, corsHeaders, 200);
     }
 
     if (path === "/api/blogs/metrics" && req.method === "GET") {
       // Only admins can view metrics
       if (!userRoles.is_admin) {
-        return errorResponse("Unauthorized", 403, corsHeaders);
+        return failWithCors("Unauthorized", corsHeaders, 403);
       }
 
       // Get various metrics
@@ -930,7 +918,7 @@ serve(async (req) => {
         reviewPosts: reviewPosts?.length || 0
       };
 
-      return okResponse({ metrics }, 200, corsHeaders);
+      return okWithCors({ metrics }, corsHeaders, 200);
     }
 
     if (path === "/api/blogs/docs" && req.method === "GET") {
@@ -985,15 +973,15 @@ serve(async (req) => {
         ]
       };
 
-      return okResponse(docs, 200, corsHeaders);
+      return okWithCors(docs, corsHeaders, 200);
     }
 
     // Default 404 response
     console.log(`blogs-api: No route matched for path "${path}" method ${req.method}`);
-    return errorResponse("Not found", 404, corsHeaders);
+    return failWithCors("Not found", corsHeaders, 404);
 
   } catch (e: any) {
     console.error("blogs-api error", e);
-    return errorResponse(e.message ?? "Unexpected error", 400, corsHeaders);
+    return failWithCors(e.message ?? "Unexpected error", corsHeaders, 400);
   }
 });

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getOpenAI } from "../_shared/openai.ts";
+import { ok, fail } from "../_shared/response.ts";
 
 // Dynamic CORS with allowlist
 const allowOrigin = (origin: string | null) => {
@@ -165,17 +166,17 @@ serve(async (req) => {
     if (purpose === 'blog_generation') {
       const { topic, instructions_text, source_links, source_files } = body;
       if (!topic) {
-        return new Response(JSON.stringify({ success: false, error: 'Topic is required for blog generation' }), {
-          status: 400,
-          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
-        });
+        const response = fail('Topic is required for blog generation', 400);
+        response.headers.set('Access-Control-Allow-Origin', allowed);
+        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
+        return response;
       }
       
       if (!instructions_text) {
-        return new Response(JSON.stringify({ success: false, error: 'Instructions text is required for blog generation' }), {
-          status: 400,
-          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
-        });
+        const response = fail('Instructions text is required for blog generation', 400);
+        response.headers.set('Access-Control-Allow-Origin', allowed);
+        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
+        return response;
       }
 
       try {
@@ -301,13 +302,10 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
           console.error('Failed to parse AI JSON response:', parseError, 'Raw content:', content);
           
           // Return error instead of fallback to maintain contract
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: 'AI returned invalid JSON format' 
-          }), {
-            status: 500,
-            headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
-          });
+          const response = fail('AI returned invalid JSON format', 500);
+          response.headers.set('Access-Control-Allow-Origin', allowed);
+          Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
+          return response;
         }
 
         // Normalize AI output to editor-compatible schema
@@ -354,19 +352,16 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
           source_errors: sourceErrors.length > 0 ? sourceErrors : undefined
         };
 
-        return new Response(JSON.stringify(finalData), {
-          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
-        });
+        const response = ok(finalData);
+        response.headers.set('Access-Control-Allow-Origin', allowed);
+        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
+        return response;
       } catch (error) {
         console.error('Blog generation error:', error);
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: error instanceof Error ? error.message : 'Blog generation failed',
-          source_errors: sourceErrors.length > 0 ? sourceErrors : undefined
-        }), {
-          status: 500,
-          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
-        });
+        const response = fail(error instanceof Error ? error.message : 'Blog generation failed', 500);
+        response.headers.set('Access-Control-Allow-Origin', allowed);
+        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
+        return response;
       }
     }
 
@@ -377,15 +372,10 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
     if (purpose === 'image_generation') {
       const { description } = body;
       if (!description) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          image_url: null, 
-          image_data: null, 
-          error: 'Missing image description' 
-        }), {
-          status: 400,
-          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
-        });
+        const response = fail('Missing image description', 400);
+        response.headers.set('Access-Control-Allow-Origin', allowed);
+        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
+        return response;
       }
 
       try {
@@ -412,36 +402,25 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
         // Check if we have a valid image URL
         if (!imageData?.url) {
           console.error('Image generation error: No image URL returned', result);
-          return new Response(JSON.stringify({ 
-            success: false, 
-            image_url: null,
-            image_data: null,
-            error: 'Image generation returned no URL' 
-          }), {
-            status: 500,
-            headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
-          });
+          const response = fail('Image generation returned no URL', 500);
+          response.headers.set('Access-Control-Allow-Origin', allowed);
+          Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
+          return response;
         }
         
-        return new Response(JSON.stringify({ 
-          success: true, 
+        const response = ok({ 
           image_url: imageData.url,
-          image_data: null,
-          error: null 
-        }), {
-          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+          image_data: null
         });
+        response.headers.set('Access-Control-Allow-Origin', allowed);
+        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
+        return response;
       } catch (error) {
         console.error('Image generation error:', error);
-        return new Response(JSON.stringify({ 
-          success: false, 
-          image_url: null, 
-          image_data: null,
-          error: error instanceof Error ? error.message : 'Image generation failed'
-        }), {
-          status: 500,
-          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
-        });
+        const response = fail(error instanceof Error ? error.message : 'Image generation failed', 500);
+        response.headers.set('Access-Control-Allow-Origin', allowed);
+        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
+        return response;
       }
     }
 

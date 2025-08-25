@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getOpenAI, chat } from "../_shared/openai.ts";
+import { ok, fail } from "../_shared/response.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,10 +25,10 @@ serve(async (req) => {
   // Check OpenAI key first
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
   if (!openaiKey) {
-    return new Response(JSON.stringify({ success: false, error: "OpenAI key not configured" }), { 
-      status: 500, 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
+    const response = fail("OpenAI key not configured", 500);
+    response.headers.set("Access-Control-Allow-Origin", "*");
+    response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+    return response;
   }
 
   const supabase = createClient(
@@ -48,10 +49,10 @@ serve(async (req) => {
     try {
       body = (await req.json()) as RequestBody;
     } catch (e) {
-      return new Response(JSON.stringify({ success: false, error: "Invalid JSON payload" }), { 
-        status: 400, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
+      const response = fail("Invalid JSON payload", 400);
+      response.headers.set("Access-Control-Allow-Origin", "*");
+      response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+      return response;
     }
 
     // Add structured validation for bulk_generate and practice_generate actions
@@ -69,14 +70,10 @@ serve(async (req) => {
       }
       
       if (errors.length > 0) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          errors,
-          message: `Validation failed: ${errors.map(e => `${e.field}: ${e.message}`).join(', ')}`
-        }), { 
-          status: 400, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        });
+        const response = fail(`Validation failed: ${errors.map(e => `${e.field}: ${e.message}`).join(', ')}`, 400);
+        response.headers.set("Access-Control-Allow-Origin", "*");
+        response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+        return response;
       }
     }
 
@@ -92,7 +89,10 @@ serve(async (req) => {
         .select("*")
         .single();
       if (error) throw error;
-      return new Response(JSON.stringify({ success: true, session: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const response = ok({ session: data });
+      response.headers.set("Access-Control-Allow-Origin", "*");
+      response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+      return response;
     }
 
     if (body.action === "generate_question") {
@@ -215,7 +215,10 @@ Return ONLY this JSON schema:
           error_code: null
         });
 
-        return new Response(JSON.stringify({ success: true, question: saved }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const response = ok({ question: saved });
+        response.headers.set("Access-Control-Allow-Origin", "*");
+        response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+        return response;
       } catch (err: any) {
         // Log failure
         await supabase.from("ai_gen_logs").insert({
@@ -250,7 +253,10 @@ Return ONLY this JSON schema:
         .single();
       if (aErr) throw aErr;
 
-      return new Response(JSON.stringify({ success: true, result: { is_correct }, answer }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const response = ok({ result: { is_correct }, answer });
+      response.headers.set("Access-Control-Allow-Origin", "*");
+      response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+      return response;
     }
 
     if (body.action === "bulk_generate") {
@@ -511,24 +517,20 @@ Return ONLY this JSON schema:
 
       // Return consistent schema with success field
       if (generated.length === 0) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: "Failed to generate any valid questions. Please try again with different parameters.",
-          items: [],
-          count: 0,
-          requested: safeCount
-        }), { 
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        });
+        const response = fail("Failed to generate any valid questions. Please try again with different parameters.", 500);
+        response.headers.set("Access-Control-Allow-Origin", "*");
+        response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+        return response;
       }
 
-      return new Response(JSON.stringify({ 
-        success: true,
+      const response = ok({ 
         items: generated, 
         count: generated.length,
         requested: safeCount 
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      });
+      response.headers.set("Access-Control-Allow-Origin", "*");
+      response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+      return response;
     }
 
     if (body.action === "practice_generate") {
@@ -599,35 +601,28 @@ Return ONLY this JSON schema:
 
       // Always return structured response with success/error
       if (generated.length === 0) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: "Failed to generate any valid questions. Please try again with different parameters.",
-          items: [],
-          count: 0,
-          requested: count
-        }), { 
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        });
+        const response = fail("Failed to generate any valid questions. Please try again with different parameters.", 500);
+        response.headers.set("Access-Control-Allow-Origin", "*");
+        response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+        return response;
       }
 
-      return new Response(JSON.stringify({ 
-        success: true,
+      const response = ok({ 
         items: generated, 
         count: generated.length,
         requested: count 
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      });
+      response.headers.set("Access-Control-Allow-Origin", "*");
+      response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+      return response;
     }
 
     throw new Error("Unknown action");
   } catch (e) {
     console.error("ai-exams-api error", e);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: String(e?.message ?? e) 
-    }), { 
-      status: 500, 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
+    const response = fail(String(e?.message ?? e), 500);
+    response.headers.set("Access-Control-Allow-Origin", "*");
+    response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+    return response;
   }
 });

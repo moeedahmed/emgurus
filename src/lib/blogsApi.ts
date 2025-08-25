@@ -265,9 +265,38 @@ export async function createDraft(body: {
   excerpt?: string;
 }) {
   try {
-    return await callFunction("/blogs-api/api/blogs", body, true, "POST");
+    const response = await callFunction("/blogs-api/api/blogs", body, true, "POST");
+    if (response && typeof response === 'object' && 'success' in response) {
+      if (!response.success) {
+        throw new Error(response.error || "Unknown error");
+      }
+      return response;
+    }
+    return response;
   } catch (error: any) {
     const message = getErrorMessage(error, "Failed to create draft");
+    throw new Error(message);
+  }
+}
+
+export async function assignReviewers(postId: string, reviewerIds: string[], note?: string) {
+  try {
+    const response = await callFunction("/blogs-api/api/blogs", {
+      action: "assign_reviewers",
+      post_id: postId,
+      reviewer_ids: reviewerIds,
+      note: note || ""
+    }, true, "POST");
+    
+    if (response && typeof response === 'object' && 'success' in response) {
+      if (!response.success) {
+        throw new Error(response.error || "Unknown error");
+      }
+      return response;
+    }
+    return response;
+  } catch (error: any) {
+    const message = getErrorMessage(error, "Failed to assign reviewers");
     throw new Error(message);
   }
 }
