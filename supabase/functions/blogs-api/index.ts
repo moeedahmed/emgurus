@@ -2536,4 +2536,4 @@ async function trackShare(postId: string, req: Request): Promise<Response> {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-}
+});
