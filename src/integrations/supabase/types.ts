@@ -3154,6 +3154,13 @@ export type Database = {
         Args: { p_note: string; p_question_id: string }
         Returns: undefined
       }
+      get_user_role_flags: {
+        Args: { p_user_id: string }
+        Returns: {
+          is_admin: boolean
+          is_guru: boolean
+        }[]
+      }
       halfvec_avg: {
         Args: { "": number[] }
         Returns: unknown
