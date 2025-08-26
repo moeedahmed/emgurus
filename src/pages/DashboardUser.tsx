@@ -10,7 +10,7 @@ import BlogsOverview from "@/components/dashboard/blogs/BlogsOverview";
 import BlogsFeedbackList from "@/components/dashboard/blogs/BlogsFeedbackList";
 import ConsultationsOverview from "@/components/dashboard/consultations/ConsultationsOverview";
 import ForumsOverview from "@/components/dashboard/forums/ForumsOverview";
-import AuthoredBlogTabs from "@/components/dashboard/blogs/AuthoredBlogTabs";
+import MyBlogs from "@/components/dashboard/blogs/MyBlogs";
 import MyThreadsWithChips from "@/components/dashboard/forums/MyThreadsWithChips";
 
 export default function DashboardUser() {
@@ -23,7 +23,11 @@ export default function DashboardUser() {
       icon: BookOpen,
       tabs: [
         { id: "overview", title: "Overview", render: <div className="p-0"><BlogsOverview /></div> },
-        { id: "authored", title: "Authored", description: "Your authored blog posts across all stages.", render: <AuthoredBlogTabs /> },
+        { id: "drafts", title: "Drafts", description: "Private posts you're still working on.", render: <MyBlogs filter="draft" /> },
+        { id: "submitted", title: "Submitted", description: "Posts awaiting review by the team.", render: <MyBlogs filter="in_review" /> },
+        { id: "published", title: "Published", description: "Your posts that are live on EMGurus.", render: <MyBlogs filter="published" /> },
+        { id: "rejected", title: "Rejected", description: "Changes requested. Edit and resubmit when ready.", render: <MyBlogs filter="rejected" /> },
+        { id: "feedback", title: "Feedback", description: "Blog feedback you've submitted.", render: <div className="p-0"><BlogsFeedbackList /></div> },
       ],
     },
     {

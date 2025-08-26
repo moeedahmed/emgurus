@@ -35,8 +35,7 @@ export default function BlogReviewQueue() {
             blog_posts!inner(
               title,
               status,
-              author_id,
-              submitted_at
+              author_id
             )
           `)
           .eq('reviewer_id', user.id)

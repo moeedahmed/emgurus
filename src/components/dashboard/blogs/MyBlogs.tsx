@@ -11,7 +11,7 @@ interface MyBlogsProps {
   filter?: BlogStatus;
 }
 
-export default function AuthoredBlogs({ filter = 'draft' }: MyBlogsProps) {
+export default function MyBlogs({ filter = 'draft' }: MyBlogsProps) {
   const { user } = useAuth();
   const activeFilter = filter;
   const [rows, setRows] = useState<any[]>([]);
@@ -101,14 +101,6 @@ export default function AuthoredBlogs({ filter = 'draft' }: MyBlogsProps) {
 
   return (
     <div className="p-4">
-      {filter === 'draft' && (
-        <div className="mb-4 flex justify-between items-center">
-          <div className="text-sm text-muted-foreground">Create and manage your blog drafts</div>
-          <Button asChild variant="default" size="sm">
-            <a href="/blogs/editor/new">Write Blog</a>
-          </Button>
-        </div>
-      )}
       <TableCard
         title={getTitle()}
         columns={columns}

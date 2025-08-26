@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
 import { BookOpen, Stethoscope, GraduationCap, MessageSquare, Eye, ThumbsUp, MessageCircle, Share2, Flag, Clock, CheckCircle } from "lucide-react";
-import AuthoredBlogTabs from "@/components/dashboard/blogs/AuthoredBlogTabs";
+import ReviewedByMe from "@/pages/guru/ReviewedByMe";
+import GuruReviewQueue from "@/pages/guru/ReviewQueue";
+import MyExamDrafts from "@/pages/tools/MyExamDrafts";
+import RejectedByMe from "@/pages/guru/RejectedByMe";
 import Bookings from "@/pages/Bookings";
 import Availability from "@/pages/guru/Availability";
 import Pricing from "@/pages/guru/Pricing";
@@ -297,10 +300,10 @@ export default function DashboardGuru() {
           render: <BlogReviews /> 
         },
         { 
-          id: "authored", 
-          title: "Authored", 
-          description: "Your authored blog posts across all stages.", 
-          render: <div className="p-0"><AuthoredBlogTabs /></div> 
+          id: "myblogs", 
+          title: "MyBlogs", 
+          description: "Write or continue your own posts.", 
+          render: <MyBlogStatusPanel filter="draft" /> 
         },
         { 
           id: "marked", 

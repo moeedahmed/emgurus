@@ -24,7 +24,7 @@ interface SectionConfig {
 
 // Lazy load all dashboard components
 const BlogsOverview = React.lazy(() => import('@/components/dashboard/blogs/BlogsOverview'));
-const AuthoredBlogTabs = React.lazy(() => import('@/components/dashboard/blogs/AuthoredBlogTabs'));
+const MyBlogs = React.lazy(() => import('@/components/dashboard/blogs/MyBlogs'));
 const BlogReviewQueue = React.lazy(() => import('@/components/dashboard/blogs/BlogReviewQueue'));
 const AdminBlogQueue = React.lazy(() => import('@/components/dashboard/blogs/AdminBlogQueue'));
 const BlogAnalytics = React.lazy(() => import('@/components/dashboard/blogs/BlogAnalytics'));
@@ -64,11 +64,11 @@ const tabRegistry: Record<string, SectionConfig> = {
         roles: ['user', 'guru', 'admin'], 
         description: 'Recent posts summary and performance insights.' 
       },
-      authored: { 
-        label: 'Authored', 
-        component: AuthoredBlogTabs, 
+      posts: { 
+        label: 'Posts', 
+        component: MyBlogs, 
         roles: ['user', 'guru', 'admin'], 
-        description: 'Your authored blog posts across all stages.' 
+        description: 'Your blog posts filtered by status.' 
       },
       reviews: { 
         label: 'Reviews', 

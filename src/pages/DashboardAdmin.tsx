@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
 import { BookOpen, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings, Stethoscope, Brain, Eye, ThumbsUp, MessageCircle, Share2, Flag } from "lucide-react";
-import AuthoredBlogTabs from "@/components/dashboard/blogs/AuthoredBlogTabs";
 import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
 import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
 import ForumsModerationQueue from "@/components/dashboard/forums/ForumsModerationQueue";
@@ -20,8 +19,6 @@ import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import QuestionGenerator from "@/pages/admin/QuestionGenerator";
-import GenerateBlogDraft from "@/pages/tools/GenerateBlogDraft";
-import ExamGenerator from "@/components/dashboard/exams/ExamGenerator";
 
 import { useToast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
@@ -1154,12 +1151,6 @@ export default function DashboardAdmin() {
           render: <AdminAnalyticsPanel /> 
         },
         { 
-          id: "generator", 
-          title: "Generator", 
-          description: "AI-powered blog draft generation.", 
-          render: <div className="p-0"><GenerateBlogDraft /></div> 
-        },
-        { 
           id: "queue", 
           title: "Queue", 
           description: "Triage incoming posts and assign to reviewers.", 
@@ -1178,10 +1169,10 @@ export default function DashboardAdmin() {
           render: <BlogTaxonomyManager /> 
         },
         { 
-          id: "authored", 
-          title: "Authored", 
-          description: "Your authored blog posts across all stages.", 
-          render: <div className="p-0"><AuthoredBlogTabs /></div> 
+          id: "myblogs", 
+          title: "MyBlogs", 
+          description: "Your authored posts.", 
+          render: <MyBlogsAdmin /> 
         },
         { 
           id: "marked", 
@@ -1202,10 +1193,10 @@ export default function DashboardAdmin() {
           render: <div className="p-4 grid gap-4 md:grid-cols-5"><KpiCard title="Generated (7d)" value="0" isLoading={false} /><KpiCard title="In Review" value={examKpis.under_review} isLoading={false} /><KpiCard title="Published" value={examKpis.approved} isLoading={false} /><KpiCard title="Quality Flags Open" value={examKpis.flaggedOpen} isLoading={false} /><div className="text-sm text-muted-foreground">Coverage chart coming soon</div></div> 
         },
         { 
-          id: "generator", 
-          title: "Generator", 
-          description: "AI-powered exam question generation.", 
-          render: <div className="p-0"><ExamGenerator /></div> 
+          id: "generation", 
+          title: "Generation", 
+          description: "Generate AI questions by exam/topic/difficulty.", 
+          render: <ExamGeneration /> 
         },
         { 
           id: "review-assignment", 
@@ -1328,6 +1319,37 @@ export default function DashboardAdmin() {
           title: "Feature Flags / Branding", 
           description: "Admin toggles and customization.", 
           render: <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">Feature flags coming soon.</Card></div> 
+        },
+      ],
+    },
+    {
+      id: "experimental",
+      title: "🧪 Experimental",
+      icon: Brain,
+      tabs: [
+        { 
+          id: "question-generator", 
+          title: "Question Generator 🧠", 
+          description: "Modern AI question generation interface (Beta).", 
+          render: <QuestionGenerator />
+        },
+        { 
+          id: "blog-generator", 
+          title: "Blog Generator 🤖", 
+          description: "AI-powered blog generation and assignment tool (Experimental).", 
+          render: <div className="p-4">
+            <div className="mb-4">
+              <Button asChild>
+                <a href="/tools/generate-blog-draft">Launch Blog Generator</a>
+              </Button>
+            </div>
+            <Card className="p-4">
+              <p className="text-sm text-muted-foreground">
+                Generate AI-written blog drafts and assign them to Gurus for review. 
+                This experimental tool helps admins create high-quality content efficiently.
+              </p>
+            </Card>
+          </div>
         },
       ],
     },

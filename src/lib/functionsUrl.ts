@@ -5,7 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const envBase = (import.meta as any).env?.VITE_FUNCTIONS_BASE_URL as string | undefined;
-const fallbackBase = `https://cgtvvpzrzwyvsbavboxa.functions.supabase.co`;
+const fallbackBase = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.functions.supabase.co`;
 
 export function getFunctionsBaseUrl() {
   const base = (envBase && envBase.replace(/\/$/, "")) || fallbackBase;
@@ -13,12 +13,11 @@ export function getFunctionsBaseUrl() {
 }
 
 export async function callFunction(path: string, body?: unknown, includeAuth = true, method: 'GET' | 'POST' | 'DELETE' = 'POST') {
-  // Direct Supabase Edge Functions URL construction
+  // Ensure Supabase Edge Functions prefix
   const base = getFunctionsBaseUrl();
-  const cleanPath = path.startsWith('/') ? path.slice(1) : path; // Remove leading slash
-  const url = path.startsWith('http') ? path : `${base}/${cleanPath}`;
-  
-  console.log(`callFunction: ${method} ${url}`, body);
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const finalPath = cleanPath.startsWith('/functions/v1/') ? cleanPath : `/functions/v1${cleanPath}`;
+  const url = path.startsWith('http') ? path : `${base}${finalPath}`;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",

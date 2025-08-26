@@ -5,7 +5,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Type, 
-  Heading, 
   Image, 
   Video, 
   Volume2, 
@@ -17,7 +16,7 @@ import {
 
 export interface Block {
   id: string;
-  type: 'text' | 'heading' | 'image' | 'video' | 'audio' | 'quote' | 'divider';
+  type: 'text' | 'image' | 'video' | 'audio' | 'quote' | 'divider';
   content: any;
   order: number;
 }
@@ -32,7 +31,6 @@ interface BlocksPaletteProps {
 
 const blockTypes = [
   { type: 'text' as const, icon: Type, label: 'Text', description: 'Rich text paragraph' },
-  { type: 'heading' as const, icon: Heading, label: 'Heading', description: 'Section heading (H2/H3)' },
   { type: 'image' as const, icon: Image, label: 'Image', description: 'Upload or link image' },
   { type: 'video' as const, icon: Video, label: 'Video', description: 'YouTube/Vimeo embed' },
   { type: 'audio' as const, icon: Volume2, label: 'Audio', description: 'Audio file or URL' },

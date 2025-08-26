@@ -15,29 +15,11 @@ export default function ExamsOverview() {
 
   // Guard against loading states and invalid user
   if (userLoading) {
-    return (
-      <div className="p-4">
-        <div className="grid gap-4">
-          <div className="grid gap-4 md:grid-cols-4">
-            <KpiCard title="Total sessions" value="-" isLoading={true} />
-            <KpiCard title="Avg score (exam)" value="-" isLoading={true} />
-            <KpiCard title="Questions attempted" value="-" isLoading={true} />
-            <KpiCard title="Time spent" value="-" isLoading={true} />
-          </div>
-          <div className="text-sm text-muted-foreground">Loading exam overview…</div>
-        </div>
-      </div>
-    );
+    return <div className="p-4">Loading overview…</div>;
   }
 
   if (!user) {
-    return (
-      <div className="p-4">
-        <div className="bg-muted/50 rounded-lg p-6 text-center">
-          <p className="text-muted-foreground">Please sign in to view your exam overview.</p>
-        </div>
-      </div>
-    );
+    return <div className="p-4">Please sign in to view your exam overview.</div>;
   }
 
   useEffect(() => {

@@ -265,38 +265,9 @@ export async function createDraft(body: {
   excerpt?: string;
 }) {
   try {
-    const response = await callFunction("/blogs-api/api/blogs", body, true, "POST");
-    if (response && typeof response === 'object' && 'success' in response) {
-      if (!response.success) {
-        throw new Error(response.error || "Unknown error");
-      }
-      return response;
-    }
-    return response;
+    return await callFunction("/blogs-api/api/blogs", body, true, "POST");
   } catch (error: any) {
     const message = getErrorMessage(error, "Failed to create draft");
-    throw new Error(message);
-  }
-}
-
-export async function assignReviewers(postId: string, reviewerIds: string[], note?: string) {
-  try {
-    const response = await callFunction("/blogs-api/api/blogs", {
-      action: "assign_reviewers",
-      post_id: postId,
-      reviewer_ids: reviewerIds,
-      note: note || ""
-    }, true, "POST");
-    
-    if (response && typeof response === 'object' && 'success' in response) {
-      if (!response.success) {
-        throw new Error(response.error || "Unknown error");
-      }
-      return response;
-    }
-    return response;
-  } catch (error: any) {
-    const message = getErrorMessage(error, "Failed to assign reviewers");
     throw new Error(message);
   }
 }
@@ -326,34 +297,23 @@ export async function submitPost(id: string) {
   }
 }
 
-export async function reviewPost(id: string, body: {
-  action: "approve" | "reject" | "request_changes";
-  note?: string;
-}) {
-  try {
-    return await callFunction(`/blogs-api/api/blogs/${id}/review`, body, true, "POST");
-  } catch (error: any) {
-    const message = getErrorMessage(error, "Failed to review post");
-    throw new Error(message);
-  }
-}
-
-export async function approveForPublishing(id: string) {
-  try {
-    return await callFunction(`/blogs-api/api/blogs/${id}/approve`, {}, true, "POST");
-  } catch (error: any) {
-    const message = getErrorMessage(error, "Failed to approve post");
-    throw new Error(message);
-  }
+export async function reviewPost(id: string, body: { note?: string; is_featured?: boolean }) {
+  const res = await fetch(`${BASE}/api/blogs/${id}/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(await authHeader()) },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }
 
 export async function publishPost(id: string) {
-  try {
-    return await callFunction(`/blogs-api/api/blogs/${id}/publish`, {}, true, "POST");
-  } catch (error: any) {
-    const message = getErrorMessage(error, "Failed to publish post");
-    throw new Error(message);
-  }
+  const res = await fetch(`${BASE}/api/blogs/${id}/publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(await authHeader()) },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }
 
 export async function reactToPost(id: string, reaction: ReactionKey) {

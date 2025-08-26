@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getOpenAI } from "../_shared/openai.ts";
-import { ok, fail } from "../_shared/response.ts";
 
 // Dynamic CORS with allowlist
 const allowOrigin = (origin: string | null) => {
@@ -61,14 +60,11 @@ serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const browsing: boolean = !!body.browsing;
-    const searchOnline: boolean = !!body.searchOnline;
     const sessionId: string | null = body.session_id || null;
     const anonId: string | null = body.anon_id || null;
     const pageContext: any = body.pageContext || body.page_context || {};
     const messages: MessageIn[] = Array.isArray(body.messages) ? body.messages.slice(-20) : [];
     const purpose: string = typeof body.purpose === 'string' ? body.purpose : 'chatbot';
-    const urls: string[] = Array.isArray(body.urls) ? body.urls : [];
-    const files: Array<{name: string; content: string}> = Array.isArray(body.files) ? body.files : [];
     // Map requested purpose to real OpenAI models compatible with Chat Completions
     // "gpt-5.0-nano/pro" are project-level labels; route to OpenAI equivalents
     const requested = (purpose === 'exam-generation' || purpose === 'blog_generation') ? 'gpt-5.0-pro' : 'gpt-5.0-nano';
@@ -89,58 +85,6 @@ serve(async (req) => {
       }
     } catch (_) {
       dbSessionId = null; // non-fatal
-    }
-
-    // Source ingestion tracking
-    const sourceErrors: Array<{source: string; error: string}> = [];
-    
-    // Process URLs if searchOnline is enabled
-    if (searchOnline && urls.length > 0) {
-      for (const url of urls) {
-        try {
-          if (!url.trim()) continue;
-          
-          // Basic URL validation
-          try {
-            new URL(url);
-          } catch {
-            sourceErrors.push({ source: url, error: "Invalid URL format" });
-            continue;
-          }
-          
-          console.log(`Processing URL: ${url}`);
-          // TODO: Add actual web scraping here
-          // For now, just simulate processing
-        } catch (error) {
-          sourceErrors.push({ source: url, error: `Failed to process URL: ${error instanceof Error ? error.message : 'Unknown error'}` });
-        }
-      }
-    }
-    
-    // Process files
-    if (files.length > 0) {
-      for (const file of files) {
-        try {
-          if (!file.name?.trim()) {
-            sourceErrors.push({ source: file.name || 'Unknown file', error: "Missing file name" });
-            continue;
-          }
-          
-          if (!file.content?.trim()) {
-            sourceErrors.push({ source: file.name, error: "File content is empty" });
-            continue;
-          }
-          
-          console.log(`Processing file: ${file.name}`);
-          // TODO: Add actual file processing here
-          // For now, just validate content length
-          if (file.content.length < 10) {
-            sourceErrors.push({ source: file.name, error: "File content too short" });
-          }
-        } catch (error) {
-          sourceErrors.push({ source: file.name || 'Unknown file', error: `Failed to process file: ${error instanceof Error ? error.message : 'Unknown error'}` });
-        }
-      }
     }
 
     // Build retrieval context if browsing allowed
@@ -166,17 +110,17 @@ serve(async (req) => {
     if (purpose === 'blog_generation') {
       const { topic, instructions_text, source_links, source_files } = body;
       if (!topic) {
-        const response = fail('Topic is required for blog generation', 400);
-        response.headers.set('Access-Control-Allow-Origin', allowed);
-        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
-        return response;
+        return new Response(JSON.stringify({ success: false, error: 'Topic is required for blog generation' }), {
+          status: 400,
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
       }
       
       if (!instructions_text) {
-        const response = fail('Instructions text is required for blog generation', 400);
-        response.headers.set('Access-Control-Allow-Origin', allowed);
-        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
-        return response;
+        return new Response(JSON.stringify({ success: false, error: 'Instructions text is required for blog generation' }), {
+          status: 400,
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
       }
 
       try {
@@ -191,21 +135,16 @@ serve(async (req) => {
         let sourceTexts: string[] = [];
         if (hasFiles) {
           for (const file of source_files) {
-            try {
-              if (file.content && file.content.trim()) {
-                // Client-parsed .txt/.md files
-                sourceTexts.push(file.content);
-              } else if (file.name && !file.content) {
-                // Files that need server-side processing (.pdf, .docx, .pptx)
-                const fileName = file.name.toLowerCase();
-                if (fileName.endsWith('.pdf') || fileName.endsWith('.docx') || fileName.endsWith('.pptx')) {
-                  sourceErrors.push({ source: file.name, error: "Server-side file parsing not yet implemented" });
-                } else {
-                  sourceErrors.push({ source: file.name, error: "Unknown file type or empty content" });
-                }
+            if (file.content && file.content.trim()) {
+              // Client-parsed .txt/.md files
+              sourceTexts.push(file.content);
+            } else if (file.name && !file.content) {
+              // Files that need server-side processing (.pdf, .docx, .pptx)
+              // For now, just add a placeholder - future enhancement could implement actual parsing
+              const fileName = file.name.toLowerCase();
+              if (fileName.endsWith('.pdf') || fileName.endsWith('.docx') || fileName.endsWith('.pptx')) {
+                sourceTexts.push(`[Document: ${file.name} - content parsing not yet implemented]`);
               }
-            } catch (error) {
-              sourceErrors.push({ source: file.name || 'Unknown file', error: `File processing failed: ${error instanceof Error ? error.message : 'Unknown error'}` });
             }
           }
         }
@@ -243,19 +182,14 @@ RESPOND ONLY with valid JSON in this exact format:
   "title": "Compelling clinical title",
   "tags": ["tag1", "tag2", "tag3"],
   "blocks": [
-    { "type": "text", "content": "Full paragraph text..." },
-    { "type": "heading", "content": "Section heading", "level": "h2" },
-    { "type": "image", "description": "Specific image description" }
+    { "type": "paragraph", "content": "Full paragraph text..." },
+    { "type": "image_request", "description": "Specific image description" }
   ]
 }
 
-Block types allowed: "text", "heading", "image", "video", "quote", "divider"
-- text blocks need "content" field with full text
-- heading blocks need "content" field with heading text and "level" field (h2 or h3)
-- image blocks need "description" field for AI generation
-- video blocks need "description" field for placeholder
-- quote blocks need "content" field with quote text
-- divider blocks need no additional fields`;
+Block types allowed: "paragraph", "image_request", "video_placeholder"
+- paragraph blocks need "content" field with full text
+- image_request/video_placeholder blocks need "description" field`;
 
         if (hasUrls) {
           systemPrompt += `\n\nIMPORTANT: Ground your content in the provided sources and cite them inline using bracketed numbers [1], [2], etc. that correspond to the numbered source URLs.`;
@@ -302,66 +236,35 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
           console.error('Failed to parse AI JSON response:', parseError, 'Raw content:', content);
           
           // Return error instead of fallback to maintain contract
-          const response = fail('AI returned invalid JSON format', 500);
-          response.headers.set('Access-Control-Allow-Origin', allowed);
-          Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
-          return response;
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'AI returned invalid JSON format' 
+          }), {
+            status: 500,
+            headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+          });
         }
-
-        // Normalize AI output to editor-compatible schema
-        const normalizedBlocks = Array.isArray(structuredData.blocks) 
-          ? structuredData.blocks.map((block: any) => {
-              // Convert legacy "paragraph" to "text"
-              if (block.type === 'paragraph') {
-                return { type: 'text', content: block.content };
-              }
-              // Convert legacy "image_request" to "image"
-              if (block.type === 'image_request') {
-                return { type: 'image', description: block.description };
-              }
-              // Convert legacy "video_placeholder" to "video"
-              if (block.type === 'video_placeholder') {
-                return { type: 'video', description: block.description };
-              }
-              // Filter out placeholder blocks
-              if (block.content?.includes('content parsing not yet implemented') || 
-                  block.description?.includes('content parsing not yet implemented')) {
-                return null;
-              }
-              return block;
-            }).filter(Boolean)
-          : [{ type: 'text', content: 'No content generated' }];
-
-        // Validate final blocks
-        const validBlocks = normalizedBlocks.filter(block => {
-          if (block.type === 'text' && (!block.content || block.content.trim().length === 0)) {
-            return false;
-          }
-          if (block.type === 'heading' && (!block.content || block.content.trim().length === 0)) {
-            return false;
-          }
-          return true;
-        });
 
         // Ensure required fields exist with defaults and return success format
         const finalData = {
           success: true,
           title: structuredData.title || `Blog on ${topic}`,
           tags: Array.isArray(structuredData.tags) ? structuredData.tags : [],
-          blocks: validBlocks.length > 0 ? validBlocks : [{ type: 'text', content: 'Generated content is empty. Please try again with different parameters.' }],
-          source_errors: sourceErrors.length > 0 ? sourceErrors : undefined
+          blocks: Array.isArray(structuredData.blocks) ? structuredData.blocks : [{ type: 'paragraph', content: 'No content generated' }]
         };
 
-        const response = ok(finalData);
-        response.headers.set('Access-Control-Allow-Origin', allowed);
-        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
-        return response;
+        return new Response(JSON.stringify(finalData), {
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
       } catch (error) {
         console.error('Blog generation error:', error);
-        const response = fail(error instanceof Error ? error.message : 'Blog generation failed', 500);
-        response.headers.set('Access-Control-Allow-Origin', allowed);
-        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
-        return response;
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Blog generation failed' 
+        }), {
+          status: 500,
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
       }
     }
 
@@ -372,10 +275,15 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
     if (purpose === 'image_generation') {
       const { description } = body;
       if (!description) {
-        const response = fail('Missing image description', 400);
-        response.headers.set('Access-Control-Allow-Origin', allowed);
-        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
-        return response;
+        return new Response(JSON.stringify({ 
+          success: false, 
+          image_url: null, 
+          image_data: null, 
+          error: 'Missing image description' 
+        }), {
+          status: 400,
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
       }
 
       try {
@@ -386,7 +294,7 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
           body: JSON.stringify({
             model: 'gpt-image-1',
             prompt: `Medical illustration: ${description}. Professional, clinical style suitable for medical education.`,
-            size: '1024x1024'
+            size: '512x512'
           })
         });
 
@@ -402,25 +310,28 @@ Block types allowed: "text", "heading", "image", "video", "quote", "divider"
         // Check if we have a valid image URL
         if (!imageData?.url) {
           console.error('Image generation error: No image URL returned', result);
-          const response = fail('Image generation returned no URL', 500);
-          response.headers.set('Access-Control-Allow-Origin', allowed);
-          Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
-          return response;
+          throw new Error('Image generation returned no URL');
         }
         
-        const response = ok({ 
+        return new Response(JSON.stringify({ 
+          success: true, 
           image_url: imageData.url,
-          image_data: null
+          image_data: null,
+          error: null 
+        }), {
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
         });
-        response.headers.set('Access-Control-Allow-Origin', allowed);
-        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
-        return response;
       } catch (error) {
         console.error('Image generation error:', error);
-        const response = fail(error instanceof Error ? error.message : 'Image generation failed', 500);
-        response.headers.set('Access-Control-Allow-Origin', allowed);
-        Object.entries(baseCors).forEach(([key, value]) => response.headers.set(key, value));
-        return response;
+        return new Response(JSON.stringify({ 
+          success: false, 
+          image_url: null, 
+          image_data: null,
+          error: error instanceof Error ? error.message : 'Image generation failed'
+        }), {
+          status: 500,
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
       }
     }
 

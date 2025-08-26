@@ -2,7 +2,6 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getOpenAI, chat } from "../_shared/openai.ts";
-import { ok, fail } from "../_shared/response.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,23 +11,21 @@ const corsHeaders = {
 type StartSessionBody = { action: "start_session"; examType: string };
 type GenerateQuestionBody = { action: "generate_question"; session_id: string; curriculum_ids?: string[]; topic?: string; count?: number };
 type SubmitAnswerBody = { action: "submit_answer"; question_id: string; selected_answer: string; feedback?: "none"|"too_easy"|"hallucinated"|"wrong"|"not_relevant" };
-type BulkGenerateBody = { action: "bulk_generate"; exam_type: string; topic?: string; topic_id?: string; difficulty?: string; count?: number; persistAsDraft?: boolean; reviewer_assign_to?: string[]; preGenerated?: any };
+type BulkGenerateBody = { action: "bulk_generate"; exam_type: string; topic?: string; difficulty?: string; count?: number; persistAsDraft?: boolean; reviewer_assign_to?: string };
 type PracticeGenerateBody = { action: "practice_generate"; exam_type: string; topic?: string; difficulty?: string; count?: number };
 
 type RequestBody = StartSessionBody | GenerateQuestionBody | SubmitAnswerBody | BulkGenerateBody | PracticeGenerateBody;
 
 serve(async (req) => {
-  console.log(`ai-exams-api: ${req.method} ${req.url}`);
-  console.log(`ai-exams-api: ${req.method} ${req.url}`);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   // Check OpenAI key first
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
   if (!openaiKey) {
-    const response = fail("OpenAI key not configured", 500);
-    response.headers.set("Access-Control-Allow-Origin", "*");
-    response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
-    return response;
+    return new Response(JSON.stringify({ error: "OpenAI key not configured" }), { 
+      status: 500, 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
   }
 
   const supabase = createClient(
@@ -49,31 +46,27 @@ serve(async (req) => {
     try {
       body = (await req.json()) as RequestBody;
     } catch (e) {
-      const response = fail("Invalid JSON payload", 400);
-      response.headers.set("Access-Control-Allow-Origin", "*");
-      response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
-      return response;
+      return new Response(JSON.stringify({ error: "Invalid JSON payload" }), { 
+        status: 400, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
     }
 
-    // Add structured validation for bulk_generate and practice_generate actions
+    // Add simple validation for bulk_generate and practice_generate actions
     if (body.action === "bulk_generate" || body.action === "practice_generate") {
       const { exam_type, count = 1 } = body as BulkGenerateBody | PracticeGenerateBody;
-      const errors: { field: string; message: string }[] = [];
-      
       if (!exam_type || typeof exam_type !== 'string') {
-        errors.push({ field: "exam_type", message: "Exam type is required" });
+        return new Response(JSON.stringify({ error: "Invalid payload: exam_type required" }), { 
+          status: 400, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
       }
-      
       const maxCount = body.action === "practice_generate" ? 1 : 20;
       if (typeof count !== 'number' || count < 1 || count > maxCount) {
-        errors.push({ field: "count", message: `Count must be between 1 and ${maxCount}` });
-      }
-      
-      if (errors.length > 0) {
-        const response = fail(`Validation failed: ${errors.map(e => `${e.field}: ${e.message}`).join(', ')}`, 400);
-        response.headers.set("Access-Control-Allow-Origin", "*");
-        response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
-        return response;
+        return new Response(JSON.stringify({ error: `Invalid payload: count must be 1-${maxCount}` }), { 
+          status: 400, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
       }
     }
 
@@ -89,10 +82,7 @@ serve(async (req) => {
         .select("*")
         .single();
       if (error) throw error;
-      const response = ok({ session: data });
-      response.headers.set("Access-Control-Allow-Origin", "*");
-      response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
-      return response;
+      return new Response(JSON.stringify({ session: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (body.action === "generate_question") {
@@ -215,10 +205,7 @@ Return ONLY this JSON schema:
           error_code: null
         });
 
-        const response = ok({ question: saved });
-        response.headers.set("Access-Control-Allow-Origin", "*");
-        response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
-        return response;
+        return new Response(JSON.stringify({ question: saved }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       } catch (err: any) {
         // Log failure
         await supabase.from("ai_gen_logs").insert({
@@ -253,36 +240,11 @@ Return ONLY this JSON schema:
         .single();
       if (aErr) throw aErr;
 
-      const response = ok({ result: { is_correct }, answer });
-      response.headers.set("Access-Control-Allow-Origin", "*");
-      response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
-      return response;
+      return new Response(JSON.stringify({ result: { is_correct }, answer }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (body.action === "bulk_generate") {
-      const { exam_type, topic, topic_id, difficulty, count = 5, persistAsDraft = true, reviewer_assign_to, searchOnline = false, files = [], urls = [], preGenerated } = body as BulkGenerateBody & { 
-        searchOnline?: boolean; 
-        files?: Array<{ name: string; content: string; type: string }>; 
-        urls?: string[];
-        preGenerated?: { question: string; options: string[]; correct: string; explanation?: string; reference?: string; }
-      };
-      
-      // Resolve topic from topic_id if provided
-      let topicTitle = topic;
-      if (topic_id) {
-        try {
-          const { data: topicData } = await supabase
-            .from('curriculum_map')
-            .select('slo_title')
-            .eq('id', topic_id)
-            .single();
-          if (topicData) {
-            topicTitle = topicData.slo_title;
-          }
-        } catch (err) {
-          console.error('Failed to resolve topic_id:', err);
-        }
-      }
+      const { exam_type, topic, difficulty, count = 5, persistAsDraft = true, reviewer_assign_to } = body as BulkGenerateBody;
       
       // Check if user is admin or guru
       const { data: roles } = await supabase
@@ -306,88 +268,19 @@ Return ONLY this JSON schema:
         throw new Error("OpenAI key not configured");
       }
 
-      // Process uploaded files and URLs for content enrichment
-      let additionalContext = "";
-      
-      // Parse files (PDF/DOCX/TXT)
-      for (const file of files || []) {
-        try {
-          if (file.type === 'text/plain') {
-            additionalContext += `\n\nFile Content (${file.name}):\n${file.content}`;
-          } else if (file.type === 'application/pdf') {
-            // Simple text extraction - in production, use proper PDF parser
-            additionalContext += `\n\nPDF Content (${file.name}):\n${file.content}`;
-          } else if (file.type.includes('document')) {
-            // Simple DOCX extraction - in production, use proper DOCX parser
-            additionalContext += `\n\nDocument Content (${file.name}):\n${file.content}`;
-          }
-        } catch (err) {
-          console.error(`Failed to parse file ${file.name}:`, err);
-        }
-      }
-
-      // Scrape URLs
-      for (const url of urls || []) {
-        try {
-          const response = await fetch(url);
-          if (response.ok) {
-            const text = await response.text();
-            // Basic HTML cleaning
-            const cleanText = text
-              .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-              .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-              .replace(/<[^>]*>/g, '')
-              .replace(/\s+/g, ' ')
-              .trim()
-              .slice(0, 5000); // Limit content length
-            
-            additionalContext += `\n\nURL Content (${url}):\n${cleanText}`;
-          }
-        } catch (err) {
-          console.error(`Failed to scrape URL ${url}:`, err);
-        }
-      }
-
-      // Online search enrichment
-      if (searchOnline && topic) {
-        try {
-          // Placeholder for web search - integrate with search API
-          additionalContext += `\n\nOnline Search Results for "${topic}":\n[Search integration needed]`;
-        } catch (err) {
-          console.error("Online search failed:", err);
-        }
-      }
-
       const generated = [];
       const model = Deno.env.get("OPENAI_MODEL_EXAM") || "gpt-4o-mini";
 
       for (let i = 0; i < safeCount; i++) {
         try {
-          let obj: any;
-
-          // Use pre-generated content if provided (from Exam Generator)
-          if (preGenerated && i === 0) {
-            obj = {
-              question: preGenerated.question,
-              options: Array.isArray(preGenerated.options) 
-                ? { A: preGenerated.options[0], B: preGenerated.options[1], C: preGenerated.options[2], D: preGenerated.options[3], E: preGenerated.options[4] }
-                : preGenerated.options,
-              correct: preGenerated.correct,
-              explanation: preGenerated.explanation || '',
-              reference: preGenerated.reference || '',
-              topic: topic || 'General',
-              subtopic: topic || 'General'
-            };
-          } else {
-            const systemPrompt = `You are a medical education expert writing Emergency Medicine MCQs. Return strict JSON only.`;
-            const userPrompt = `Generate one MCQ for ${exam_type}.
+          const systemPrompt = `You are a medical education expert writing Emergency Medicine MCQs. Return strict JSON only.`;
+          const userPrompt = `Generate one MCQ for ${exam_type}.
 Constraints:
-- Topic focus: ${topicTitle || "random across the EM curriculum"}
+- Topic focus: ${topic || "random across the EM curriculum"}
 - Difficulty: ${difficulty || "mixed"}
 - 5 options (A–E), exactly one correct
 - Concise, high-yield explanation
 - Add a short credible reference hint (e.g., NICE/RCEM/UpToDate)
-${additionalContext ? `\n\nAdditional Context (use as reference):\n${additionalContext.slice(0, 2000)}` : ''}
 
 Return ONLY this JSON schema:
 {
@@ -400,23 +293,16 @@ Return ONLY this JSON schema:
   "subtopic": "string"
 }`;
 
-            const result = await chat({
-              system: systemPrompt,
-              messages: [{ role: 'user', content: userPrompt }],
-              model,
-              responseFormat: 'json_object',
-              temperature: 0.4,
-              maxTokens: 800
-            });
+          const result = await chat({
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }],
+            model,
+            responseFormat: 'json_object',
+            temperature: 0.4,
+            maxTokens: 800
+          });
 
-            obj = JSON.parse(result);
-          }
-          
-          // Validate generated content - drop empty or malformed questions
-          if (!obj.question || !obj.options || !obj.correct || !obj.explanation) {
-            console.warn(`Dropping malformed question ${i + 1}:`, obj);
-            continue;
-          }
+          const obj = JSON.parse(result);
           
           if (persistAsDraft) {
             // Insert into review_exam_questions as draft
@@ -429,8 +315,7 @@ Return ONLY this JSON schema:
                 explanation: obj.explanation,
                 exam_type: exam_type,
                 created_by: user.id,
-                status: 'draft',
-                submitted_at: persistAsDraft ? new Date().toISOString() : null
+                status: 'draft'
               })
               .select("*")
               .single();
@@ -438,62 +323,16 @@ Return ONLY this JSON schema:
             if (iErr) throw iErr;
             generated.push(saved);
 
-            // Create assignments if reviewers specified (support multi-reviewer)
-            if (reviewer_assign_to && Array.isArray(reviewer_assign_to) && reviewer_assign_to.length > 0 && saved) {
-              const assignments = reviewer_assign_to.map(reviewerId => ({
-                question_id: saved.id,
-                reviewer_id: reviewerId,
-                assigned_by: user.id,
-                status: 'pending_review',
-                assigned_at: new Date().toISOString(),
-                notes: `Auto-assigned via ${preGenerated ? 'Exam Generator' : 'bulk generation'}`
-              }));
-
-              const { error: assignError } = await supabase
-                .from("exam_review_assignments")
-                .insert(assignments);
-
-              if (assignError) {
-                console.error('Assignment error:', assignError);
-                // Don't fail the whole operation for assignment errors
-              } else {
-                // Update question metadata only if assignment succeeded
-                await supabase
-                  .from("review_exam_questions")
-                  .update({
-                    status: 'under_review',
-                    assigned_by: user.id,
-                    assigned_at: new Date().toISOString()
-                  })
-                  .eq('id', saved.id);
-              }
-            } else if (reviewer_assign_to && typeof reviewer_assign_to === 'string' && saved) {
-              // Legacy single reviewer support
-              const { error: assignError } = await supabase
+            // Create assignment if reviewer specified
+            if (reviewer_assign_to && saved) {
+              await supabase
                 .from("exam_review_assignments")
                 .insert({
                   question_id: saved.id,
                   reviewer_id: reviewer_assign_to,
                   assigned_by: user.id,
-                  status: 'pending_review',
-                  assigned_at: new Date().toISOString(),
-                  notes: `Auto-assigned via ${preGenerated ? 'Exam Generator' : 'bulk generation'}`
+                  status: 'assigned'
                 });
-
-              if (assignError) {
-                console.error('Assignment error:', assignError);
-                // Don't fail the whole operation for assignment errors
-              } else {
-                // Update question metadata only if assignment succeeded
-                await supabase
-                  .from("review_exam_questions")
-                  .update({
-                    status: 'under_review',
-                    assigned_by: user.id,
-                    assigned_at: new Date().toISOString()
-                  })
-                  .eq('id', saved.id);
-              }
             }
           } else {
             generated.push(obj);
@@ -508,41 +347,27 @@ Return ONLY this JSON schema:
         user_id: user.id,
         source: "admin_bulk",
         exam: exam_type,
-        slo: topicTitle || topic || null,
+        slo: topic || null,
         count: safeCount,
         model_used: model,
         success: generated.length > 0,
         error_code: generated.length === 0 ? "all_failed" : null
       });
 
-      // Return consistent schema with success field
-      if (generated.length === 0) {
-        const response = fail("Failed to generate any valid questions. Please try again with different parameters.", 500);
-        response.headers.set("Access-Control-Allow-Origin", "*");
-        response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
-        return response;
-      }
-
-      const response = ok({ 
+      return new Response(JSON.stringify({ 
         items: generated, 
         count: generated.length,
         requested: safeCount 
-      });
-      response.headers.set("Access-Control-Allow-Origin", "*");
-      response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
-      return response;
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (body.action === "practice_generate") {
-      console.log("Practice generate request:", body);
       const { exam_type, topic, difficulty, count = 1 } = body as PracticeGenerateBody;
       
       // No role restriction for practice - anyone can use it
       try {
         getOpenAI();
-        console.log("OpenAI key validated successfully");
       } catch (error) {
-        console.error("OpenAI key validation failed:", error);
         throw new Error("OpenAI key not configured");
       }
 
@@ -576,7 +401,6 @@ Return ONLY this JSON schema:
             messages: [{ role: 'user', content: userPrompt }],
             model,
             responseFormat: 'json_object',
-            temperature: 0.4,
             maxTokens: 800
           });
 
@@ -599,30 +423,16 @@ Return ONLY this JSON schema:
         error_code: generated.length === 0 ? "all_failed" : null
       });
 
-      // Always return structured response with success/error
-      if (generated.length === 0) {
-        const response = fail("Failed to generate any valid questions. Please try again with different parameters.", 500);
-        response.headers.set("Access-Control-Allow-Origin", "*");
-        response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
-        return response;
-      }
-
-      const response = ok({ 
+      return new Response(JSON.stringify({ 
         items: generated, 
         count: generated.length,
         requested: count 
-      });
-      response.headers.set("Access-Control-Allow-Origin", "*");
-      response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
-      return response;
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     throw new Error("Unknown action");
   } catch (e) {
     console.error("ai-exams-api error", e);
-    const response = fail(String(e?.message ?? e), 500);
-    response.headers.set("Access-Control-Allow-Origin", "*");
-    response.headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
-    return response;
+    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
