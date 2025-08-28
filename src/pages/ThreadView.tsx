@@ -50,7 +50,13 @@ export default function ThreadView() {
       if (!res.ok) throw new Error(data.error || 'Failed to load thread');
       setThread(data.thread);
       const sorted = (data.replies || []).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      setReplies(sorted);
+      // Filter out any temporary optimistic replies that might duplicate server data
+      const filteredServerReplies = sorted.filter((reply: any) => !reply.id.startsWith('temp-'));
+      // Keep any optimistic replies that haven't been replaced yet
+      setReplies(prev => {
+        const optimisticReplies = prev.filter(r => r.id.startsWith('temp-'));
+        return [...filteredServerReplies, ...optimisticReplies];
+      });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -70,6 +76,23 @@ export default function ThreadView() {
       toast({ title: 'Reply too short', description: 'Please write at least 10 characters.' });
       return;
     }
+    
+    // Optimistic UI update
+    const optimisticReply: ReplyRow = {
+      id: `temp-${Date.now()}`,
+      thread_id: thread_id,
+      author_id: session.user?.id || '',
+      content: reply.trim(),
+      created_at: new Date().toISOString(),
+      likes_count: 0,
+      reaction_counts: {},
+      user_reactions: []
+    };
+    
+    setReplies(prev => [...prev, optimisticReply]);
+    const currentReply = reply;
+    setReply("");
+    
     try {
       setPosting(true);
       const res = await fetch(`${FORUMS_EDGE}/api/forum/replies`, {
@@ -78,19 +101,27 @@ export default function ThreadView() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ thread_id, content: reply }),
+        body: JSON.stringify({ thread_id, content: currentReply }),
       });
       if (res.status === 401) {
         toast({ title: 'Sign in required', description: 'Please sign in to post a reply.' });
+        // Rollback optimistic update
+        setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
+        setReply(currentReply);
         return;
       }
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to post reply');
-      setReply("");
+      
       toast({ title: 'Reply posted' });
+      
+      // Replace optimistic reply with real data from server
       await load();
     } catch (e: any) {
       toast({ title: 'Could not post reply', description: e.message });
+      // Rollback optimistic update
+      setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
+      setReply(currentReply);
     } finally {
       setPosting(false);
     }

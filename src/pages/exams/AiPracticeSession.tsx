@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import QuestionCard from "@/components/exams/QuestionCard";
 import FloatingSettings from "@/components/exams/FloatingSettings";
+import ExamResults from "@/components/exams/ExamResults";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ExamName } from "@/lib/curricula";
@@ -49,6 +50,14 @@ export default function AiPracticeSession() {
   const [issueTypes, setIssueTypes] = useState<{ [key: number]: string[] }>({});
   const [feedbackNotes, setFeedbackNotes] = useState<{ [key: number]: string }>({});
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<{ [key: number]: boolean }>({});
+  const [showResults, setShowResults] = useState(false);
+  const [examResults, setExamResults] = useState<{
+    correct: number;
+    total: number;
+    percentage: number;
+    duration: number;
+  } | null>(null);
+  const [startTime] = useState(new Date());
   const [currentSettings, setCurrentSettings] = useState({
     exam: exam as ExamName,
     count: total,
@@ -388,12 +397,7 @@ export default function AiPracticeSession() {
         ).length || 0;
         
         const percentage = Math.round((correctCount / total) * 100);
-        
-        toast({
-          title: 'Session Complete!',
-          description: `You scored ${correctCount}/${total} (${percentage}%)`,
-          duration: 5000
-        });
+        const duration = Math.floor((Date.now() - startTime.getTime()) / 1000);
         
         // Update final attempt record
         supabase
@@ -401,7 +405,14 @@ export default function AiPracticeSession() {
           .update({ finished_at: new Date().toISOString() })
           .eq('id', attemptId)
           .then(() => {
-            setTimeout(() => navigate('/dashboard/exams/attempts'), 2000);
+            // Show results component instead of redirecting
+            setShowResults(true);
+            setExamResults({
+              correct: correctCount,
+              total,
+              percentage,
+              duration
+            });
           });
       });
   }
@@ -412,6 +423,23 @@ export default function AiPracticeSession() {
       setSelected("");
       setShow(false);
     }
+  }
+
+  // Show results screen if exam is completed
+  if (showResults && examResults) {
+    return (
+      <ExamResults
+        score={{
+          correct: examResults.correct,
+          total: examResults.total,
+          percentage: examResults.percentage
+        }}
+        duration={examResults.duration}
+        timeLimit={total * 90} // Approximate time limit
+        onContinue={() => navigate('/exams/ai-practice')}
+        onRetakeExam={() => navigate('/exams/ai-practice')}
+      />
+    );
   }
 
   if (!exam) {

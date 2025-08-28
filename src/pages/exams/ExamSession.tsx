@@ -432,12 +432,23 @@ export default function ExamSession() {
                   </Button>
                   <Button
                     onClick={() => {
+                      const currentAnswer = answers[currentQuestion.id];
+                      if (!currentAnswer) {
+                        toast({
+                          title: 'Answer Required',
+                          description: 'Please select an answer before proceeding.',
+                          variant: 'destructive'
+                        });
+                        return;
+                      }
+                      
                       if (currentIndex < questions.length - 1) {
                         setCurrentIndex(prev => prev + 1);
                       } else {
                         finishExam();
                       }
                     }}
+                    disabled={!answers[currentQuestion?.id]}
                   >
                     {currentIndex < questions.length - 1 ? 'Next' : 'Finish Exam'}
                   </Button>
