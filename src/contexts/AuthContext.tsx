@@ -109,53 +109,98 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut
   );
 
+  // Ensure user has a profile row before setting auth ready
+  const ensureProfile = async (user: User) => {
+    try {
+      // Check if profile exists
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!profile) {
+        // Create profile for new user
+        const { error } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+            avatar_url: user.user_metadata?.avatar_url || null,
+          });
+
+        if (error) {
+          console.warn('Failed to create profile:', error);
+          // Don't block auth if profile creation fails
+        }
+      }
+    } catch (error) {
+      console.warn('Profile check failed:', error);
+      // Don't block auth if check fails
+    }
+  };
+
   useEffect(() => {
     setAuthReady('checking');
     
     // Set up auth state listener FIRST (single source of truth)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       // Only synchronous state updates here
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      setAuthReady('ready');
 
-      // Handle welcome email for new sign-ins and redirect to original page
-      if (event === 'SIGNED_IN' && session?.user?.email) {
-        // Defer Supabase calls with setTimeout to avoid recursive auth calls
-        setTimeout(async () => {
-          try {
-            await supabase.functions.invoke('send-welcome-email', {
-              headers: { Authorization: `Bearer ${session!.access_token}` },
-              body: {
-                user_id: session!.user.id,
-                email: session!.user.email!,
-                full_name:
-                  (session!.user.user_metadata as any)?.full_name ||
-                  (session!.user.user_metadata as any)?.name ||
-                  undefined,
-              },
-            });
-          } catch (e) {
-            console.warn('Welcome email invoke failed', e);
-          }
+      if (session?.user) {
+        // Ensure profile exists before setting ready
+        await ensureProfile(session.user);
+        setAuthReady('ready');
 
-          // Handle return URL redirect after successful sign-in
-          const returnUrl = localStorage.getItem('authReturnUrl');
-          if (returnUrl && returnUrl !== '/auth' && returnUrl !== '/auth/callback' && 
-              (window.location.pathname === '/auth' || window.location.pathname === '/auth/callback')) {
-            localStorage.removeItem('authReturnUrl');
-            window.location.href = returnUrl;
-          }
-        }, 0);
+        // Handle welcome email for new sign-ins and redirect to original page
+        if (event === 'SIGNED_IN' && session?.user?.email) {
+          // Defer Supabase calls with setTimeout to avoid recursive auth calls
+          setTimeout(async () => {
+            try {
+              await supabase.functions.invoke('send-welcome-email', {
+                headers: { Authorization: `Bearer ${session!.access_token}` },
+                body: {
+                  user_id: session!.user.id,
+                  email: session!.user.email!,
+                  full_name:
+                    (session!.user.user_metadata as any)?.full_name ||
+                    (session!.user.user_metadata as any)?.name ||
+                    undefined,
+                },
+              });
+            } catch (e) {
+              console.warn('Welcome email invoke failed', e);
+            }
+
+            // Handle return URL redirect after successful sign-in
+            const returnUrl = localStorage.getItem('authReturnUrl');
+            if (returnUrl && returnUrl !== '/auth' && returnUrl !== '/auth/callback' && 
+                (window.location.pathname === '/auth' || window.location.pathname === '/auth/callback')) {
+              localStorage.removeItem('authReturnUrl');
+              window.location.href = returnUrl;
+            }
+          }, 0);
+        }
+      } else {
+        // No session, auth is ready
+        setAuthReady('ready');
       }
     });
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      if (session?.user) {
+        // Ensure profile exists before setting ready
+        await ensureProfile(session.user);
+      }
       setAuthReady('ready');
     });
 
