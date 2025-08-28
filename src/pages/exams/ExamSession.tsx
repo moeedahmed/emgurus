@@ -34,6 +34,7 @@ export default function ExamSession() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { authReady, user } = useAuth();
   const sessionState = location.state as ExamSessionState | null;
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -55,6 +56,25 @@ export default function ExamSession() {
   useEffect(() => {
     document.title = "Exam Session • EM Gurus";
   }, []);
+
+  // Show loading state until auth is ready
+  if (authReady !== 'ready') {
+    return (
+      <div className="container mx-auto px-4 py-10">
+        <Card>
+          <CardContent className="py-8 text-center">
+            <div className="mb-3">Loading exam session...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!user) {
+    window.location.href = '/auth';
+    return null;
+  }
 
   // Initialize session
   useEffect(() => {

@@ -111,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut
   );
 
-  // Ensure user has a profile row before setting auth ready
+  // Ensure user has a profile row and default role/membership before setting auth ready
   const ensureProfile = async (user: User) => {
     try {
       // Check if profile exists
@@ -153,9 +153,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Don't block auth if profile creation fails
         }
       }
+
+      // Ensure user has a default role
+      const { data: userRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!userRole) {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: user.id,
+            role: 'user'
+          });
+
+        if (roleError) {
+          console.warn('Failed to create user role:', roleError);
+          // Don't block auth if role creation fails
+        }
+      }
+
+      // Ensure user has a default subscription
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('tier')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!subscription) {
+        const { error: subError } = await supabase
+          .from('subscriptions')
+          .insert({
+            user_id: user.id,
+            tier: 'free',
+            status: 'active'
+          });
+
+        if (subError) {
+          console.warn('Failed to create subscription:', subError);
+          // Don't block auth if subscription creation fails
+        }
+      }
     } catch (error) {
-      console.warn('Profile check failed:', error);
-      // Don't block auth if check fails
+      console.warn('Profile/role/subscription provisioning failed:', error);
+      // Don't block auth if provisioning fails
     }
   };
 

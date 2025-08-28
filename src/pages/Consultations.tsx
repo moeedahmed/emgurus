@@ -8,8 +8,10 @@ import PageHero from "@/components/PageHero";
 import { Chip } from "@/components/ui/chip";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ConsultationsFilterPanel from "@/components/consultations/ConsultationsFilterPanel";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
+  const { authReady, user } = useAuth();
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState<string>("all");
   const [exam, setExam] = useState<string>("all");
@@ -19,6 +21,15 @@ const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [attemptedSeed, setAttemptedSeed] = useState(false);
+
+  // Show loading state until auth is ready
+  if (authReady !== 'ready') {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-muted-foreground">Loading consultations...</div>
+      </div>
+    );
+  }
   
   useEffect(() => {
     const title = "Book a Guru for Career Guidance | EMGurus";

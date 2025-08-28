@@ -10,6 +10,7 @@ import ExamResults from "@/components/exams/ExamResults";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ExamName } from "@/lib/curricula";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface GeneratedQuestion {
   id?: string;
@@ -29,6 +30,7 @@ export default function AiPracticeSession() {
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const { toast } = useToast();
+  const { authReady } = useAuth();
 
   const exam = search.get("exam");
   const topic = search.get("topic");
@@ -68,6 +70,19 @@ export default function AiPracticeSession() {
   useEffect(() => {
     document.title = "AI Practice Session • EM Gurus";
   }, []);
+
+  // Show loading state until auth is ready
+  if (authReady !== 'ready') {
+    return (
+      <div className="container mx-auto px-4 py-10">
+        <Card>
+          <CardContent className="py-8 text-center">
+            <div className="mb-3">Loading AI practice session...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Check auth and redirect if missing required params
   useEffect(() => {

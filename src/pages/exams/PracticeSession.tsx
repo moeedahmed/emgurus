@@ -42,7 +42,7 @@ export default function PracticeSession() {
   const location = useLocation();
   const params = useParams();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const { isAdmin, isGuru } = useRoles();
   const sessionState = location.state as PracticeSessionState | null;
 
@@ -63,6 +63,25 @@ export default function PracticeSession() {
   useEffect(() => {
     document.title = "Practice Session • EM Gurus";
   }, []);
+
+  // Show loading state until auth is ready
+  if (authReady !== 'ready') {
+    return (
+      <div className="container mx-auto px-4 py-10">
+        <Card>
+          <CardContent className="py-8 text-center">
+            <div className="mb-3">Loading practice session...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!user) {
+    window.location.href = '/auth';
+    return null;
+  }
 
   // Save/restore session progress
   useEffect(() => {
