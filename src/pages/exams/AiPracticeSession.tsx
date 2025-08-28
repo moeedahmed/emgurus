@@ -389,22 +389,33 @@ export default function AiPracticeSession() {
         
         const percentage = Math.round((correctCount / total) * 100);
         
-        toast({
-          title: 'Session Complete!',
-          description: `You scored ${correctCount}/${total} (${percentage}%)`,
-          duration: 5000
-        });
+        // Show result card
+        showAISessionResult(correctCount, total, percentage);
         
         // Update final attempt record
         supabase
           .from('exam_attempts')
           .update({ finished_at: new Date().toISOString() })
-          .eq('id', attemptId)
-          .then(() => {
-            setTimeout(() => navigate('/dashboard/exams/attempts'), 2000);
-          });
+          .eq('id', attemptId);
       });
   }
+
+  const showAISessionResult = (correct: number, total: number, percentage: number) => {
+    toast({
+      title: 'AI Practice Complete!',
+      description: `Score: ${correct}/${total} (${percentage}%)`,
+      duration: 5000
+    });
+
+    // Show result card in UI
+    setTimeout(() => {
+      if (confirm(`AI Practice Session Complete!\n\nScore: ${correct}/${total} (${percentage}%)\n\nWould you like to view all your attempts?`)) {
+        navigate('/dashboard/user#exams-attempts');
+      } else {
+        navigate('/exams');
+      }
+    }, 1000);
+  };
 
   function prev() {
     if (idx > 0) {
@@ -583,7 +594,14 @@ export default function AiPracticeSession() {
               {!show ? (
                 <Button onClick={submit} disabled={!q || !selected || loading}>Submit</Button>
               ) : (
-                <Button onClick={next}>{idx < total - 1 ? 'Next' : 'Finish'}</Button>
+                <Button onClick={next} disabled={!selected && !show}>
+                  {idx < total - 1 ? 'Next' : 'Finish'}
+                </Button>
+              )}
+              {!selected && !show && (
+                <div className="text-sm text-muted-foreground ml-2">
+                  Please select an answer to continue
+                </div>
               )}
             </div>
           </div>

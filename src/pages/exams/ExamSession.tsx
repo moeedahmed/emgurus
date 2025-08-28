@@ -230,13 +230,8 @@ export default function ExamSession() {
 
       const percentage = Math.round((correctCount / questions.length) * 100);
       
-      toast({
-        title: 'Exam Complete!',
-        description: `Score: ${correctCount}/${questions.length} (${percentage}%)`,
-        duration: 5000
-      });
-
-      setTimeout(() => navigate('/dashboard/exams/attempts'), 2000);
+      // Show result card instead of just toast
+      showExamResult(correctCount, questions.length, percentage);
     } catch (err) {
       console.error('Finish exam failed:', err);
       toast({
@@ -245,6 +240,23 @@ export default function ExamSession() {
         variant: 'destructive'
       });
     }
+  };
+
+  const showExamResult = (correct: number, total: number, percentage: number) => {
+    toast({
+      title: 'Exam Complete!',
+      description: `Score: ${correct}/${total} (${percentage}%)`,
+      duration: 5000
+    });
+
+    // Show result card in UI (you could also create a modal here)
+    setTimeout(() => {
+      if (confirm(`Exam Complete!\n\nScore: ${correct}/${total} (${percentage}%)\n\nWould you like to view all your attempts?`)) {
+        navigate('/dashboard/user#exams-attempts');
+      } else {
+        navigate('/exams');
+      }
+    }, 1000);
   };
 
   const formatTime = (seconds: number) => {
@@ -412,9 +424,15 @@ export default function ExamSession() {
                         finishExam();
                       }
                     }}
+                    disabled={!answers[currentQuestion.id]}
                   >
                     {currentIndex < questions.length - 1 ? 'Next' : 'Finish Exam'}
                   </Button>
+                  {!answers[currentQuestion.id] && (
+                    <div className="text-sm text-muted-foreground ml-2">
+                      Please select an answer to continue
+                    </div>
+                  )}
                 </div>
               </div>
             </>

@@ -70,6 +70,23 @@ export default function ThreadView() {
       toast({ title: 'Reply too short', description: 'Please write at least 10 characters.' });
       return;
     }
+    
+    // Optimistic update
+    const tempReply = {
+      id: `temp-${Date.now()}`,
+      thread_id,
+      author_id: session.user?.id || '',
+      content: reply,
+      created_at: new Date().toISOString(),
+      likes_count: 0,
+      reaction_counts: {},
+      user_reactions: []
+    };
+    
+    setReplies(prev => [...prev, tempReply]);
+    const replyContent = reply;
+    setReply("");
+    
     try {
       setPosting(true);
       const res = await fetch(`${FORUMS_EDGE}/api/forum/replies`, {
@@ -78,19 +95,27 @@ export default function ThreadView() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ thread_id, content: reply }),
+        body: JSON.stringify({ thread_id, content: replyContent }),
       });
       if (res.status === 401) {
         toast({ title: 'Sign in required', description: 'Please sign in to post a reply.' });
+        // Remove optimistic update
+        setReplies(prev => prev.filter(r => r.id !== tempReply.id));
+        setReply(replyContent);
         return;
       }
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to post reply');
-      setReply("");
+      
       toast({ title: 'Reply posted' });
+      
+      // Replace temp reply with real one from server or reload
       await load();
     } catch (e: any) {
       toast({ title: 'Could not post reply', description: e.message });
+      // Remove optimistic update and restore content
+      setReplies(prev => prev.filter(r => r.id !== tempReply.id));
+      setReply(replyContent);
     } finally {
       setPosting(false);
     }

@@ -122,7 +122,10 @@ const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
           }
         }
       } catch (e) {
-        console.error(e);
+        console.error('Consultations API error:', e);
+        // Show graceful fallback for failed membership/API calls
+        setGurus([]);
+        toast.error('Unable to load consultations. Please check your membership status or try again later.');
       } finally {
         setLoading(false);
       }
@@ -287,9 +290,24 @@ const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
 
             <div className="text-sm text-muted-foreground mb-4">{filtered.length} mentors found</div>
 
-            {filtered.length === 0 ? (
+            {loading ? (
+              <section className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3"></div>
+                <div className="text-muted-foreground">Loading consultations...</div>
+              </section>
+            ) : filtered.length === 0 ? (
               <section className="text-center text-muted-foreground py-12">
-                No Gurus found. Try changing filters or come back later.
+                {gurus.length === 0 ? (
+                  <div className="space-y-3">
+                    <div className="font-medium">No membership found</div>
+                    <div className="text-sm">Please upgrade to access consultations or try again later.</div>
+                    <Button variant="outline" onClick={() => window.location.href = '/pricing'}>
+                      View Pricing
+                    </Button>
+                  </div>
+                ) : (
+                  "No Gurus found. Try changing filters or come back later."
+                )}
               </section>
             ) : (
               <section className="space-y-4">

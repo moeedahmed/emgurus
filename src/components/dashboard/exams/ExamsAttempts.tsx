@@ -4,6 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import TableCard from "@/components/dashboard/TableCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 
 export default function ExamsAttempts() {
   const { user } = useAuth();
@@ -86,6 +88,28 @@ export default function ExamsAttempts() {
     }},
     { key: 'view', header: 'View', render: (r: any) => <Button size="sm" variant="outline" onClick={() => openView(r)}>View</Button> },
   ];
+
+  if (!user) {
+    return (
+      <div className="p-4 grid gap-4">
+        <div>
+          <h3 className="text-lg font-semibold">Attempts</h3>
+          <p className="text-sm text-muted-foreground">All your practice and exam sessions.</p>
+        </div>
+        <Card>
+          <CardContent className="py-8 text-center">
+            <div className="mb-3 font-medium">Sign in Required</div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Please sign in to view your exam attempts and track your progress.
+            </p>
+            <Button asChild>
+              <Link to="/auth">Sign In</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 grid gap-4">
