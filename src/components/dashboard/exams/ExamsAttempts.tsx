@@ -4,8 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import TableCard from "@/components/dashboard/TableCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { LogIn } from "lucide-react";
 
 export default function ExamsAttempts() {
   const { user } = useAuth();
@@ -37,15 +35,10 @@ export default function ExamsAttempts() {
     if (topic) params.set('topic', topic);
     return `/exams?${params.toString()}`;
   })();
-  
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user) { 
-        setRows([]);
-        setLoading(false);
-        return; 
-      }
+      if (!user) { setRows([]); return; }
       setLoading(true);
       try {
         const { data } = await (supabase as any)
@@ -56,35 +49,10 @@ export default function ExamsAttempts() {
           .order('started_at', { ascending: false })
           .limit(100);
         if (!cancelled) setRows((data as any[]) || []);
-      } catch (error) {
-        console.error('Failed to load exam attempts:', error);
-        if (!cancelled) setRows([]);
-      } finally { 
-        if (!cancelled) setLoading(false); 
-      }
+      } finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
   }, [user?.id, mode]);
-
-  // Show auth prompt if user is not logged in
-  if (!user) {
-    return (
-      <div className="p-4">
-        <Card>
-          <CardContent className="py-8 text-center">
-            <LogIn className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">Sign In Required</h3>
-            <p className="text-muted-foreground mb-4">
-              Please sign in to view your exam attempts and track your progress.
-            </p>
-            <Button onClick={() => window.location.href = '/auth'}>
-              Sign In
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   const openView = async (attempt: any) => {
     setActive(attempt); setOpen(true); setItems([]); setQuestions([]);

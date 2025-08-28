@@ -101,8 +101,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Ensure local state is always cleared to avoid being stuck
       setSession(null);
       setUser(null);
-      // Redirect to home page after sign out
-      window.location.href = '/';
     }
   };
 
@@ -111,157 +109,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut
   );
 
-  // Ensure user has a profile row and default role/membership before setting auth ready
-  const ensureProfile = async (user: User) => {
-    try {
-      // Check if profile exists
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!profile) {
-        // Create complete profile for new user with safe defaults
-        const { error } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-            avatar_url: user.user_metadata?.avatar_url || null,
-            onboarding_required: true,
-            onboarding_progress: {},
-            show_profile_public: true,
-            show_socials_public: true,
-            position_tags: [],
-            employer_tags: [],
-            exam_interests: [],
-            languages: [],
-            subscription_tier: 'free',
-            notification_settings: {
-              channels: { inapp: true, email: true, sms: false },
-              categories: {
-                blogs: { assignments: true, approvals: true, rejections: true, published: true },
-                system: { general: true }
-              }
-            }
-          });
-
-        if (error) {
-          console.warn('Failed to create profile:', error);
-          // Don't block auth if profile creation fails
-        }
-      }
-
-      // Ensure user has a default role
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!userRole) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: user.id,
-            role: 'user'
-          });
-
-        if (roleError) {
-          console.warn('Failed to create user role:', roleError);
-          // Don't block auth if role creation fails
-        }
-      }
-
-      // Ensure user has a default subscription
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('tier')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!subscription) {
-        const { error: subError } = await supabase
-          .from('subscriptions')
-          .insert({
-            user_id: user.id,
-            tier: 'free',
-            status: 'active'
-          });
-
-        if (subError) {
-          console.warn('Failed to create subscription:', subError);
-          // Don't block auth if subscription creation fails
-        }
-      }
-    } catch (error) {
-      console.warn('Profile/role/subscription provisioning failed:', error);
-      // Don't block auth if provisioning fails
-    }
-  };
-
   useEffect(() => {
     setAuthReady('checking');
     
     // Set up auth state listener FIRST (single source of truth)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // Only synchronous state updates here
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      setAuthReady('ready');
 
-      if (session?.user) {
-        // Ensure profile exists before setting ready
-        await ensureProfile(session.user);
-        setAuthReady('ready');
-
-        // Handle welcome email for new sign-ins and redirect to original page
-        if (event === 'SIGNED_IN' && session?.user?.email) {
-          // Defer Supabase calls with setTimeout to avoid recursive auth calls
-          setTimeout(async () => {
-            try {
-              await supabase.functions.invoke('send-welcome-email', {
-                headers: { Authorization: `Bearer ${session!.access_token}` },
-                body: {
-                  user_id: session!.user.id,
-                  email: session!.user.email!,
-                  full_name:
-                    (session!.user.user_metadata as any)?.full_name ||
-                    (session!.user.user_metadata as any)?.name ||
-                    undefined,
-                },
-              });
-            } catch (e) {
-              console.warn('Welcome email invoke failed', e);
-            }
-
-            // Handle return URL redirect after successful sign-in
-            const returnUrl = localStorage.getItem('authReturnUrl');
-            if (returnUrl && returnUrl !== '/auth' && returnUrl !== '/auth/callback' && 
-                (window.location.pathname === '/auth' || window.location.pathname === '/auth/callback')) {
-              localStorage.removeItem('authReturnUrl');
-              window.location.href = returnUrl;
-            }
-          }, 0);
-        }
-      } else {
-        // No session, auth is ready
-        setAuthReady('ready');
+      // Handle welcome email for new sign-ins
+      if (event === 'SIGNED_IN' && session?.user?.email) {
+        // Defer Supabase calls with setTimeout to avoid recursive auth calls
+        setTimeout(async () => {
+          try {
+            await supabase.functions.invoke('send-welcome-email', {
+              headers: { Authorization: `Bearer ${session!.access_token}` },
+              body: {
+                user_id: session!.user.id,
+                email: session!.user.email!,
+                full_name:
+                  (session!.user.user_metadata as any)?.full_name ||
+                  (session!.user.user_metadata as any)?.name ||
+                  undefined,
+              },
+            });
+          } catch (e) {
+            console.warn('Welcome email invoke failed', e);
+          }
+        }, 0);
       }
     });
 
     // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-
-      if (session?.user) {
-        // Ensure profile exists before setting ready
-        await ensureProfile(session.user);
-      }
       setAuthReady('ready');
     });
 
@@ -269,11 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signInWithGoogle = async () => {
-    // Store current location to return to it after auth
-    const currentPath = window.location.pathname + window.location.search;
-    localStorage.setItem('authReturnUrl', currentPath);
-    
-    const redirectUrl = `${window.location.origin}/auth/callback`;
+    const redirectUrl = `${window.location.origin}/auth`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

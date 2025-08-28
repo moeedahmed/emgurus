@@ -6,11 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import QuestionCard from "@/components/exams/QuestionCard";
 import FloatingSettings from "@/components/exams/FloatingSettings";
-import ExamResults from "@/components/exams/ExamResults";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ExamName } from "@/lib/curricula";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface GeneratedQuestion {
   id?: string;
@@ -30,7 +28,6 @@ export default function AiPracticeSession() {
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const { toast } = useToast();
-  const { authReady } = useAuth();
 
   const exam = search.get("exam");
   const topic = search.get("topic");
@@ -52,14 +49,6 @@ export default function AiPracticeSession() {
   const [issueTypes, setIssueTypes] = useState<{ [key: number]: string[] }>({});
   const [feedbackNotes, setFeedbackNotes] = useState<{ [key: number]: string }>({});
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<{ [key: number]: boolean }>({});
-  const [showResults, setShowResults] = useState(false);
-  const [examResults, setExamResults] = useState<{
-    correct: number;
-    total: number;
-    percentage: number;
-    duration: number;
-  } | null>(null);
-  const [startTime] = useState(new Date());
   const [currentSettings, setCurrentSettings] = useState({
     exam: exam as ExamName,
     count: total,
@@ -70,19 +59,6 @@ export default function AiPracticeSession() {
   useEffect(() => {
     document.title = "AI Practice Session • EM Gurus";
   }, []);
-
-  // Show loading state until auth is ready
-  if (authReady !== 'ready') {
-    return (
-      <div className="container mx-auto px-4 py-10">
-        <Card>
-          <CardContent className="py-8 text-center">
-            <div className="mb-3">Loading AI practice session...</div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   // Check auth and redirect if missing required params
   useEffect(() => {
@@ -412,7 +388,12 @@ export default function AiPracticeSession() {
         ).length || 0;
         
         const percentage = Math.round((correctCount / total) * 100);
-        const duration = Math.floor((Date.now() - startTime.getTime()) / 1000);
+        
+        toast({
+          title: 'Session Complete!',
+          description: `You scored ${correctCount}/${total} (${percentage}%)`,
+          duration: 5000
+        });
         
         // Update final attempt record
         supabase
@@ -420,14 +401,7 @@ export default function AiPracticeSession() {
           .update({ finished_at: new Date().toISOString() })
           .eq('id', attemptId)
           .then(() => {
-            // Show results component instead of redirecting
-            setShowResults(true);
-            setExamResults({
-              correct: correctCount,
-              total,
-              percentage,
-              duration
-            });
+            setTimeout(() => navigate('/dashboard/exams/attempts'), 2000);
           });
       });
   }
@@ -438,23 +412,6 @@ export default function AiPracticeSession() {
       setSelected("");
       setShow(false);
     }
-  }
-
-  // Show results screen if exam is completed
-  if (showResults && examResults) {
-    return (
-      <ExamResults
-        score={{
-          correct: examResults.correct,
-          total: examResults.total,
-          percentage: examResults.percentage
-        }}
-        duration={examResults.duration}
-        timeLimit={total * 90} // Approximate time limit
-        onContinue={() => navigate('/dashboard/user?tab=attempts')}
-        onRetakeExam={() => navigate('/exams/ai-practice')}
-      />
-    );
   }
 
   if (!exam) {
