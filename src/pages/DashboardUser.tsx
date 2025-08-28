@@ -1,6 +1,8 @@
 import React, { useEffect } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
 import { BookOpen, Stethoscope, GraduationCap, MessagesSquare } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import Bookings from "@/pages/Bookings";
 import ExamsOverview from "@/components/dashboard/exams/ExamsOverview";
 import ExamsAttempts from "@/components/dashboard/exams/ExamsAttempts";
@@ -14,7 +16,15 @@ import MyBlogs from "@/components/dashboard/blogs/MyBlogs";
 import MyThreadsWithChips from "@/components/dashboard/forums/MyThreadsWithChips";
 
 export default function DashboardUser() {
+  const { authReady } = useAuth();
   useEffect(() => { document.title = "Learner Workspace | EMGurus"; }, []);
+
+  // Wrap auth-dependent components in error boundaries
+  const AuthSafeComponent = ({ children }: { children: React.ReactNode }) => (
+    <ErrorBoundary>
+      {children}
+    </ErrorBoundary>
+  );
 
   const sections: WorkspaceSection[] = [
     {
@@ -35,10 +45,10 @@ export default function DashboardUser() {
       title: "Exams",
       icon: GraduationCap,
       tabs: [
-        { id: "overview", title: "Overview", render: <div className="p-0"><ExamsOverview /></div> },
-        { id: "attempts", title: "Attempts", description: "Your recent practice and exam sessions.", render: <div className="p-0"><ExamsAttempts /></div> },
-        { id: "progress", title: "Progress", description: "Where you're strong or need work.", render: <div className="p-0"><ExamsProgressMatrix /></div> },
-        { id: "feedback", title: "Feedback", description: "Questions you flagged and your notes.", render: <div className="p-0"><ExamsFeedbackList /></div> },
+        { id: "overview", title: "Overview", render: <AuthSafeComponent><div className="p-0"><ExamsOverview /></div></AuthSafeComponent> },
+        { id: "attempts", title: "Attempts", description: "Your recent practice and exam sessions.", render: <AuthSafeComponent><div className="p-0"><ExamsAttempts /></div></AuthSafeComponent> },
+        { id: "progress", title: "Progress", description: "Where you're strong or need work.", render: <AuthSafeComponent><div className="p-0"><ExamsProgressMatrix /></div></AuthSafeComponent> },
+        { id: "feedback", title: "Feedback", description: "Questions you flagged and your notes.", render: <AuthSafeComponent><div className="p-0"><ExamsFeedbackList /></div></AuthSafeComponent> },
       ],
     },
     {

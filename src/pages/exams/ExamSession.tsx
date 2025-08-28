@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, Flag, ArrowLeft } from "lucide-react";
 import QuestionCard from "@/components/exams/QuestionCard";
 import MarkForReviewButton from "@/components/exams/MarkForReviewButton";
+import ExamResults from "@/components/exams/ExamResults";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +44,13 @@ export default function ExamSession() {
   const [loading, setLoading] = useState(true);
   const [attemptId, setAttemptId] = useState<string>("");
   const [startTime, setStartTime] = useState<Date>(new Date());
+  const [showResults, setShowResults] = useState(false);
+  const [examResults, setExamResults] = useState<{
+    correct: number;
+    total: number;
+    percentage: number;
+    duration: number;
+  } | null>(null);
 
   useEffect(() => {
     document.title = "Exam Session • EM Gurus";
@@ -230,13 +238,14 @@ export default function ExamSession() {
 
       const percentage = Math.round((correctCount / questions.length) * 100);
       
-      toast({
-        title: 'Exam Complete!',
-        description: `Score: ${correctCount}/${questions.length} (${percentage}%)`,
-        duration: 5000
+      // Show results screen instead of immediately navigating
+      setExamResults({
+        correct: correctCount,
+        total: questions.length,
+        percentage,
+        duration: durationSec
       });
-
-      setTimeout(() => navigate('/dashboard/exams/attempts'), 2000);
+      setShowResults(true);
     } catch (err) {
       console.error('Finish exam failed:', err);
       toast({
@@ -260,6 +269,23 @@ export default function ExamSession() {
   const currentQuestion = questions[currentIndex];
   const answeredCount = Object.keys(answers).length;
   const markedCount = markedForReview.size;
+
+  // Show results screen if exam is completed
+  if (showResults && examResults) {
+    return (
+      <ExamResults
+        score={{
+          correct: examResults.correct,
+          total: examResults.total,
+          percentage: examResults.percentage
+        }}
+        duration={examResults.duration}
+        timeLimit={sessionState?.limitSec || 0}
+        onContinue={() => navigate('/dashboard/user')}
+        onRetakeExam={() => navigate('/exams/exam')}
+      />
+    );
+  }
 
   if (loading) {
     return (

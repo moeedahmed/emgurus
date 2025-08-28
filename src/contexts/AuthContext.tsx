@@ -120,7 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
       setAuthReady('ready');
 
-      // Handle welcome email for new sign-ins
+      // Handle welcome email for new sign-ins and redirect to original page
       if (event === 'SIGNED_IN' && session?.user?.email) {
         // Defer Supabase calls with setTimeout to avoid recursive auth calls
         setTimeout(async () => {
@@ -139,6 +139,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch (e) {
             console.warn('Welcome email invoke failed', e);
           }
+
+          // Handle return URL redirect after successful sign-in
+          const returnUrl = localStorage.getItem('authReturnUrl');
+          if (returnUrl && returnUrl !== '/auth' && window.location.pathname === '/auth') {
+            localStorage.removeItem('authReturnUrl');
+            window.location.href = returnUrl;
+          }
         }, 0);
       }
     });
@@ -155,6 +162,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signInWithGoogle = async () => {
+    // Store current location to return to it after auth
+    const currentPath = window.location.pathname + window.location.search;
+    localStorage.setItem('authReturnUrl', currentPath);
+    
     const redirectUrl = `${window.location.origin}/auth`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
