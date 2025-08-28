@@ -142,7 +142,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           // Handle return URL redirect after successful sign-in
           const returnUrl = localStorage.getItem('authReturnUrl');
-          if (returnUrl && returnUrl !== '/auth' && window.location.pathname === '/auth') {
+          if (returnUrl && returnUrl !== '/auth' && returnUrl !== '/auth/callback' && 
+              (window.location.pathname === '/auth' || window.location.pathname === '/auth/callback')) {
             localStorage.removeItem('authReturnUrl');
             window.location.href = returnUrl;
           }
@@ -166,7 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const currentPath = window.location.pathname + window.location.search;
     localStorage.setItem('authReturnUrl', currentPath);
     
-    const redirectUrl = `${window.location.origin}/auth`;
+    const redirectUrl = `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

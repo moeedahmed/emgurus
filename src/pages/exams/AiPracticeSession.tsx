@@ -436,7 +436,7 @@ export default function AiPracticeSession() {
         }}
         duration={examResults.duration}
         timeLimit={total * 90} // Approximate time limit
-        onContinue={() => navigate('/exams/ai-practice')}
+        onContinue={() => navigate('/dashboard/user?tab=attempts')}
         onRetakeExam={() => navigate('/exams/ai-practice')}
       />
     );
