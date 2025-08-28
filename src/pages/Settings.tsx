@@ -49,9 +49,24 @@ const defaultSettings: NotificationSettings = {
 };
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Show loading state until auth is ready
+  if (authReady !== 'ready') {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-muted-foreground">Loading settings...</div>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!user) {
+    window.location.href = '/auth';
+    return null;
+  }
 
   const [activeTab, setActiveTab] = useState<string>("profile");
   const [profile, setProfile] = useState<ProfileRowAny | null>(null);
@@ -124,7 +139,7 @@ export default function SettingsPage() {
       const row = data as ProfileRowAny | null;
       setProfile(row);
 
-      // Initialize profile form state
+      // Initialize profile form state with null-safe fallbacks
       if (row) {
         setFullName(row.full_name || '');
         setCountry(row.country || '');
@@ -148,6 +163,25 @@ export default function SettingsPage() {
         if (row.notification_settings?.phone_verified) {
           setPhoneVerified(true);
         }
+      } else {
+        // Set safe defaults if no profile found yet
+        setFullName('');
+        setCountry('');
+        setTz('');
+        setPrimarySpecialty('');
+        setExamInterests([]);
+        setLanguages([]);
+        setBio('');
+        setPositionText('');
+        setHospitalText('');
+        setLinkedinUrl('');
+        setTwitterUrl('');
+        setGithubUrl('');
+        setFacebookUrl('');
+        setInstagramUrl('');
+        setYoutubeUrl('');
+        setAvatarInput('');
+        setPhoneInput('');
       }
 
       // Detect optional columns by presence in fetched row

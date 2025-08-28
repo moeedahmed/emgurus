@@ -16,8 +16,23 @@ import MyBlogs from "@/components/dashboard/blogs/MyBlogs";
 import MyThreadsWithChips from "@/components/dashboard/forums/MyThreadsWithChips";
 
 export default function DashboardUser() {
-  const { authReady } = useAuth();
+  const { authReady, user } = useAuth();
   useEffect(() => { document.title = "Learner Workspace | EMGurus"; }, []);
+
+  // Show loading state until auth is ready
+  if (authReady !== 'ready') {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-muted-foreground">Loading workspace...</div>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!user) {
+    window.location.href = '/auth';
+    return null;
+  }
 
   // Wrap auth-dependent components in error boundaries
   const AuthSafeComponent = ({ children }: { children: React.ReactNode }) => (

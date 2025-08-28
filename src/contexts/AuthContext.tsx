@@ -101,6 +101,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Ensure local state is always cleared to avoid being stuck
       setSession(null);
       setUser(null);
+      // Redirect to home page after sign out
+      window.location.href = '/';
     }
   };
 
@@ -120,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .maybeSingle();
 
       if (!profile) {
-        // Create profile for new user
+        // Create complete profile for new user with safe defaults
         const { error } = await supabase
           .from('profiles')
           .insert({
@@ -128,6 +130,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: user.email,
             full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
             avatar_url: user.user_metadata?.avatar_url || null,
+            onboarding_required: true,
+            onboarding_progress: {},
+            show_profile_public: true,
+            show_socials_public: true,
+            position_tags: [],
+            employer_tags: [],
+            exam_interests: [],
+            languages: [],
+            subscription_tier: 'free',
+            notification_settings: {
+              channels: { inapp: true, email: true, sms: false },
+              categories: {
+                blogs: { assignments: true, approvals: true, rejections: true, published: true },
+                system: { general: true }
+              }
+            }
           });
 
         if (error) {
