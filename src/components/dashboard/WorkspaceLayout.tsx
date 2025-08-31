@@ -177,7 +177,12 @@ export function WorkspaceLayoutInner({
             </div>
           </header>
 
-          <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
+          <main 
+            id="main-content" 
+            role="main" 
+            tabIndex={-1}
+            className="container mx-auto px-2 sm:px-4 py-4 sm:py-6"
+          >
             <Tabs 
               key={`${activeView}:${activeTab}:${tabRetryKey}`}
               value={activeTab}
@@ -206,7 +211,7 @@ export function WorkspaceLayoutInner({
                 </TabsContent>
               ))}
             </Tabs>
-          </div>
+           </main>
         </SidebarInset>
     </div>
   );

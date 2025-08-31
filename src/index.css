@@ -253,6 +253,33 @@ All colors MUST be HSL.
     }
   }
 
+  /* Accessibility utilities */
+  .skip-link {
+    transform: translateY(-100%);
+  }
+  
+  .skip-link:focus,
+  .skip-link:focus-visible {
+    transform: translateY(0);
+  }
+
+  /* Enhanced focus-visible styles */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring)) !important;
+    outline-offset: 2px !important;
+  }
+
+  /* Ensure interactive elements have proper focus styles */
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid hsl(var(--ring)) !important;
+    outline-offset: 2px !important;
+  }
+
   /* Text utilities */
   .text-balance {
     text-wrap: balance;
