@@ -8,6 +8,7 @@ import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { fromZonedTime } from "https://esm.sh/date-fns-tz@3.0.0";
 import { Resend } from "npm:resend@4.0.0";
+import { requireEntitlement } from "../_shared/entitlements.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -26,6 +27,7 @@ function json(data: unknown, status = 200) {
 function unauthorized(msg = "Unauthorized") { return json({ error: msg }, 401); }
 function badRequest(msg = "Bad Request") { return json({ error: msg }, 400); }
 function notFound(msg = "Not Found") { return json({ error: msg }, 404); }
+function forbidden(msg = "Requires active subscription") { return json({ error: msg }, 403); }
 function serverError(msg: string, details?: unknown) {
   console.error("Server error:", msg, details);
   return json({ error: msg }, 500);
@@ -524,7 +526,13 @@ async function handle(req: Request): Promise<Response> {
     if (path.endsWith("/api/bookings") && req.method === "POST") {
       const user = await getAuthUser(req);
       if (!user) return unauthorized("Authentication required for bookings");
-      if (!user) return unauthorized();
+      
+      // Check entitlement for booking creation
+      const serviceClient = getServiceClient();
+      const entitlementResult = await requireEntitlement(serviceClient, user.id, ['consults', 'premium']);
+      if (!entitlementResult.ok) {
+        return forbidden(entitlementResult.message);
+      }
       const body = await req.json().catch(() => null) as any;
       if (!body) return badRequest("Invalid JSON body");
       const { guru_id, start_datetime_utc, end_datetime_utc, communication_method, notes } = body;
@@ -607,6 +615,13 @@ async function handle(req: Request): Promise<Response> {
     if (path.endsWith("/api/payments") && req.method === "POST") {
       const user = await getAuthUser(req);
       if (!user) return unauthorized("Authentication required for payments");
+      
+      // Check entitlement for payment processing
+      const serviceClient = getServiceClient();
+      const entitlementResult = await requireEntitlement(serviceClient, user.id, ['consults', 'premium']);
+      if (!entitlementResult.ok) {
+        return forbidden(entitlementResult.message);
+      }
       const body = await req.json().catch(() => null) as any;
       const { booking_id, provider } = body || {};
       if (!booking_id || !provider) return badRequest("booking_id and provider are required");
@@ -666,6 +681,13 @@ async function handle(req: Request): Promise<Response> {
     if (path.endsWith("/api/payments/verify") && req.method === "POST") {
       const user = await getAuthUser(req);
       if (!user) return unauthorized("Authentication required for payment verification");
+      
+      // Check entitlement for payment verification
+      const serviceClient = getServiceClient();
+      const entitlementResult = await requireEntitlement(serviceClient, user.id, ['consults', 'premium']);
+      if (!entitlementResult.ok) {
+        return forbidden(entitlementResult.message);
+      }
       const { session_id } = await req.json().catch(() => ({}));
       if (!session_id) return badRequest("session_id required");
 

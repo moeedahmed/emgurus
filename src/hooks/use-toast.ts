@@ -1,4 +1,4 @@
-import { toast as sonnerToast } from "sonner"
+import { toast as sonnerToast } from "@/lib/toast-core"
 
 // Compatibility adapter for existing use-toast API
 // Routes object-style toasts to Sonner while preserving the same interface
