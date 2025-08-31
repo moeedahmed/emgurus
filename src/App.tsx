@@ -86,6 +86,7 @@ import { useRoles } from "@/hooks/useRoles";
 import RoleRedirector from "@/components/auth/RoleRedirector";
 import AuthLandingGuard from "@/components/auth/AuthLandingGuard";
 import { SkipLink } from "@/components/ui/SkipLink";
+import { ScreenReaderAnnouncer } from "@/components/ui/ScreenReaderAnnouncer";
 
 // Loading fallback component
 const PageLoadingFallback = () => (
@@ -125,6 +126,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <SkipLink />
+          <ScreenReaderAnnouncer />
           <ScrollToTop />
           <AuthLandingGuard />
           <Routes>

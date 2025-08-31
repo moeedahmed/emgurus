@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import TabErrorBoundary from "@/components/TabErrorBoundary";
+import { announce } from "@/lib/a11y";
 
 export type WorkspaceSection = {
   id: string;            // e.g. "blogs"
@@ -36,6 +37,8 @@ export function WorkspaceLayoutInner({
   const firstId = defaultSectionId || ids[0];
   const [searchParams, setSearchParams] = useSearchParams();
   const [tabRetryKey, setTabRetryKey] = useState(0);
+  const previousViewRef = useRef<string>('');
+  const previousTabRef = useRef<string>('');
 
   // Derive active view and tab from URLSearchParams with fallbacks
   const activeView = useMemo(() => {
@@ -103,6 +106,32 @@ export function WorkspaceLayoutInner({
   const handleTabRetry = useCallback(() => {
     setTabRetryKey(prev => prev + 1);
   }, []);
+
+  // Handle announcements and title updates on view/tab changes
+  useEffect(() => {
+    const currentViewTitle = current.title;
+    const currentTab = current.tabs.find(t => t.id === activeTab);
+    const currentTabTitle = currentTab?.title;
+
+    // Only announce and update title if values actually changed
+    if (activeView !== previousViewRef.current || activeTab !== previousTabRef.current) {
+      // Update document title
+      const titleParts = ['EMGURUS', currentViewTitle];
+      if (currentTabTitle) {
+        titleParts.push(currentTabTitle);
+      }
+      document.title = titleParts.join(' • ');
+
+      // Announce to screen readers (skip initial load)
+      if (previousViewRef.current || previousTabRef.current) {
+        const announcement = `Switched to ${currentViewTitle}${currentTabTitle ? ' — ' + currentTabTitle : ''}`;
+        announce(announcement);
+      }
+
+      previousViewRef.current = activeView;
+      previousTabRef.current = activeTab;
+    }
+  }, [activeView, activeTab, current]);
 
   return (
     <div className="min-h-screen flex w-full">
