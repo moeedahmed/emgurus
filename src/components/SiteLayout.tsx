@@ -87,6 +87,12 @@ const SiteLayout = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col transition-colors duration-300">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+      >
+        Skip to content
+      </a>
       <Header />
       {showReminderBanner && (
         <div className="bg-accent/10 border-b border-accent/20 px-4 py-3 text-sm animate-slide-up">

@@ -2,6 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 export default function ConsultationsFilterPanel({
   search,
@@ -27,8 +28,9 @@ export default function ConsultationsFilterPanel({
   return (
     <Card className="p-4 space-y-4">
       <div>
-        <label className="text-sm text-muted-foreground">Search</label>
+        <Label htmlFor="consults-search" className="text-sm text-muted-foreground">Search</Label>
         <Input
+          id="consults-search"
           placeholder="Search by name or specialty"
           className="mt-1"
           value={search}
@@ -37,9 +39,9 @@ export default function ConsultationsFilterPanel({
       </div>
 
       <div>
-        <label className="text-sm text-muted-foreground">Country</label>
+        <Label htmlFor="consults-country" className="text-sm text-muted-foreground">Country</Label>
         <Select value={country} onValueChange={(v) => onChange('country', v)}>
-          <SelectTrigger className="mt-1"><SelectValue placeholder="Country" /></SelectTrigger>
+          <SelectTrigger id="consults-country" className="mt-1"><SelectValue placeholder="Country" /></SelectTrigger>
           <SelectContent className="z-50">
             {countries.map((c) => (
               <SelectItem key={c} value={c}>{c === 'all' ? 'All Countries' : c}</SelectItem>
@@ -49,9 +51,9 @@ export default function ConsultationsFilterPanel({
       </div>
 
       <div>
-        <label className="text-sm text-muted-foreground">Specialty</label>
+        <Label htmlFor="consults-specialty" className="text-sm text-muted-foreground">Specialty</Label>
         <Select value={specialty} onValueChange={(v) => onChange('specialty', v)}>
-          <SelectTrigger className="mt-1"><SelectValue placeholder="Specialty" /></SelectTrigger>
+          <SelectTrigger id="consults-specialty" className="mt-1"><SelectValue placeholder="Specialty" /></SelectTrigger>
           <SelectContent className="z-50">
             {specialties.map((s) => (
               <SelectItem key={s} value={s}>{s === 'all' ? 'All Specialties' : s}</SelectItem>
@@ -61,9 +63,9 @@ export default function ConsultationsFilterPanel({
       </div>
 
       <div>
-        <label className="text-sm text-muted-foreground">Exam</label>
+        <Label htmlFor="consults-exam" className="text-sm text-muted-foreground">Exam</Label>
         <Select value={exam} onValueChange={(v) => onChange('exam', v)}>
-          <SelectTrigger className="mt-1"><SelectValue placeholder="Exam" /></SelectTrigger>
+          <SelectTrigger id="consults-exam" className="mt-1"><SelectValue placeholder="Exam" /></SelectTrigger>
           <SelectContent className="z-50">
             {exams.map((e) => (
               <SelectItem key={e} value={e}>{e === 'all' ? 'All Exams' : e}</SelectItem>

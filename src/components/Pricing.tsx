@@ -14,11 +14,11 @@ const Pricing = () => {
       return;
     }
 
-    const tierMap: Record<string, 'exam' | 'consultation' | 'premium'> = {
-      "Exams Membership": 'exam',
-      "Consults Membership": 'consultation',
-      "Premium Membership": 'premium',
-    };
+  const tierMap: Record<string, 'exam' | 'consults' | 'premium'> = {
+    "Exams Membership": 'exam',
+    "Consults Membership": 'consults',
+    "Premium Membership": 'premium',
+  };
     const tier = tierMap[planName as keyof typeof tierMap];
     if (!tier) return;
 

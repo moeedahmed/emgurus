@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Search } from "lucide-react";
 
 interface CategoryItem { title: string; count: number }
@@ -39,10 +40,10 @@ export default function BlogsFilterPanel({
     <Card className="p-4 space-y-6">
       {/* Search */}
       <div>
-        <label className="text-sm text-muted-foreground">Search</label>
+        <Label htmlFor="blogs-search" className="text-sm text-muted-foreground">Search</Label>
         <div className="relative mt-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-9" value={q} onChange={(e) => onChange("q", e.target.value)} placeholder="Search title or excerpt" />
+          <Input id="blogs-search" className="pl-9" value={q} onChange={(e) => onChange("q", e.target.value)} placeholder="Search title or excerpt" />
         </div>
       </div>
 
@@ -50,9 +51,9 @@ export default function BlogsFilterPanel({
 
       {/* Category */}
       <div>
-        <label className="text-sm text-muted-foreground">Category</label>
+        <Label htmlFor="blogs-category" className="text-sm text-muted-foreground">Category</Label>
         <Select value={category || "__all__"} onValueChange={(v) => onChange("category", v === "__all__" ? "" : v)}>
-          <SelectTrigger>
+          <SelectTrigger id="blogs-category">
             <SelectValue placeholder="All" />
           </SelectTrigger>
           <SelectContent className="z-50">
@@ -68,9 +69,9 @@ export default function BlogsFilterPanel({
 
       {/* Author */}
       <div>
-        <label className="text-sm text-muted-foreground">Author</label>
+        <Label htmlFor="blogs-author" className="text-sm text-muted-foreground">Author</Label>
         <Select value={author || "__all__"} onValueChange={(v) => onChange("author", v === "__all__" ? "" : v)}>
-          <SelectTrigger>
+          <SelectTrigger id="blogs-author">
             <SelectValue placeholder="All" />
           </SelectTrigger>
           <SelectContent className="z-50">
@@ -86,9 +87,9 @@ export default function BlogsFilterPanel({
 
       {/* Sort */}
       <div>
-        <label className="text-sm text-muted-foreground">Sort</label>
+        <Label htmlFor="blogs-sort" className="text-sm text-muted-foreground">Sort</Label>
         <Select value={sort} onValueChange={(v) => onChange("sort", v)}>
-          <SelectTrigger>
+          <SelectTrigger id="blogs-sort">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="z-50">

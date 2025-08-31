@@ -89,11 +89,11 @@ const Index = () => {
   }, []);
 
   return (
-    <main>
+    <div>
       <Hero />
       <FeatureCarousel />
       <Pricing />
-    </main>
+    </div>
   );
 };
 

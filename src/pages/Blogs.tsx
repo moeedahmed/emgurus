@@ -217,7 +217,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
   }, [items]);
 
   return (
-    <main>
+    <div>
       {!embedded && (
         <PageHero
           title="Blogs"
@@ -267,7 +267,7 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
                   <SheetTrigger asChild>
                     <Button variant="outline">Filters</Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-80 sm:w-96">
+                  <SheetContent side="right" className="w-full max-w-sm sm:max-w-md md:max-w-lg">
                     <BlogsFilterPanel
                       q={q}
                       category={category}
@@ -380,6 +380,6 @@ export default function Blogs({ embedded = false }: { embedded?: boolean } = {})
           </section>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

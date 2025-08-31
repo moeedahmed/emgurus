@@ -243,8 +243,8 @@ const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
                 <SheetTrigger asChild>
                   <Button variant="outline">Filters</Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-80 sm:w-96">
-                  <ConsultationsFilterPanel
+                 <SheetContent side="right" className="w-full max-w-sm sm:max-w-md md:max-w-lg">
+                   <ConsultationsFilterPanel
                     search={search}
                     country={country}
                     specialty={specialty}

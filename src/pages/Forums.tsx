@@ -101,7 +101,7 @@ const Forums = ({ embedded = false }: { embedded?: boolean } = {}) => {
   }, [threads, q, section, topic]);
 
   return (
-    <main>
+    <div>
       {!embedded && (
         <PageHero
           title="Forums"
@@ -146,7 +146,7 @@ const Forums = ({ embedded = false }: { embedded?: boolean } = {}) => {
                 <SheetTrigger asChild>
                   <Button variant="outline">Filters</Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-80 sm:w-96">
+                <SheetContent side="right" className="w-full max-w-sm sm:max-w-md md:max-w-lg">
                   <ForumsFilterPanel
                     q={q}
                     section={section}
@@ -249,7 +249,7 @@ const Forums = ({ embedded = false }: { embedded?: boolean } = {}) => {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 };
 

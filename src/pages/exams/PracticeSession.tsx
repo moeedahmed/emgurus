@@ -656,7 +656,7 @@ export default function PracticeSession() {
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 md:flex-nowrap">
                   <Button
                     variant="outline"
                     onClick={prevQuestion}

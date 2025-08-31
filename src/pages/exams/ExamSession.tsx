@@ -408,7 +408,7 @@ export default function ExamSession() {
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 md:flex-nowrap">
                   <Button
                     variant="outline"
                     onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
@@ -429,7 +429,7 @@ export default function ExamSession() {
                     {currentIndex < questions.length - 1 ? 'Next' : 'Finish Exam'}
                   </Button>
                   {!answers[currentQuestion.id] && (
-                    <div className="text-sm text-muted-foreground ml-2">
+                    <div className="text-sm text-muted-foreground w-full md:w-auto md:ml-2">
                       Please select an answer to continue
                     </div>
                   )}

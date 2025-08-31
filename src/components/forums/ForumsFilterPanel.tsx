@@ -2,6 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 export default function ForumsFilterPanel({
   q,
@@ -21,8 +22,9 @@ export default function ForumsFilterPanel({
   return (
     <Card className="p-4 space-y-4">
       <div>
-        <label className="text-sm text-muted-foreground">Search</label>
+        <Label htmlFor="forums-search" className="text-sm text-muted-foreground">Search</Label>
         <Input
+          id="forums-search"
           className="mt-1"
           placeholder="Search title or content"
           value={q}
@@ -31,9 +33,9 @@ export default function ForumsFilterPanel({
       </div>
 
       <div>
-        <label className="text-sm text-muted-foreground">Section</label>
+        <Label htmlFor="forums-section" className="text-sm text-muted-foreground">Section</Label>
         <Select value={section || "__all__"} onValueChange={(v) => onChange('section', v === "__all__" ? "" : v)}>
-          <SelectTrigger className="mt-1"><SelectValue placeholder="All Sections" /></SelectTrigger>
+          <SelectTrigger id="forums-section" className="mt-1"><SelectValue placeholder="All Sections" /></SelectTrigger>
           <SelectContent className="z-50">
             <SelectItem value="__all__">All Sections</SelectItem>
             {sections.map((c) => (
@@ -45,9 +47,9 @@ export default function ForumsFilterPanel({
 
       {topics.length > 0 && (
         <div>
-          <label className="text-sm text-muted-foreground">Topic</label>
+          <Label htmlFor="forums-topic" className="text-sm text-muted-foreground">Topic</Label>
           <Select onValueChange={(v) => onChange('topic', v)}>
-            <SelectTrigger className="mt-1"><SelectValue placeholder="All Topics" /></SelectTrigger>
+            <SelectTrigger id="forums-topic" className="mt-1"><SelectValue placeholder="All Topics" /></SelectTrigger>
             <SelectContent className="z-50">
               <SelectItem value="all">All Topics</SelectItem>
               {topics.map((t) => (
