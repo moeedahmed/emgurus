@@ -742,6 +742,11 @@ async function handle(req: Request): Promise<Response> {
     if (cancelMatch && req.method === "POST") {
       const user = await getAuthUser(req);
       if (!user) return unauthorized();
+      
+      // Entitlement guard for cancellation
+      const entitlementCheck = await requireEntitlement(supabase, user.id, ['consults', 'premium']);
+      if (!entitlementCheck.ok) return forbidden(entitlementCheck.message);
+      
       const bookingId = cancelMatch[1];
 
       const { data: booking, error: be } = await supabase
