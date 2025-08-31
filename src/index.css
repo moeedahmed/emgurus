@@ -49,6 +49,7 @@ All colors MUST be HSL.
     /* Info: Professional blue */
     --info: 213 50% 50%;
     --info-foreground: 0 0% 100%;
+    --info-600: 213 50% 40%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -117,6 +118,7 @@ All colors MUST be HSL.
 
     --info: 213 50% 55%;
     --info-foreground: 210 40% 98%;
+    --info-600: 213 50% 45%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
