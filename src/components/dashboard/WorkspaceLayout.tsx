@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import TabErrorBoundary from "@/components/TabErrorBoundary";
 
 export type WorkspaceSection = {
   id: string;            // e.g. "blogs"
@@ -32,30 +34,75 @@ export function WorkspaceLayoutInner({
 }) {
   const ids = useMemo(() => sections.map(s => s.id), [sections]);
   const firstId = defaultSectionId || ids[0];
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [tabRetryKey, setTabRetryKey] = useState(0);
 
-  const [sectionId, setSectionId] = useState<string>(() => (window.location.hash?.slice(1) || firstId));
-  useEffect(() => {
-    const hash = window.location.hash?.slice(1);
-    if (!hash || !ids.includes(hash)) {
-      // Set first section on load if missing or invalid
-      window.location.hash = `#${firstId}`;
-      setSectionId(firstId);
+  // Derive active view and tab from URLSearchParams with fallbacks
+  const activeView = useMemo(() => {
+    const viewParam = searchParams.get('view');
+    const hashView = window.location.hash?.slice(1);
+    
+    // Precedence: ?view wins over hash, then fallback to firstId
+    if (viewParam && ids.includes(viewParam)) return viewParam;
+    if (hashView && ids.includes(hashView)) return hashView;
+    return firstId;
+  }, [searchParams, ids, firstId]);
+
+  const current = sections.find(s => s.id === activeView) || sections[0];
+  const activeTab = useMemo(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && current.tabs.some(t => t.id === tabParam)) return tabParam;
+    return current.tabs[0]?.id || '';
+  }, [searchParams, current]);
+
+  // Update URL when view/tab changes
+  const updateURL = useCallback((newView: string, newTab?: string, replace = false) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('view', newView);
+    if (newTab) {
+      params.set('tab', newTab);
     } else {
-      setSectionId(hash);
+      params.delete('tab');
     }
+    
+    const newURL = `${window.location.pathname}?${params.toString()}`;
+    if (replace) {
+      window.history.replaceState(null, '', newURL);
+    } else {
+      window.history.pushState(null, '', newURL);
+    }
+    setSearchParams(params, { replace });
+  }, [searchParams, setSearchParams]);
+
+  // Initial sync - use replaceState to avoid history noise
+  useEffect(() => {
+    const currentView = searchParams.get('view');
+    const currentTab = searchParams.get('tab');
+    
+    if (!currentView || !ids.includes(currentView)) {
+      updateURL(activeView, activeTab, true);
+    }
+  }, []);
+
+  // Handle hash changes for legacy support
+  useEffect(() => {
     const onHash = () => {
-      const next = window.location.hash?.slice(1);
-      if (next && ids.includes(next)) setSectionId(next);
+      const hashView = window.location.hash?.slice(1);
+      if (hashView && ids.includes(hashView) && !searchParams.get('view')) {
+        updateURL(hashView, undefined, true);
+      }
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
-  }, [firstId, ids]);
-
-  const current = sections.find(s => s.id === sectionId) || sections[0];
+  }, [ids, searchParams, updateURL]);
 
   const { state, setOpen, isMobile } = useSidebar();
   const collapsed = state === 'collapsed';
-  const [searchSync, setSearchSync] = useState(0);
+
+  // Tab retry handler
+  const handleTabRetry = useCallback(() => {
+    setTabRetryKey(prev => prev + 1);
+  }, []);
 
   return (
     <div className="min-h-screen flex w-full">
@@ -71,40 +118,30 @@ export function WorkspaceLayoutInner({
               <nav className="flex-1 overflow-y-auto flex flex-col gap-1 p-1 pr-2 max-h-[calc(100vh-var(--header-h)-4rem)]">
                   {sections.map((s) => {
                     const Icon = s.icon as any;
-                    const active = s.id === sectionId;
-                    const search = new URLSearchParams(window.location.search);
-                    const currentTab = search.get('tab') || (s.tabs[0]?.id || '');
+                    const active = s.id === activeView;
+                    const currentTabForSection = active ? activeTab : (s.tabs[0]?.id || '');
 
-                    const go = (sid: string, tid?: string) => {
-                      const sp = new URLSearchParams(window.location.search);
-                      if (tid) sp.set('tab', tid); else sp.delete('tab');
-                      const qs = sp.toString();
-                      const nextUrl = qs ? `${location.pathname}?${qs}#${sid}` : `${location.pathname}#${sid}`;
-                      history.replaceState(null, '', nextUrl);
-                      // proactively sync local state so content switches immediately
-                      setSectionId(sid);
-                      // force re-render so Tabs remount reflects updated ?tab
-                      setSearchSync((v) => v + 1);
+                    const go = (newView: string, newTab?: string) => {
+                      updateURL(newView, newTab || s.tabs[0]?.id);
                     };
                     return (
                       <div key={s.id} className="flex flex-col">
-                        <a
-                          href={`#${s.id}`}
-                          onClick={(e) => { e.preventDefault(); go(s.id, currentTab); }}
+                        <button
+                          onClick={() => go(s.id, currentTabForSection)}
                           className={cn(
-                            "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
+                            "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors w-full text-left",
                             active ? "bg-muted text-primary font-semibold" : "hover:bg-muted/50 text-foreground"
                           )}
                           aria-current={active ? "page" : undefined}
                         >
                           {Icon && <Icon className="h-4 w-4" />}
                           {!collapsed && <span>{s.title}</span>}
-                        </a>
+                        </button>
                         {/* sub-tabs */}
                         {active && !collapsed && (
                           <div className="ml-6 mt-1 mb-2 flex flex-col">
                             {s.tabs.map((t) => {
-                              const isActiveTab = currentTab === t.id;
+                              const isActiveTab = active && activeTab === t.id;
                               return (
                                 <button
                                   key={t.id}
@@ -141,9 +178,10 @@ export function WorkspaceLayoutInner({
           </header>
 
           <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
-            <Tabs key={`${sectionId}:${new URLSearchParams(window.location.search).get('tab') || ''}:${searchSync}`}
-              defaultValue={(current.tabs.find(t => t.id === new URLSearchParams(window.location.search).get('tab'))?.id) || current.tabs[0]?.id}
-              value={undefined /* uncontrolled per remount */}
+            <Tabs 
+              key={`${activeView}:${activeTab}:${tabRetryKey}`}
+              value={activeTab}
+              onValueChange={(newTab) => updateURL(activeView, newTab)}
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="w-full overflow-x-auto overscroll-x-contain whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -161,7 +199,9 @@ export function WorkspaceLayoutInner({
                     <div className="mb-4 text-sm text-muted-foreground">{t.description}</div>
                   )}
                   <div className="border rounded-lg">
-                    {typeof t.render === 'function' ? (t.render as any)() : t.render}
+                    <TabErrorBoundary tabId={t.id} onRetry={handleTabRetry}>
+                      {typeof t.render === 'function' ? (t.render as any)() : t.render}
+                    </TabErrorBoundary>
                   </div>
                 </TabsContent>
               ))}

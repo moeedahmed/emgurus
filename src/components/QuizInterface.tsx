@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle, XCircle, ArrowRight, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import MarkForReviewButton from "@/components/exams/MarkForReviewButton";
 
 interface Question {
@@ -58,7 +58,7 @@ const QuizInterface = ({ config, onBack }: QuizInterfaceProps) => {
         if (error) throw error;
         
         if (data.disclaimer) {
-          toast.info(data.disclaimer);
+          toast({ title: data.disclaimer, variant: "info" });
         }
         
         setCurrentQuestion(data.question);
@@ -79,12 +79,12 @@ const QuizInterface = ({ config, onBack }: QuizInterfaceProps) => {
         if (questions && questions.length > 0) {
           setCurrentQuestion(questions[0]);
         } else {
-          toast.error('No reviewed questions found for this topic. Try AI real-time questions instead.');
+          toast({ title: 'No reviewed questions found for this topic. Try AI real-time questions instead.', variant: 'error' });
         }
       }
     } catch (error) {
       console.error('Error generating question:', error);
-      toast.error('Failed to generate question');
+      toast({ title: 'Failed to generate question', variant: 'error' });
     } finally {
       setLoading(false);
     }
