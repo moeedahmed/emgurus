@@ -12,7 +12,7 @@ import ShareButtons from "@/components/blogs/ShareButtons";
 import CollapsibleCard from "@/components/ui/CollapsibleCard";
 import { parseContentIntoSections, generateAuthorBio, ContentSection } from "@/lib/markdownRenderer";
 import AuthorCard from "@/components/blogs/AuthorCard";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Eye, ThumbsUp, ThumbsDown, MessageCircle, Share2, Flag, Sparkles, Play, FileText, Image, User } from "lucide-react";

@@ -523,6 +523,7 @@ async function handle(req: Request): Promise<Response> {
     // POST /api/bookings
     if (path.endsWith("/api/bookings") && req.method === "POST") {
       const user = await getAuthUser(req);
+      if (!user) return unauthorized("Authentication required for bookings");
       if (!user) return unauthorized();
       const body = await req.json().catch(() => null) as any;
       if (!body) return badRequest("Invalid JSON body");
@@ -605,7 +606,7 @@ async function handle(req: Request): Promise<Response> {
     // POST /api/payments
     if (path.endsWith("/api/payments") && req.method === "POST") {
       const user = await getAuthUser(req);
-      if (!user) return unauthorized();
+      if (!user) return unauthorized("Authentication required for payments");
       const body = await req.json().catch(() => null) as any;
       const { booking_id, provider } = body || {};
       if (!booking_id || !provider) return badRequest("booking_id and provider are required");
@@ -664,7 +665,7 @@ async function handle(req: Request): Promise<Response> {
     // POST /api/payments/verify { session_id }
     if (path.endsWith("/api/payments/verify") && req.method === "POST") {
       const user = await getAuthUser(req);
-      if (!user) return unauthorized();
+      if (!user) return unauthorized("Authentication required for payment verification");
       const { session_id } = await req.json().catch(() => ({}));
       if (!session_id) return badRequest("session_id required");
 

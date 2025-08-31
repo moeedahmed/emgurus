@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { useSearchParams } from "react-router-dom";
 import { useRoles } from "@/hooks/useRoles";
 import { notifyInApp, notifyEmailIfConfigured } from "@/lib/notifications";

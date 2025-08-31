@@ -1,4 +1,4 @@
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 export function getErrorMessage(err: unknown, fallback = "Something went wrong") {
   if (err && typeof err === "object") {
@@ -12,5 +12,5 @@ export function getErrorMessage(err: unknown, fallback = "Something went wrong")
 
 export function showErrorToast(err: unknown, fallback = "Request failed") {
   const msg = getErrorMessage(err, fallback);
-  toast.error(msg);
+  toast({ description: msg, variant: "error" });
 }

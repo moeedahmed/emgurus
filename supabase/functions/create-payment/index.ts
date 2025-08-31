@@ -36,7 +36,10 @@ serve(async (req) => {
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
     } else {
-      const customer = await stripe.customers.create({ email: user.email });
+      const customer = await stripe.customers.create({ 
+        email: user.email,
+        metadata: { user_id: user.id }
+      });
       customerId = customer.id;
     }
 
@@ -51,6 +54,10 @@ serve(async (req) => {
     if (!tierData) throw new Error("Invalid tier");
 
     let sessionConfig;
+    
+    // Generate idempotency key
+    const today = new Date().toISOString().slice(0, 10);
+    const idempotencyKey = `${user.id}:${tier}:${today}`;
     
     if (mode === 'subscription') {
       // Create subscription
@@ -70,6 +77,11 @@ serve(async (req) => {
         mode: "subscription" as const,
         success_url: `${req.headers.get("origin")}/dashboard?success=true`,
         cancel_url: `${req.headers.get("origin")}/pricing`,
+        metadata: {
+          user_id: user.id,
+          tier: tier,
+          mode: mode
+        }
       };
     } else {
       // One-time payment
@@ -88,10 +100,17 @@ serve(async (req) => {
         mode: "payment" as const,
         success_url: `${req.headers.get("origin")}/dashboard?success=true`,
         cancel_url: `${req.headers.get("origin")}/pricing`,
+        metadata: {
+          user_id: user.id,
+          tier: tier,
+          mode: mode
+        }
       };
     }
 
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    const session = await stripe.checkout.sessions.create(sessionConfig, {
+      idempotencyKey: idempotencyKey
+    });
 
     // Store subscription info
     const supabaseService = createClient(

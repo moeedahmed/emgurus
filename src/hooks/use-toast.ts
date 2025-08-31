@@ -16,7 +16,15 @@ interface ToastProps {
   }
 }
 
-function toast({ title, description, variant = "default", duration, action }: ToastProps) {
+// Overloaded function signatures
+function toast(props: ToastProps): string | number;
+function toast(message: string): string | number;
+function toast(propsOrMessage: ToastProps | string): string | number {
+  if (typeof propsOrMessage === "string") {
+    return sonnerToast(propsOrMessage);
+  }
+  
+  const { title, description, variant = "default", duration, action } = propsOrMessage;
   const message = title || description || ""
   const details = title && description ? description : undefined
   const options = { description: details, duration }
@@ -36,6 +44,13 @@ function toast({ title, description, variant = "default", duration, action }: To
       return sonnerToast(message, options)
   }
 }
+
+// Add convenience methods for backward compatibility
+toast.success = (message: string, options?: any) => sonnerToast.success(message, options)
+toast.error = (message: string, options?: any) => sonnerToast.error(message, options)
+toast.warning = (message: string, options?: any) => sonnerToast.warning(message, options)
+toast.info = (message: string, options?: any) => sonnerToast.info(message, options)
+toast.message = (message: string, options?: any) => sonnerToast(message, options)
 
 // Legacy hook interface for compatibility
 function useToast() {

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { useRoles } from "@/hooks/useRoles";
 import { submitPost, updateDraft } from "@/lib/blogsApi";
 import { isFeatureEnabled } from "@/lib/constants";

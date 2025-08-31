@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { commentOnPost } from "@/lib/blogsApi";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";

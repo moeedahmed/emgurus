@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import TableCard from "@/components/dashboard/TableCard";
 import { ErrorBoundary } from "react-error-boundary";
 import { Link } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { callFunction } from "@/lib/functionsUrl";
 
 interface BlogPost {

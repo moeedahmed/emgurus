@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { reactToPost, type ReactionKey } from "@/lib/blogsApi";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 const emojiMap: { key: ReactionKey; emoji: string; label: string }[] = [
   { key: "thumbs_up", emoji: "👍", label: "Like" },

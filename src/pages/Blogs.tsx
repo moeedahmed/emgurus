@@ -5,7 +5,7 @@ import { callFunction } from "@/lib/functionsUrl";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Card } from "@/components/ui/card";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import BlogCard from "@/components/blogs/BlogCard";
 import BlogsFilterPanel from "@/components/blogs/BlogsFilterPanel";
 import TopAuthorsPanel from "@/components/blogs/TopAuthorsPanel";

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { GuruCard, type Guru } from "@/components/consultations/GuruCard";
 import { BookingModal } from "@/components/consultations/BookingModal";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import PageHero from "@/components/PageHero";
 import { Chip } from "@/components/ui/chip";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
