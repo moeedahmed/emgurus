@@ -1,0 +1,21 @@
+name: No Backup Files
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  check-no-baks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check for .bak files
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '\.bak$'; then
+            echo "Found .bak files in repo. Remove them before merging."
+            exit 1
+          fi
+          echo "No .bak files found. All good!"
