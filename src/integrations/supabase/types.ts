@@ -364,6 +364,27 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_webhook_events: {
+        Row: {
+          event_id: string
+          payload: Json | null
+          received_at: string
+          type: string
+        }
+        Insert: {
+          event_id: string
+          payload?: Json | null
+          received_at?: string
+          type: string
+        }
+        Update: {
+          event_id?: string
+          payload?: Json | null
+          received_at?: string
+          type?: string
+        }
+        Relationships: []
+      }
       blog_ai_summaries: {
         Row: {
           created_at: string
