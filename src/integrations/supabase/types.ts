@@ -640,6 +640,8 @@ export type Database = {
       }
       blog_posts: {
         Row: {
+          assigned_at: string | null
+          assigned_by: string | null
           author_id: string
           category_id: string | null
           content: string | null
@@ -662,6 +664,8 @@ export type Database = {
           view_count: number
         }
         Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
           author_id: string
           category_id?: string | null
           content?: string | null
@@ -684,6 +688,8 @@ export type Database = {
           view_count?: number
         }
         Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
           author_id?: string
           category_id?: string | null
           content?: string | null
@@ -745,31 +751,37 @@ export type Database = {
       }
       blog_review_assignments: {
         Row: {
+          assigned_at: string | null
           assigned_by: string
           created_at: string
           id: string
           notes: string | null
           post_id: string
+          reviewed_at: string | null
           reviewer_id: string
           status: Database["public"]["Enums"]["review_assignment_status"]
           updated_at: string
         }
         Insert: {
+          assigned_at?: string | null
           assigned_by: string
           created_at?: string
           id?: string
           notes?: string | null
           post_id: string
+          reviewed_at?: string | null
           reviewer_id: string
           status?: Database["public"]["Enums"]["review_assignment_status"]
           updated_at?: string
         }
         Update: {
+          assigned_at?: string | null
           assigned_by?: string
           created_at?: string
           id?: string
           notes?: string | null
           post_id?: string
+          reviewed_at?: string | null
           reviewer_id?: string
           status?: Database["public"]["Enums"]["review_assignment_status"]
           updated_at?: string
@@ -1342,31 +1354,37 @@ export type Database = {
       }
       exam_review_assignments: {
         Row: {
+          assigned_at: string | null
           assigned_by: string
           created_at: string
           id: string
           note: string | null
           question_id: string
+          reviewed_at: string | null
           reviewer_id: string
           status: string
           updated_at: string
         }
         Insert: {
+          assigned_at?: string | null
           assigned_by: string
           created_at?: string
           id?: string
           note?: string | null
           question_id: string
+          reviewed_at?: string | null
           reviewer_id: string
           status?: string
           updated_at?: string
         }
         Update: {
+          assigned_at?: string | null
           assigned_by?: string
           created_at?: string
           id?: string
           note?: string | null
           question_id?: string
+          reviewed_at?: string | null
           reviewer_id?: string
           status?: string
           updated_at?: string
@@ -2366,6 +2384,8 @@ export type Database = {
       }
       review_exam_questions: {
         Row: {
+          assigned_at: string | null
+          assigned_by: string | null
           correct_answer: string
           created_at: string
           created_by: string
@@ -2380,6 +2400,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
           correct_answer: string
           created_at?: string
           created_by: string
@@ -2394,6 +2416,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
           correct_answer?: string
           created_at?: string
           created_by?: string
@@ -3071,6 +3095,8 @@ export type Database = {
           p_title: string
         }
         Returns: {
+          assigned_at: string | null
+          assigned_by: string | null
           author_id: string
           category_id: string | null
           content: string | null
@@ -3127,6 +3153,13 @@ export type Database = {
       exam_request_changes: {
         Args: { p_note: string; p_question_id: string }
         Returns: undefined
+      }
+      get_user_role_flags: {
+        Args: { p_user_id: string }
+        Returns: {
+          is_admin: boolean
+          is_guru: boolean
+        }[]
       }
       halfvec_avg: {
         Args: { "": number[] }
@@ -3190,6 +3223,8 @@ export type Database = {
       list_all_posts_admin: {
         Args: { p_limit: number; p_offset: number; p_status: string }
         Returns: {
+          assigned_at: string | null
+          assigned_by: string | null
           author_id: string
           category_id: string | null
           content: string | null
@@ -3231,6 +3266,8 @@ export type Database = {
       list_my_drafts: {
         Args: { p_limit: number; p_offset: number }
         Returns: {
+          assigned_at: string | null
+          assigned_by: string | null
           author_id: string
           category_id: string | null
           content: string | null
@@ -3288,6 +3325,8 @@ export type Database = {
       list_my_submissions: {
         Args: { p_limit: number; p_offset: number }
         Returns: {
+          assigned_at: string | null
+          assigned_by: string | null
           author_id: string
           category_id: string | null
           content: string | null
@@ -3328,6 +3367,8 @@ export type Database = {
       list_reviewer_queue: {
         Args: { p_limit: number; p_offset: number }
         Returns: {
+          assigned_at: string | null
+          assigned_by: string | null
           author_id: string
           category_id: string | null
           content: string | null
@@ -3471,7 +3512,11 @@ export type Database = {
         | "exam_question"
         | "exam_answer"
       reminder_type: "email" | "sms" | "whatsapp" | "one_hour_before"
-      review_assignment_status: "pending" | "completed" | "cancelled"
+      review_assignment_status:
+        | "pending"
+        | "completed"
+        | "cancelled"
+        | "pending_review"
       review_question_status: "draft" | "under_review" | "published"
       subscription_tier: "free" | "exam" | "consultation" | "premium"
       taxonomy_type: "specialty" | "category" | "topic" | "exam" | "forum"
@@ -3676,7 +3721,12 @@ export const Constants = {
         "exam_answer",
       ],
       reminder_type: ["email", "sms", "whatsapp", "one_hour_before"],
-      review_assignment_status: ["pending", "completed", "cancelled"],
+      review_assignment_status: [
+        "pending",
+        "completed",
+        "cancelled",
+        "pending_review",
+      ],
       review_question_status: ["draft", "under_review", "published"],
       subscription_tier: ["free", "exam", "consultation", "premium"],
       taxonomy_type: ["specialty", "category", "topic", "exam", "forum"],
