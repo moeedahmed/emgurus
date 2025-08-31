@@ -656,6 +656,8 @@ export default function GenerateBlogDraft() {
                             size="sm"
                             className="h-4 w-4 p-0"
                             onClick={() => removeUrl(index)}
+                            type="button"
+                            aria-label="Remove URL"
                           >
                             <X className="h-3 w-3" />
                           </Button>
@@ -667,9 +669,10 @@ export default function GenerateBlogDraft() {
 
                 {/* File Upload */}
                 <div>
-                  <Label className="text-sm font-medium">Supporting Documents</Label>
+                  <Label htmlFor="draft-upload" className="text-sm font-medium">Supporting Documents</Label>
                   <div className="mt-1">
                     <input
+                      id="draft-upload"
                       type="file"
                       multiple
                       accept=".pdf,.docx,.pptx,.txt,.md"
@@ -697,6 +700,8 @@ export default function GenerateBlogDraft() {
                             size="sm"
                             className="h-4 w-4 p-0"
                             onClick={() => removeFile(index)}
+                            type="button"
+                            aria-label="Remove file"
                           >
                             <X className="h-3 w-3" />
                           </Button>

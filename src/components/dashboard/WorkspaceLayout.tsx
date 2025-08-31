@@ -219,16 +219,32 @@ export function WorkspaceLayoutInner({
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="w-full overflow-x-auto overscroll-x-contain whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  <TabsList className="inline-flex gap-1 flex-nowrap min-w-max px-2">
+                  <TabsList role="tablist" className="inline-flex gap-1 flex-nowrap min-w-max px-2">
                     {current.tabs.map((t) => (
-                      <TabsTrigger key={t.id} value={t.id} className="shrink-0">{t.title}</TabsTrigger>
+                      <TabsTrigger 
+                        key={t.id} 
+                        value={t.id} 
+                        className="shrink-0"
+                        role="tab"
+                        aria-selected={activeTab === t.id}
+                        id={`tab-${activeView}-${t.id}`}
+                      >
+                        {t.title}
+                      </TabsTrigger>
                     ))}
                   </TabsList>
                 </div>
               </div>
 
               {current.tabs.map((t) => (
-                <TabsContent key={t.id} value={t.id} className="mt-0">
+                <TabsContent 
+                  key={t.id} 
+                  value={t.id} 
+                  className="mt-0"
+                  role="tabpanel"
+                  aria-labelledby={`tab-${activeView}-${t.id}`}
+                  id={`panel-${activeView}-${t.id}`}
+                >
                   {t.description && (
                     <div className="mb-4 text-sm text-muted-foreground">{t.description}</div>
                   )}

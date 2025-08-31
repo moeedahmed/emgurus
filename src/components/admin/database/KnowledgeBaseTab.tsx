@@ -376,9 +376,10 @@ const KnowledgeBaseTab = () => {
               </div>
 
               <div>
-                <label className="text-sm font-medium">File Upload</label>
+                <label htmlFor="kb-upload" className="text-sm font-medium">File Upload</label>
                 <div className="mt-1">
                   <input
+                    id="kb-upload"
                     type="file"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
