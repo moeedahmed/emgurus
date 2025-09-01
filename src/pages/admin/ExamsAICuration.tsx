@@ -123,9 +123,8 @@ const ExamsAICuration = () => {
           <h2 className="text-xl font-semibold">Generated</h2>
           <Button variant="outline" size="sm" onClick={async ()=>{ setLoading(true); try{ const gen = await callFunction('/exams-admin-curate/generated', null, true); setGenerated(gen?.data||[]);} finally { setLoading(false);} }}>Refresh</Button>
         </div>
-        <Card className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
+        <Card className="p-0 overflow-hidden">
+          <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Created</TableHead>
@@ -158,7 +157,6 @@ const ExamsAICuration = () => {
               )}
             </TableBody>
           </Table>
-          </div>
         </Card>
       </section>
 
@@ -184,9 +182,8 @@ const ExamsAICuration = () => {
             <TabsTrigger value="rejected">Rejected (Archive)</TabsTrigger>
           </TabsList>
           <TabsContent value="approved">
-            <Card className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
+            <Card className="p-0 overflow-hidden">
+              <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Created</TableHead>
@@ -213,13 +210,11 @@ const ExamsAICuration = () => {
                   )}
                 </TableBody>
               </Table>
-              </div>
             </Card>
           </TabsContent>
           <TabsContent value="rejected">
-            <Card className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
+            <Card className="p-0 overflow-hidden">
+              <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Created</TableHead>
@@ -246,7 +241,6 @@ const ExamsAICuration = () => {
                   )}
                 </TableBody>
               </Table>
-              </div>
             </Card>
           </TabsContent>
         </Tabs>

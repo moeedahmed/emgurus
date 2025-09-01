@@ -462,35 +462,21 @@ html, body, #root {
   padding: 0 0.5rem;    /* breathing room at edges */
 }
 
-/* P6b: dashboard-scoped swipeable tabs (grey row + blue/white subtabs) */
-[data-dashboard] [role="tablist"] {
-  display: flex;
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: visible;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
-  gap: 0.5rem;
-  scrollbar-width: none;           /* Firefox hide */
-}
-[data-dashboard] [role="tablist"]::-webkit-scrollbar { display: none; }
-[data-dashboard] [role="tablist"] > * { flex: 0 0 auto; } /* no shrink chips */
-
-/* Allow opting-out on specific tablists if needed */
-[data-dashboard] [role="tablist"].no-scroll {
-  overflow-x: visible;
-  white-space: normal;
-}
-
-/* Safe-area padding so floating FABs don't cover content */
-[data-dashboard] {
-  padding-bottom: max(env(safe-area-inset-bottom), 0px);
-}
-
 /* Optional: slimmer horizontal scrollbar height on desktop (harmless on mobile) */
-.tab-scroll::-webkit-scrollbar { height: 6px; }
-.tab-scroll { scrollbar-width: thin; }
+.tab-scroll::-webkit-scrollbar,
+[role="tablist"].tab-scroll::-webkit-scrollbar { 
+  height: 6px; 
+  display: none; 
+}
+
+.tab-scroll,
+[role="tablist"].tab-scroll { 
+  scrollbar-width: thin; 
+}
+
+/* Hide scrollbar visuals but keep it accessible */
+[role="tablist"].tab-scroll::-webkit-scrollbar { display: none; }
+[role="tablist"].tab-scroll { scrollbar-width: none; }
 
 /* Soft edge fade using mask (supported in modern browsers) */
 @supports (mask-image: linear-gradient(#000, #000)) or (-webkit-mask-image: linear-gradient(#000, #000)) {

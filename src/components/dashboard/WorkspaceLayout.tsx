@@ -197,7 +197,7 @@ export function WorkspaceLayoutInner({
         </Sidebar>
 
         <SidebarInset className="pt-[var(--header-h)] min-w-0">
-          <header className="sticky top-[var(--header-h)] z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-3 sm:mb-4">
+          <header className="sticky top-[var(--header-h)] z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
             <div className="h-12 flex items-center gap-3 px-3">
               <SidebarTrigger className="lg:hidden" />
               <div className="text-sm text-muted-foreground">{title}</div>
@@ -210,10 +210,9 @@ export function WorkspaceLayoutInner({
             id="main-content" 
             role="main" 
             tabIndex={-1}
-            data-dashboard
             className={cn(
-              "container mx-auto px-2 sm:px-4 pb-4 sm:pb-6",
-              "overflow-x-visible min-w-0 relative"
+              "container mx-auto px-2 sm:px-4 py-4 sm:py-6",
+              "overflow-x-visible min-w-0"
             )}
           >
             {/* P6a: swipeable tab row with ARIA + deep links preserved */}
