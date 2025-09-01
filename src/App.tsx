@@ -20,7 +20,7 @@ import PricingPage from "./pages/Pricing";
 // Heavy pages - lazy loaded
 const DashboardUser = lazy(() => import("./pages/DashboardUser"));
 const DashboardGuru = lazy(() => import("./pages/DashboardGuru"));
-const DashboardAdmin = lazy(() => import("./pages/DashboardAdmin"));
+const DashboardAdmin = lazy(() => import("./pages/DashboardAdminSimple"));
 const DashboardNew = lazy(() => import("./pages/DashboardNew"));
 const Forums = lazy(() => import("./pages/Forums"));
 const Consultations = lazy(() => import("./pages/Consultations"));
