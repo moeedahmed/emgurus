@@ -404,3 +404,39 @@ All colors MUST be HSL.
     @apply transition-shadow duration-200 hover:shadow-medium;
   }
 }
+
+/* ============= ACCESSIBILITY ENHANCEMENTS ============= */
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *:not([data-allow-motion="true"]), 
+  *:not([data-allow-motion="true"])::before, 
+  *:not([data-allow-motion="true"])::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+}
+
+/* High contrast / forced colors support */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid CanvasText !important;
+    outline-offset: 2px;
+  }
+
+  a {
+    text-decoration: underline;
+  }
+
+  button, 
+  [role="button"], 
+  [type="button"], 
+  [type="submit"] {
+    border: 1px solid CanvasText;
+  }
+}
