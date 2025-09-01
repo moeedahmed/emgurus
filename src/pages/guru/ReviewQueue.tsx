@@ -158,11 +158,11 @@ const GuruReviewQueue = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[120px]">When</TableHead>
-                <TableHead className="w-full md:w-[50%] min-w-[200px]">Question</TableHead>
-                <TableHead className="min-w-[80px]">Exam</TableHead>
-                <TableHead className="min-w-[70px]">Marked</TableHead>
-                <TableHead className="text-right min-w-[200px]">Actions</TableHead>
+                <TableHead className="min-w-[6rem] md:min-w-[8rem]">When</TableHead>
+                <TableHead className="min-w-0 w-auto max-w-[10rem] md:max-w-none">Question</TableHead>
+                <TableHead className="min-w-0 w-auto md:min-w-[5rem]">Exam</TableHead>
+                <TableHead className="min-w-0 w-auto md:min-w-[4rem]">Marked</TableHead>
+                <TableHead className="text-right shrink-0 md:min-w-[12rem]">Actions</TableHead>
               </TableRow>
             </TableHeader>
           <TableBody>
@@ -183,17 +183,21 @@ const GuruReviewQueue = () => {
             )}
             {!loading && !error && combined.map((row) => (
               <TableRow key={row.key}>
-                <TableCell className="text-xs">{new Date(row.when).toLocaleDateString()}</TableCell>
+                <TableCell className="text-xs text-nowrap md:whitespace-normal">{new Date(row.when).toLocaleDateString()}</TableCell>
                 <TableCell className="text-xs">
                   {row.source === 'assigned' ? (
-                    <button className="text-left hover:underline truncate max-w-[200px] block" onClick={() => setDetail(row.ref as any)}>
+                    <button 
+                      className="text-left hover:underline truncate max-w-[8rem] md:max-w-none block md:break-words md:whitespace-normal" 
+                      onClick={() => setDetail(row.ref as any)}
+                      title={row.question}
+                    >
                       {row.question}
                     </button>
                   ) : (
-                    <span title={(row.ref as any)?.comment || ''} className="truncate max-w-[200px] block">{row.question}</span>
+                    <span title={(row.ref as any)?.comment || row.question} className="truncate max-w-[8rem] md:max-w-none block md:break-words md:whitespace-normal">{row.question}</span>
                   )}
                 </TableCell>
-                <TableCell className="text-xs">{row.exam}</TableCell>
+                <TableCell className="text-xs truncate">{row.exam}</TableCell>
                 <TableCell className="text-xs">{row.marked ? 'Yes' : 'No'}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex gap-1 justify-end">

@@ -153,26 +153,29 @@ const ExamsReviewQueue = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[120px]">Created</TableHead>
-                <TableHead className="w-full md:w-auto min-w-[200px]">Question</TableHead>
-                <TableHead className="min-w-[80px]">Exam</TableHead>
-                <TableHead className="min-w-[90px]">Difficulty</TableHead>
-                <TableHead className="min-w-[80px]">Topic</TableHead>
-                <TableHead className="min-w-[80px]"></TableHead>
+                <TableHead className="min-w-[6rem] md:min-w-[8rem]">Created</TableHead>
+                <TableHead className="min-w-0 w-auto max-w-[10rem] md:max-w-none">Question</TableHead>
+                <TableHead className="min-w-0 w-auto md:min-w-[5rem]">Exam</TableHead>
+                <TableHead className="min-w-0 w-auto md:min-w-[6rem]">Difficulty</TableHead>
+                <TableHead className="min-w-0 w-auto md:min-w-[5rem]">Topic</TableHead>
+                <TableHead className="shrink-0 md:min-w-[5rem]"></TableHead>
               </TableRow>
             </TableHeader>
           <TableBody>
             {queue.map((item) => (
               <TableRow key={item.assignment_id}>
-                <TableCell className="text-sm">{new Date(item.created_at).toLocaleDateString()}</TableCell>
+                <TableCell className="text-sm text-nowrap md:whitespace-normal">{new Date(item.created_at).toLocaleDateString()}</TableCell>
                 <TableCell className="text-sm">
-                  <div className="truncate max-w-[200px]" title={item.preview?.question_text || "(open to view)"}>
+                  <div 
+                    className="truncate max-w-[8rem] md:max-w-none md:break-words md:whitespace-normal" 
+                    title={item.preview?.question_text || "(open to view)"}
+                  >
                     {item.preview?.question_text || "(open to view)"}
                   </div>
                 </TableCell>
-                <TableCell className="text-sm">{item.preview?.exam_type || '-'}</TableCell>
-                <TableCell className="text-sm">{item.preview?.difficulty_level || '-'}</TableCell>
-                <TableCell className="text-sm">{item.preview?.topic || '-'}</TableCell>
+                <TableCell className="text-sm truncate">{item.preview?.exam_type || '-'}</TableCell>
+                <TableCell className="text-sm truncate">{item.preview?.difficulty_level || '-'}</TableCell>
+                <TableCell className="text-sm truncate">{item.preview?.topic || '-'}</TableCell>
                  <TableCell className="text-right">
                    <Button 
                      size="sm" 
