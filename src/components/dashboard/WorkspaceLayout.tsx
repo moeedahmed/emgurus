@@ -210,47 +210,61 @@ export function WorkspaceLayoutInner({
             id="main-content" 
             role="main" 
             tabIndex={-1}
-            className="container mx-auto px-2 sm:px-4 py-4 sm:py-6"
+            className={cn(
+              "container mx-auto px-2 sm:px-4 py-4 sm:py-6",
+              "overflow-x-clip"
+            )}
           >
-            <Tabs 
-              key={`${activeView}:${activeTab}:${tabRetryKey}`}
-              value={activeTab}
-              onValueChange={(newTab) => updateURL(activeView, newTab)}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-full overflow-x-auto overscroll-x-contain whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  <TabsList role="tablist" className="inline-flex gap-1 flex-nowrap min-w-max px-2">
-                    {current.tabs.map((t) => (
-                      <TabsTrigger 
-                        key={t.id} 
-                        value={t.id} 
-                        className="shrink-0"
-                        role="tab"
-                        aria-selected={activeTab === t.id}
-                        id={`tab-${activeView}-${t.id}`}
-                      >
-                        {t.title}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </div>
-              </div>
+            {/* P6a: swipeable tab row with ARIA + deep links preserved */}
+            <Tabs value={activeTab} onValueChange={(newTab) => updateURL(activeView, newTab)}>
 
+              {/* Swipeable row */}
+              <TabsList
+                role="tablist"
+                aria-label={`${current.title} sections`}
+                data-testid="tabs-scroll"
+                className={cn(
+                  "tab-scroll w-full"
+                )}
+              >
+                {current.tabs.map((t) => {
+                  const selected = activeTab === t.id;
+                  return (
+                    <TabsTrigger
+                      key={t.id}
+                      value={t.id}
+                      role="tab"
+                      id={`tab-${t.id}`}
+                      aria-selected={selected ? "true" : "false"}
+                      className={cn(
+                        "tab-pill"
+                      )}
+                      onClick={() => updateURL(activeView, t.id)}
+                    >
+                      {t.title}
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+
+              {/* Panels (unchanged except for ARIA linkage) */}
               {current.tabs.map((t) => (
-                <TabsContent 
-                  key={t.id} 
-                  value={t.id} 
-                  className="mt-0"
+                <TabsContent
+                  key={t.id}
+                  value={t.id}
                   role="tabpanel"
-                  aria-labelledby={`tab-${activeView}-${t.id}`}
-                  id={`panel-${activeView}-${t.id}`}
+                  aria-labelledby={`tab-${t.id}`}
+                  className={cn(
+                    "mt-0"
+                  )}
                 >
+                  {/* Keep your description + boundary exactly as before */}
                   {t.description && (
-                    <div className="mb-4 text-sm text-muted-foreground">{t.description}</div>
+                    <p className="text-sm text-muted-foreground mb-2">{t.description}</p>
                   )}
                   <div className="border rounded-lg">
                     <TabErrorBoundary tabId={t.id} onRetry={handleTabRetry}>
-                      {typeof t.render === 'function' ? (t.render as any)() : t.render}
+                      {typeof t.render === "function" ? (t.render as any)() : t.render}
                     </TabErrorBoundary>
                   </div>
                 </TabsContent>

@@ -440,3 +440,47 @@ All colors MUST be HSL.
     border: 1px solid CanvasText;
   }
 }
+
+/* --- P6a: global horizontal scroll guard (page) --- */
+html, body, #root {
+  /* Prevent accidental page-wide sideways scroll; widgets still scroll inside */
+  overflow-x: clip; /* better than hidden; avoids creating new formatting contexts */
+}
+
+/* --- P6a: swipeable tablist --- */
+[role="tablist"].tab-scroll {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch; /* smooth iOS swiping */
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  gap: 0.5rem;          /* space between chips */
+  padding: 0 0.5rem;    /* breathing room at edges */
+}
+
+/* Hide scrollbar visuals but keep it accessible */
+[role="tablist"].tab-scroll::-webkit-scrollbar { display: none; }
+[role="tablist"].tab-scroll { scrollbar-width: none; }
+
+/* Soft edge fade using mask (supported in modern browsers) */
+@supports (mask-image: linear-gradient(#000, #000)) or (-webkit-mask-image: linear-gradient(#000, #000)) {
+  [role="tablist"].tab-scroll {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+  }
+}
+
+/* Don't let individual tab pills shrink too narrow while scrolling */
+[role="tab"].tab-pill {
+  flex: 0 0 auto;       /* width based on content; participates in horizontal scroll */
+  scroll-snap-align: start;
+}
+
+/* Respect reduced motion preferences (less jarring when tab row scrolls) */
+@media (prefers-reduced-motion: reduce) {
+  [role="tablist"].tab-scroll {
+    scroll-behavior: auto;
+  }
+}
