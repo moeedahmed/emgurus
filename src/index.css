@@ -444,7 +444,7 @@ All colors MUST be HSL.
 /* --- P6a: global horizontal scroll guard (page) --- */
 html, body, #root {
   /* Prevent accidental page-wide sideways scroll; widgets still scroll inside */
-  overflow-x: clip; /* better than hidden; avoids creating new formatting contexts */
+  overflow-x: hidden; /* prevent page-wide scroll but allow inner swipe areas */
 }
 
 /* --- P6a: swipeable tablist --- */

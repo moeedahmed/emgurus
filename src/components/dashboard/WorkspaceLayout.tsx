@@ -196,7 +196,7 @@ export function WorkspaceLayoutInner({
           </SidebarContent>
         </Sidebar>
 
-        <SidebarInset className="pt-[var(--header-h)]">
+        <SidebarInset className="pt-[var(--header-h)] min-w-0">
           <header className="sticky top-[var(--header-h)] z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
             <div className="h-12 flex items-center gap-3 px-3">
               <SidebarTrigger className="lg:hidden" />
@@ -212,21 +212,22 @@ export function WorkspaceLayoutInner({
             tabIndex={-1}
             className={cn(
               "container mx-auto px-2 sm:px-4 py-4 sm:py-6",
-              "overflow-x-visible"
+              "overflow-x-visible min-w-0"
             )}
           >
             {/* P6a: swipeable tab row with ARIA + deep links preserved */}
             <Tabs value={activeTab} onValueChange={(newTab) => updateURL(activeView, newTab)}>
 
               {/* Swipeable row */}
-              <TabsList
-                role="tablist"
-                aria-label={`${current.title} sections`}
-                data-testid="tabs-scroll"
-                className={cn(
-                  "tab-scroll w-full"
-                )}
-              >
+              <div className="tab-scroll overflow-x-auto -mx-2 px-2">
+                <TabsList
+                  role="tablist"
+                  aria-label={`${current.title} sections`}
+                  data-testid="tabs-scroll"
+                  className={cn(
+                    "w-full"
+                  )}
+                >
                 {current.tabs.map((t) => {
                   const selected = activeTab === t.id;
                   return (
@@ -246,6 +247,7 @@ export function WorkspaceLayoutInner({
                   );
                 })}
               </TabsList>
+              </div>
 
               {/* Panels (unchanged except for ARIA linkage) */}
               {current.tabs.map((t) => (
