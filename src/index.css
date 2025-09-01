@@ -448,6 +448,7 @@ html, body, #root {
 }
 
 /* --- P6a: swipeable tablist --- */
+.tab-scroll,
 [role="tablist"].tab-scroll {
   display: flex;
   max-width: 100%;
@@ -456,8 +457,21 @@ html, body, #root {
   -webkit-overflow-scrolling: touch; /* smooth iOS swiping */
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
+  scrollbar-gutter: stable both-edges; /* keep layout steady when scrollbars appear */
   gap: 0.5rem;          /* space between chips */
   padding: 0 0.5rem;    /* breathing room at edges */
+}
+
+/* Optional: slimmer horizontal scrollbar height on desktop (harmless on mobile) */
+.tab-scroll::-webkit-scrollbar,
+[role="tablist"].tab-scroll::-webkit-scrollbar { 
+  height: 6px; 
+  display: none; 
+}
+
+.tab-scroll,
+[role="tablist"].tab-scroll { 
+  scrollbar-width: thin; 
 }
 
 /* Hide scrollbar visuals but keep it accessible */

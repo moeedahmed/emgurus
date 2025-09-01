@@ -212,7 +212,7 @@ export function WorkspaceLayoutInner({
             tabIndex={-1}
             className={cn(
               "container mx-auto px-2 sm:px-4 py-4 sm:py-6",
-              "overflow-x-clip"
+              "overflow-x-visible"
             )}
           >
             {/* P6a: swipeable tab row with ARIA + deep links preserved */}
