@@ -36,6 +36,7 @@ const GuruReviewQueue = () => {
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [noteTargetId, setNoteTargetId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const [flags, setFlags] = useState<FlagItem[]>([]);
 
@@ -111,7 +112,9 @@ const GuruReviewQueue = () => {
   }, [page]);
 
   const approve = async (id: string) => {
+    if (actionLoading) return;
     try {
+      setActionLoading(id);
       const { error } = await supabase.rpc("exam_approve", { p_question_id: id });
       if (error) throw error;
       toast.success("Approved");
@@ -119,12 +122,15 @@ const GuruReviewQueue = () => {
       await load();
     } catch (e: any) {
       toast.error(e?.message || "Approve failed");
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const requestChanges = async () => {
-    if (!noteTargetId) return;
+    if (!noteTargetId || actionLoading) return;
     try {
+      setActionLoading(noteTargetId);
       const { error } = await supabase.rpc("exam_request_changes", { p_question_id: noteTargetId, p_note: noteText || "" });
       if (error) throw error;
       toast.success("Requested changes");
@@ -134,6 +140,8 @@ const GuruReviewQueue = () => {
       await load();
     } catch (e: any) {
       toast.error(e?.message || "Request failed");
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -146,16 +154,17 @@ const GuruReviewQueue = () => {
       <p className="text-muted-foreground mb-6">Approve or request changes on questions assigned to you.</p>
 
       <Card className="p-0 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>When</TableHead>
-              <TableHead className="w-[50%]">Question</TableHead>
-              <TableHead>Exam</TableHead>
-              <TableHead>Marked</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[120px]">When</TableHead>
+                <TableHead className="w-full md:w-[50%] min-w-[200px]">Question</TableHead>
+                <TableHead className="min-w-[80px]">Exam</TableHead>
+                <TableHead className="min-w-[70px]">Marked</TableHead>
+                <TableHead className="text-right min-w-[200px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
           <TableBody>
             {loading && (
               <TableRow>
@@ -174,40 +183,75 @@ const GuruReviewQueue = () => {
             )}
             {!loading && !error && combined.map((row) => (
               <TableRow key={row.key}>
-                <TableCell className="whitespace-nowrap text-xs">{new Date(row.when).toLocaleString()}</TableCell>
+                <TableCell className="text-xs">{new Date(row.when).toLocaleDateString()}</TableCell>
                 <TableCell className="text-xs">
                   {row.source === 'assigned' ? (
-                    <button className="text-left hover:underline" onClick={() => setDetail(row.ref as any)}>
+                    <button className="text-left hover:underline truncate max-w-[200px] block" onClick={() => setDetail(row.ref as any)}>
                       {row.question}
                     </button>
                   ) : (
-                    <span title={(row.ref as any)?.comment || ''}>{row.question}</span>
+                    <span title={(row.ref as any)?.comment || ''} className="truncate max-w-[200px] block">{row.question}</span>
                   )}
                 </TableCell>
                 <TableCell className="text-xs">{row.exam}</TableCell>
                 <TableCell className="text-xs">{row.marked ? 'Yes' : 'No'}</TableCell>
-                <TableCell className="text-right space-x-2">
-                  {row.source === 'assigned' ? (
-                    <>
-                      <Button variant="secondary" size="sm" onClick={() => { setNoteTargetId((row.ref as any).id); setNoteOpen(true); }}>Request changes</Button>
-                      <Button size="sm" onClick={() => setConfirmId((row.ref as any).id)}>Approve</Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button size="sm" onClick={async () => {
-                        const { data: u } = await supabase.auth.getUser();
-                        const uid = u.user?.id;
-                        await supabase.from('exam_question_flags').update({ status: 'resolved', resolved_by: uid }).eq('id', (row.ref as any).id);
-                        loadFlags();
-                      }}>Approve & Resolve</Button>
-                      <Button variant="destructive" size="sm" onClick={() => { setNoteTargetId((row.ref as any).id); setNoteOpen(true); }}>Remove</Button>
-                    </>
-                  )}
+                <TableCell className="text-right">
+                  <div className="flex gap-1 justify-end">
+                    {row.source === 'assigned' ? (
+                      <>
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          onClick={() => { setNoteTargetId((row.ref as any).id); setNoteOpen(true); }}
+                          disabled={actionLoading === (row.ref as any).id}
+                        >
+                          {actionLoading === (row.ref as any).id ? "..." : "Changes"}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          onClick={() => setConfirmId((row.ref as any).id)}
+                          disabled={!!actionLoading}
+                        >
+                          Approve
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button 
+                          size="sm" 
+                          onClick={async () => {
+                            if (actionLoading) return;
+                            setActionLoading((row.ref as any).id);
+                            try {
+                              const { data: u } = await supabase.auth.getUser();
+                              const uid = u.user?.id;
+                              await supabase.from('exam_question_flags').update({ status: 'resolved', resolved_by: uid }).eq('id', (row.ref as any).id);
+                              loadFlags();
+                            } finally {
+                              setActionLoading(null);
+                            }
+                          }}
+                          disabled={actionLoading === (row.ref as any).id}
+                        >
+                          {actionLoading === (row.ref as any).id ? "..." : "Resolve"}
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => { setNoteTargetId((row.ref as any).id); setNoteOpen(true); }}
+                          disabled={!!actionLoading}
+                        >
+                          Remove
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </Card>
 
       <div className="mt-4 flex items-center justify-between">
@@ -275,20 +319,30 @@ const GuruReviewQueue = () => {
           <Textarea value={noteText} onChange={(e) => setNoteText(e.currentTarget.value)} placeholder="Your note…" />
           <DialogFooter>
             <Button variant="outline" onClick={() => { setNoteOpen(false); setNoteText(""); setNoteTargetId(null); }}>Cancel</Button>
-            <Button onClick={async () => {
-              if (!noteTargetId) return;
-              if (flags.find(f => f.id === noteTargetId)) {
-                const { data: u } = await supabase.auth.getUser();
-                const uid = u.user?.id;
-                await supabase.from('exam_question_flags').update({ status: 'removed', resolved_by: uid, resolution_note: noteText }).eq('id', noteTargetId);
-                loadFlags();
-                setNoteOpen(false);
-                setNoteText("");
-                setNoteTargetId(null);
-              } else {
-                await requestChanges();
-              }
-            }}>Submit</Button>
+            <Button 
+              onClick={async () => {
+                if (!noteTargetId || actionLoading) return;
+                if (flags.find(f => f.id === noteTargetId)) {
+                  setActionLoading(noteTargetId);
+                  try {
+                    const { data: u } = await supabase.auth.getUser();
+                    const uid = u.user?.id;
+                    await supabase.from('exam_question_flags').update({ status: 'removed', resolved_by: uid, resolution_note: noteText }).eq('id', noteTargetId);
+                    loadFlags();
+                    setNoteOpen(false);
+                    setNoteText("");
+                    setNoteTargetId(null);
+                  } finally {
+                    setActionLoading(null);
+                  }
+                } else {
+                  await requestChanges();
+                }
+              }}
+              disabled={!!actionLoading}
+            >
+              {actionLoading ? "Submitting..." : "Submit"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

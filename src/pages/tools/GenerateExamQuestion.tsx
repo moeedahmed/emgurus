@@ -17,6 +17,21 @@ const GenerateExamQuestion: React.FC = () => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!examType.trim()) {
+      toast({ title: "Exam Type Required", description: "Please enter an exam type", variant: "destructive" });
+      return;
+    }
+    if (!difficulty.trim()) {
+      toast({ title: "Difficulty Required", description: "Please enter a difficulty level", variant: "destructive" });
+      return;
+    }
+    if (!topic.trim()) {
+      toast({ title: "Topic Required", description: "Please enter a topic", variant: "destructive" });
+      return;
+    }
+    
     setLoading(true);
     setResult(null);
     try {
@@ -45,23 +60,53 @@ const GenerateExamQuestion: React.FC = () => {
           <CardTitle>Parameters</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={onSubmit} className="grid gap-4 max-w-xl">
+          <form onSubmit={onSubmit} className="grid gap-4 w-full max-w-xl">
             <div>
-              <Label htmlFor="examType">Exam Type</Label>
-              <Input id="examType" placeholder="e.g. mrcem_sba" value={examType} onChange={(e) => setExamType(e.target.value)} />
+              <Label htmlFor="examType">Exam Type *</Label>
+              <Input 
+                id="examType" 
+                placeholder="e.g. mrcem_sba" 
+                value={examType} 
+                onChange={(e) => setExamType(e.target.value)}
+                required
+                className={!examType.trim() && examType !== "" ? "border-destructive" : ""}
+              />
             </div>
             <div>
-              <Label htmlFor="difficulty">Difficulty</Label>
-              <Input id="difficulty" placeholder="e.g. easy | medium | hard" value={difficulty} onChange={(e) => setDifficulty(e.target.value)} />
+              <Label htmlFor="difficulty">Difficulty *</Label>
+              <Input 
+                id="difficulty" 
+                placeholder="e.g. easy | medium | hard" 
+                value={difficulty} 
+                onChange={(e) => setDifficulty(e.target.value)}
+                required
+                className={!difficulty.trim() && difficulty !== "" ? "border-destructive" : ""}
+              />
             </div>
             <div>
-              <Label htmlFor="topic">Topic</Label>
-              <Input id="topic" placeholder="e.g. Chest pain" value={topic} onChange={(e) => setTopic(e.target.value)} />
+              <Label htmlFor="topic">Topic *</Label>
+              <Input 
+                id="topic" 
+                placeholder="e.g. Chest pain" 
+                value={topic} 
+                onChange={(e) => setTopic(e.target.value)}
+                required
+                className={!topic.trim() && topic !== "" ? "border-destructive" : ""}
+              />
             </div>
 
-            <div className="flex items-center gap-3">
-              <Button type="submit" disabled={loading}>{loading ? "Generating..." : "Generate"}</Button>
-              <Button type="button" variant="secondary" onClick={() => navigate("/tools/my-exam-drafts")}>View My Drafts</Button>
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+                {loading ? "Generating..." : "Generate"}
+              </Button>
+              <Button 
+                type="button" 
+                variant="secondary" 
+                onClick={() => navigate("/tools/my-exam-drafts")}
+                className="w-full sm:w-auto"
+              >
+                View My Drafts
+              </Button>
             </div>
           </form>
         </CardContent>

@@ -43,6 +43,7 @@ interface QuestionFull {
 const ExamsReviewQueue = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<{ assignment_id: string; question_id: string } | null>(null);
@@ -81,9 +82,9 @@ const ExamsReviewQueue = () => {
   const onChange = (patch: Partial<QuestionFull>) => setModel((m) => (m ? { ...m, ...patch } : m));
 
   const saveApprove = async () => {
-    if (!active || !model) return;
+    if (!active || !model || actionLoading) return;
     try {
-      setLoading(true);
+      setActionLoading(true);
       const updates: any = {
         question_text: model.question_text,
         option_a: model.option_a,
@@ -110,17 +111,17 @@ const ExamsReviewQueue = () => {
     } catch (e: any) {
       toast({ title: "Failed to approve", description: e.message || "", variant: "destructive" });
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
   const reject = async () => {
-    if (!active || rejectNote.trim().length < 3) {
+    if (!active || rejectNote.trim().length < 3 || actionLoading) {
       toast({ title: "Add a note", description: "Please include a short reason." });
       return;
     }
     try {
-      setLoading(true);
+      setActionLoading(true);
       await callFunction("/exams-guru-review/reject", {
         assignment_id: active.assignment_id,
         question_id: active.question_id,
@@ -134,7 +135,7 @@ const ExamsReviewQueue = () => {
     } catch (e: any) {
       toast({ title: "Failed to reject", description: e.message || "", variant: "destructive" });
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -142,27 +143,34 @@ const ExamsReviewQueue = () => {
     <main className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Exams Review Queue</h1>
       <Card className="p-0 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Created</TableHead>
-              <TableHead>Question</TableHead>
-              <TableHead>Exam</TableHead>
-              <TableHead>Difficulty</TableHead>
-              <TableHead>Topic</TableHead>
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[120px]">Created</TableHead>
+                <TableHead className="w-full md:w-auto min-w-[200px]">Question</TableHead>
+                <TableHead className="min-w-[80px]">Exam</TableHead>
+                <TableHead className="min-w-[90px]">Difficulty</TableHead>
+                <TableHead className="min-w-[80px]">Topic</TableHead>
+                <TableHead className="min-w-[80px]"></TableHead>
+              </TableRow>
+            </TableHeader>
           <TableBody>
             {queue.map((item) => (
               <TableRow key={item.assignment_id}>
-                <TableCell className="whitespace-nowrap text-sm">{new Date(item.created_at).toLocaleString()}</TableCell>
-                <TableCell className="text-sm">{item.preview?.question_text || "(open to view)"}</TableCell>
+                <TableCell className="text-sm">{new Date(item.created_at).toLocaleDateString()}</TableCell>
+                <TableCell className="text-sm">
+                  <div className="truncate max-w-[200px]" title={item.preview?.question_text || "(open to view)"}>
+                    {item.preview?.question_text || "(open to view)"}
+                  </div>
+                </TableCell>
                 <TableCell className="text-sm">{item.preview?.exam_type || '-'}</TableCell>
                 <TableCell className="text-sm">{item.preview?.difficulty_level || '-'}</TableCell>
                 <TableCell className="text-sm">{item.preview?.topic || '-'}</TableCell>
                 <TableCell className="text-right">
-                  <Button size="sm" onClick={() => openEditor(item)}>Open</Button>
+                  <Button size="sm" onClick={() => openEditor(item)} disabled={loading}>
+                    {loading ? "..." : "Open"}
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -173,6 +181,7 @@ const ExamsReviewQueue = () => {
             )}
           </TableBody>
         </Table>
+        </div>
       </Card>
 
       <Drawer open={open} onOpenChange={setOpen}>
@@ -246,11 +255,23 @@ const ExamsReviewQueue = () => {
                 </div>
             </div>
             )}
-            <DrawerFooter className="flex items-center gap-2 pt-6">
-              <Button onClick={saveApprove} disabled={loading || !model}>Save & Approve</Button>
+            <DrawerFooter className="flex flex-col sm:flex-row items-center gap-2 pt-6">
+              <Button onClick={saveApprove} disabled={actionLoading || !model} className="w-full sm:w-auto">
+                {actionLoading ? "Saving..." : "Save & Approve"}
+              </Button>
               <div className="flex-1" />
-              <Input placeholder="Reject note" value={rejectNote} onChange={(e) => setRejectNote(e.target.value)} />
-              <Button variant="destructive" onClick={reject} disabled={loading || !active}>Reject</Button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Input 
+                  placeholder="Reject note" 
+                  value={rejectNote} 
+                  onChange={(e) => setRejectNote(e.target.value)}
+                  className="flex-1 sm:min-w-[200px]"
+                  required
+                />
+                <Button variant="destructive" onClick={reject} disabled={actionLoading || !active}>
+                  {actionLoading ? "Rejecting..." : "Reject"}
+                </Button>
+              </div>
             </DrawerFooter>
           </div>
         </DrawerContent>
