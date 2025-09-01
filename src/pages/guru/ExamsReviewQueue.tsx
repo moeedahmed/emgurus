@@ -44,6 +44,7 @@ const ExamsReviewQueue = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [openLoadingId, setOpenLoadingId] = useState<string | null>(null);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<{ assignment_id: string; question_id: string } | null>(null);
@@ -63,6 +64,9 @@ const ExamsReviewQueue = () => {
   };
 
   const openEditor = async (item: QueueItem) => {
+    if (openLoadingId) return;
+    
+    setOpenLoadingId(item.assignment_id);
     setActive({ assignment_id: item.assignment_id, question_id: item.question_id });
     setOpen(true);
     try {
@@ -71,6 +75,8 @@ const ExamsReviewQueue = () => {
     } catch (e: any) {
       toast({ title: "Failed to load item", description: e.message || "", variant: "destructive" });
       setOpen(false);
+    } finally {
+      setOpenLoadingId(null);
     }
   };
 
@@ -142,7 +148,7 @@ const ExamsReviewQueue = () => {
   return (
     <main className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Exams Review Queue</h1>
-      <Card className="p-0 overflow-hidden">
+      <Card className="p-0">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -167,11 +173,15 @@ const ExamsReviewQueue = () => {
                 <TableCell className="text-sm">{item.preview?.exam_type || '-'}</TableCell>
                 <TableCell className="text-sm">{item.preview?.difficulty_level || '-'}</TableCell>
                 <TableCell className="text-sm">{item.preview?.topic || '-'}</TableCell>
-                <TableCell className="text-right">
-                  <Button size="sm" onClick={() => openEditor(item)} disabled={loading}>
-                    {loading ? "..." : "Open"}
-                  </Button>
-                </TableCell>
+                 <TableCell className="text-right">
+                   <Button 
+                     size="sm" 
+                     onClick={() => openEditor(item)} 
+                     disabled={loading || openLoadingId === item.assignment_id}
+                   >
+                     {openLoadingId === item.assignment_id ? "..." : "Open"}
+                   </Button>
+                 </TableCell>
               </TableRow>
             ))}
             {queue.length === 0 && (

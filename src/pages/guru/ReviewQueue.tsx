@@ -153,7 +153,7 @@ const GuruReviewQueue = () => {
       <h1 className="text-3xl font-bold mb-2">Review AI-Generated Questions</h1>
       <p className="text-muted-foreground mb-6">Approve or request changes on questions assigned to you.</p>
 
-      <Card className="p-0 overflow-hidden">
+      <Card className="p-0">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
