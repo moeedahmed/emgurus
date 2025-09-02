@@ -470,7 +470,7 @@ export default function AiPracticeSession() {
             AI Question {idx + 1} of {total}
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4">
+        <CardContent className="grid gap-4 w-full max-w-full break-words">
           {error && (
             <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
               <div className="font-medium">Error: {error}</div>

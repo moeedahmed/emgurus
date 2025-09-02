@@ -32,7 +32,7 @@ export default function QuestionCard({
   questionId?: string;
 }) {
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 w-full max-w-full">
       <Card>
         <CardContent className="prose prose-sm dark:prose-invert max-w-none py-4 w-full max-w-full break-words">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{stem}</ReactMarkdown>

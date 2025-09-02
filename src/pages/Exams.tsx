@@ -37,9 +37,9 @@ export default function Exams() {
           {/* AI Mode */}
           <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center justify-center gap-2 mb-2">
                 <Zap className="h-5 w-5 text-primary" />
-                <h3 className="text-xl font-semibold">AI Mode</h3>
+                <h3 className="text-xl font-semibold text-center">AI Mode</h3>
                 <span className="ml-2 align-middle text-xs px-2 py-0.5 rounded-full border bg-primary/10 text-primary">Beta</span>
               </div>
               <ul className="text-left list-disc list-inside space-y-1 text-sm text-muted-foreground">
@@ -49,10 +49,10 @@ export default function Exams() {
                 <li>Dynamic difficulty adjustment</li>
               </ul>
             </div>
-            <div className="pt-6">
+            <div className="pt-6 flex justify-center">
               <Button 
                 size="lg" 
-                className="w-full"
+                className="w-auto"
                 onClick={() => navigate('/exams/ai-practice')}
                 aria-label="Start AI Mode"
               >
@@ -64,9 +64,9 @@ export default function Exams() {
           {/* Practice Mode */}
           <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center justify-center gap-2 mb-2">
                 <BookOpen className="h-5 w-5 text-primary" />
-                <h3 className="text-xl font-semibold">Practice Mode</h3>
+                <h3 className="text-xl font-semibold text-center">Practice Mode</h3>
               </div>
               <ul className="text-left list-disc list-inside space-y-1 text-sm text-muted-foreground">
                 <li>Curated questions from expert reviewers</li>
@@ -75,10 +75,10 @@ export default function Exams() {
                 <li>Navigate freely between questions</li>
               </ul>
             </div>
-            <div className="pt-6">
+            <div className="pt-6 flex justify-center">
               <Button 
                 size="lg" 
-                className="w-full"
+                className="w-auto"
                 onClick={() => navigate('/exams/practice')}
                 aria-label="Start Practice"
               >
@@ -90,9 +90,9 @@ export default function Exams() {
           {/* Exam Mode */}
           <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center justify-center gap-2 mb-2">
                 <Clock className="h-5 w-5 text-primary" />
-                <h3 className="text-xl font-semibold">Exam Mode</h3>
+                <h3 className="text-xl font-semibold text-center">Exam Mode</h3>
               </div>
               <ul className="text-left list-disc list-inside space-y-1 text-sm text-muted-foreground">
                 <li>Timed practice exams</li>
@@ -101,10 +101,10 @@ export default function Exams() {
                 <li>Mark questions for review</li>
               </ul>
             </div>
-            <div className="pt-6">
+            <div className="pt-6 flex justify-center">
               <Button 
                 size="lg" 
-                className="w-full"
+                className="w-auto"
                 onClick={() => navigate('/exams/exam')}
                 aria-label="Start Exam"
               >

@@ -539,7 +539,7 @@ export default function PracticeSession() {
                 </div>
               </CardTitle>
             </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 w-full max-w-full break-words">
           {currentQuestion && (
             <>
               <QuestionCard
