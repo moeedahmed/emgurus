@@ -88,11 +88,9 @@ import RoleRedirector from "@/components/auth/RoleRedirector";
 import AuthLandingGuard from "@/components/auth/AuthLandingGuard";
 import { SkipLink } from "@/components/ui/SkipLink";
 import { ScreenReaderAnnouncer } from "@/components/ui/ScreenReaderAnnouncer";
-import { FeatureDisabled } from "@/components/common/FeatureDisabled";
+import { GuardedLazy } from "@/lib/guarded-lazy";
+import { DevFlagBanner } from "@/components/common/DevFlagBanner";
 import { isBlogsV2Enabled, isExamsV2Enabled } from "@/lib/flags";
-
-// V2 Namespace pages - dynamically imported only when flags are enabled
-// No top-level lazy imports to prevent prefetching when disabled
 
 // Loading fallback component
 const PageLoadingFallback = () => (
@@ -135,6 +133,7 @@ const App = () => (
           <ScreenReaderAnnouncer />
           <ScrollToTop />
           <AuthLandingGuard />
+          <DevFlagBanner />
           <Routes>
             <Route element={<SiteLayout />}> 
               <Route path="/" element={<Index />} />
@@ -479,44 +478,22 @@ const App = () => (
                 </RoleProtectedRoute>
               } />
 
-              {/* V2 Namespace Routes - Feature Flag Guarded (No Prefetch) */}
+              {/* V2 Namespace Routes - GuardedLazy (No Prefetch) */}
               <Route path="/blogs2/*" element={
-                (() => {
-                  if (!isBlogsV2Enabled()) {
-                    return <FeatureDisabled 
-                      featureName="Blog 2.0" 
-                      description="Blog 2.0 features are currently disabled in this environment."
-                    />;
-                  }
-                  
-                  const Blogs2Index = lazy(() => import("@/pages/blogs2/Index"));
-                  return (
-                    <ErrorBoundary>
-                      <Suspense fallback={<PageLoadingFallback />}>
-                        <Blogs2Index />
-                      </Suspense>
-                    </ErrorBoundary>
-                  );
-                })()
+                <GuardedLazy
+                  enabled={isBlogsV2Enabled()}
+                  featureName="Blog 2.0"
+                  description="Blog 2.0 features are currently disabled in this environment."
+                  importPath={() => import("@/pages/blogs2/Index")}
+                />
               } />
               <Route path="/exams2/*" element={
-                (() => {
-                  if (!isExamsV2Enabled()) {
-                    return <FeatureDisabled 
-                      featureName="Exam 2.0" 
-                      description="Exam 2.0 features are currently disabled in this environment."
-                    />;
-                  }
-                  
-                  const Exams2Index = lazy(() => import("@/pages/exams2/Index"));
-                  return (
-                    <ErrorBoundary>
-                      <Suspense fallback={<PageLoadingFallback />}>
-                        <Exams2Index />
-                      </Suspense>
-                    </ErrorBoundary>
-                  );
-                })()
+                <GuardedLazy
+                  enabled={isExamsV2Enabled()}
+                  featureName="Exam 2.0"
+                  description="Exam 2.0 features are currently disabled in this environment."
+                  importPath={() => import("@/pages/exams2/Index")}
+                />
               } />
             </Route>
 
