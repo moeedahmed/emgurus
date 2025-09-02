@@ -383,7 +383,43 @@ export default function ExamSession() {
                 questionId={currentQuestion.id}
               />
 
-              <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              {/* Primary action placement - right under options */}
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="justify-self-start">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                    disabled={currentIndex === 0}
+                    className="min-w-0 text-sm sm:text-base"
+                  >
+                    Previous
+                  </Button>
+                </div>
+                <div className="justify-self-end">
+                  <Button
+                    onClick={() => {
+                      if (currentIndex < questions.length - 1) {
+                        setCurrentIndex(prev => prev + 1);
+                      } else {
+                        finishExam();
+                      }
+                    }}
+                    disabled={!answers[currentQuestion.id]}
+                    className="min-w-0 text-sm sm:text-base"
+                  >
+                    {currentIndex < questions.length - 1 ? 'Next' : 'Finish Exam'}
+                  </Button>
+                </div>
+              </div>
+
+              {!answers[currentQuestion.id] && (
+                <div className="text-sm text-muted-foreground text-center mt-2">
+                  Please select an answer to continue
+                </div>
+              )}
+
+              {/* Secondary actions - below primary actions */}
+              <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-between order-last md:order-none">
                 <div className="flex flex-wrap items-center gap-2 gap-y-2">
                   <MarkForReviewButton
                     currentQuestionId={currentQuestion.id}
@@ -404,35 +440,6 @@ export default function ExamSession() {
                    >
                     Finish Early
                   </Button>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 gap-y-2 w-full sm:w-auto">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
-                    disabled={currentIndex === 0}
-                    className="min-w-0 text-sm sm:text-base"
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      if (currentIndex < questions.length - 1) {
-                        setCurrentIndex(prev => prev + 1);
-                      } else {
-                        finishExam();
-                      }
-                    }}
-                    disabled={!answers[currentQuestion.id]}
-                    className="min-w-0 text-sm sm:text-base"
-                  >
-                    {currentIndex < questions.length - 1 ? 'Next' : 'Finish Exam'}
-                  </Button>
-                  {!answers[currentQuestion.id] && (
-                    <div className="text-sm text-muted-foreground w-full">
-                      Please select an answer to continue
-                    </div>
-                  )}
                 </div>
               </div>
             </>

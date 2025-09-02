@@ -34,12 +34,12 @@ export default function QuestionCard({
   return (
     <div className="grid gap-4">
       <Card>
-        <CardContent className="prose prose-sm dark:prose-invert max-w-none py-4 break-words max-w-full">
+        <CardContent className="prose prose-sm dark:prose-invert max-w-none py-4 w-full max-w-full break-words">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{stem}</ReactMarkdown>
         </CardContent>
       </Card>
 
-      <div className="rounded-lg border border-border p-4 w-full">
+      <div className="rounded-lg border border-border p-4 w-full max-w-full">
         <RadioGroup key={questionId || 'q'} value={selectedKey} onValueChange={onSelect} className="w-full">
             {options.map((o) => {
               const isCorrect = !!showExplanation && !!correctKey && o.key === correctKey;
@@ -68,8 +68,8 @@ export default function QuestionCard({
       </div>
 
       {showExplanation && (
-        <Card>
-          <CardContent className="py-4 space-y-4">
+        <Card className="w-full max-w-full">
+          <CardContent className="py-4 space-y-4 w-full max-w-full break-words">
             <div>
               <div id="explanation-heading" tabIndex={-1} className="font-semibold mb-2 outline-none">Main Explanation</div>
               <div className="prose prose-sm dark:prose-invert max-w-none break-words max-w-full">

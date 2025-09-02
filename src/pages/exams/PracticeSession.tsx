@@ -633,8 +633,31 @@ export default function PracticeSession() {
                 </Card>
               )}
 
-              <div className="flex items-center justify-between pt-4">
-                <div className="flex items-center gap-2">
+              {/* Primary action placement - right under options */}
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="justify-self-start">
+                  <Button
+                    variant="outline"
+                    onClick={prevQuestion}
+                    disabled={currentIndex === 0}
+                    className="min-w-0 text-sm sm:text-base"
+                  >
+                    Previous
+                  </Button>
+                </div>
+                <div className="justify-self-end">
+                  <Button
+                    onClick={nextQuestion}
+                    className="min-w-0 text-sm sm:text-base"
+                  >
+                    Next Question
+                  </Button>
+                </div>
+              </div>
+
+              {/* Secondary actions - below explanation/feedback */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between order-last md:order-none pt-4">
+                <div className="flex flex-wrap items-center gap-2 gap-y-2 md:flex-nowrap">
                   <MarkForReviewButton
                     currentQuestionId={currentQuestion.id}
                     source="reviewed"
@@ -642,44 +665,20 @@ export default function PracticeSession() {
                   <Button 
                     variant="outline" 
                     onClick={() => navigate('/exams/practice')}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 min-w-0 text-sm sm:text-base"
                   >
                     <ArrowLeft className="h-4 w-4" />
                     Back to Config
                   </Button>
                   <Button 
                     variant="outline" 
-                  onClick={endPractice}
-                  className="text-warning"
+                    onClick={endPractice}
+                    className="text-warning min-w-0 text-sm sm:text-base"
                   >
                     End Practice
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 md:flex-nowrap">
-                  <Button
-                    variant="outline"
-                    onClick={prevQuestion}
-                    disabled={currentIndex === 0}
-                    className="flex items-center gap-2"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    Previous
-                  </Button>
-                  <Button
-                    onClick={nextQuestion}
-                    className="flex items-center gap-2"
-                  >
-                    {currentIndex < questions.length - 1 ? (
-                      <>
-                        Next
-                        <ArrowRight className="h-4 w-4" />
-                      </>
-                    ) : (
-                      'Finish Practice'
-                    )}
-                  </Button>
-                </div>
               </div>
             </>
           )}

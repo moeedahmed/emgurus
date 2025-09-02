@@ -444,8 +444,8 @@ export default function AiPracticeSession() {
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 mx-0 w-full px-4 py-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold">AI Practice Session</h1>
-            <div className="text-sm text-muted-foreground">
+            <h1 className="text-base sm:text-lg font-semibold">AI Practice Session</h1>
+            <div className="text-xs sm:text-sm text-muted-foreground break-words max-w-full leading-snug">
               Question {idx + 1} of {total} • {exam} • {topic || 'All topics'} • {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
             </div>
           </div>
@@ -482,9 +482,9 @@ export default function AiPracticeSession() {
           
           {q && (
             <>
-              <div className="p-3 rounded-md bg-warning/10 border border-warning/20 text-warning text-sm mb-4">
-                <div className="font-medium mb-1">⚠️ AI Generated Content - Experimental</div>
-                <div>This content is AI-generated and may not always be accurate. Please exercise your judgment and provide feedback if you notice any issues.</div>
+              <div className="w-full max-w-full p-3 rounded-md bg-warning/10 border border-warning/20 text-warning text-xs sm:text-sm mb-4 break-words">
+                <div className="font-medium mb-1 leading-snug">⚠️ AI Generated Content - Experimental</div>
+                <div className="leading-snug">This content is AI-generated and may not always be accurate. Please exercise your judgment and provide feedback if you notice any issues.</div>
               </div>
               <QuestionCard
                 stem={q.question}
@@ -495,10 +495,27 @@ export default function AiPracticeSession() {
                 explanation={q.explanation}
                 source={q.reference}
                 correctKey={q.correct}
-              />
-              {show && !feedbackSubmitted[idx] && (
-                <Card className="mt-4">
-                  <CardContent className="py-4">
+               />
+               
+               {/* Primary action placement - right under options */}
+               <div className="grid grid-cols-2 gap-3 mt-4">
+                 <div className="justify-self-start">
+                   <Button variant="outline" onClick={prev} disabled={idx === 0} className="min-w-0 text-sm sm:text-base">Previous</Button>
+                 </div>
+                 <div className="justify-self-end">
+                   {!show ? (
+                     <Button onClick={submit} disabled={!q || !selected || loading} className="min-w-0 text-sm sm:text-base">Submit</Button>
+                   ) : (
+                     <Button onClick={next} disabled={!selected && !show} className="min-w-0 text-sm sm:text-base">
+                       {idx < total - 1 ? 'Next' : 'Finish'}
+                     </Button>
+                   )}
+                 </div>
+               </div>
+               
+               {show && !feedbackSubmitted[idx] && (
+                 <Card className="mt-4 w-full max-w-full">
+                   <CardContent className="py-4 break-words">
                     <div className="text-sm font-medium mb-3">Question Feedback</div>
                     
                     <div className="space-y-3">
@@ -568,7 +585,7 @@ export default function AiPracticeSession() {
               )}
 
               {feedbackSubmitted[idx] && (
-                <div className="mt-4 p-3 bg-success/10 border border-success/20 rounded-md text-success text-sm">
+                <div className="mt-4 w-full max-w-full p-3 bg-success/10 border border-success/20 rounded-md text-success text-sm break-words">
                   ✓ Thank you for your feedback!
                 </div>
               )}
@@ -579,7 +596,8 @@ export default function AiPracticeSession() {
             <div className="text-sm text-muted-foreground">{loading ? 'Generating question…' : 'No question yet.'}</div>
           )}
           
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Secondary actions - below explanation/feedback */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between order-last md:order-none">
             <div className="flex flex-wrap items-center gap-2 gap-y-2">
               <Button variant="outline" onClick={() => navigate('/exams/ai-practice')} className="min-w-0 text-sm sm:text-base">Edit selection</Button>
               <Button variant="outline" onClick={showFinalScore} className="text-warning min-w-0 text-sm sm:text-base">
@@ -589,21 +607,11 @@ export default function AiPracticeSession() {
                 <Button variant="ghost" onClick={() => generate(idx)} disabled={loading} className="min-w-0 text-sm sm:text-base">Retry</Button>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-2 gap-y-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={prev} disabled={idx === 0} className="min-w-0 text-sm sm:text-base">Previous</Button>
-              {!show ? (
-                <Button onClick={submit} disabled={!q || !selected || loading} className="min-w-0 text-sm sm:text-base">Submit</Button>
-              ) : (
-                <Button onClick={next} disabled={!selected && !show} className="min-w-0 text-sm sm:text-base">
-                  {idx < total - 1 ? 'Next' : 'Finish'}
-                </Button>
-              )}
-              {!selected && !show && (
-                <div className="text-sm text-muted-foreground w-full">
-                  Please select an answer to continue
-                </div>
-              )}
-            </div>
+            {!selected && !show && (
+              <div className="text-sm text-muted-foreground">
+                Please select an answer to continue
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

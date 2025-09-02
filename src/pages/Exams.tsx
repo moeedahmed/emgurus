@@ -31,7 +31,8 @@ export default function Exams() {
         ctas={[{ label: "Exams Membership", href: "/pricing", variant: "default" }]} 
       />
       <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="mx-auto max-w-5xl grid items-stretch gap-6 md:grid-cols-3">
+        <div className="mx-auto max-w-screen-md px-4 text-center">
+          <div className="grid items-stretch gap-6 md:grid-cols-3">
           
           {/* AI Mode */}
           <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
@@ -111,6 +112,7 @@ export default function Exams() {
               </Button>
             </div>
           </Card>
+          </div>
         </div>
       </section>
     </main>
