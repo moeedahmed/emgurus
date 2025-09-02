@@ -312,7 +312,7 @@ export default function ExamSession() {
       </div>
 
       {/* Desktop sticky header with timer */}
-      <div className="hidden md:block sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 -mx-4 px-4 py-3">
+      <div className="hidden md:block sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 mx-0 w-full px-4 py-3">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold flex items-center gap-2">
@@ -383,8 +383,8 @@ export default function ExamSession() {
                 questionId={currentQuestion.id}
               />
 
-              <div className="flex items-center justify-between pt-4">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-2 gap-y-2">
                   <MarkForReviewButton
                     currentQuestionId={currentQuestion.id}
                     source="reviewed"
@@ -392,7 +392,7 @@ export default function ExamSession() {
                   <Button 
                     variant="outline" 
                     onClick={() => navigate('/exams/exam')}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 min-w-0 text-sm sm:text-base"
                   >
                     <ArrowLeft className="h-4 w-4" />
                     Back to Config
@@ -400,17 +400,18 @@ export default function ExamSession() {
                    <Button 
                      variant="outline" 
                      onClick={finishExam}
-                     className="text-warning"
+                     className="text-warning min-w-0 text-sm sm:text-base"
                    >
                     Finish Early
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 md:flex-nowrap">
+                <div className="flex flex-wrap items-center gap-2 gap-y-2 w-full sm:w-auto">
                   <Button
                     variant="outline"
                     onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
                     disabled={currentIndex === 0}
+                    className="min-w-0 text-sm sm:text-base"
                   >
                     Previous
                   </Button>
@@ -423,11 +424,12 @@ export default function ExamSession() {
                       }
                     }}
                     disabled={!answers[currentQuestion.id]}
+                    className="min-w-0 text-sm sm:text-base"
                   >
                     {currentIndex < questions.length - 1 ? 'Next' : 'Finish Exam'}
                   </Button>
                   {!answers[currentQuestion.id] && (
-                    <div className="text-sm text-muted-foreground w-full md:w-auto md:ml-2">
+                    <div className="text-sm text-muted-foreground w-full">
                       Please select an answer to continue
                     </div>
                   )}

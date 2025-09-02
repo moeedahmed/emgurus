@@ -441,7 +441,7 @@ export default function AiPracticeSession() {
   return (
     <div className="container mx-auto px-4 py-6">
       {/* Sticky progress bar */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 -mx-4 px-4 py-3">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 mx-0 w-full px-4 py-3">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold">AI Practice Session</h1>
@@ -579,27 +579,27 @@ export default function AiPracticeSession() {
             <div className="text-sm text-muted-foreground">{loading ? 'Generating question…' : 'No question yet.'}</div>
           )}
           
-          <div className="flex items-center gap-2 justify-between">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => navigate('/exams/ai-practice')}>Edit selection</Button>
-              <Button variant="outline" onClick={showFinalScore} className="text-warning">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2 gap-y-2">
+              <Button variant="outline" onClick={() => navigate('/exams/ai-practice')} className="min-w-0 text-sm sm:text-base">Edit selection</Button>
+              <Button variant="outline" onClick={showFinalScore} className="text-warning min-w-0 text-sm sm:text-base">
                 End Early
               </Button>
               {error && (
-                <Button variant="ghost" onClick={() => generate(idx)} disabled={loading}>Retry</Button>
+                <Button variant="ghost" onClick={() => generate(idx)} disabled={loading} className="min-w-0 text-sm sm:text-base">Retry</Button>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={prev} disabled={idx === 0}>Previous</Button>
+            <div className="flex flex-wrap items-center gap-2 gap-y-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={prev} disabled={idx === 0} className="min-w-0 text-sm sm:text-base">Previous</Button>
               {!show ? (
-                <Button onClick={submit} disabled={!q || !selected || loading}>Submit</Button>
+                <Button onClick={submit} disabled={!q || !selected || loading} className="min-w-0 text-sm sm:text-base">Submit</Button>
               ) : (
-                <Button onClick={next} disabled={!selected && !show}>
+                <Button onClick={next} disabled={!selected && !show} className="min-w-0 text-sm sm:text-base">
                   {idx < total - 1 ? 'Next' : 'Finish'}
                 </Button>
               )}
               {!selected && !show && (
-                <div className="text-sm text-muted-foreground ml-2">
+                <div className="text-sm text-muted-foreground w-full">
                   Please select an answer to continue
                 </div>
               )}

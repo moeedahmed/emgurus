@@ -34,7 +34,7 @@ export default function QuestionCard({
   return (
     <div className="grid gap-4">
       <Card>
-        <CardContent className="prose prose-sm dark:prose-invert max-w-none py-4 break-words overflow-x-hidden">
+        <CardContent className="prose prose-sm dark:prose-invert max-w-none py-4 break-words max-w-full">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{stem}</ReactMarkdown>
         </CardContent>
       </Card>
@@ -55,8 +55,8 @@ export default function QuestionCard({
                   )}
                 >
                   <RadioGroupItem value={o.key} id={`opt-${questionId || 'q'}-${o.key}`} disabled={!!lockSelection} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-foreground/90 break-words overflow-x-hidden">
+                   <div className="flex-1 min-w-0">
+                     <div className="text-sm text-foreground/90 break-words max-w-full">
                       <span className="font-medium">{o.key}. </span>
                       <span className="inline"><ReactMarkdown remarkPlugins={[remarkGfm]}>{o.text}</ReactMarkdown></span>
                     </div>
@@ -72,7 +72,7 @@ export default function QuestionCard({
           <CardContent className="py-4 space-y-4">
             <div>
               <div id="explanation-heading" tabIndex={-1} className="font-semibold mb-2 outline-none">Main Explanation</div>
-              <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-hidden">
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words max-w-full">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanation || "No explanation provided."}</ReactMarkdown>
               </div>
             </div>
@@ -89,7 +89,7 @@ export default function QuestionCard({
                       <div className="font-medium text-sm mb-1">
                         {option.key}. {option.text.length > 50 ? `${option.text.substring(0, 50)}...` : option.text}
                       </div>
-                      <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-hidden">
+                      <div className="prose prose-sm dark:prose-invert max-w-none break-words max-w-full">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{option.explanation}</ReactMarkdown>
                       </div>
                     </div>
