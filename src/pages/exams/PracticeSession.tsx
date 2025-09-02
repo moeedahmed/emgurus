@@ -556,11 +556,11 @@ export default function PracticeSession() {
 
               {/* Feedback Card */}
               {showExplanations[currentQuestion.id] && (
-                <Card className="mt-4">
+                <Card className="mt-4 w-full max-w-full">
                   <CardHeader>
                     <CardTitle className="text-base">Question Feedback</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="w-full max-w-full break-words">
                     {!feedbackSubmitted[currentQuestion.id] ? (
                       <>
                         <div className="mb-4">

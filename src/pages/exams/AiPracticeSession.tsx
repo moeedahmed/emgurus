@@ -453,7 +453,7 @@ export default function AiPracticeSession() {
             <div className="text-sm text-muted-foreground">
               {Math.round(((idx + 1) / total) * 100)}% complete
             </div>
-            <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
               <div 
                 className="h-full bg-primary transition-all duration-300"
                 style={{ width: `${((idx + 1) / total) * 100}%` }}
@@ -482,7 +482,7 @@ export default function AiPracticeSession() {
           
           {q && (
             <>
-              <div className="w-full max-w-full p-3 rounded-md bg-warning/10 border border-warning/20 text-warning text-xs sm:text-sm mb-4 break-words">
+              <div className="w-full max-w-full py-2 px-3 rounded-md bg-warning/10 border border-warning/20 text-warning text-xs sm:text-sm mb-4 break-words">
                 <div className="font-medium mb-1 leading-snug">⚠️ AI Generated Content - Experimental</div>
                 <div className="leading-snug">This content is AI-generated and may not always be accurate. Please exercise your judgment and provide feedback if you notice any issues.</div>
               </div>

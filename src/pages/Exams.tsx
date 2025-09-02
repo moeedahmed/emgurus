@@ -42,11 +42,11 @@ export default function Exams() {
                 <h3 className="text-xl font-semibold">AI Mode</h3>
                 <span className="ml-2 align-middle text-xs px-2 py-0.5 rounded-full border bg-primary/10 text-primary">Beta</span>
               </div>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• AI-generated questions on demand</li>
-                <li>• Instant explanations and feedback</li>
-                <li>• Customizable by exam and topic</li>
-                <li>• Dynamic difficulty adjustment</li>
+              <ul className="text-left list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                <li>AI-generated questions on demand</li>
+                <li>Instant explanations and feedback</li>
+                <li>Customizable by exam and topic</li>
+                <li>Dynamic difficulty adjustment</li>
               </ul>
             </div>
             <div className="pt-6">
@@ -68,11 +68,11 @@ export default function Exams() {
                 <BookOpen className="h-5 w-5 text-primary" />
                 <h3 className="text-xl font-semibold">Practice Mode</h3>
               </div>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Curated questions from expert reviewers</li>
-                <li>• See answers and explanations immediately</li>
-                <li>• Untimed learning experience</li>
-                <li>• Navigate freely between questions</li>
+              <ul className="text-left list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                <li>Curated questions from expert reviewers</li>
+                <li>See answers and explanations immediately</li>
+                <li>Untimed learning experience</li>
+                <li>Navigate freely between questions</li>
               </ul>
             </div>
             <div className="pt-6">
@@ -94,11 +94,11 @@ export default function Exams() {
                 <Clock className="h-5 w-5 text-primary" />
                 <h3 className="text-xl font-semibold">Exam Mode</h3>
               </div>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Timed practice exams</li>
-                <li>• Realistic exam conditions</li>
-                <li>• Complete score analysis</li>
-                <li>• Mark questions for review</li>
+              <ul className="text-left list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                <li>Timed practice exams</li>
+                <li>Realistic exam conditions</li>
+                <li>Complete score analysis</li>
+                <li>Mark questions for review</li>
               </ul>
             </div>
             <div className="pt-6">
