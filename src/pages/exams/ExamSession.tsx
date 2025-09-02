@@ -243,20 +243,18 @@ export default function ExamSession() {
   };
 
   const showExamResult = (correct: number, total: number, percentage: number) => {
-    toast({
-      title: 'Exam Complete!',
-      description: `Score: ${correct}/${total} (${percentage}%)`,
-      duration: 5000
-    });
-
-    // Show result card in UI (you could also create a modal here)
-    setTimeout(() => {
-      if (confirm(`Exam Complete!\n\nScore: ${correct}/${total} (${percentage}%)\n\nWould you like to view all your attempts?`)) {
-        navigate('/dashboard/user#exams-attempts');
-      } else {
-        navigate('/exams');
+    // Navigate to report card instead of showing toast/confirm
+    const durationSec = Math.floor((Date.now() - startTime.getTime()) / 1000);
+    
+    navigate('/exams/result', {
+      replace: true,
+      state: {
+        attemptId,
+        score: { correct, total, percentage },
+        duration: { seconds: durationSec, formatted: formatTime(durationSec) },
+        exam: { name: sessionState.exam, topic: sessionState.topic }
       }
-    }, 1000);
+    });
   };
 
   const formatTime = (seconds: number) => {

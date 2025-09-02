@@ -42,6 +42,7 @@ const QuestionBankPage = lazy(() => import("@/pages/exams/QuestionBankPage"));
 const QuestionDetail = lazy(() => import("@/pages/exams/QuestionDetail"));
 const ReviewedExamSession = lazy(() => import("@/pages/exams/ReviewedExamSession"));
 const ExamSession = lazy(() => import("@/pages/exams/ExamSession"));
+const ExamReport = lazy(() => import("@/pages/exams/ExamReport"));
 
 // Admin pages - lazy loaded
 const ExamsAICuration = lazy(() => import("./pages/admin/ExamsAICuration"));
@@ -161,13 +162,20 @@ const App = () => (
                     </Suspense>
                   </ErrorBoundary>
                 } />
-                <Route path="/exams/exam/session" element={
-                  <ErrorBoundary>
-                    <Suspense fallback={<PageLoadingFallback />}>
-                      <ExamSession />
-                    </Suspense>
-                  </ErrorBoundary>
-                } />
+                 <Route path="/exams/exam/session" element={
+                   <ErrorBoundary>
+                     <Suspense fallback={<PageLoadingFallback />}>
+                       <ExamSession />
+                     </Suspense>
+                   </ErrorBoundary>
+                 } />
+                 <Route path="/exams/result" element={
+                   <ErrorBoundary>
+                     <Suspense fallback={<PageLoadingFallback />}>
+                       <ExamReport />
+                     </Suspense>
+                   </ErrorBoundary>
+                 } />
                 <Route path="/exams/reviewed" element={
                   <ErrorBoundary>
                     <Suspense fallback={<PageLoadingFallback />}>

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Brain, FileText, Flag, Edit, Trash2, RotateCcw, Save, Users, AlertCircle, Loader2, Check, X, UserPlus, CheckSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast-core';
 import { DraftEditModal } from '@/components/DraftEditModal';
 
 interface ExamOption {
