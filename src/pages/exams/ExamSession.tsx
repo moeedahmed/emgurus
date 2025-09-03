@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import { Clock, Flag, ArrowLeft } from "lucide-react";
 import QuestionCard from "@/components/exams/QuestionCard";
 import Progress from "@/components/exams/Progress";
@@ -59,6 +60,7 @@ export default function ExamSession() {
   const [feedbackSaving, setFeedbackSaving] = useState<Record<number, boolean>>({});
   const [feedbackSaved, setFeedbackSaved] = useState<Record<number, boolean>>({});
   const [feedbackError, setFeedbackError] = useState<Record<number, string | null>>({});
+  const [showQuestionMap, setShowQuestionMap] = useState(false);
 
   useEffect(() => {
     document.title = "Exam Session • EM Gurus";
@@ -416,7 +418,29 @@ export default function ExamSession() {
 
       {/* Mobile drawer */}
       <div className="md:hidden mt-4">
-        <Button variant="outline" size="sm">Open question map</Button>
+        <Drawer open={showQuestionMap} onOpenChange={setShowQuestionMap}>
+          <DrawerTrigger asChild>
+            <Button variant="outline" size="sm">Open question map</Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <div className="p-4">
+              <RightSidebar
+                total={questions.length}
+                currentIndex={currentIndex}
+                answered={questions.map((q) => !!answers[q.id])}
+                onJump={(index) => {
+                  setCurrentIndex(index);
+                  setShowQuestionMap(false);
+                }}
+                mode="exam"
+                showGuru={SHOW_GURU["exam"]}
+                examId={attemptId}
+                questionId={currentQuestion?.id}
+                kbId={undefined}
+              />
+            </div>
+          </DrawerContent>
+        </Drawer>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-4 mt-6">
@@ -593,7 +617,7 @@ export default function ExamSession() {
           <RightSidebar
             total={questions.length}
             currentIndex={currentIndex}
-            answered={Object.fromEntries(questions.map((_, i) => [i, !!answers[questions[i]?.id]]))}
+            answered={questions.map((q) => !!answers[q.id])}
             onJump={(i) => setCurrentIndex(i)}
             mode="exam"
             showGuru={SHOW_GURU["exam"]}

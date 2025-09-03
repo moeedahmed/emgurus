@@ -1,6 +1,7 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import QuestionMap from "./QuestionMap";
-import AIGuruPanel from "@/components/chat/AIGuruPanel";
+
+const AIGuruPanel = lazy(() => import("@/components/chat/AIGuruPanel"));
 
 type Props = {
   total: number;
@@ -38,17 +39,19 @@ export default function RightSidebar({
         />
       </div>
 
-      {showGuru && (
+      {showGuru ? (
         <div className="rounded-xl border bg-card p-4 min-w-0">
           <h3 className="font-medium mb-3">AI Guru</h3>
-          <AIGuruPanel 
-            mode={mode} 
-            examId={examId} 
-            questionId={questionId} 
-            kbId={kbId} 
-          />
+          <Suspense fallback={<div className="text-xs text-muted-foreground">Loading AI Guru...</div>}>
+            <AIGuruPanel 
+              mode="practice" 
+              examId={examId} 
+              questionId={questionId} 
+              kbId={kbId} 
+            />
+          </Suspense>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

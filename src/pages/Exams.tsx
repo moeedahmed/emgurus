@@ -61,18 +61,19 @@ export default function Exams() {
             </div>
           </Card>
 
-          {/* Practice Mode */}
+          {/* Study Mode */}
           <Card className="h-full p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
               <div className="flex items-center justify-center gap-2 mb-2">
                 <BookOpen className="h-5 w-5 text-primary" />
-                <h3 className="text-xl font-semibold text-center">Practice Mode</h3>
+                <h3 className="text-xl font-semibold text-center">Study Mode</h3>
               </div>
               <ul className="text-left list-disc list-inside space-y-1 text-sm text-muted-foreground">
                 <li>Curated questions from expert reviewers</li>
                 <li>See answers and explanations immediately</li>
                 <li>Untimed learning experience</li>
                 <li>Navigate freely between questions</li>
+                <li>AI Guru assistance available</li>
               </ul>
             </div>
             <div className="pt-6 flex justify-center">
@@ -80,9 +81,9 @@ export default function Exams() {
                 size="lg" 
                 className="w-auto"
                 onClick={() => navigate('/exams/practice')}
-                aria-label="Start Practice"
+                aria-label="Start Study Session"
               >
-                Start Practice
+                Start Study Session
               </Button>
             </div>
           </Card>
