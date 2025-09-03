@@ -5,13 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import { BookOpen, ArrowLeft, ArrowRight, Settings, Flag } from "lucide-react";
 import QuestionCard from "@/components/exams/QuestionCard";
 import QuestionChat from "@/components/exams/QuestionChat";
-import MarkForReviewButton from "@/components/exams/MarkForReviewButton";
 import FloatingSettings from "@/components/exams/FloatingSettings";
+import Progress from "@/components/exams/Progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useRoles } from "@/hooks/useRoles";
@@ -487,117 +486,60 @@ export default function PracticeSession() {
 
   return (
     <div className="container mx-auto px-4 py-6 overflow-x-clip">
-      {/* Mobile progress at top */}
-      <div className="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border mb-4">
-        <div className="px-1 py-2">
-          <div className="text-xs text-muted-foreground mb-1">
-            Question {currentIndex + 1} of {questions.length} • {currentQuestion?.exam}
-            {currentQuestion?.topic && ` • ${currentQuestion.topic}`}
-          </div>
-          <Progress value={((currentIndex + 1) / questions.length) * 100} />
-        </div>
-      </div>
+      {/* Unified header */}
+      <Progress current={currentIndex + 1} total={questions.length} />
+      <h1 className="mt-4 text-2xl font-semibold">Practice Mode</h1>
 
-      {/* Desktop sticky header with progress */}
-      <div className="hidden md:block sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 mx-0 w-full px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              Practice Session
-            </h1>
-            <div className="text-sm text-muted-foreground">
-              Question {currentIndex + 1} of {questions.length} • {currentQuestion?.exam}
-              {currentQuestion?.topic && ` • ${currentQuestion.topic}`}
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="text-sm text-muted-foreground">Progress</div>
-              <div className="text-lg font-semibold">
-                {answeredCount}/{questions.length}
+      {/* Mobile question map drawer */}
+      <div className="md:hidden mt-4">
+        <Drawer open={showQuestionMap} onOpenChange={setShowQuestionMap}>
+          <DrawerTrigger asChild>
+            <Button variant="outline" size="sm">Question Map</Button>
+          </DrawerTrigger>
+          <DrawerContent className="p-4">
+            <div className="space-y-4">
+              <div className="text-sm font-medium">Jump to Question</div>
+              <div className="grid grid-cols-8 gap-2">
+                {questions.map((q, i) => {
+                  const isCurrent = i === currentIndex;
+                  const isAnswered = !!answers[q.id];
+                  const isMarked = markedForReview.has(q.id);
+                  const isCorrect = isAnswered && answers[q.id] === q.correct_answer;
+                  
+                  let buttonClass = "h-8 w-8 rounded text-sm flex items-center justify-center border ";
+                  if (isCurrent) {
+                    buttonClass += "bg-primary text-primary-foreground ring-2 ring-primary";
+                  } else if (isAnswered) {
+                    buttonClass += isCorrect ? "bg-success/10 border-success/20 text-success" : "bg-destructive/10 border-destructive/20 text-destructive";
+                  } else {
+                    buttonClass += "bg-muted border-muted-foreground/20";
+                  }
+                  
+                  return (
+                    <Button
+                      key={q.id}
+                      onClick={() => {
+                        navigateToQuestion(i);
+                        setShowQuestionMap(false);
+                      }}
+                      className={buttonClass}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      {isMarked && <Flag className="h-3 w-3 text-warning absolute -top-1 -right-1" />}
+                      {i + 1}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
-            {markedCount > 0 && (
-              <div className="text-right">
-                <div className="text-sm text-muted-foreground">Marked</div>
-                <div className="text-lg font-semibold text-warning">
-                  {markedCount}
-                </div>
-              </div>
-            )}
-            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
-              />
-            </div>
-            <div className="md:hidden">
-              <Drawer open={showQuestionMap} onOpenChange={setShowQuestionMap}>
-                <DrawerTrigger asChild>
-                  <Button variant="outline" size="sm">Question Map</Button>
-                </DrawerTrigger>
-                <DrawerContent className="p-4">
-                  <div className="space-y-4">
-                    <div className="text-sm font-medium">Jump to Question</div>
-                    <div className="grid grid-cols-8 gap-2">
-                      {questions.map((q, i) => {
-                        const isCurrent = i === currentIndex;
-                        const isAnswered = !!answers[q.id];
-                        const isMarked = markedForReview.has(q.id);
-                        const isCorrect = isAnswered && answers[q.id] === q.correct_answer;
-                        
-                        let buttonClass = "h-8 w-8 rounded text-sm flex items-center justify-center border ";
-                        if (isCurrent) {
-                          buttonClass += "bg-primary text-primary-foreground ring-2 ring-primary";
-                        } else if (isAnswered) {
-                          buttonClass += isCorrect ? "bg-success/10 border-success/20 text-success" : "bg-destructive/10 border-destructive/20 text-destructive";
-                        } else {
-                          buttonClass += "bg-muted border-muted-foreground/20";
-                        }
-                        
-                        return (
-                          <Button
-                            key={q.id}
-                            onClick={() => {
-                              navigateToQuestion(i);
-                              setShowQuestionMap(false);
-                            }}
-                            className={buttonClass}
-                            variant="ghost"
-                            size="sm"
-                          >
-                    {isMarked && <Flag className="h-3 w-3 text-warning absolute -top-1 -right-1" />}
-                            {i + 1}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </DrawerContent>
-              </Drawer>
-            </div>
-          </div>
-        </div>
+          </DrawerContent>
+        </Drawer>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-4">
+      <div className="grid gap-6 lg:grid-cols-4 mt-6">
         <div className="lg:col-span-3">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Question {currentIndex + 1} of {questions.length}</span>
-                <div className="flex items-center gap-2">
-                  {markedCount > 0 && (
-                    <Badge variant="outline" className="text-warning">
-                      <Flag className="h-3 w-3 mr-1" />
-                      {markedCount} marked
-                    </Badge>
-                  )}
-                  <Badge variant="secondary">Untimed</Badge>
-                </div>
-              </CardTitle>
-            </CardHeader>
         <CardContent className="space-y-4 w-full max-w-full break-words">
           {currentQuestion && (
             <>

@@ -498,3 +498,8 @@ html, body, #root {
     scroll-behavior: auto;
   }
 }
+
+/* Focus mode: hide the public site footer while inside exam/practice sessions */
+body.exam-shell footer { 
+  display: none !important; 
+}

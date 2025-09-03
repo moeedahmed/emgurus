@@ -3,10 +3,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Clock, Flag, ArrowLeft } from "lucide-react";
 import QuestionCard from "@/components/exams/QuestionCard";
+import Progress from "@/components/exams/Progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -395,34 +395,22 @@ export default function ExamSession() {
   return (
     <div className="container mx-auto px-4 py-6 overflow-x-clip">
       {/* Unified header */}
-      <div className="mb-3 flex items-center justify-between min-w-0 w-full max-w-full">
-        <p className="text-sm text-muted-foreground truncate">{metaLeft}</p>
-        <p className="text-sm text-muted-foreground ml-3 shrink-0">{metaRight}</p>
+      <Progress current={currentIndex + 1} total={total} />
+      <div className="flex items-center justify-between mt-4 mb-6">
+        <h1 className="text-2xl font-semibold">Exam Mode</h1>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={timeLeft < 300 ? 'text-destructive' : ''}>
+            <Clock className="h-3 w-3 mr-1" />
+            {formatTime(timeLeft)}
+          </Badge>
+          {markedCount > 0 && (
+            <Badge variant="outline" className="text-warning">
+              <Flag className="h-3 w-3 mr-1" />
+              {markedCount} marked
+            </Badge>
+          )}
+        </div>
       </div>
-
-      <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-4">
-        <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
-      </div>
-
-      <Card className="min-w-0 w-full max-w-full mb-4">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">{modeTitle}</h2>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className={timeLeft < 300 ? 'text-destructive' : ''}>
-                <Clock className="h-3 w-3 mr-1" />
-                {formatTime(timeLeft)}
-              </Badge>
-              {markedCount > 0 && (
-                <Badge variant="outline" className="text-warning">
-                  <Flag className="h-3 w-3 mr-1" />
-                  {markedCount} marked
-                </Badge>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
 
       <Card>
         <CardContent className="space-y-4">
