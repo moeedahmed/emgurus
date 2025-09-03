@@ -439,7 +439,7 @@ export default function AiPracticeSession() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 overflow-x-clip">
       {/* Sticky progress bar */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 mx-0 w-full px-4 py-3">
         <div className="flex items-center justify-between">
@@ -514,8 +514,8 @@ export default function AiPracticeSession() {
                </div>
                
                {show && !feedbackSubmitted[idx] && (
-                  <Card className="mt-4 w-full max-w-full">
-                    <CardContent className="py-4 w-full max-w-full break-words">
+                  <Card className="mt-4 w-full max-w-full min-w-0">
+                    <CardContent className="py-4 w-full max-w-full min-w-0 break-words">
                     <div className="text-sm font-medium mb-3">Question Feedback</div>
                     
                     <div className="space-y-3">

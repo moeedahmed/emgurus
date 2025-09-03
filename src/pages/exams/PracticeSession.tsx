@@ -427,7 +427,7 @@ export default function PracticeSession() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 overflow-x-clip">
       {/* Mobile progress at top */}
       <div className="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border mb-4">
         <div className="px-1 py-2">
@@ -556,11 +556,11 @@ export default function PracticeSession() {
 
               {/* Feedback Card */}
               {showExplanations[currentQuestion.id] && (
-                <Card className="mt-4 w-full max-w-full">
+                <Card className="mt-4 w-full max-w-full min-w-0">
                   <CardHeader>
                     <CardTitle className="text-base">Question Feedback</CardTitle>
                   </CardHeader>
-                  <CardContent className="w-full max-w-full break-words">
+                  <CardContent className="w-full max-w-full min-w-0 break-words">
                     {!feedbackSubmitted[currentQuestion.id] ? (
                       <>
                         <div className="mb-4">

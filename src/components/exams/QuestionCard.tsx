@@ -32,7 +32,7 @@ export default function QuestionCard({
   questionId?: string;
 }) {
   return (
-    <div className="grid gap-4 w-full max-w-full">
+    <div className="grid gap-4 w-full max-w-full min-w-0">
       <Card>
         <CardContent className="prose prose-sm dark:prose-invert max-w-none py-4 w-full max-w-full break-words">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{stem}</ReactMarkdown>
@@ -68,8 +68,8 @@ export default function QuestionCard({
       </div>
 
       {showExplanation && (
-        <Card className="w-full max-w-full">
-          <CardContent className="py-4 space-y-4 w-full max-w-full break-words">
+        <Card className="w-full max-w-full min-w-0">
+          <CardContent className="py-4 space-y-4 w-full max-w-full min-w-0 break-words">
             <div>
               <div id="explanation-heading" tabIndex={-1} className="font-semibold mb-2 outline-none">Main Explanation</div>
               <div className="prose prose-sm dark:prose-invert max-w-none break-words max-w-full">
