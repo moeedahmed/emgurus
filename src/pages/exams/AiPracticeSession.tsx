@@ -514,8 +514,8 @@ export default function AiPracticeSession() {
                </div>
                
                {show && !feedbackSubmitted[idx] && (
-                 <Card className="mt-4 w-full max-w-full">
-                   <CardContent className="py-4 break-words">
+                  <Card className="mt-4 w-full max-w-full">
+                    <CardContent className="py-4 w-full max-w-full break-words">
                     <div className="text-sm font-medium mb-3">Question Feedback</div>
                     
                     <div className="space-y-3">
