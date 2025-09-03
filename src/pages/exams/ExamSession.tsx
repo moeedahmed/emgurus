@@ -470,31 +470,39 @@ export default function ExamSession() {
 
               {/* Question Feedback - show after selection */}
               {answers[currentQuestion.id] && (
-                <Card className="min-w-0 w-full max-w-full">
-                  <CardContent className="min-w-0 w-full max-w-full break-words">
+                <Card className="min-w-0 w-full max-w-full mt-4">
+                  <CardContent className="min-w-0 w-full max-w-full break-words p-4 sm:p-5">
                     <h3 className="font-semibold mb-2">Question Feedback</h3>
 
-                    <div className="flex flex-wrap gap-2 w-full min-w-0 mb-2">
+                    <div className="flex flex-wrap gap-2 w-full min-w-0 mb-3">
                       <Button
                         variant={feedbackType[currentIndex] === 'good' ? 'default' : 'secondary'}
-                        className="min-w-0 text-sm px-3 py-2"
+                        size="icon"
+                        className="h-10 w-10 rounded-full"
+                        aria-pressed={feedbackType[currentIndex] === 'good'}
+                        aria-label="Looks good"
                         onClick={() => {
                           setFeedbackType(v => ({...v, [currentIndex]: 'good'}));
                           queueSubmitFeedback(currentIndex, 300);
                         }}
                       >
-                        👍 Looks good
+                        <span aria-hidden>👍</span>
+                        <span className="sr-only">Looks good</span>
                       </Button>
 
                       <Button
                         variant={feedbackType[currentIndex] === 'improvement' ? 'default' : 'secondary'}
-                        className="min-w-0 text-sm px-3 py-2"
+                        size="icon"
+                        className="h-10 w-10 rounded-full"
+                        aria-pressed={feedbackType[currentIndex] === 'improvement'}
+                        aria-label="Needs improvement"
                         onClick={() => {
                           setFeedbackType(v => ({...v, [currentIndex]: 'improvement'}));
                           queueSubmitFeedback(currentIndex, 300);
                         }}
                       >
-                        👎 Needs improvement
+                        <span aria-hidden>👎</span>
+                        <span className="sr-only">Needs improvement</span>
                       </Button>
                     </div>
 

@@ -405,10 +405,6 @@ export default function PracticeSession() {
 
       setFeedbackSubmitted(prev => ({ ...prev, [questionId]: true }));
       
-      toast({
-        title: 'Feedback submitted',
-        description: 'Thank you for helping us improve!',
-      });
     } catch (err) {
       console.error('Feedback submission failed:', err);
       toast({
@@ -618,23 +614,35 @@ export default function PracticeSession() {
 
               {/* Feedback Card */}
               {showExplanations[currentQuestion.id] && (
-                <Card className="min-w-0 w-full max-w-full">
-                  <CardContent className="min-w-0 w-full max-w-full break-words">
+                <Card className="min-w-0 w-full max-w-full mt-4">
+                  <CardContent className="min-w-0 w-full max-w-full break-words p-4 sm:p-5">
                     <h3 className="font-semibold mb-2">Question Feedback</h3>
 
                     {/* Type buttons */}
-                    <div className="flex flex-wrap gap-2 w-full min-w-0 mb-2">
+                    <div className="flex flex-wrap gap-2 w-full min-w-0 mb-3">
                       <Button
                         variant={feedbackType[currentQuestion.id]==='good' ? 'default' : 'secondary'}
-                        className="min-w-0 text-sm px-3 py-2"
+                        size="icon"
+                        className="h-10 w-10 rounded-full"
+                        aria-pressed={feedbackType[currentQuestion.id]==='good'}
+                        aria-label="Looks good"
                         onClick={() => handleFeedbackTypeChange(currentQuestion.id, 'good')}
-                      >👍 Looks good</Button>
+                      >
+                        <span aria-hidden>👍</span>
+                        <span className="sr-only">Looks good</span>
+                      </Button>
 
                       <Button
                         variant={feedbackType[currentQuestion.id]==='improvement' ? 'default' : 'secondary'}
-                        className="min-w-0 text-sm px-3 py-2"
+                        size="icon"
+                        className="h-10 w-10 rounded-full"
+                        aria-pressed={feedbackType[currentQuestion.id]==='improvement'}
+                        aria-label="Needs improvement"
                         onClick={() => handleFeedbackTypeChange(currentQuestion.id, 'improvement')}
-                      >👎 Needs improvement</Button>
+                      >
+                        <span aria-hidden>👎</span>
+                        <span className="sr-only">Needs improvement</span>
+                      </Button>
                     </div>
 
                     {/* Improvement details */}
