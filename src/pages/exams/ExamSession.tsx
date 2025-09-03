@@ -60,6 +60,8 @@ export default function ExamSession() {
 
   useEffect(() => {
     document.title = "Exam Session • EM Gurus";
+    document.body.classList.add('exam-shell');
+    return () => document.body.classList.remove('exam-shell');
   }, []);
 
   // Initialize session
@@ -383,78 +385,46 @@ export default function ExamSession() {
     );
   }
 
+  // Compute shared values for unified shell
+  const total = questions.length;
+  const percent = total > 0 ? Math.round(((currentIndex + 1) / total) * 100) : 0;
+  const modeTitle = 'Exam Mode';
+  const metaLeft = `Question ${currentIndex + 1} of ${total} • ${sessionState?.exam ?? 'Unknown'}${sessionState?.topic ? ` • ${sessionState.topic}` : ''}`;
+  const metaRight = `${percent}% complete`;
+
   return (
     <div className="container mx-auto px-4 py-6 overflow-x-clip">
-      {/* Mobile progress at top */}
-      <div className="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border mb-4">
-        <div className="px-1 py-2">
-          <div className="text-xs text-muted-foreground mb-1">
-            Question {currentIndex + 1} of {questions.length} • {sessionState.exam}
-            {sessionState.topic && ` • ${sessionState.topic}`}
-          </div>
-          <Progress value={((currentIndex + 1) / questions.length) * 100} />
-        </div>
+      {/* Unified header */}
+      <div className="mb-3 flex items-center justify-between min-w-0 w-full max-w-full">
+        <p className="text-sm text-muted-foreground truncate">{metaLeft}</p>
+        <p className="text-sm text-muted-foreground ml-3 shrink-0">{metaRight}</p>
       </div>
 
-      {/* Desktop sticky header with timer */}
-      <div className="hidden md:block sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 mx-0 w-full px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Exam Session
-            </h1>
-            <div className="text-sm text-muted-foreground">
-              Question {currentIndex + 1} of {questions.length} • {sessionState.exam}
-              {sessionState.topic && ` • ${sessionState.topic}`}
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="text-sm text-muted-foreground">Time Remaining</div>
-              <div className={`text-lg font-semibold ${timeLeft < 300 ? 'text-destructive' : ''}`}>
-                {formatTime(timeLeft)}
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-muted-foreground">Progress</div>
-              <div className="text-lg font-semibold">
-                {answeredCount}/{questions.length}
-              </div>
-            </div>
-            {markedCount > 0 && (
-              <div className="text-right">
-                <div className="text-sm text-muted-foreground">Marked</div>
-                <div className="text-lg font-semibold text-warning">
-                  {markedCount}
-                </div>
-              </div>
-            )}
-            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
-              />
-            </div>
-          </div>
-        </div>
+      <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-4">
+        <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Question {currentIndex + 1} of {questions.length}</span>
+      <Card className="min-w-0 w-full max-w-full mb-4">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">{modeTitle}</h2>
             <div className="flex items-center gap-2">
+              <Badge variant="outline" className={timeLeft < 300 ? 'text-destructive' : ''}>
+                <Clock className="h-3 w-3 mr-1" />
+                {formatTime(timeLeft)}
+              </Badge>
               {markedCount > 0 && (
                 <Badge variant="outline" className="text-warning">
                   <Flag className="h-3 w-3 mr-1" />
                   {markedCount} marked
                 </Badge>
               )}
-              <Badge variant="destructive">Timed</Badge>
             </div>
-          </CardTitle>
+          </div>
         </CardHeader>
+      </Card>
+
+      <Card>
         <CardContent className="space-y-4">
           {currentQuestion && (
             <>

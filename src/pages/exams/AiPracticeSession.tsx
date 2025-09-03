@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import QuestionCard from "@/components/exams/QuestionCard";
 import FloatingSettings from "@/components/exams/FloatingSettings";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,6 +66,8 @@ export default function AiPracticeSession() {
 
   useEffect(() => {
     document.title = "AI Practice Session • EM Gurus";
+    document.body.classList.add('exam-shell');
+    return () => document.body.classList.remove('exam-shell');
   }, []);
 
   // Check auth and redirect if missing required params
@@ -472,30 +475,29 @@ export default function AiPracticeSession() {
     );
   }
 
+  // Compute shared values for unified shell
+  const percent = total > 0 ? Math.round(((idx + 1) / total) * 100) : 0;
+  const modeTitle = 'AI Practice';
+  const metaLeft = `Question ${idx + 1} of ${total} • ${exam ?? 'Unknown'} • ${topic || 'All topics'}`;
+  const metaRight = `${percent}% complete`;
+
   return (
     <div className="container mx-auto px-4 py-6 overflow-x-clip">
-      {/* Sticky progress bar */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 mx-0 w-full px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-base sm:text-lg font-semibold">AI Practice Session</h1>
-            <div className="text-xs sm:text-sm text-muted-foreground break-words max-w-full leading-snug">
-              Question {idx + 1} of {total} • {exam} • {topic || 'All topics'} • {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="text-sm text-muted-foreground">
-              {Math.round(((idx + 1) / total) * 100)}% complete
-            </div>
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${((idx + 1) / total) * 100}%` }}
-              />
-            </div>
-          </div>
-        </div>
+      {/* Unified header */}
+      <div className="mb-3 flex items-center justify-between min-w-0 w-full max-w-full">
+        <p className="text-sm text-muted-foreground truncate">{metaLeft}</p>
+        <p className="text-sm text-muted-foreground ml-3 shrink-0">{metaRight}</p>
       </div>
+
+      <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-4">
+        <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
+      </div>
+
+      <Card className="min-w-0 w-full max-w-full mb-4">
+        <CardHeader className="pb-2">
+          <h2 className="text-xl font-semibold">{modeTitle}</h2>
+        </CardHeader>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -527,73 +529,71 @@ export default function AiPracticeSession() {
                 correctKey={q.correct}
                 locked={show}
               />
-              
-              <div className="min-w-0 w-full max-w-full py-2 px-3 rounded-md bg-warning/10 border border-warning/20 text-warning text-xs sm:text-sm leading-snug break-words order-20">
-                <div className="font-medium mb-1 leading-snug">⚠️ AI Generated Content - Experimental</div>
-                <div className="leading-snug">This content is AI-generated and may not always be accurate. Please exercise your judgment and provide feedback if you notice any issues.</div>
-              </div>
-                
-                {show && (
-                   <Card className="min-w-0 w-full max-w-full mt-4 order-30">
-                     <CardContent className="min-w-0 w-full max-w-full break-words p-4 sm:p-5">
-                       <h3 className="font-semibold mb-2">Question Feedback</h3>
+              {/* Question Feedback - show after selection */}
+              {selected && (
+                <Card className="min-w-0 w-full max-w-full mt-4">
+                  <CardContent className="min-w-0 w-full max-w-full break-words p-4 sm:p-5">
+                    <h3 className="font-semibold mb-2">Question Feedback</h3>
 
-                       {/* Type buttons */}
-                       <div className="flex flex-wrap gap-2 w-full min-w-0 mb-3">
-                         <Button
-                           variant={feedbackType[idx]==='good' ? 'default' : 'secondary'}
-                           size="icon"
-                           className="h-10 w-10 rounded-full"
-                           aria-pressed={feedbackType[idx]==='good'}
-                           aria-label="Looks good"
-                           onClick={() => handleFeedbackTypeChange(idx, 'good')}
-                         >
-                           <span aria-hidden>👍</span>
-                           <span className="sr-only">Looks good</span>
-                         </Button>
+                    <div className="flex flex-wrap gap-2 w-full min-w-0 mb-3">
+                      <Button
+                        variant={feedbackType[idx] === 'good' ? 'default' : 'secondary'}
+                        size="icon"
+                        className="h-10 w-10 rounded-full"
+                        aria-pressed={feedbackType[idx] === 'good'}
+                        aria-label="Looks good"
+                        onClick={() => handleFeedbackTypeChange(idx, 'good')}
+                      >
+                        <span aria-hidden>👍</span>
+                        <span className="sr-only">Looks good</span>
+                      </Button>
 
-                         <Button
-                           variant={feedbackType[idx]==='improvement' ? 'default' : 'secondary'}
-                           size="icon"
-                           className="h-10 w-10 rounded-full"
-                           aria-pressed={feedbackType[idx]==='improvement'}
-                           aria-label="Needs improvement"
-                           onClick={() => handleFeedbackTypeChange(idx, 'improvement')}
-                         >
-                           <span aria-hidden>👎</span>
-                           <span className="sr-only">Needs improvement</span>
-                         </Button>
-                       </div>
+                      <Button
+                        variant={feedbackType[idx] === 'improvement' ? 'default' : 'secondary'}
+                        size="icon"
+                        className="h-10 w-10 rounded-full"
+                        aria-pressed={feedbackType[idx] === 'improvement'}
+                        aria-label="Needs improvement"
+                        onClick={() => handleFeedbackTypeChange(idx, 'improvement')}
+                      >
+                        <span aria-hidden>👎</span>
+                        <span className="sr-only">Needs improvement</span>
+                      </Button>
+                    </div>
 
-                       {/* Improvement details */}
-                       {feedbackType[idx] === 'improvement' && (
-                         <div className="rounded-md border p-3 sm:p-4">
-                           <p className="font-medium mb-2">What's the issue? (select all)</p>
-                           <div className="flex flex-wrap gap-2 w-full min-w-0 mb-3">
-                             {FEEDBACK_TAGS.map(tag => (
-                               <Button key={tag} variant={issueTypes[idx]?.includes(tag) ? 'default' : 'secondary'}
-                                 className="min-w-0 text-sm px-3 py-2"
-                                 onClick={() => handleToggleFeedbackTag(idx, tag)}
-                               >{tag}</Button>
-                             ))}
-                           </div>
-                           <Textarea
-                             value={feedbackNotes[idx] ?? ''}
-                             onChange={(e) => handleFeedbackNotesChange(idx, e.target.value)}
-                             onBlur={() => queueSubmitFeedback(idx, 600)}
-                             placeholder="Add details (optional)…"
-                             className="min-w-0 w-full"
-                           />
-                         </div>
-                       )}
+                    {feedbackType[idx] === 'improvement' && (
+                      <div className="rounded-md border p-3 sm:p-4">
+                        <p className="font-medium mb-2">What's the issue? (select all)</p>
+                        <div className="flex flex-wrap gap-2 w-full min-w-0 mb-3">
+                          {FEEDBACK_TAGS.map(tag => (
+                            <Button
+                              key={tag}
+                              variant={issueTypes[idx]?.includes(tag) ? 'default' : 'secondary'}
+                              className="min-w-0 text-sm px-3 py-2"
+                              onClick={() => handleToggleFeedbackTag(idx, tag)}
+                            >
+                              {tag}
+                            </Button>
+                          ))}
+                        </div>
+                        <Textarea
+                          value={feedbackNotes[idx] ?? ''}
+                          onChange={(e) => {
+                            handleFeedbackNotesChange(idx, e.target.value);
+                            queueSubmitFeedback(idx, 600);
+                          }}
+                          placeholder="Add details (optional)…"
+                          className="min-w-0 w-full"
+                        />
+                      </div>
+                    )}
 
-                       {/* Micro status */}
-                       <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
-                         {feedbackSaving[idx] ? 'Saving…' : feedbackError[idx] ? `Error: ${feedbackError[idx]}` : feedbackSaved[idx] ? 'Saved' : ''}
-                       </p>
-                     </CardContent>
-                   </Card>
-               )}
+                    <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
+                      {feedbackSaving[idx] ? 'Saving…' : feedbackError[idx] ? `Error: ${feedbackError[idx]}` : feedbackSaved[idx] ? 'Saved' : ''}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
                {/* Primary action placement - AFTER feedback */}
                <div className="grid grid-cols-2 gap-3 mt-4 order-40">

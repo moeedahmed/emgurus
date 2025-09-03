@@ -69,6 +69,8 @@ export default function PracticeSession() {
 
   useEffect(() => {
     document.title = "Practice Session • EM Gurus";
+    document.body.classList.add('exam-shell');
+    return () => document.body.classList.remove('exam-shell');
   }, []);
 
   // Save/restore session progress

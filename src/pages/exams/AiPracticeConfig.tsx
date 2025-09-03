@@ -4,6 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
@@ -84,14 +86,31 @@ export default function AiPracticeConfig() {
         </div>
       </div>
 
-      <Card>
+      <Card className="min-w-0 w-full max-w-full">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            AI Practice Configuration
-            <span className="ml-2 align-middle text-xs px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700">Beta</span>
-          </CardTitle>
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-semibold">AI Practice</span>
+            <Badge variant="secondary">Beta</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            AI-generated questions with instant feedback. Use your judgment and report issues.
+          </p>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="space-y-4">
+          <ul className="list-disc pl-5 text-sm text-muted-foreground">
+            <li>Immediate feedback after each question</li>
+            <li>AI-generated stems and distractors</li>
+            <li>Detailed explanations included</li>
+          </ul>
+
+          <Alert>
+            <AlertTitle>Heads up</AlertTitle>
+            <AlertDescription>
+              Content is AI-generated and may be imperfect. Please submit feedback if something looks off.
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <Label>Exam<span className="sr-only"> required</span></Label>
             <Select value={exam} onValueChange={(v) => setExam(v as ExamName)}>
@@ -128,10 +147,11 @@ export default function AiPracticeConfig() {
               </SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-2 lg:col-span-4 flex items-center gap-2 justify-end pt-2">
-            <Button onClick={start} disabled={!exam || loading}>
-              {loading ? 'Generating…' : 'Generate'}
-            </Button>
+            <div className="md:col-span-2 lg:col-span-4 flex items-center gap-2 justify-end pt-2">
+              <Button onClick={start} disabled={!exam || loading}>
+                {loading ? 'Generating…' : 'Generate'}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
