@@ -10,9 +10,11 @@ import { Flag } from "lucide-react";
 import QuestionCard from "@/components/exams/QuestionCard";
 import FloatingSettings from "@/components/exams/FloatingSettings";
 import Progress from "@/components/exams/Progress";
+import RightSidebar from "@/components/exams/RightSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ExamName } from "@/lib/curricula";
+import { MODE_LABEL, SHOW_GURU } from "@/lib/exams/modeLabels";
 
 interface GeneratedQuestion {
   id?: string;
@@ -489,7 +491,7 @@ export default function AiPracticeSession() {
     <div className="container mx-auto px-4 py-6 overflow-x-clip">
       {/* Unified header */}
       <Progress current={idx + 1} total={total} />
-      <h1 className="mt-4 text-2xl font-semibold">AI Practice</h1>
+      <h1 className="mt-4 text-2xl font-semibold">{MODE_LABEL["ai"]}</h1>
 
       <Card>
         <CardHeader>
@@ -520,6 +522,8 @@ export default function AiPracticeSession() {
                 source={q.reference}
                 correctKey={q.correct}
                 locked={show}
+                index={idx}
+                total={total}
               />
 
               {/* AI Banner: after options/explanation, before feedback */}
@@ -641,47 +645,32 @@ export default function AiPracticeSession() {
         </CardContent>
       </Card>
 
-      {/* Desktop question map */}
+      {/* Desktop sidebar */}
       <div className="mt-8 hidden md:block">
-        <Card>
-          <CardContent className="py-4">
-            <div className="text-sm font-medium mb-2">Question Map</div>
-            <div className="grid grid-cols-5 gap-2">
-              {Array.from({ length: total }, (_, i) => {
-                const isCurrent = i === idx;
-                const isAnswered = i < idx || (i === idx && selected);
-                
-                let buttonClass = "h-8 w-8 rounded text-sm flex items-center justify-center border relative ";
-                if (isCurrent) {
-                  buttonClass += "bg-primary text-primary-foreground ring-2 ring-primary";
-                } else if (isAnswered) {
-                  buttonClass += "bg-success/10 border-success/20 text-success";
-                } else {
-                  buttonClass += "bg-muted border-muted-foreground/20 hover:bg-accent";
-                }
-                
-                return (
-                  <Button
-                    key={i}
-                    onClick={() => setIdx(i)}
-                    className={buttonClass}
-                    variant="ghost"
-                    size="sm"
-                  >
-                    {i + 1}
-                  </Button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        <RightSidebar
+          total={total}
+          currentIndex={idx}
+          answered={(() => {
+            const result: Record<number, boolean> = {};
+            for (let i = 0; i < total; i++) {
+              result[i] = i < idx || (i === idx && !!selected);
+            }
+            return result;
+          })()}
+          onJump={setIdx}
+          mode="ai"
+          showGuru={SHOW_GURU["ai"]}
+          examId={exam}
+          questionId={q?.id}
+          kbId={topic}
+        />
       </div>
 
       {/* Mobile toggle button */}
       <div className="mt-6 md:hidden">
         <Drawer open={showQuestionMap} onOpenChange={setShowQuestionMap}>
           <DrawerTrigger asChild>
-            <Button variant="outline" size="sm">Question Map</Button>
+            <Button variant="outline" size="sm">Open question map</Button>
           </DrawerTrigger>
           <DrawerContent className="p-4">
             <div className="space-y-4">

@@ -11,10 +11,12 @@ import QuestionCard from "@/components/exams/QuestionCard";
 import QuestionChat from "@/components/exams/QuestionChat";
 import FloatingSettings from "@/components/exams/FloatingSettings";
 import Progress from "@/components/exams/Progress";
+import RightSidebar from "@/components/exams/RightSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useRoles } from "@/hooks/useRoles";
 import { useAuth } from "@/contexts/AuthContext";
+import { MODE_LABEL, SHOW_GURU } from "@/lib/exams/modeLabels";
 
 interface PracticeSessionState {
   ids: string[];
@@ -67,7 +69,7 @@ export default function PracticeSession() {
   const SESSION_KEY = 'emgurus.practice.session';
 
   useEffect(() => {
-    document.title = "Practice Session • EM Gurus";
+    document.title = "Study Session • EM Gurus";
     document.body.classList.add('exam-shell');
     return () => document.body.classList.remove('exam-shell');
   }, []);
@@ -488,13 +490,13 @@ export default function PracticeSession() {
     <div className="container mx-auto px-4 py-6 overflow-x-clip">
       {/* Unified header */}
       <Progress current={currentIndex + 1} total={questions.length} />
-      <h1 className="mt-4 text-2xl font-semibold">Practice Mode</h1>
+      <h1 className="mt-4 text-2xl font-semibold">{MODE_LABEL["practice"]}</h1>
 
       {/* Mobile question map drawer */}
       <div className="md:hidden mt-4">
         <Drawer open={showQuestionMap} onOpenChange={setShowQuestionMap}>
           <DrawerTrigger asChild>
-            <Button variant="outline" size="sm">Question Map</Button>
+            <Button variant="outline" size="sm">Open map & AI chat</Button>
           </DrawerTrigger>
           <DrawerContent className="p-4">
             <div className="space-y-4">
@@ -543,18 +545,20 @@ export default function PracticeSession() {
         <CardContent className="space-y-4 w-full max-w-full break-words">
           {currentQuestion && (
             <>
-              <QuestionCard
-                stem={currentQuestion.stem}
-                options={currentQuestion.options}
-                selectedKey={answers[currentQuestion.id] || ""}
-                onSelect={(key) => handleAnswer(currentQuestion.id, key)}
-                showExplanation={showExplanations[currentQuestion.id] || false}
-                explanation={currentQuestion.explanation}
-                correctKey={currentQuestion.correct_answer}
-                source={currentQuestion.source}
-                questionId={currentQuestion.id}
-                locked={showExplanations[currentQuestion.id] || false}
-              />
+                <QuestionCard
+                  stem={currentQuestion.stem}
+                  options={currentQuestion.options}
+                  selectedKey={answers[currentQuestion.id] || ""}
+                  onSelect={(key) => handleAnswer(currentQuestion.id, key)}
+                  showExplanation={showExplanations[currentQuestion.id] || false}
+                  explanation={currentQuestion.explanation}
+                  correctKey={currentQuestion.correct_answer}
+                  source={currentQuestion.source}
+                  questionId={currentQuestion.id}
+                  locked={showExplanations[currentQuestion.id] || false}
+                  index={currentIndex}
+                  total={questions.length}
+                />
 
               {/* Feedback Card */}
               {showExplanations[currentQuestion.id] && (
@@ -668,46 +672,20 @@ export default function PracticeSession() {
       </Card>
     </div>
 
-    {/* Desktop Sidebar */}
-    <aside className="hidden lg:block">
-      <div className="sticky top-20 space-y-4">
-        <Card>
-          <CardContent className="py-4">
-            <div className="text-sm font-medium mb-2">Question Map</div>
-            <div className="grid grid-cols-5 gap-2">
-              {questions.map((q, i) => {
-                const isCurrent = i === currentIndex;
-                const isAnswered = !!answers[q.id];
-                const isMarked = markedForReview.has(q.id);
-                const isCorrect = isAnswered && answers[q.id] === q.correct_answer;
-                
-                let buttonClass = "h-8 w-8 rounded text-sm flex items-center justify-center border relative ";
-                if (isCurrent) {
-                  buttonClass += "bg-primary text-primary-foreground ring-2 ring-primary";
-                } else if (isAnswered) {
-                  buttonClass += isCorrect ? "bg-success/10 border-success/20 text-success" : "bg-destructive/10 border-destructive/20 text-destructive";
-                } else {
-                  buttonClass += "bg-muted border-muted-foreground/20 hover:bg-accent";
-                }
-                
-                return (
-                  <Button
-                    key={q.id}
-                    onClick={() => navigateToQuestion(i)}
-                    className={buttonClass}
-                    variant="ghost"
-                    size="sm"
-                  >
-                    {isMarked && <Flag className="h-3 w-3 text-warning absolute -top-1 -right-1" />}
-                    {i + 1}
-                  </Button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </aside>
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block">
+          <RightSidebar
+            total={questions.length}
+            currentIndex={currentIndex}
+            answered={Object.fromEntries(questions.map((_, i) => [i, !!answers[questions[i]?.id]]))}
+            onJump={navigateToQuestion}
+            mode="practice"
+            showGuru={SHOW_GURU["practice"]}
+            examId={sessionState?.exam}
+            questionId={currentQuestion?.id}
+            kbId={currentQuestion?.topic}
+          />
+        </aside>
   </div>
 
       <FloatingSettings

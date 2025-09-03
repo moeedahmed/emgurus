@@ -20,6 +20,8 @@ export default function QuestionCard({
   lockSelection,
   locked,
   questionId,
+  index,
+  total,
 }: {
   stem: string;
   options: Option[];
@@ -32,9 +34,15 @@ export default function QuestionCard({
   lockSelection?: boolean;
   locked?: boolean;
   questionId?: string;
+  index?: number;
+  total?: number;
 }) {
   return (
     <div className="grid gap-4 w-full max-w-full min-w-0">
+      {/* Screen reader heading for question number */}
+      {typeof index === 'number' && typeof total === 'number' && (
+        <h2 className="sr-only">{`Question ${index + 1} of ${total}`}</h2>
+      )}
       <Card>
         <CardContent className="prose prose-sm dark:prose-invert max-w-none py-4 w-full max-w-full break-words">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{stem}</ReactMarkdown>

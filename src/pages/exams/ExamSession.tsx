@@ -7,9 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Clock, Flag, ArrowLeft } from "lucide-react";
 import QuestionCard from "@/components/exams/QuestionCard";
 import Progress from "@/components/exams/Progress";
+import RightSidebar from "@/components/exams/RightSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { MODE_LABEL, SHOW_GURU } from "@/lib/exams/modeLabels";
 
 interface ExamSessionState {
   ids: string[];
@@ -397,7 +399,7 @@ export default function ExamSession() {
       {/* Unified header */}
       <Progress current={currentIndex + 1} total={total} />
       <div className="flex items-center justify-between mt-4 mb-6">
-        <h1 className="text-2xl font-semibold">Exam Mode</h1>
+        <h1 className="text-2xl font-semibold">{MODE_LABEL["exam"]}</h1>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className={timeLeft < 300 ? 'text-destructive' : ''}>
             <Clock className="h-3 w-3 mr-1" />
@@ -412,8 +414,15 @@ export default function ExamSession() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="space-y-4">
+      {/* Mobile drawer */}
+      <div className="md:hidden mt-4">
+        <Button variant="outline" size="sm">Open question map</Button>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-4 mt-6">
+        <div className="lg:col-span-3">
+          <Card>
+            <CardContent className="space-y-4">
           {currentQuestion && (
             <>
               <QuestionCard
@@ -424,6 +433,8 @@ export default function ExamSession() {
                 showExplanation={false}
                 source={currentQuestion.source}
                 questionId={currentQuestion.id}
+                index={currentIndex}
+                total={questions.length}
               />
 
               {/* Question Feedback - show after selection */}
@@ -573,8 +584,25 @@ export default function ExamSession() {
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block">
+          <RightSidebar
+            total={questions.length}
+            currentIndex={currentIndex}
+            answered={Object.fromEntries(questions.map((_, i) => [i, !!answers[questions[i]?.id]]))}
+            onJump={(i) => setCurrentIndex(i)}
+            mode="exam"
+            showGuru={SHOW_GURU["exam"]}
+            examId={sessionState?.exam}
+            questionId={currentQuestion?.id}
+            kbId={currentQuestion?.topic}
+          />
+        </aside>
+      </div>
     </div>
   );
 }

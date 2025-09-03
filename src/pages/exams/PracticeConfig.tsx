@@ -22,8 +22,8 @@ const EXAM_CODE_MAP: Record<ExamName, string> = {
 
 export default function PracticeConfig() {
   useEffect(() => {
-    document.title = "Practice Mode • EM Gurus";
-    const desc = "Configure Practice Mode with curated questions from expert reviewers.";
+    document.title = "Study Mode • EM Gurus";
+    const desc = "Configure Study Mode with curated questions from expert reviewers.";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name','description'); document.head.appendChild(meta); }
     meta.setAttribute('content', desc);
@@ -176,7 +176,7 @@ export default function PracticeConfig() {
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-6 mx-0 w-full px-4 py-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">Practice Mode</h1>
+            <h1 className="text-xl font-semibold">Study Mode</h1>
             <p className="text-sm text-muted-foreground">Curated questions from expert reviewers</p>
           </div>
           <Button variant="outline" onClick={() => navigate('/exams')}>
@@ -188,7 +188,7 @@ export default function PracticeConfig() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            Practice Configuration
+            Study Configuration
             <Badge variant="secondary">Untimed</Badge>
           </CardTitle>
         </CardHeader>
@@ -224,12 +224,13 @@ export default function PracticeConfig() {
           <div className="md:col-span-2">
             <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
               <div className="text-sm text-muted-foreground">
-                <strong>Practice Mode Features:</strong>
+                <strong>Study Mode Features:</strong>
                 <ul className="mt-1 space-y-1 text-xs">
                   <li>• Immediate feedback after each question</li>
                   <li>• Expert-reviewed questions only</li>
                   <li>• Detailed explanations included</li>
                   <li>• Navigate freely between questions</li>
+                  <li>• AI Guru assistance available</li>
                 </ul>
               </div>
             </div>
@@ -237,7 +238,7 @@ export default function PracticeConfig() {
 
           <div className="md:col-span-2 flex items-center gap-2 justify-end pt-2">
             <Button onClick={start} disabled={!exam || loading} size="lg">
-              {loading ? 'Loading questions...' : 'Start Practice'}
+              {loading ? 'Loading questions...' : 'Start Study Session'}
             </Button>
           </div>
         </CardContent>
