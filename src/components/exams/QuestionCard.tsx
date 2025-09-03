@@ -18,6 +18,7 @@ export default function QuestionCard({
   source,
   correctKey,
   lockSelection,
+  locked,
   questionId,
 }: {
   stem: string;
@@ -29,6 +30,7 @@ export default function QuestionCard({
   source?: string;
   correctKey?: string;
   lockSelection?: boolean;
+  locked?: boolean;
   questionId?: string;
 }) {
   return (
@@ -54,7 +56,12 @@ export default function QuestionCard({
                     isWrongSel && "bg-destructive/10 ring-1 ring-destructive/40"
                   )}
                 >
-                  <RadioGroupItem value={o.key} id={`opt-${questionId || 'q'}-${o.key}`} disabled={!!lockSelection} />
+                  <RadioGroupItem 
+                    value={o.key} 
+                    id={`opt-${questionId || 'q'}-${o.key}`} 
+                    disabled={!!lockSelection || !!locked}
+                    className={cn("", (lockSelection || locked) && "cursor-not-allowed opacity-90")}
+                  />
                    <div className="flex-1 min-w-0">
                      <div className="text-sm text-foreground/90 break-words max-w-full">
                       <span className="font-medium">{o.key}. </span>

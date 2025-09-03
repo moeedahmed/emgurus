@@ -533,6 +533,7 @@ export default function AiPracticeSession() {
                 explanation={q.explanation}
                 source={q.reference}
                 correctKey={q.correct}
+                locked={show}
               />
               
               <div className="min-w-0 w-full max-w-full py-2 px-3 rounded-md bg-warning/10 border border-warning/20 text-warning text-xs sm:text-sm leading-snug break-words order-20">

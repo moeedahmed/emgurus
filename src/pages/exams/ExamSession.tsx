@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import { Clock, Flag, ArrowLeft } from "lucide-react";
 import QuestionCard from "@/components/exams/QuestionCard";
-import MarkForReviewButton from "@/components/exams/MarkForReviewButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +29,8 @@ interface Question {
   answer_key?: string;
 }
 
+const FEEDBACK_TAGS = ["Wrong answer", "Ambiguous", "Outdated", "Typo", "Too easy", "Too hard"] as const;
+
 export default function ExamSession() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,6 +45,18 @@ export default function ExamSession() {
   const [loading, setLoading] = useState(true);
   const [attemptId, setAttemptId] = useState<string>("");
   const [startTime, setStartTime] = useState<Date>(new Date());
+  
+  // Feedback state
+  const [feedbackType, setFeedbackType] = useState<{ [key: number]: 'good' | 'improvement' }>({});
+  const [feedbackTags, setFeedbackTags] = useState<{ [key: number]: Set<string> }>({});
+  const [feedbackText, setFeedbackText] = useState<{ [key: number]: string }>({});
+  
+  // Autosave state
+  const savingRef = useRef<Record<number, ReturnType<typeof setTimeout> | null>>({});
+  const [feedbackDirty, setFeedbackDirty] = useState<Record<number, boolean>>({});
+  const [feedbackSaving, setFeedbackSaving] = useState<Record<number, boolean>>({});
+  const [feedbackSaved, setFeedbackSaved] = useState<Record<number, boolean>>({});
+  const [feedbackError, setFeedbackError] = useState<Record<number, string | null>>({});
 
   useEffect(() => {
     document.title = "Exam Session • EM Gurus";
@@ -62,6 +76,71 @@ export default function ExamSession() {
     loadQuestions();
     createAttempt();
   }, [sessionState, navigate]);
+
+  // Feedback helpers
+  const buildFeedbackPayload = (qIndex: number) => ({
+    type: feedbackType[qIndex] ?? null,
+    tags: Array.from(feedbackTags[qIndex] ?? []),
+    text: feedbackText[qIndex] ?? '',
+  });
+
+  const toggleQuestionFlag = async (questionId: string, shouldFlag: boolean) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      if (shouldFlag) {
+        await supabase.from('exam_question_flags').insert({
+          question_id: questionId,
+          question_source: 'reviewed',
+          flagged_by: user.id,
+          comment: null,
+        });
+      } else {
+        await supabase.from('exam_question_flags')
+          .delete()
+          .eq('question_id', questionId)
+          .eq('flagged_by', user.id);
+      }
+    } catch (err) {
+      console.error('Flag toggle failed:', err);
+    }
+  };
+
+  const syncMarkForReview = async (qIndex: number) => {
+    const shouldFlag = feedbackType[qIndex] === 'improvement';
+    const question = questions[qIndex];
+    if (question) {
+      await toggleQuestionFlag(question.id, shouldFlag);
+    }
+  };
+
+  const submitFeedback = async (qIndex: number, payload: any) => {
+    // Mock implementation for exam feedback submission
+    // In a real app, this would submit to your feedback endpoint
+    console.log('Submitting feedback for question', qIndex, payload);
+  };
+
+  const doSubmitFeedback = async (qIndex: number) => {
+    setFeedbackError(v => ({...v, [qIndex]: null}));
+    setFeedbackSaving(v => ({...v, [qIndex]: true}));
+    try {
+      await submitFeedback(qIndex, buildFeedbackPayload(qIndex));
+      await syncMarkForReview(qIndex);
+      setFeedbackSaved(v => ({...v, [qIndex]: true}));
+      setFeedbackDirty(v => ({...v, [qIndex]: false}));
+    } catch (e: any) {
+      setFeedbackError(v => ({...v, [qIndex]: e?.message ?? 'Could not save'}));
+    } finally {
+      setFeedbackSaving(v => ({...v, [qIndex]: false}));
+    }
+  };
+
+  const queueSubmitFeedback = (qIndex: number, delay = 450) => {
+    setFeedbackDirty(v => ({...v, [qIndex]: true}));
+    if (savingRef.current[qIndex]) clearTimeout(savingRef.current[qIndex]!);
+    savingRef.current[qIndex] = setTimeout(() => { void doSubmitFeedback(qIndex); }, delay);
+  };
 
   // Timer countdown
   useEffect(() => {
@@ -183,6 +262,12 @@ export default function ExamSession() {
   };
 
   const finishExam = async () => {
+    // Flush pending feedback
+    if (feedbackDirty[currentIndex]) {
+      if (savingRef.current[currentIndex]) clearTimeout(savingRef.current[currentIndex]!);
+      await doSubmitFeedback(currentIndex);
+    }
+    
     if (!attemptId) {
       navigate('/exams');
       return;
@@ -299,7 +384,7 @@ export default function ExamSession() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 overflow-x-clip">
       {/* Mobile progress at top */}
       <div className="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border mb-4">
         <div className="px-1 py-2">
@@ -383,12 +468,89 @@ export default function ExamSession() {
                 questionId={currentQuestion.id}
               />
 
-              {/* Primary action placement - right under options */}
+              {/* Question Feedback - show after selection */}
+              {answers[currentQuestion.id] && (
+                <Card className="min-w-0 w-full max-w-full">
+                  <CardContent className="min-w-0 w-full max-w-full break-words">
+                    <h3 className="font-semibold mb-2">Question Feedback</h3>
+
+                    <div className="flex flex-wrap gap-2 w-full min-w-0 mb-2">
+                      <Button
+                        variant={feedbackType[currentIndex] === 'good' ? 'default' : 'secondary'}
+                        className="min-w-0 text-sm px-3 py-2"
+                        onClick={() => {
+                          setFeedbackType(v => ({...v, [currentIndex]: 'good'}));
+                          queueSubmitFeedback(currentIndex, 300);
+                        }}
+                      >
+                        👍 Looks good
+                      </Button>
+
+                      <Button
+                        variant={feedbackType[currentIndex] === 'improvement' ? 'default' : 'secondary'}
+                        className="min-w-0 text-sm px-3 py-2"
+                        onClick={() => {
+                          setFeedbackType(v => ({...v, [currentIndex]: 'improvement'}));
+                          queueSubmitFeedback(currentIndex, 300);
+                        }}
+                      >
+                        👎 Needs improvement
+                      </Button>
+                    </div>
+
+                    {feedbackType[currentIndex] === 'improvement' && (
+                      <div className="rounded-md border p-3 sm:p-4">
+                        <p className="font-medium mb-2">What's the issue? (select all)</p>
+                        <div className="flex flex-wrap gap-2 w-full min-w-0 mb-3">
+                          {FEEDBACK_TAGS.map(tag => (
+                            <Button
+                              key={tag}
+                              variant={feedbackTags[currentIndex]?.has(tag) ? 'default' : 'secondary'}
+                              className="min-w-0 text-sm px-3 py-2"
+                              onClick={() => {
+                                setFeedbackTags(v => {
+                                  const next = new Set(v[currentIndex] ?? []);
+                                  next.has(tag) ? next.delete(tag) : next.add(tag);
+                                  return {...v, [currentIndex]: next};
+                                });
+                                queueSubmitFeedback(currentIndex, 350);
+                              }}
+                            >
+                              {tag}
+                            </Button>
+                          ))}
+                        </div>
+                        <Textarea
+                          value={feedbackText[currentIndex] ?? ''}
+                          onChange={(e) => {
+                            setFeedbackText(v => ({...v, [currentIndex]: e.target.value}));
+                            queueSubmitFeedback(currentIndex, 600);
+                          }}
+                          placeholder="Add details (optional)…"
+                          className="min-w-0 w-full"
+                        />
+                      </div>
+                    )}
+
+                    <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
+                      {feedbackSaving[currentIndex] ? 'Saving…' : feedbackError[currentIndex] ? `Error: ${feedbackError[currentIndex]}` : feedbackSaved[currentIndex] ? 'Saved' : ''}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Primary action placement */}
               <div className="grid grid-cols-2 gap-3 mt-4">
                 <div className="justify-self-start">
                   <Button
                     variant="outline"
-                    onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                    onClick={async () => {
+                      if (feedbackDirty[currentIndex]) {
+                        if (savingRef.current[currentIndex]) clearTimeout(savingRef.current[currentIndex]!);
+                        await doSubmitFeedback(currentIndex);
+                      }
+                      setCurrentIndex(prev => Math.max(0, prev - 1));
+                    }}
                     disabled={currentIndex === 0}
                     className="min-w-0 text-sm sm:text-base"
                   >
@@ -397,7 +559,12 @@ export default function ExamSession() {
                 </div>
                 <div className="justify-self-end">
                   <Button
-                    onClick={() => {
+                    onClick={async () => {
+                      if (feedbackDirty[currentIndex]) {
+                        if (savingRef.current[currentIndex]) clearTimeout(savingRef.current[currentIndex]!);
+                        await doSubmitFeedback(currentIndex);
+                      }
+                      
                       if (currentIndex < questions.length - 1) {
                         setCurrentIndex(prev => prev + 1);
                       } else {
@@ -421,10 +588,6 @@ export default function ExamSession() {
               {/* Secondary actions - below primary actions */}
               <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-between order-last md:order-none">
                 <div className="flex flex-wrap items-center gap-2 gap-y-2">
-                  <MarkForReviewButton
-                    currentQuestionId={currentQuestion.id}
-                    source="reviewed"
-                  />
                   <Button 
                     variant="outline" 
                     onClick={() => navigate('/exams/exam')}

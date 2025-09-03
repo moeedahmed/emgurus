@@ -613,6 +613,7 @@ export default function PracticeSession() {
                 correctKey={currentQuestion.correct_answer}
                 source={currentQuestion.source}
                 questionId={currentQuestion.id}
+                locked={showExplanations[currentQuestion.id] || false}
               />
 
               {/* Feedback Card */}
