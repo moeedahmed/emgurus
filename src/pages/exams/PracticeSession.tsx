@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,12 @@ export default function PracticeSession() {
   const [issueTypes, setIssueTypes] = useState<{ [key: string]: string[] }>({});
   const [feedbackNotes, setFeedbackNotes] = useState<{ [key: string]: string }>({});
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<{ [key: string]: boolean }>({});
+  
+  // Autosave feedback state
+  const savingRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
+  const [feedbackDirty, setFeedbackDirty] = useState<Record<string, boolean>>({});
+  const [feedbackSaving, setFeedbackSaving] = useState<Record<string, boolean>>({});
+  const [feedbackSaved, setFeedbackSaved] = useState<Record<string, boolean>>({});
   const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set());
   const [showQuestionMap, setShowQuestionMap] = useState(false);
   const SESSION_KEY = 'emgurus.practice.session';
@@ -266,7 +272,13 @@ export default function PracticeSession() {
     }
   };
 
-  const nextQuestion = () => {
+  const nextQuestion = async () => {
+    // Flush feedback before navigation
+    if (currentQuestion && feedbackDirty[currentQuestion.id]) {
+      if (savingRef.current[currentQuestion.id]) clearTimeout(savingRef.current[currentQuestion.id]!);
+      await doSubmitFeedback(currentQuestion.id);
+    }
+    
     if (currentIndex < questions.length - 1) {
       const nextIdx = currentIndex + 1;
       setCurrentIndex(nextIdx);
@@ -296,6 +308,30 @@ export default function PracticeSession() {
     }
   };
 
+  // Autosave helpers
+  const buildFeedbackPayload = (questionId: string) => ({
+    type: feedbackType[questionId] ?? null,
+    tags: Array.from(issueTypes[questionId] ?? []),
+    text: feedbackNotes[questionId] ?? '',
+  });
+
+  const doSubmitFeedback = async (questionId: string) => {
+    try {
+      setFeedbackSaving(v => ({...v, [questionId]: true}));
+      await submitFeedback(questionId);
+      setFeedbackSaved(v => ({...v, [questionId]: true}));
+      setFeedbackDirty(v => ({...v, [questionId]: false}));
+    } finally {
+      setFeedbackSaving(v => ({...v, [questionId]: false}));
+    }
+  };
+
+  const queueSubmitFeedback = (questionId: string, delay = 400) => {
+    setFeedbackDirty(v => ({...v, [questionId]: true}));
+    if (savingRef.current[questionId]) clearTimeout(savingRef.current[questionId]!);
+    savingRef.current[questionId] = setTimeout(() => { void doSubmitFeedback(questionId); }, delay);
+  };
+
   const handleFeedbackTypeChange = (questionId: string, type: 'good' | 'improvement') => {
     setFeedbackType(prev => ({ ...prev, [questionId]: type }));
     if (type === 'good') {
@@ -303,6 +339,7 @@ export default function PracticeSession() {
       setIssueTypes(prev => ({ ...prev, [questionId]: [] }));
       setFeedbackNotes(prev => ({ ...prev, [questionId]: '' }));
     }
+    queueSubmitFeedback(questionId);
   };
 
   const handleToggleFeedbackTag = (questionId: string, tag: string) => {
@@ -312,6 +349,7 @@ export default function PracticeSession() {
         ? prev[questionId].filter(t => t !== tag)
         : [...(prev[questionId] || []), tag]
     }));
+    queueSubmitFeedback(questionId);
   };
 
   const handleFeedbackNotesChange = (questionId: string, notes: string) => {
@@ -606,6 +644,7 @@ export default function PracticeSession() {
                                   id={`feedback-notes-${currentQuestion.id}`}
                                   value={feedbackNotes[currentQuestion.id] || ''}
                                   onChange={(e) => handleFeedbackNotesChange(currentQuestion.id, e.target.value)}
+                                  onBlur={() => queueSubmitFeedback(currentQuestion.id, 600)}
                                   placeholder="Describe the issue in more detail..."
                                   className="mt-1"
                                 />
@@ -613,17 +652,9 @@ export default function PracticeSession() {
                             </div>
                           )}
 
-                          {feedbackType[currentQuestion.id] && (
-                            <div className="mt-3">
-                              <Button
-                                size="sm"
-                                onClick={() => submitFeedback(currentQuestion.id)}
-                                disabled={feedbackType[currentQuestion.id] === 'improvement' && (!issueTypes[currentQuestion.id]?.length)}
-                              >
-                                Submit Feedback
-                              </Button>
-                            </div>
-                          )}
+                          <p className="mt-1 text-xs text-muted-foreground" aria-live="polite">
+                            {feedbackSaving[currentQuestion.id] ? 'Saving…' : feedbackSaved[currentQuestion.id] ? 'Saved' : ''}
+                          </p>
                         </div>
                       </>
                     ) : (
