@@ -482,10 +482,6 @@ export default function AiPracticeSession() {
           
           {q && (
             <>
-              <div className="w-full max-w-full py-2 px-3 rounded-md bg-warning/10 border border-warning/20 text-warning text-xs sm:text-sm mb-4 break-words">
-                <div className="font-medium mb-1 leading-snug">⚠️ AI Generated Content - Experimental</div>
-                <div className="leading-snug">This content is AI-generated and may not always be accurate. Please exercise your judgment and provide feedback if you notice any issues.</div>
-              </div>
               <QuestionCard
                 stem={q.question}
                 options={Object.entries(q.options).map(([key, text]) => ({ key, text }))}
@@ -495,7 +491,12 @@ export default function AiPracticeSession() {
                 explanation={q.explanation}
                 source={q.reference}
                 correctKey={q.correct}
-               />
+              />
+              
+              <div className="min-w-0 w-full max-w-full py-2 px-3 rounded-md bg-warning/10 border border-warning/20 text-warning text-xs sm:text-sm mb-4 break-words">
+                <div className="font-medium mb-1 leading-snug">⚠️ AI Generated Content - Experimental</div>
+                <div className="leading-snug">This content is AI-generated and may not always be accurate. Please exercise your judgment and provide feedback if you notice any issues.</div>
+              </div>
                
                {/* Primary action placement - right under options */}
                <div className="grid grid-cols-2 gap-3 mt-4">
@@ -518,23 +519,25 @@ export default function AiPracticeSession() {
                     <CardContent className="py-4 w-full max-w-full min-w-0 break-words">
                     <div className="text-sm font-medium mb-3">Question Feedback</div>
                     
-                    <div className="space-y-3">
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant={feedbackType[idx] === 'good' ? 'default' : 'outline'}
-                          onClick={() => handleFeedbackTypeChange(idx, 'good')}
-                        >
-                          👍 Looks good
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={feedbackType[idx] === 'improvement' ? 'default' : 'outline'}
-                          onClick={() => handleFeedbackTypeChange(idx, 'improvement')}
-                        >
-                          👎 Needs improvement
-                        </Button>
-                      </div>
+                     <div className="space-y-3">
+                       <div className="flex flex-wrap gap-2 sm:gap-3 w-full min-w-0 items-start mb-3">
+                         <Button
+                           size="sm"
+                           variant={feedbackType[idx] === 'good' ? 'default' : 'outline'}
+                           onClick={() => handleFeedbackTypeChange(idx, 'good')}
+                           className="min-w-0 text-sm sm:text-base px-3 py-2 whitespace-normal"
+                         >
+                           👍 Looks good
+                         </Button>
+                         <Button
+                           size="sm"
+                           variant={feedbackType[idx] === 'improvement' ? 'default' : 'outline'}
+                           onClick={() => handleFeedbackTypeChange(idx, 'improvement')}
+                           className="min-w-0 text-sm sm:text-base px-3 py-2 whitespace-normal"
+                         >
+                           👎 Needs improvement
+                         </Button>
+                       </div>
 
                       {feedbackType[idx] === 'improvement' && (
                         <div className="space-y-3 p-3 bg-muted/50 rounded-md">

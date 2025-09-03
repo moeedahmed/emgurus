@@ -563,23 +563,25 @@ export default function PracticeSession() {
                   <CardContent className="w-full max-w-full min-w-0 break-words">
                     {!feedbackSubmitted[currentQuestion.id] ? (
                       <>
-                        <div className="mb-4">
-                          <div className="flex gap-3 mb-3">
-                            <Button
-                              variant={feedbackType[currentQuestion.id] === 'good' ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => handleFeedbackTypeChange(currentQuestion.id, 'good')}
-                            >
-                              👍 Looks good
-                            </Button>
-                            <Button
-                              variant={feedbackType[currentQuestion.id] === 'improvement' ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => handleFeedbackTypeChange(currentQuestion.id, 'improvement')}
-                            >
-                              👎 Needs improvement
-                            </Button>
-                          </div>
+                         <div className="mb-4">
+                           <div className="flex flex-wrap gap-2 sm:gap-3 w-full min-w-0 items-start mb-3">
+                             <Button
+                               variant={feedbackType[currentQuestion.id] === 'good' ? 'default' : 'outline'}
+                               size="sm"
+                               onClick={() => handleFeedbackTypeChange(currentQuestion.id, 'good')}
+                               className="min-w-0 text-sm sm:text-base px-3 py-2 whitespace-normal"
+                             >
+                               👍 Looks good
+                             </Button>
+                             <Button
+                               variant={feedbackType[currentQuestion.id] === 'improvement' ? 'default' : 'outline'}
+                               size="sm"
+                               onClick={() => handleFeedbackTypeChange(currentQuestion.id, 'improvement')}
+                               className="min-w-0 text-sm sm:text-base px-3 py-2 whitespace-normal"
+                             >
+                               👎 Needs improvement
+                             </Button>
+                           </div>
 
                           {feedbackType[currentQuestion.id] === 'improvement' && (
                             <div className="space-y-3">
