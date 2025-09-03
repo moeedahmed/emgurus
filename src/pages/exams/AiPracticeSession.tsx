@@ -55,6 +55,7 @@ export default function AiPracticeSession() {
   const [feedbackDirty, setFeedbackDirty] = useState<Record<number, boolean>>({});
   const [feedbackSaving, setFeedbackSaving] = useState<Record<number, boolean>>({});
   const [feedbackSaved, setFeedbackSaved] = useState<Record<number, boolean>>({});
+  const [feedbackError, setFeedbackError] = useState<Record<number, string | null>>({});
   const [currentSettings, setCurrentSettings] = useState({
     exam: exam as ExamName,
     count: total,
@@ -266,11 +267,14 @@ export default function AiPracticeSession() {
   });
 
   const doSubmitFeedback = async (qIndex: number) => {
+    setFeedbackError(v => ({...v, [qIndex]: null}));
+    setFeedbackSaving(v => ({...v, [qIndex]: true}));
     try {
-      setFeedbackSaving(v => ({...v, [qIndex]: true}));
       await submitFeedback(qIndex);
       setFeedbackSaved(v => ({...v, [qIndex]: true}));
       setFeedbackDirty(v => ({...v, [qIndex]: false}));
+    } catch (e: any) {
+      setFeedbackError(v => ({...v, [qIndex]: e?.message ?? 'Could not save'}));
     } finally {
       setFeedbackSaving(v => ({...v, [qIndex]: false}));
     }
@@ -288,7 +292,7 @@ export default function AiPracticeSession() {
       setIssueTypes(prev => ({ ...prev, [questionIdx]: [] }));
       setFeedbackNotes(prev => ({ ...prev, [questionIdx]: '' }));
     }
-    queueSubmitFeedback(questionIdx);
+    queueSubmitFeedback(questionIdx, 300);
   };
 
   const handleToggleFeedbackTag = (questionIdx: number, tag: string) => {
@@ -298,7 +302,7 @@ export default function AiPracticeSession() {
         ? prev[questionIdx].filter(t => t !== tag)
         : [...(prev[questionIdx] || []), tag]
     }));
-    queueSubmitFeedback(questionIdx);
+    queueSubmitFeedback(questionIdx, 350);
   };
 
   const handleFeedbackNotesChange = (questionIdx: number, notes: string) => {
@@ -536,72 +540,54 @@ export default function AiPracticeSession() {
                 <div className="leading-snug">This content is AI-generated and may not always be accurate. Please exercise your judgment and provide feedback if you notice any issues.</div>
               </div>
                 
-                {show && !feedbackSubmitted[idx] && (
+                {show && (
                    <Card className="min-w-0 w-full max-w-full order-30">
-                     <CardContent className="py-4 min-w-0 w-full max-w-full break-words">
-                     <div className="text-sm font-medium mb-3">Question Feedback</div>
-                     
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap gap-2 sm:gap-3 w-full min-w-0 items-start mb-3">
-                          <Button
-                            size="sm"
-                            variant={feedbackType[idx] === 'good' ? 'default' : 'outline'}
-                            onClick={() => handleFeedbackTypeChange(idx, 'good')}
-                            className="min-w-0 text-sm sm:text-base px-3 py-2 whitespace-normal"
-                          >
-                            👍 Looks good
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={feedbackType[idx] === 'improvement' ? 'default' : 'outline'}
-                            onClick={() => handleFeedbackTypeChange(idx, 'improvement')}
-                            className="min-w-0 text-sm sm:text-base px-3 py-2 whitespace-normal"
-                          >
-                            👎 Needs improvement
-                          </Button>
-                        </div>
+                     <CardContent className="min-w-0 w-full max-w-full break-words">
+                       <h3 className="font-semibold mb-2">Question Feedback</h3>
 
+                       {/* Type buttons */}
+                       <div className="flex flex-wrap gap-2 w-full min-w-0 mb-2">
+                         <Button
+                           variant={feedbackType[idx]==='good' ? 'default' : 'secondary'}
+                           className="min-w-0 text-sm px-3 py-2"
+                           onClick={() => handleFeedbackTypeChange(idx, 'good')}
+                         >👍 Looks good</Button>
+
+                         <Button
+                           variant={feedbackType[idx]==='improvement' ? 'default' : 'secondary'}
+                           className="min-w-0 text-sm px-3 py-2"
+                           onClick={() => handleFeedbackTypeChange(idx, 'improvement')}
+                         >👎 Needs improvement</Button>
+                       </div>
+
+                       {/* Improvement details */}
                        {feedbackType[idx] === 'improvement' && (
-                         <div className="space-y-3 p-3 bg-muted/50 rounded-md">
-                           <div>
-                             <div className="text-sm font-medium mb-2">What's the issue? (select all that apply)</div>
-                              <div className="flex flex-wrap gap-2">
-                                {FEEDBACK_TAGS.map(tag => (
-                                 <Button
-                                   key={tag}
-                                   size="sm"
-                                   variant={issueTypes[idx]?.includes(tag) ? 'default' : 'outline'}
-                                   onClick={() => handleToggleFeedbackTag(idx, tag)}
-                                 >
-                                   {tag}
-                                 </Button>
-                               ))}
-                             </div>
+                         <div className="rounded-md border p-3 sm:p-4">
+                           <p className="font-medium mb-2">What's the issue? (select all)</p>
+                           <div className="flex flex-wrap gap-2 w-full min-w-0 mb-3">
+                             {FEEDBACK_TAGS.map(tag => (
+                               <Button key={tag} variant={issueTypes[idx]?.includes(tag) ? 'default' : 'secondary'}
+                                 className="min-w-0 text-sm px-3 py-2"
+                                 onClick={() => handleToggleFeedbackTag(idx, tag)}
+                               >{tag}</Button>
+                             ))}
                            </div>
-                           
-                           <div>
-                             <Label htmlFor={`feedback-${idx}`} className="text-sm font-medium">
-                               Additional details (optional)
-                             </Label>
-                             <Textarea
-                               id={`feedback-${idx}`}
-                               placeholder="Describe the issue in more detail..."
-                               value={feedbackNotes[idx] || ''}
-                               onChange={(e) => handleFeedbackNotesChange(idx, e.target.value)}
-                               onBlur={() => queueSubmitFeedback(idx, 600)}
-                               className="mt-1"
-                               rows={3}
-                             />
-                           </div>
+                           <Textarea
+                             value={feedbackNotes[idx] ?? ''}
+                             onChange={(e) => handleFeedbackNotesChange(idx, e.target.value)}
+                             onBlur={() => queueSubmitFeedback(idx, 600)}
+                             placeholder="Add details (optional)…"
+                             className="min-w-0 w-full"
+                           />
                          </div>
                        )}
 
-                       <p className="mt-1 text-xs text-muted-foreground" aria-live="polite">
-                         {feedbackSaving[idx] ? 'Saving…' : feedbackSaved[idx] ? 'Saved' : ''}
+                       {/* Micro status */}
+                       <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
+                         {feedbackSaving[idx] ? 'Saving…' : feedbackError[idx] ? `Error: ${feedbackError[idx]}` : feedbackSaved[idx] ? 'Saved' : ''}
                        </p>
-                     </div>
-                   </CardContent>
-                 </Card>
+                     </CardContent>
+                   </Card>
                )}
 
                {/* Primary action placement - AFTER feedback */}
@@ -620,11 +606,6 @@ export default function AiPracticeSession() {
                  </div>
                </div>
 
-              {feedbackSubmitted[idx] && (
-                <div className="mt-4 w-full max-w-full p-3 bg-success/10 border border-success/20 rounded-md text-success text-sm break-words">
-                  ✓ Thank you for your feedback!
-                </div>
-              )}
             </>
           )}
           

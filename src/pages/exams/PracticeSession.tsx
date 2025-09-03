@@ -62,6 +62,7 @@ export default function PracticeSession() {
   const [feedbackDirty, setFeedbackDirty] = useState<Record<string, boolean>>({});
   const [feedbackSaving, setFeedbackSaving] = useState<Record<string, boolean>>({});
   const [feedbackSaved, setFeedbackSaved] = useState<Record<string, boolean>>({});
+  const [feedbackError, setFeedbackError] = useState<Record<string, string | null>>({});
   const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set());
   const [showQuestionMap, setShowQuestionMap] = useState(false);
   const SESSION_KEY = 'emgurus.practice.session';
@@ -315,12 +316,34 @@ export default function PracticeSession() {
     text: feedbackNotes[questionId] ?? '',
   });
 
-  const doSubmitFeedback = async (questionId: string) => {
+  const syncMarkForReview = async (questionId: string) => {
+    const type = feedbackType[questionId];
+    const shouldFlag = type === 'improvement';
     try {
-      setFeedbackSaving(v => ({...v, [questionId]: true}));
+      if (shouldFlag) {
+        setMarkedForReview(prev => new Set(prev).add(questionId));
+      } else {
+        setMarkedForReview(prev => {
+          const next = new Set(prev);
+          next.delete(questionId);
+          return next;
+        });
+      }
+    } catch (e) {
+      console.warn('Mark for review sync failed:', e);
+    }
+  };
+
+  const doSubmitFeedback = async (questionId: string) => {
+    setFeedbackError(v => ({...v, [questionId]: null}));
+    setFeedbackSaving(v => ({...v, [questionId]: true}));
+    try {
       await submitFeedback(questionId);
+      await syncMarkForReview(questionId);
       setFeedbackSaved(v => ({...v, [questionId]: true}));
       setFeedbackDirty(v => ({...v, [questionId]: false}));
+    } catch (e: any) {
+      setFeedbackError(v => ({...v, [questionId]: e?.message ?? 'Could not save'}));
     } finally {
       setFeedbackSaving(v => ({...v, [questionId]: false}));
     }
@@ -339,7 +362,7 @@ export default function PracticeSession() {
       setIssueTypes(prev => ({ ...prev, [questionId]: [] }));
       setFeedbackNotes(prev => ({ ...prev, [questionId]: '' }));
     }
-    queueSubmitFeedback(questionId);
+    queueSubmitFeedback(questionId, 300);
   };
 
   const handleToggleFeedbackTag = (questionId: string, tag: string) => {
@@ -349,7 +372,7 @@ export default function PracticeSession() {
         ? prev[questionId].filter(t => t !== tag)
         : [...(prev[questionId] || []), tag]
     }));
-    queueSubmitFeedback(questionId);
+    queueSubmitFeedback(questionId, 350);
   };
 
   const handleFeedbackNotesChange = (questionId: string, notes: string) => {
@@ -594,74 +617,51 @@ export default function PracticeSession() {
 
               {/* Feedback Card */}
               {showExplanations[currentQuestion.id] && (
-                <Card className="mt-4 w-full max-w-full min-w-0">
-                  <CardHeader>
-                    <CardTitle className="text-base">Question Feedback</CardTitle>
-                  </CardHeader>
-                  <CardContent className="w-full max-w-full min-w-0 break-words">
-                    {!feedbackSubmitted[currentQuestion.id] ? (
-                      <>
-                         <div className="mb-4">
-                           <div className="flex flex-wrap gap-2 sm:gap-3 w-full min-w-0 items-start mb-3">
-                             <Button
-                               variant={feedbackType[currentQuestion.id] === 'good' ? 'default' : 'outline'}
-                               size="sm"
-                               onClick={() => handleFeedbackTypeChange(currentQuestion.id, 'good')}
-                               className="min-w-0 text-sm sm:text-base px-3 py-2 whitespace-normal"
-                             >
-                               👍 Looks good
-                             </Button>
-                             <Button
-                               variant={feedbackType[currentQuestion.id] === 'improvement' ? 'default' : 'outline'}
-                               size="sm"
-                               onClick={() => handleFeedbackTypeChange(currentQuestion.id, 'improvement')}
-                               className="min-w-0 text-sm sm:text-base px-3 py-2 whitespace-normal"
-                             >
-                               👎 Needs improvement
-                             </Button>
-                           </div>
+                <Card className="min-w-0 w-full max-w-full">
+                  <CardContent className="min-w-0 w-full max-w-full break-words">
+                    <h3 className="font-semibold mb-2">Question Feedback</h3>
 
-                          {feedbackType[currentQuestion.id] === 'improvement' && (
-                            <div className="space-y-3">
-                              <div>
-                                <Label className="text-sm font-medium">What's the issue? (select all that apply)</Label>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  {FEEDBACK_TAGS.map(tag => (
-                                    <Button
-                                      key={tag}
-                                      variant={issueTypes[currentQuestion.id]?.includes(tag) ? 'default' : 'outline'}
-                                      size="sm"
-                                      onClick={() => handleToggleFeedbackTag(currentQuestion.id, tag)}
-                                    >
-                                      {tag}
-                                    </Button>
-                                  ))}
-                                </div>
-                              </div>
-                              <div>
-                                <Label htmlFor={`feedback-notes-${currentQuestion.id}`} className="text-sm">Additional details (optional)</Label>
-                                <Textarea
-                                  id={`feedback-notes-${currentQuestion.id}`}
-                                  value={feedbackNotes[currentQuestion.id] || ''}
-                                  onChange={(e) => handleFeedbackNotesChange(currentQuestion.id, e.target.value)}
-                                  onBlur={() => queueSubmitFeedback(currentQuestion.id, 600)}
-                                  placeholder="Describe the issue in more detail..."
-                                  className="mt-1"
-                                />
-                              </div>
-                            </div>
-                          )}
+                    {/* Type buttons */}
+                    <div className="flex flex-wrap gap-2 w-full min-w-0 mb-2">
+                      <Button
+                        variant={feedbackType[currentQuestion.id]==='good' ? 'default' : 'secondary'}
+                        className="min-w-0 text-sm px-3 py-2"
+                        onClick={() => handleFeedbackTypeChange(currentQuestion.id, 'good')}
+                      >👍 Looks good</Button>
 
-                          <p className="mt-1 text-xs text-muted-foreground" aria-live="polite">
-                            {feedbackSaving[currentQuestion.id] ? 'Saving…' : feedbackSaved[currentQuestion.id] ? 'Saved' : ''}
-                          </p>
+                      <Button
+                        variant={feedbackType[currentQuestion.id]==='improvement' ? 'default' : 'secondary'}
+                        className="min-w-0 text-sm px-3 py-2"
+                        onClick={() => handleFeedbackTypeChange(currentQuestion.id, 'improvement')}
+                      >👎 Needs improvement</Button>
+                    </div>
+
+                    {/* Improvement details */}
+                    {feedbackType[currentQuestion.id] === 'improvement' && (
+                      <div className="rounded-md border p-3 sm:p-4">
+                        <p className="font-medium mb-2">What's the issue? (select all)</p>
+                        <div className="flex flex-wrap gap-2 w-full min-w-0 mb-3">
+                          {FEEDBACK_TAGS.map(tag => (
+                            <Button key={tag} variant={issueTypes[currentQuestion.id]?.includes(tag) ? 'default' : 'secondary'}
+                              className="min-w-0 text-sm px-3 py-2"
+                              onClick={() => handleToggleFeedbackTag(currentQuestion.id, tag)}
+                            >{tag}</Button>
+                          ))}
                         </div>
-                      </>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">
-                        ✅ Feedback submitted. Thank you for helping us improve!
+                        <Textarea
+                          value={feedbackNotes[currentQuestion.id] ?? ''}
+                          onChange={(e) => handleFeedbackNotesChange(currentQuestion.id, e.target.value)}
+                          onBlur={() => queueSubmitFeedback(currentQuestion.id, 600)}
+                          placeholder="Add details (optional)…"
+                          className="min-w-0 w-full"
+                        />
                       </div>
                     )}
+
+                    {/* Micro status */}
+                    <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
+                      {feedbackSaving[currentQuestion.id] ? 'Saving…' : feedbackError[currentQuestion.id] ? `Error: ${feedbackError[currentQuestion.id]}` : feedbackSaved[currentQuestion.id] ? 'Saved' : ''}
+                    </p>
                   </CardContent>
                 </Card>
               )}
@@ -691,10 +691,6 @@ export default function PracticeSession() {
               {/* Secondary actions - below explanation/feedback */}
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between order-last md:order-none pt-4">
                 <div className="flex flex-wrap items-center gap-2 gap-y-2 md:flex-nowrap">
-                  <MarkForReviewButton
-                    currentQuestionId={currentQuestion.id}
-                    source="reviewed"
-                  />
                   <Button 
                     variant="outline" 
                     onClick={() => navigate('/exams/practice')}
