@@ -1115,6 +1115,12 @@ export default function DashboardAdmin() {
           render: <AdminAnalyticsPanel /> 
         },
         { 
+          id: "generator", 
+          title: "Generator", 
+          description: "AI-powered blog generation and assignment tool.", 
+          render: <div className="p-0"><GenerateBlogDraft /></div> 
+        },
+        { 
           id: "queue", 
           title: "Queue", 
           description: "Triage incoming posts and assign to reviewers.", 
@@ -1264,19 +1270,6 @@ export default function DashboardAdmin() {
           title: "Directory & Roles", 
           description: "Manage user roles and permissions.", 
           render: <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">User directory coming soon.</Card></div> 
-        },
-      ],
-    },
-    {
-      id: "experimental",
-      title: "🧪 Experimental",
-      icon: Brain,
-      tabs: [
-        { 
-          id: "blog-generator", 
-          title: "Blog Generator 🤖", 
-          description: "AI-powered blog generation and assignment tool (Experimental).", 
-          render: <div className="p-0"><GenerateBlogDraft /></div>
         },
       ],
     },
