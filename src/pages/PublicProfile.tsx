@@ -39,14 +39,34 @@ export default function PublicProfile() {
   useEffect(() => {
     let mounted = true;
     (async () => {
+      // Use the secure function that respects user privacy preferences
       const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, timezone, country, specialty, primary_specialty, avatar_url, exam_interests, exams, languages, bio, price_per_30min, cover_image_url, linkedin, twitter, website')
-        .eq('user_id', id)
+        .rpc('get_public_guru_profile', { guru_user_id: id })
         .maybeSingle();
       if (!mounted) return;
       if (error || !data) { setNotFound(true); return; }
-      setProfile(data as any);
+      
+      // Map the function result to the expected format
+      const mappedData = {
+        user_id: data.user_id,
+        full_name: data.full_name,
+        timezone: data.timezone || null,
+        country: data.country,
+        specialty: data.specialty,
+        primary_specialty: data.specialty, // Use specialty as primary_specialty fallback
+        avatar_url: data.avatar_url,
+        exam_interests: data.exams, // Map exams to exam_interests
+        exams: data.exams,
+        languages: data.languages,
+        bio: data.bio,
+        price_per_30min: data.price_per_30min || null,
+        cover_image_url: data.cover_image_url,
+        linkedin: data.linkedin,
+        twitter: data.twitter,
+        website: data.website
+      };
+      
+      setProfile(mappedData as any);
     })();
     return () => { mounted = false; };
   }, [id]);

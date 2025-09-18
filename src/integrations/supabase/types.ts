@@ -3175,6 +3175,36 @@ export type Database = {
         Args: { p_note: string; p_question_id: string }
         Returns: undefined
       }
+      get_public_guru_profile: {
+        Args: { guru_user_id: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          country: string
+          cover_image_url: string
+          created_at: string
+          credentials: string
+          exams: string[]
+          facebook: string
+          full_name: string
+          github: string
+          hospital: string
+          id: string
+          instagram: string
+          languages: string[]
+          linkedin: string
+          primary_specialty: string
+          specialty: string
+          title: string
+          twitter: string
+          updated_at: string
+          user_id: string
+          user_position: string
+          website: string
+          years_experience: number
+          youtube: string
+        }[]
+      }
       get_user_role_flags: {
         Args: { p_user_id: string }
         Returns: {

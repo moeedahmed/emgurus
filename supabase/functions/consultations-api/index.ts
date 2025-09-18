@@ -390,43 +390,116 @@ async function handle(req: Request): Promise<Response> {
       const page = Number(url.searchParams.get("page") || 1);
       const pageSize = 12;
 
-      let query = supabase
-        .from("profiles")
-        .select("user_id, full_name, avatar_url, specialty, country, exams, price_per_30min, timezone, bio", { count: "exact" })
-        .neq("user_id", "080c2b2d-2b51-4484-9027-a037216c3a7c");
-      // RLS exposes only guru profiles via existing policy
+      // Use service client to access secure data function
+      const serviceClient = getServiceClient();
+      
+      // Get all guru profiles that are public using the secure function
+      const { data: guruRoles } = await serviceClient
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "guru");
+        
+      if (!guruRoles || guruRoles.length === 0) {
+        return json({ items: [], total: 0, page, pageSize });
+      }
+      
+      // Get profiles for each guru using the secure function
+      const guruProfiles = [];
+      for (const role of guruRoles) {
+        const { data: profile } = await serviceClient
+          .rpc('get_public_guru_profile', { guru_user_id: role.user_id })
+          .maybeSingle();
+        if (profile) {
+          guruProfiles.push({
+            user_id: profile.user_id,
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url,
+            specialty: profile.specialty,
+            country: profile.country,
+            exams: profile.exams,
+            price_per_30min: profile.price_per_30min,
+            timezone: profile.timezone,
+            bio: profile.bio
+          });
+        }
+      }
+      
+      // Apply filters manually since we can't use RLS filtering
+      let filteredProfiles = guruProfiles.filter(profile => 
+        profile.user_id !== "080c2b2d-2b51-4484-9027-a037216c3a7c"
+      );
 
       if (search) {
-        query = query.or(`full_name.ilike.%${search}%,specialty.ilike.%${search}%`);
+        filteredProfiles = filteredProfiles.filter(profile =>
+          profile.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+          profile.specialty?.toLowerCase().includes(search.toLowerCase())
+        );
       }
-      if (country && country !== "all") query = query.eq("country", country);
-      if (exam && exam !== "all") query = query.contains("exams", [exam]);
-      if (minPrice) query = query.gte("price_per_30min", Number(minPrice));
-      if (maxPrice) query = query.lte("price_per_30min", Number(maxPrice));
+      if (country && country !== "all") {
+        filteredProfiles = filteredProfiles.filter(profile => profile.country === country);
+      }
+      if (exam && exam !== "all") {
+        filteredProfiles = filteredProfiles.filter(profile => 
+          profile.exams?.includes(exam)
+        );
+      }
+      if (minPrice) {
+        filteredProfiles = filteredProfiles.filter(profile => 
+          (profile.price_per_30min || 0) >= Number(minPrice)
+        );
+      }
+      if (maxPrice) {
+        filteredProfiles = filteredProfiles.filter(profile => 
+          (profile.price_per_30min || 0) <= Number(maxPrice)
+        );
+      }
 
       // Sorting
-      if (sort === "price_asc") query = query.order("price_per_30min", { ascending: true });
-      else if (sort === "price_desc") query = query.order("price_per_30min", { ascending: false });
-      else if (sort === "name") query = query.order("full_name", { ascending: true });
+      if (sort === "price_asc") {
+        filteredProfiles.sort((a, b) => (a.price_per_30min || 0) - (b.price_per_30min || 0));
+      } else if (sort === "price_desc") {
+        filteredProfiles.sort((a, b) => (b.price_per_30min || 0) - (a.price_per_30min || 0));
+      } else if (sort === "name") {
+        filteredProfiles.sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+      }
 
-      query = query.range((page - 1) * pageSize, page * pageSize - 1);
-      const { data, error, count } = await query;
-      if (error) return serverError("Failed to list gurus", error);
-      return json({ items: data, total: count, page, pageSize });
+      // Pagination
+      const total = filteredProfiles.length;
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const paginatedProfiles = filteredProfiles.slice(startIndex, endIndex);
+      
+      return json({ items: paginatedProfiles, total, page, pageSize });
     }
 
     // GET /api/gurus/:id
     const guruIdMatch = path.match(/\/api\/gurus\/(.+)$/);
     if (guruIdMatch && req.method === "GET" && !path.endsWith("/availability")) {
       const guruId = guruIdMatch[1].split("/")[0];
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, avatar_url, specialty, country, exams, price_per_30min, timezone, bio")
-        .eq("user_id", guruId)
+      
+      // Use the secure function that respects user privacy preferences
+      const serviceClient = getServiceClient();
+      const { data, error } = await serviceClient
+        .rpc('get_public_guru_profile', { guru_user_id: guruId })
         .maybeSingle();
+        
       if (error) return serverError("Failed to fetch guru", error);
-      if (!data) return notFound("Guru not found");
-      return json(data);
+      if (!data) return notFound("Guru not found or profile not public");
+      
+      // Map to expected format
+      const mappedData = {
+        user_id: data.user_id,
+        full_name: data.full_name,
+        avatar_url: data.avatar_url,
+        specialty: data.specialty,
+        country: data.country,
+        exams: data.exams,
+        price_per_30min: data.price_per_30min,
+        timezone: data.timezone,
+        bio: data.bio
+      };
+      
+      return json(mappedData);
     }
 
     // GET /api/gurus/:id/availability?from&to
