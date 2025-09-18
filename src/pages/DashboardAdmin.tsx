@@ -1163,34 +1163,34 @@ export default function DashboardAdmin() {
           render: <div className="p-4 grid gap-4 md:grid-cols-5"><KpiCard title="Generated (7d)" value="0" isLoading={false} /><KpiCard title="In Review" value={examKpis.under_review} isLoading={false} /><KpiCard title="Published" value={examKpis.approved} isLoading={false} /><KpiCard title="Quality Flags Open" value={examKpis.flaggedOpen} isLoading={false} /><div className="text-sm text-muted-foreground">Coverage chart coming soon</div></div> 
         },
         { 
-          id: "generation", 
-          title: "Generation", 
+          id: "generator", 
+          title: "Generator", 
           description: "Modern AI question generation interface (Beta).", 
           render: <QuestionGenerator />
         },
         { 
-          id: "review-assignment", 
-          title: "Review & Assignment", 
+          id: "review", 
+          title: "Review", 
           description: "Assign questions to gurus and track decisions.", 
-          render: <ExamReviewAssignment /> 
+          render: <ExamReviewAssignment />
         },
         { 
-          id: "marked-quality", 
-          title: "Marked & Quality", 
+          id: "quality", 
+          title: "Quality", 
           description: "Address user feedback and quality flags.", 
-          render: <ExamMarkedQuality /> 
+          render: <ExamMarkedQuality />
         },
         { 
-          id: "bank-sets", 
-          title: "Bank & Sets", 
+          id: "bank", 
+          title: "Bank",
           description: "Browse approved questions and manage sets.", 
           render: <ExamBankSets /> 
         },
         { 
-          id: "my-questions", 
-          title: "My Questions", 
+          id: "authored", 
+          title: "Authored", 
           description: "Your authored questions.", 
-          render: <MyQuestionsAdmin /> 
+          render: <MyQuestionsAdmin />
         },
       ],
     },
