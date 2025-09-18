@@ -37,6 +37,7 @@ import AdminConsultsNotifications from "@/components/dashboard/consultations/Adm
 import AdminConsultsSettings from "@/components/dashboard/consultations/AdminConsultsSettings";
 import ApproveGurus from "@/pages/admin/ApproveGurus";
 import BlogTaxonomyManager from "@/components/blogs/BlogTaxonomyManager";
+import GenerateBlogDraft from "@/pages/tools/GenerateBlogDraft";
 
 // -------- Analytics panel
 const AdminAnalyticsPanel: React.FC = () => {
@@ -1275,19 +1276,7 @@ export default function DashboardAdmin() {
           id: "blog-generator", 
           title: "Blog Generator 🤖", 
           description: "AI-powered blog generation and assignment tool (Experimental).", 
-          render: <div className="p-4">
-            <div className="mb-4">
-              <Button asChild>
-                <a href="/tools/generate-blog-draft">Launch Blog Generator</a>
-              </Button>
-            </div>
-            <Card className="p-4">
-              <p className="text-sm text-muted-foreground">
-                Generate AI-written blog drafts and assign them to Gurus for review. 
-                This experimental tool helps admins create high-quality content efficiently.
-              </p>
-            </Card>
-          </div>
+          render: <div className="p-0"><GenerateBlogDraft /></div>
         },
       ],
     },
