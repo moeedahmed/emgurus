@@ -601,44 +601,7 @@ const RejectedPanel: React.FC = () => {
   );
 };
 
-// -------- Exams workflow components with chips
-const ExamGeneration: React.FC = () => {
-  const [activeFilter, setActiveFilter] = useState<'generator' | 'generate' | 'drafts'>('generator');
-
-  const getComponent = () => {
-    switch (activeFilter) {
-      case 'generator': return <Generator />;
-      case 'generate': return <AdminGeneration />;
-      case 'drafts': return <DraftsPanel />;
-      default: return <Generator />;
-    }
-  };
-
-  return (
-    <div className="p-0">
-      
-      <div className="flex gap-2 mb-4 px-4">
-        {[
-          { id: 'generator' as const, label: 'Generator' },
-          { id: 'generate' as const, label: 'Generate' },
-          { id: 'drafts' as const, label: 'Drafts' },
-        ].map(chip => (
-          <Button
-            key={chip.id}
-            size="sm"
-            variant={activeFilter === chip.id ? "default" : "outline"}
-            onClick={() => setActiveFilter(chip.id)}
-            aria-pressed={activeFilter === chip.id}
-          >
-            {chip.label}
-          </Button>
-        ))}
-      </div>
-
-      {getComponent()}
-    </div>
-  );
-};
+// -------- Removed ExamGeneration - replaced with QuestionGenerator in exams section
 
 const ExamReviewAssignment: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'draft' | 'assigned' | 'approved' | 'rejected'>('draft');
@@ -1195,8 +1158,8 @@ export default function DashboardAdmin() {
         { 
           id: "generation", 
           title: "Generation", 
-          description: "Generate AI questions by exam/topic/difficulty.", 
-          render: <ExamGeneration /> 
+          description: "Modern AI question generation interface (Beta).", 
+          render: <QuestionGenerator />
         },
         { 
           id: "review-assignment", 
@@ -1327,12 +1290,6 @@ export default function DashboardAdmin() {
       title: "🧪 Experimental",
       icon: Brain,
       tabs: [
-        { 
-          id: "question-generator", 
-          title: "Question Generator 🧠", 
-          description: "Modern AI question generation interface (Beta).", 
-          render: <QuestionGenerator />
-        },
         { 
           id: "blog-generator", 
           title: "Blog Generator 🤖", 
