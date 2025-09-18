@@ -196,7 +196,7 @@ export function WorkspaceLayoutInner({
           </SidebarContent>
         </Sidebar>
 
-        <SidebarInset className="pt-[var(--header-h)] min-w-0">
+        <SidebarInset className="min-w-0">
           <header className="sticky top-[var(--header-h)] z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
             <div className="h-12 flex items-center gap-3 px-3">
               <SidebarTrigger className="lg:hidden" />
