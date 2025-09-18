@@ -177,7 +177,7 @@ export default function PracticeConfig() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold">Study Mode</h1>
-            <p className="text-sm text-muted-foreground">Curated questions from expert reviewers</p>
+            
           </div>
           <Button variant="outline" onClick={() => navigate('/exams')}>
             Back to Exams

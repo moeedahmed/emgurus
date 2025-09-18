@@ -133,9 +133,6 @@ export default function TaxonomyManager() {
 
   return (
     <div className="p-4">
-      <div className="mb-4 text-sm text-muted-foreground">
-        Manage categories and topics used across forums.
-      </div>
 
       <Tabs defaultValue="categories" className="space-y-4">
         <TabsList>

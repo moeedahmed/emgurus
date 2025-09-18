@@ -189,7 +189,7 @@ Format as strict JSON with: stem, options, correct_index, explanation, reference
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">Generator</h1>
-              <p className="text-sm text-muted-foreground">Create draft MCQs for review</p>
+              
             </div>
             {keptCount > 0 && (
               <div className="flex gap-2">

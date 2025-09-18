@@ -172,7 +172,7 @@ const DatabaseManager = () => {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <div className="text-sm text-muted-foreground">Manage exam metadata, SLOs, and taxonomy.</div>
+        
         <Button 
           onClick={seedFcpsEm} 
           disabled={isSeeding}

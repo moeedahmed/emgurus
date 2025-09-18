@@ -55,7 +55,7 @@ export default function SiteSettings() {
     <div className="p-4 max-w-2xl space-y-6">
       <div>
         <h2 className="text-lg font-semibold mb-1">Site Settings</h2>
-        <p className="text-sm text-muted-foreground">Configure global platform settings.</p>
+        
       </div>
 
       <Card>

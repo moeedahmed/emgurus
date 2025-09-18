@@ -239,7 +239,7 @@ function MySubmittedPanel() {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-sm text-muted-foreground">Questions you submitted for review.</div>
+        
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>Refresh</Button>
       </div>
       <TableCard
@@ -291,7 +291,7 @@ export default function DashboardGuru() {
         { 
           id: "overview", 
           title: "Overview", 
-          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your recent reviews and publishing impact.</div><AnalyticsPanel /></div> 
+          render: <div className="p-0"><AnalyticsPanel /></div> 
         },
         { 
           id: "reviews", 
@@ -321,7 +321,7 @@ export default function DashboardGuru() {
         { 
           id: "overview", 
           title: "Overview", 
-          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Your exam reviews and contribution.</div><AnalyticsPanel /></div> 
+          render: <div className="p-0"><AnalyticsPanel /></div> 
         },
         { 
           id: "review-assignment", 

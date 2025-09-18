@@ -61,7 +61,7 @@ export default function GuruAvailability() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold mb-1">Availability Management</h2>
-          <p className="text-sm text-muted-foreground">Manage your consultation time slots.</p>
+          
         </div>
         <Button onClick={() => window.open('/guru/availability', '_blank')}>
           Edit Availability
