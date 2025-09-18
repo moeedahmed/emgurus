@@ -53,7 +53,7 @@ export default function PublicProfile() {
         timezone: data.timezone || null,
         country: data.country,
         specialty: data.specialty,
-        primary_specialty: data.specialty, // Use specialty as primary_specialty fallback
+        primary_specialty: data.primary_specialty || data.specialty, // Fallback to specialty
         avatar_url: data.avatar_url,
         exam_interests: data.exams, // Map exams to exam_interests
         exams: data.exams,

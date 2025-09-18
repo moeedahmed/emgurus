@@ -3193,8 +3193,10 @@ export type Database = {
           instagram: string
           languages: string[]
           linkedin: string
+          price_per_30min: number
           primary_specialty: string
           specialty: string
+          timezone: string
           title: string
           twitter: string
           updated_at: string
