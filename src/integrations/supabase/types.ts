@@ -2304,6 +2304,39 @@ export type Database = {
           },
         ]
       }
+      rate_limit_log: {
+        Row: {
+          blocked: boolean
+          created_at: string
+          endpoint: string
+          id: string
+          ip_address: unknown
+          request_count: number
+          user_id: string | null
+          window_start: string
+        }
+        Insert: {
+          blocked?: boolean
+          created_at?: string
+          endpoint: string
+          id?: string
+          ip_address: unknown
+          request_count?: number
+          user_id?: string | null
+          window_start?: string
+        }
+        Update: {
+          blocked?: boolean
+          created_at?: string
+          endpoint?: string
+          id?: string
+          ip_address?: unknown
+          request_count?: number
+          user_id?: string | null
+          window_start?: string
+        }
+        Relationships: []
+      }
       rcem_slos: {
         Row: {
           code: string
@@ -2631,6 +2664,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      security_audit_log: {
+        Row: {
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          new_data: Json | null
+          old_data: Json | null
+          operation: string
+          record_id: string | null
+          table_name: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_data?: Json | null
+          old_data?: Json | null
+          operation: string
+          record_id?: string | null
+          table_name: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_data?: Json | null
+          old_data?: Json | null
+          operation?: string
+          record_id?: string | null
+          table_name?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      security_config: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
       }
       subscriptions: {
         Row: {
@@ -3108,6 +3210,14 @@ export type Database = {
         Args: { "": string } | { "": unknown }
         Returns: unknown
       }
+      check_rate_limit: {
+        Args: { endpoint_name: string; max_requests_per_minute?: number }
+        Returns: boolean
+      }
+      cleanup_old_audit_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_blog_draft: {
         Args: {
           p_category_id: string
@@ -3174,6 +3284,21 @@ export type Database = {
       exam_request_changes: {
         Args: { p_note: string; p_question_id: string }
         Returns: undefined
+      }
+      export_user_data: {
+        Args: { target_user_id: string }
+        Returns: Json
+      }
+      get_booking_summary: {
+        Args: { booking_id: string }
+        Returns: {
+          communication_method: Database["public"]["Enums"]["communication_method"]
+          end_datetime: string
+          id: string
+          meeting_link: string
+          start_datetime: string
+          status: Database["public"]["Enums"]["booking_status"]
+        }[]
       }
       get_public_guru_profile: {
         Args: { guru_user_id: string }
