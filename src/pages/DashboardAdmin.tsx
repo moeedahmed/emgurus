@@ -1193,12 +1193,6 @@ export default function DashboardAdmin() {
           render: <div className="p-0"><AdminConsultsOverview /></div> 
         },
         { 
-          id: "approvals", 
-          title: "Approvals", 
-          description: "Review and approve guru applications.", 
-          render: <GuruApprovalsTab />
-        },
-        { 
           id: "marketplace", 
           title: "Marketplace", 
           description: "Set marketplace rules and defaults.", 
@@ -1248,10 +1242,10 @@ export default function DashboardAdmin() {
           render: <div className="p-4 grid gap-4 md:grid-cols-3"><KpiCard title="Total Users" value="0" isLoading={false} /><KpiCard title="Active (7d)" value="0" isLoading={false} /><KpiCard title="New Today" value="0" isLoading={false} /></div> 
         },
         { 
-          id: "guru-approvals", 
-          title: "Guru Approvals", 
+          id: "approvals", 
+          title: "Approvals", 
           description: "Review and approve guru applications.", 
-          render: <GuruApprovalsTab /> 
+          render: <GuruApprovalsTab />
         },
         { 
           id: "directory", 
