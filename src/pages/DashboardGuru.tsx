@@ -300,10 +300,10 @@ export default function DashboardGuru() {
           render: <BlogReviews /> 
         },
         { 
-          id: "myblogs", 
-          title: "MyBlogs", 
+          id: "authored", 
+          title: "Authored", 
           description: "Write or continue your own posts.", 
-          render: <MyBlogStatusPanel filter="draft" /> 
+          render: <MyBlogStatusPanel filter="draft" />
         },
         { 
           id: "marked", 
@@ -376,7 +376,7 @@ export default function DashboardGuru() {
           id: "overview", 
           title: "Overview", 
           description: "Incoming flags and trends.",
-          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Incoming flags and trends.</div><AnalyticsPanel /></div> 
+          render: <div className="p-0"><AnalyticsPanel /></div> 
         },
         { 
           id: "moderation", 

@@ -1193,22 +1193,22 @@ export default function DashboardAdmin() {
           render: <div className="p-0"><AdminConsultsOverview /></div> 
         },
         { 
-          id: "guru-approvals", 
-          title: "Guru Approvals", 
+          id: "approvals", 
+          title: "Approvals", 
           description: "Review and approve guru applications.", 
-          render: <GuruApprovalsTab /> 
+          render: <GuruApprovalsTab />
         },
         { 
-          id: "marketplace-controls", 
-          title: "Marketplace Controls", 
+          id: "marketplace", 
+          title: "Marketplace", 
           description: "Set marketplace rules and defaults.", 
-          render: <ConsultMarketplaceControls /> 
+          render: <ConsultMarketplaceControls />
         },
         { 
-          id: "bookings-oversight", 
-          title: "Bookings Oversight", 
+          id: "bookings", 
+          title: "Bookings", 
           description: "Monitor consultations across the platform.", 
-          render: <ConsultBookingsOversight /> 
+          render: <ConsultBookingsOversight />
         },
       ],
     },
@@ -1225,15 +1225,15 @@ export default function DashboardAdmin() {
         },
         { 
           id: "moderation", 
-          title: "Moderation Queue", 
+          title: "Moderation", 
           description: "Organization-wide flag handling.", 
-          render: <div className="p-0"><ForumsModerationQueue isAdmin={true} /></div> 
+          render: <div className="p-0"><ForumsModerationQueue isAdmin={true} /></div>
         },
         { 
           id: "taxonomy", 
-          title: "Taxonomy & Tags", 
+          title: "Taxonomy", 
           description: "Manage categories and topics used across forums.", 
-          render: <div className="p-0"><TaxonomyManager /></div> 
+          render: <div className="p-0"><TaxonomyManager /></div>
         },
       ],
     },
@@ -1255,9 +1255,9 @@ export default function DashboardAdmin() {
         },
         { 
           id: "directory", 
-          title: "Directory & Roles", 
+          title: "Directory", 
           description: "Manage user roles and permissions.", 
-          render: <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">User directory coming soon.</Card></div> 
+          render: <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">User directory coming soon.</Card></div>
         },
       ],
     },
