@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { checkRateLimit, logSecurityEvent, RATE_LIMITS } from '@/lib/security';
 
 type AuthReadyState = 'idle' | 'checking' | 'ready';
 
@@ -95,7 +96,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-    } catch (e) {
+
+      // Log successful sign out
+      await logSecurityEvent('auth_signout_success', {});
+    } catch (e: any) {
+      // Log failed sign out attempt
+      await logSecurityEvent('auth_signout_failed', { error: e.message });
+      
       console.warn('Sign out failed, clearing local state anyway', e);
     } finally {
       // Ensure local state is always cleared to avoid being stuck
@@ -155,15 +162,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signInWithGoogle = async () => {
-    const redirectUrl = `${window.location.origin}/auth`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl,
-        queryParams: { prompt: 'select_account' }
+    try {
+      // Rate limit check for authentication attempts
+      const isAllowed = await checkRateLimit('auth_google', RATE_LIMITS.AUTH_ATTEMPTS);
+      if (!isAllowed) {
+        throw new Error('Too many authentication attempts. Please try again later.');
       }
-    });
-    if (error) throw error;
+
+      const redirectUrl = `${window.location.origin}/auth`;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: { prompt: 'select_account' }
+        }
+      });
+      
+      if (error) throw error;
+
+      // Log successful authentication attempt
+      await logSecurityEvent('auth_google_success', { provider: 'google' });
+    } catch (error: any) {
+      // Log failed authentication attempt
+      await logSecurityEvent('auth_google_failed', { 
+        provider: 'google', 
+        error: error.message 
+      });
+      
+      toast.error(error.message || 'Failed to sign in with Google');
+      throw error;
+    }
   };
 
   const value = {
