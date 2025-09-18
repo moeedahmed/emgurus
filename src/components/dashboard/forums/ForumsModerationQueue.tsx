@@ -83,9 +83,6 @@ export default function ForumsModerationQueue({ isAdmin = false }: ForumsModerat
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {isAdmin ? "Organization-wide flag handling." : "Review and resolve flagged posts."}
-        </div>
         <Button variant="outline" onClick={load} disabled={loading}>Refresh</Button>
       </div>
 
