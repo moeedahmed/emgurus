@@ -1267,25 +1267,6 @@ export default function DashboardAdmin() {
       ],
     },
     {
-      id: "settings",
-      title: "Settings",
-      icon: Settings,
-      tabs: [
-        { 
-          id: "notifications", 
-          title: "Notifications", 
-          description: "Per-role defaults and email settings.", 
-          render: <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">Notification settings coming soon.</Card></div> 
-        },
-        { 
-          id: "features", 
-          title: "Feature Flags / Branding", 
-          description: "Admin toggles and customization.", 
-          render: <div className="p-4"><Card className="p-6 text-sm text-muted-foreground">Feature flags coming soon.</Card></div> 
-        },
-      ],
-    },
-    {
       id: "experimental",
       title: "🧪 Experimental",
       icon: Brain,
