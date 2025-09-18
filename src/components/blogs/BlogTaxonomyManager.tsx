@@ -49,6 +49,7 @@ export default function BlogTaxonomyManager() {
   const [newCategoryTitle, setNewCategoryTitle] = useState("");
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
   const [newTagTitle, setNewTagTitle] = useState("");
+  const [activeTab, setActiveTab] = useState<'categories' | 'tags'>('categories');
 
   const loadData = async () => {
     try {
@@ -395,15 +396,25 @@ export default function BlogTaxonomyManager() {
   const flatCategories = flattenCategories(categories);
 
   return (
-    <div className="space-y-4">
-      
-      <Tabs defaultValue="categories" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="tags">Tags</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="categories" className="space-y-4">
+    <div className="p-0">
+      <div className="flex gap-2 mb-4 px-4">
+        {[
+          { id: 'categories' as const, label: 'Categories' },
+          { id: 'tags' as const, label: 'Tags' },
+        ].map(tab => (
+          <Button
+            key={tab.id}
+            size="sm"
+            variant={activeTab === tab.id ? "default" : "outline"}
+            onClick={() => setActiveTab(tab.id)}
+            aria-pressed={activeTab === tab.id}
+          >
+            {tab.label}
+          </Button>
+        ))}
+      </div>
+      {activeTab === 'categories' && (
+        <div className="space-y-4 px-4">
           <div className="flex gap-2">
             <Input
               placeholder="Search categories..."
@@ -474,9 +485,11 @@ export default function BlogTaxonomyManager() {
               )}
             </div>
           </Card>
-        </TabsContent>
-        
-        <TabsContent value="tags" className="space-y-4">
+        </div>
+      )}
+
+      {activeTab === 'tags' && (
+        <div className="space-y-4 px-4">
           <div className="flex gap-2">
             <Input
               placeholder="Search tags..."
@@ -585,9 +598,8 @@ export default function BlogTaxonomyManager() {
               )}
             </div>
           </Card>
-        </TabsContent>
-      </Tabs>
-      
+        </div>
+      )}
       {/* Edit Category Dialog */}
       <Dialog open={isEditCategoryOpen} onOpenChange={setIsEditCategoryOpen}>
         <DialogContent>
