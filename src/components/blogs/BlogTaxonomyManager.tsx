@@ -397,7 +397,7 @@ export default function BlogTaxonomyManager() {
 
   return (
     <div className="p-0">
-      <div className="flex gap-2 mb-4 px-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4">
         {[
           { id: 'categories' as const, label: 'Categories' },
           { id: 'tags' as const, label: 'Tags' },
@@ -414,7 +414,7 @@ export default function BlogTaxonomyManager() {
         ))}
       </div>
       {activeTab === 'categories' && (
-        <div className="space-y-4 px-4">
+        <div className="space-y-4 px-6">
           <div className="flex gap-2">
             <Input
               placeholder="Search categories..."
@@ -489,7 +489,7 @@ export default function BlogTaxonomyManager() {
       )}
 
       {activeTab === 'tags' && (
-        <div className="space-y-4 px-4">
+        <div className="space-y-4 px-6">
           <div className="flex gap-2">
             <Input
               placeholder="Search tags..."
