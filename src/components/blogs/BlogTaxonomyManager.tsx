@@ -396,9 +396,6 @@ export default function BlogTaxonomyManager() {
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-muted-foreground">
-        Manage blog categories, subcategories, and tags. Items with posts cannot be deleted.
-      </div>
       
       <Tabs defaultValue="categories" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
