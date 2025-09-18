@@ -94,7 +94,7 @@ const SiteLayout = () => {
         Skip to content
       </a>
       <Header />
-      {showReminderBanner && (
+      {showReminderBanner && !isDashboardRoute && (
         <div className="bg-accent/10 border-b border-accent/20 px-4 py-3 text-sm animate-slide-up">
           <div className="container mx-auto flex items-center justify-between gap-4">
             <div className="text-foreground">
