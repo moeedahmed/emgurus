@@ -339,7 +339,7 @@ export default function DashboardGuru() {
     },
     {
       id: "consultations",
-      title: "Consultations",
+      title: "Consults",
       icon: Stethoscope,
       tabs: [
         { 

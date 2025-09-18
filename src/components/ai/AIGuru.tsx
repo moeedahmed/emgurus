@@ -26,7 +26,7 @@ function detectPageContext() {
   else if (path.startsWith('/blogs')) page_type = 'blogs';
   else if (path.startsWith('/forums/')) page_type = 'forum_thread';
   else if (path.startsWith('/forums')) page_type = 'forums';
-  else if (path.startsWith('/consultations')) page_type = 'consultations';
+  else if (path.startsWith('/consultations')) page_type = 'consults';
   else if (path.startsWith('/exams')) page_type = 'exams';
   else if (path.startsWith('/profile')) page_type = 'profile';
   else if (path === '/') page_type = 'home';

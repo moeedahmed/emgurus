@@ -43,11 +43,11 @@ export default function DashboardUser() {
     },
     {
       id: "consultations",
-      title: "Consultations",
+      title: "Consults",
       icon: Stethoscope,
       tabs: [
         { id: "overview", title: "Overview", render: <div className="p-0"><ConsultationsOverview /></div> },
-        { id: "bookings", title: "Bookings", description: "Your consultation history and upcoming sessions.", render: <div className="p-4"><Bookings embedded={true} /></div> },
+        { id: "bookings", title: "Bookings", description: "Your consult history and upcoming sessions.", render: <div className="p-4"><Bookings embedded={true} /></div> },
       ],
     },
     {

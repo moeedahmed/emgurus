@@ -1189,13 +1189,13 @@ export default function DashboardAdmin() {
     },
     {
       id: "consultations",
-      title: "Consultations",
+      title: "Consults",
       icon: Stethoscope,
       tabs: [
         { 
           id: "overview", 
           title: "Overview", 
-          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Platform-level consultations health.</div><AdminConsultsOverview /></div> 
+          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Platform-level consults health.</div><AdminConsultsOverview /></div> 
         },
         { 
           id: "guru-approvals", 

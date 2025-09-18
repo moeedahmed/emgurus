@@ -138,13 +138,13 @@ const tabRegistry: Record<string, SectionConfig> = {
         label: 'Overview', 
         component: ConsultationsOverview, 
         roles: ['user', 'guru', 'admin'], 
-        description: 'Upcoming sessions and consultation stats.' 
+        description: 'Upcoming sessions and consult stats.' 
       },
       bookings: { 
         label: 'Bookings', 
         component: Bookings, 
         roles: ['user', 'guru', 'admin'], 
-        description: 'Your consultation history and upcoming sessions.' 
+        description: 'Your consult history and upcoming sessions.' 
       },
       availability: { 
         label: 'Availability', 
