@@ -714,12 +714,9 @@ const MyQuestionsAdmin: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'draft' | 'submitted' | 'approved' | 'rejected'>('draft');
 
   return (
-    <div className="p-4">
-      <div className="mb-4 text-sm text-muted-foreground">
-        Your authored questions.
-      </div>
+    <div className="p-0">
       
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 px-4">
         {[
           { id: 'draft' as const, label: 'Draft' },
           { id: 'submitted' as const, label: 'Submitted' },
