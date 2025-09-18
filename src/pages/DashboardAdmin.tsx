@@ -649,9 +649,6 @@ const ExamMarkedQuality: React.FC = () => {
 
   return (
     <div className="p-0">
-      <div className="p-4 text-sm text-muted-foreground">
-        Address user feedback and quality flags.
-      </div>
       
       <div className="flex gap-2 mb-4 px-4">
         {[
@@ -689,9 +686,6 @@ const ExamBankSets: React.FC = () => {
 
   return (
     <div className="p-0">
-      <div className="p-4 text-sm text-muted-foreground">
-        Browse approved questions, manage sets, and configure exam database.
-      </div>
       
       <div className="flex gap-2 mb-4 px-4">
         {[
@@ -970,9 +964,6 @@ const ConsultMarketplaceControls: React.FC = () => {
 
   return (
     <div className="p-0">
-      <div className="p-4 text-sm text-muted-foreground">
-        Set marketplace rules and defaults.
-      </div>
       
       <div className="flex gap-2 mb-4 px-4">
         {[
@@ -1002,9 +993,6 @@ const ConsultBookingsOversight: React.FC = () => {
 
   return (
     <div className="p-0">
-      <div className="p-4 text-sm text-muted-foreground">
-        Monitor consultations across the platform.
-      </div>
       
       <div className="flex gap-2 mb-4 px-4">
         {[
@@ -1166,7 +1154,7 @@ export default function DashboardAdmin() {
           id: "generator", 
           title: "Generator", 
           description: "Modern AI question generation interface (Beta).", 
-          render: <QuestionGenerator />
+          render: <div className="p-0"><QuestionGenerator /></div>
         },
         { 
           id: "review", 
@@ -1202,7 +1190,7 @@ export default function DashboardAdmin() {
         { 
           id: "overview", 
           title: "Overview", 
-          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Platform-level consults health.</div><AdminConsultsOverview /></div> 
+          render: <div className="p-0"><AdminConsultsOverview /></div> 
         },
         { 
           id: "guru-approvals", 
@@ -1233,7 +1221,7 @@ export default function DashboardAdmin() {
           id: "overview", 
           title: "Overview", 
           description: "Forum health and activity.",
-          render: <div className="p-0"><div className="p-4 text-sm text-muted-foreground">Forum health and activity.</div><ForumsOverviewPanel /></div> 
+          render: <div className="p-0"><ForumsOverviewPanel /></div> 
         },
         { 
           id: "moderation", 
