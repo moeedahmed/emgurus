@@ -262,7 +262,7 @@ export function WorkspaceLayoutInner({
                 >
                   {/* Keep your description + boundary exactly as before */}
                   {t.description && (
-                    <p className="text-sm text-muted-foreground mb-2">{t.description}</p>
+                    <p className="text-sm text-muted-foreground mt-4 mb-6">{t.description}</p>
                   )}
                   <div className="border rounded-lg">
                     <TabErrorBoundary tabId={t.id} onRetry={handleTabRetry}>
