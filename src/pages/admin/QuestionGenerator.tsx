@@ -107,15 +107,28 @@ const QuestionGenerator: React.FC = () => {
         // Load gurus
         const { data: guruData, error: guruError } = await supabase
           .from('user_roles')
-          .select('user_id, profiles!inner(full_name)')
+          .select('user_id')
           .eq('role', 'guru');
 
         if (guruError) throw guruError;
 
-        const guruList = guruData?.map((r: any) => ({
-          id: r.user_id,
-          name: r.profiles?.full_name || 'Unknown Guru'
-        })) || [];
+        // Then get profiles for these users
+        const guruIds = guruData?.map(r => r.user_id) || [];
+        let guruList: Guru[] = [];
+        
+        if (guruIds.length > 0) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('user_id, full_name')
+            .in('user_id', guruIds);
+
+          if (profileError) throw profileError;
+
+          guruList = profileData?.map(p => ({
+            id: p.user_id,
+            name: p.full_name || 'Unknown Guru'
+          })) || [];
+        }
 
         setGurus(guruList);
       } catch (error) {
@@ -480,7 +493,7 @@ const QuestionGenerator: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
+      <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide">
         {[
           { id: 'generate' as const, label: 'Generate' },
           { id: 'drafts' as const, label: 'Drafts' },
