@@ -2191,6 +2191,13 @@ export type Database = {
             foreignKeyName: "question_slos_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
+            referencedRelation: "exam_questions_unified"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_slos_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
             referencedRelation: "reviewed_exam_questions"
             referencedColumns: ["id"]
           },
@@ -2607,6 +2614,7 @@ export type Database = {
           created_at: string
           difficulty: string | null
           exam: string
+          exam_type: Database["public"]["Enums"]["exam_type_enum"] | null
           explanation: string | null
           id: string
           options: string[] | null
@@ -2625,6 +2633,7 @@ export type Database = {
           created_at?: string
           difficulty?: string | null
           exam: string
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
           explanation?: string | null
           id?: string
           options?: string[] | null
@@ -2643,6 +2652,7 @@ export type Database = {
           created_at?: string
           difficulty?: string | null
           exam?: string
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
           explanation?: string | null
           id?: string
           options?: string[] | null
@@ -2952,6 +2962,7 @@ export type Database = {
           correct: number
           created_at: string
           exam: string
+          exam_type: Database["public"]["Enums"]["exam_type_enum"] | null
           id: string
           started_at: string
           total: number
@@ -2963,6 +2974,7 @@ export type Database = {
           correct?: number
           created_at?: string
           exam: string
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
           id?: string
           started_at?: string
           total?: number
@@ -2974,6 +2986,7 @@ export type Database = {
           correct?: number
           created_at?: string
           exam?: string
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
           id?: string
           started_at?: string
           total?: number
@@ -3011,6 +3024,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_question_events_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "exam_questions_unified"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_question_events_question_id_fkey"
             columns: ["question_id"]
@@ -3175,6 +3195,68 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      exam_questions_unified: {
+        Row: {
+          created_at: string | null
+          exam: string | null
+          exam_display: string | null
+          exam_type: Database["public"]["Enums"]["exam_type_enum"] | null
+          explanation: string | null
+          id: string | null
+          options: string[] | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string | null
+          stem: string | null
+          subtopic: string | null
+          tags: string[] | null
+          topic: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          exam?: string | null
+          exam_display?: never
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
+          explanation?: string | null
+          id?: string | null
+          options?: string[] | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+          stem?: string | null
+          subtopic?: string | null
+          tags?: string[] | null
+          topic?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          exam?: string | null
+          exam_display?: never
+          exam_type?: Database["public"]["Enums"]["exam_type_enum"] | null
+          explanation?: string | null
+          id?: string | null
+          options?: string[] | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+          stem?: string | null
+          subtopic?: string | null
+          tags?: string[] | null
+          topic?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviewed_exam_questions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "gurus"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -3568,6 +3650,14 @@ export type Database = {
           updated_at: string
           view_count: number
         }[]
+      }
+      map_exam_enum_to_display: {
+        Args: { _exam_type: Database["public"]["Enums"]["exam_type_enum"] }
+        Returns: string
+      }
+      map_exam_name_to_enum: {
+        Args: { _exam_name: string }
+        Returns: Database["public"]["Enums"]["exam_type_enum"]
       }
       review_approve_publish: {
         Args: { p_post_id: string }
