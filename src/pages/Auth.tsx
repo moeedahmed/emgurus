@@ -32,12 +32,12 @@ const Auth = () => {
     document.title = "Sign in | EM Gurus";
   }, []);
 
-  // Remove premature redirect - let RoleRedirector handle post-login navigation
-  // useEffect(() => {
-  //   if (user) {
-  //     navigate('/dashboard', { replace: true });
-  //   }
-  // }, [user, navigate]);
+  // After successful auth, redirect away from the auth screen
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user?.id, loading, navigate]);
 
   const handleGoogleSignIn = async () => {
     try {
