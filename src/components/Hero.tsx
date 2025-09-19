@@ -2,7 +2,7 @@ import React from "react";
 
 const Hero = () => {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-background via-secondary/20 to-accent/10 py-16 lg:py-20 pt-24">
+    <section className="relative overflow-hidden bg-gradient-to-br from-background via-secondary/20 to-accent/10 py-8 lg:py-12 pt-16">
       <div className="page-container">
         <div className="text-center">
           {/* Hero title */}

@@ -72,7 +72,7 @@ const FeatureCarousel = () => {
   }, []);
 
   return (
-    <section className="py-16 lg:py-24 bg-gradient-to-b from-background to-secondary/30">
+    <section className="py-8 lg:py-12 bg-gradient-to-b from-background to-secondary/30">
       <div ref={containerRef} className="container mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Carousel View */}
