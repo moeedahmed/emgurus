@@ -12,19 +12,22 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   useEffect(() => {
     (async () => {
       if (!user) { setChecking(false); return; }
-      // Skip check on profile route to avoid redirect loop
-      if (location.pathname.startsWith('/profile')) { setChecking(false); return; }
+      // Skip check when already on settings page to avoid redirect loops
+      if (location.pathname.startsWith('/settings') || location.pathname.startsWith('/profile')) { 
+        setChecking(false); 
+        return; 
+      }
       const { data } = await supabase
         .from('profiles')
         .select('full_name, country, specialty, timezone, exams, onboarding_required')
         .eq('user_id', user.id)
         .maybeSingle();
       const missing = !data?.full_name || !data?.country || !data?.specialty || !data?.timezone || !(data?.exams && (data.exams as any[]).length > 0);
-      // Only force redirect if the flag explicitly requires onboarding
+      // Only force redirect if the flag explicitly requires onboarding AND user has missing data
       setNeedsOnboarding(!!data?.onboarding_required && missing);
       setChecking(false);
     })();
-  }, [user, location.pathname]);
+  }, [user?.id, location.pathname]);
 
   if (loading || checking) {
     return (
