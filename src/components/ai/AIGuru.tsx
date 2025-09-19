@@ -162,7 +162,20 @@ export default function AIGuru() {
 
       if (!res.ok) {
         const errorText = await res.text().catch(() => `HTTP ${res.status}`);
-        updateLastAssistant(errorText);
+        // Attempt non-stream fallback via invoke
+        try {
+          const { data, error } = await supabase.functions.invoke('ai-route', {
+            body: { ...payload, no_stream: true }
+          });
+          if (error) {
+            updateLastAssistant(String(error.message || error));
+          } else {
+            const content = data?.message || data?.text || data?.content || String(data || errorText);
+            updateLastAssistant(content);
+          }
+        } catch {
+          updateLastAssistant(errorText);
+        }
         return;
       }
 
@@ -229,7 +242,7 @@ export default function AIGuru() {
       
       try {
         const { data, error } = await supabase.functions.invoke('ai-route', {
-          body: payload
+          body: { ...payload, no_stream: true }
         });
         
         clearTimeout(statusTimer);

@@ -60,6 +60,7 @@ serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const browsing: boolean = !!body.browsing;
+    const noStream: boolean = !!body.no_stream;
     const sessionId: string | null = body.session_id || null;
     const anonId: string | null = body.anon_id || null;
     const pageContext: any = body.pageContext || body.page_context || {};
@@ -355,6 +356,46 @@ Block types allowed: "paragraph", "image_request", "video_placeholder"
     if (retrieved.length) {
       const ctx = retrieved.map((r: any, i: number) => `#${i+1} [${r.title}](${r.slug_url || r.url || r.slug || ''})\n${(r.text_chunk||'').slice(0,800)}`).join('\n\n');
       openaiMessages.push({ role: 'system', content: `Relevant EM Gurus content:\n${ctx}` });
+    }
+
+    // If non-stream requested, return JSON once
+    if (noStream) {
+      try {
+        const apiKey = getOpenAI();
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: model,
+            temperature: 0.3,
+            max_tokens: 1024,
+            messages: openaiMessages,
+            stream: false,
+          }),
+        });
+        if (!res.ok) {
+          const errTxt = await res.text().catch(() => 'OpenAI error');
+          throw new Error(errTxt);
+        }
+        const json = await res.json();
+        const full = json?.choices?.[0]?.message?.content || '';
+        // Persist minimal history
+        if (dbSessionId) {
+          const lastUser = [...messages].reverse().find(m => m.role === 'user');
+          const userMsg = lastUser ? [{ session_id: dbSessionId, role: 'user', content: { text: lastUser.content } }] : [];
+          const asstMsg = [{ session_id: dbSessionId, role: 'assistant', content: { text: full, retrieved: (retrieved||[]).slice(0,3) } }];
+          if (userMsg.length) await supabase.from('ai_messages').insert(userMsg as any);
+          await supabase.from('ai_messages').insert(asstMsg as any);
+        }
+        return new Response(JSON.stringify({ message: full }), {
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err?.message || 'OpenAI request failed' }), {
+          status: 500,
+          headers: { ...baseCors, 'Access-Control-Allow-Origin': allowed, 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     const encoder = new TextEncoder();
