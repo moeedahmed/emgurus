@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 import TableCard from "@/components/dashboard/TableCard";
 import FilterChips from "@/components/ui/filter-chips";
 
@@ -74,29 +75,34 @@ export default function MyThreadsWithChips({ defaultFilter = 'questions' }: MyTh
   ];
 
   return (
-    <div className="p-4">
-      <div className="mb-4 text-sm text-muted-foreground">
+    <div className="p-0">
+      <div className="mb-4 text-sm text-muted-foreground px-6 pt-4">
         Your forum activity at a glance.
       </div>
 
-      <div className="mb-4">
-        <FilterChips
-          items={filterItems}
-          mode="single"
-          selected={activeFilter}
-          onChange={(value) => setActiveFilter(value as ThreadFilter)}
-          variant="outline"
-          size="sm"
-        />
+      <div className="flex gap-2 mb-6 px-6">
+        {filterItems.map(item => (
+          <Button
+            key={item.value}
+            size="sm"
+            variant={activeFilter === item.value ? "default" : "outline"}
+            onClick={() => setActiveFilter(item.value as ThreadFilter)}
+            aria-pressed={activeFilter === item.value}
+          >
+            {item.label}
+          </Button>
+        ))}
       </div>
 
-      <TableCard
-        title="My Threads"
-        columns={columns}
-        rows={threads}
-        emptyText={activeFilter === 'questions' ? "No threads yet." : "No answered threads yet."}
-        isLoading={loading}
-      />
+      <div className="px-6">
+        <TableCard
+          title="My Threads"
+          columns={columns}
+          rows={threads}
+          emptyText={activeFilter === 'questions' ? "No threads yet." : "No answered threads yet."}
+          isLoading={loading}
+        />
+      </div>
     </div>
   );
 }

@@ -81,23 +81,26 @@ export default function ForumsModerationQueue({ isAdmin = false }: ForumsModerat
   }));
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="p-0">
+      <div className="flex items-center justify-between px-6 pt-4 mb-6">
         <Button variant="outline" onClick={load} disabled={loading}>Refresh</Button>
       </div>
 
-      <div className="flex items-center gap-4">
-        <FilterChips
-          items={filterItems}
-          mode="single"
-          selected={status}
-          onChange={(value) => setStatus(value as typeof STATUS[number])}
-          variant="outline"
-          size="sm"
-        />
+      <div className="flex gap-2 mb-6 px-6">
+        {filterItems.map(item => (
+          <Button
+            key={item.value}
+            size="sm"
+            variant={status === item.value ? "default" : "outline"}
+            onClick={() => setStatus(item.value as typeof STATUS[number])}
+            aria-pressed={status === item.value}
+          >
+            {item.label}
+          </Button>
+        ))}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 px-6">
         {rows.map((f) => (
           <Card key={f.id} className="p-4 space-y-3">
             <div className="flex items-start justify-between gap-4">
