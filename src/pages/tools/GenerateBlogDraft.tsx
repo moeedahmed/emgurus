@@ -613,7 +613,7 @@ export default function GenerateBlogDraft() {
             </div>
 
             {/* Sources Section */}
-            <Collapsible open={!sourcesCollapsed} onOpenChange={setSourcesCollapsed}>
+            <Collapsible open={!sourcesCollapsed} onOpenChange={(open) => setSourcesCollapsed(!open)}>
               <CollapsibleTrigger asChild>
                 <Button 
                   variant="ghost" 
