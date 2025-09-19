@@ -165,7 +165,7 @@ export default function AdminGeneration() {
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <Label>Exam</Label>
-              <Select value={exam} onValueChange={(v) => setExam(v as ExamName)}>
+              <Select value={exam} onValueChange={(v) => setExam(v as ExamDisplayName)}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select exam" />
                 </SelectTrigger>

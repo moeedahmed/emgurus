@@ -168,7 +168,7 @@ export default function ExamsProgressMatrix() {
       <div className="grid gap-4 md:grid-cols-3">
         <div>
           <div className="text-sm font-medium mb-1">Exam</div>
-          <Select value={exam || undefined} onValueChange={(v) => setExam(v as ExamName)}>
+          <Select value={exam || undefined} onValueChange={(v) => setExam(v as ExamDisplayName)}>
             <SelectTrigger><SelectValue placeholder="All" /></SelectTrigger>
             <SelectContent>
               {EXAM_DISPLAY_NAMES.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}

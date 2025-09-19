@@ -72,7 +72,7 @@ export default function FloatingSettings({
           <div className="space-y-3">
             <div>
               <Label className="text-xs">Exam</Label>
-              <Select value={exam} onValueChange={(v) => setExam(v as ExamName)}>
+              <Select value={exam} onValueChange={(v) => setExam(v as ExamDisplayName)}>
                 <SelectTrigger className="h-8">
                   <SelectValue />
                 </SelectTrigger>
