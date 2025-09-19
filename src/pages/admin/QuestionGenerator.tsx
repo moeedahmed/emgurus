@@ -480,15 +480,6 @@ const QuestionGenerator: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <Brain className="w-6 h-6 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">AI Question Generator</h1>
-          <p className="text-sm text-muted-foreground">Generate high-quality MCQs using AI</p>
-        </div>
-        <Badge variant="outline" className="ml-auto">Beta</Badge>
-      </div>
-
       <div className="flex gap-2 mb-6 px-6 pt-4">
         {[
           { id: 'generate' as const, label: 'Generate' },
