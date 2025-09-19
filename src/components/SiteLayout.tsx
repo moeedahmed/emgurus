@@ -95,14 +95,14 @@ const SiteLayout = () => {
       </a>
       <Header />
       {showReminderBanner && !isDashboardRoute && (
-        <div className="bg-accent/10 border-b border-accent/20 px-4 py-3 text-sm animate-slide-up">
-          <div className="container mx-auto flex items-center justify-between gap-4">
-            <div className="text-foreground">
+        <div className="bg-accent/10 border-b border-accent/20 px-2 sm:px-4 py-2 text-sm animate-slide-up">
+          <div className="container mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+            <div className="text-foreground text-xs sm:text-sm">
               Complete your profile to get the best experience (about 2 minutes).
             </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" onClick={() => navigate('/profile')}>Complete now</Button>
-              <Button variant="ghost" size="sm" onClick={dismissBanner}>Dismiss</Button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button size="sm" className="text-xs h-7" onClick={() => navigate('/profile')}>Complete</Button>
+              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={dismissBanner}>Dismiss</Button>
             </div>
           </div>
         </div>
