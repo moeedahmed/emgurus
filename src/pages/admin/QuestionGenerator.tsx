@@ -501,7 +501,7 @@ const QuestionGenerator: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-1 block">Exam Type</label>
-                  <Select value={config.exam} onValueChange={(value) => setConfig(prev => ({ ...prev, exam: value as ExamDisplayName | '' }))}>]
+                  <Select value={config.exam} onValueChange={(value) => setConfig(prev => ({ ...prev, exam: value as ExamDisplayName | '' }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select exam type" />
                     </SelectTrigger>
@@ -527,14 +527,14 @@ const QuestionGenerator: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Topic</label>
+                  <label className="text-sm font-medium mb-1 block">Curriculum Topic</label>
                   <Select 
                     value={config.topic} 
                     onValueChange={(value) => setConfig(prev => ({ ...prev, topic: value }))}
                     disabled={!config.exam}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={config.exam ? "Select topic" : "Select exam first"} />
+                      <SelectValue placeholder={config.exam ? "Select curriculum topic" : "Select exam first"} />
                     </SelectTrigger>
                     <SelectContent>
                       {loadingTopics ? (
@@ -543,7 +543,7 @@ const QuestionGenerator: React.FC = () => {
                         <SelectItem value="no-topics" disabled>
                           <div className="flex items-center gap-2">
                             <AlertCircle className="w-4 h-4" />
-                            No topics available for this exam
+                            No curriculum topics available for this exam
                           </div>
                         </SelectItem>
                       ) : (
