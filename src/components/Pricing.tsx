@@ -162,16 +162,16 @@ const Pricing = () => {
         {/* Carousel View */}
         {useCarousel && (
           <Carousel className="w-full">
-            <CarouselContent className="-ml-2 md:-ml-4">
+            <CarouselContent className="-ml-2 md:-ml-4 py-4">
               {plans.map((plan, index) => (
                 <CarouselItem key={index} className="pl-2 md:pl-4 basis-[85%] md:basis-[45%] lg:basis-[30%]">
                   <Card 
                     className={`relative overflow-hidden transition-all duration-300 hover:shadow-strong flex flex-col h-full ${
                       plan.popular 
-                        ? 'border-primary shadow-medium scale-105' 
+                        ? 'border-primary shadow-medium' 
                         : plan.premium
                         ? 'border-accent shadow-medium bg-gradient-card'
-                        : 'hover:scale-105'
+                        : 'hover:shadow-medium'
                     }`}
                   >
                      {plan.popular && (
@@ -246,18 +246,18 @@ const Pricing = () => {
 
         {/* Grid View */}
         {!useCarousel && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-          {plans.map((plan, index) => (
-            <Card 
-              key={index} 
-              className={`relative overflow-hidden transition-all duration-300 hover:shadow-strong flex flex-col h-full ${
-                plan.popular 
-                  ? 'border-primary shadow-medium scale-105' 
-                  : plan.premium
-                  ? 'border-accent shadow-medium bg-gradient-card'
-                  : 'hover:scale-105'
-              }`}
-            >
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 py-4">
+            {plans.map((plan, index) => (
+              <Card 
+                key={index} 
+                className={`relative overflow-hidden transition-all duration-300 hover:shadow-strong flex flex-col h-full ${
+                  plan.popular 
+                    ? 'border-primary shadow-medium' 
+                    : plan.premium
+                    ? 'border-accent shadow-medium bg-gradient-card'
+                    : 'hover:shadow-medium'
+                }`}
+              >
                {plan.popular && (
                 <div className="absolute top-0 left-0 right-0 bg-gradient-primary text-primary-foreground text-center py-3 text-sm font-medium z-10">
                   <Star className="w-4 h-4 inline mr-1" />
