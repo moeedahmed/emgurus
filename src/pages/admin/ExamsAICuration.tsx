@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { EXAMS, CURRICULA } from "@/lib/curricula";
+import { EXAM_DISPLAY_NAMES, CURRICULA } from "@/lib/examMapping";
 
 interface LiteQuestion {
   id: string;
@@ -49,7 +49,7 @@ const ExamsAICuration = () => {
   }, []);
 
   // Generator form state
-  const [exam, setExam] = useState<string>(EXAMS[0]);
+  const [exam, setExam] = useState<string>(EXAM_DISPLAY_NAMES[0]);
   const [topic, setTopic] = useState<string>("");
   const [difficulty, setDifficulty] = useState<string>("medium");
   const [count, setCount] = useState<number>(10);
@@ -70,7 +70,7 @@ const ExamsAICuration = () => {
               <Select value={exam} onValueChange={(v)=>{ setExam(v); setTopic(""); }}>
                 <SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Select exam" /></SelectTrigger>
                 <SelectContent>
-                  {EXAMS.map((e)=> (<SelectItem key={e} value={e}>{e}</SelectItem>))}
+                  {EXAM_DISPLAY_NAMES.map((e)=> (<SelectItem key={e} value={e}>{e}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>

@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
+import { CURRICULA, EXAM_DISPLAY_NAMES, type ExamDisplayName } from "@/lib/examMapping";
 interface AIQuestion {
   id: string;
   question: string;

@@ -1,19 +1,19 @@
-export const EXAMS = [
-  "MRCEM Primary",
-  "MRCEM Intermediate SBA", 
-  "FRCEM SBA",
-  "FCPS Part 1 – Pakistan",
-  "FCPS IMM – Pakistan", 
-  "FCPS Part 2 – Pakistan",
-] as const;
+// DEPRECATED: Use @/lib/examMapping instead
+// This file is kept for backward compatibility only
 
-export type ExamName = typeof EXAMS[number];
+import { 
+  EXAM_DISPLAY_NAMES, 
+  CURRICULA as NEW_CURRICULA, 
+  type ExamDisplayName 
+} from '@/lib/examMapping';
 
-export const CURRICULA: Record<ExamName, string[]> = {
-  "MRCEM Primary": ["Anatomy", "Physiology", "Pharmacology", "Microbiology", "Pathology"],
-  "MRCEM Intermediate SBA": ["Cardiology", "Respiratory", "Neurology", "Gastro", "Renal/Urology", "EM Procedures", "Toxicology"],
-  "FRCEM SBA": ["Resuscitation", "Critical Care", "Trauma", "Pediatrics", "Toxicology", "Procedures", "Ethics/Governance"],
-  "FCPS Part 1 – Pakistan": ["Basic Sciences", "Anatomy", "Physiology", "Pathology", "Pharmacology"],
-  "FCPS IMM – Pakistan": ["Emergency Medicine", "Internal Medicine", "Cardiology", "Respiratory", "Neurology"],
-  "FCPS Part 2 – Pakistan": ["Clinical Medicine", "Surgery", "Pediatrics", "Obstetrics", "Psychiatry"],
-};
+// Re-export with old names for backward compatibility
+export const EXAMS = EXAM_DISPLAY_NAMES;
+export type ExamName = ExamDisplayName;
+export const CURRICULA = NEW_CURRICULA;
+
+// Mark as deprecated in console
+console.warn(
+  'DEPRECATED: @/lib/curricula is deprecated. Use @/lib/examMapping instead. ' +
+  'Please update your imports to use the new standardized exam mapping.'
+);

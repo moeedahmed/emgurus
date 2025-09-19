@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Settings } from "lucide-react";
-import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
+import { CURRICULA, EXAM_DISPLAY_NAMES, type ExamDisplayName } from "@/lib/examMapping";
 
 const COUNTS = [10, 25, 50];
 const DIFFICULTIES = [
@@ -14,12 +14,12 @@ const DIFFICULTIES = [
 ];
 
 interface FloatingSettingsProps {
-  currentExam: ExamName;
+  currentExam: ExamDisplayName;
   currentCount: number;
   currentTopic: string;
   currentDifficulty: string;
   onUpdate: (settings: {
-    exam: ExamName;
+    exam: ExamDisplayName;
     count: number;
     topic: string;
     difficulty: string;
@@ -34,7 +34,7 @@ export default function FloatingSettings({
   onUpdate
 }: FloatingSettingsProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [exam, setExam] = useState<ExamName>(currentExam);
+  const [exam, setExam] = useState<ExamDisplayName>(currentExam);
   const [count, setCount] = useState(currentCount);
   const [topic, setTopic] = useState(currentTopic);
   const [difficulty, setDifficulty] = useState(currentDifficulty);
@@ -77,7 +77,7 @@ export default function FloatingSettings({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {EXAMS.map(e => (
+                  {EXAM_DISPLAY_NAMES.map(e => (
                     <SelectItem key={e} value={e}>{e}</SelectItem>
                   ))}
                 </SelectContent>

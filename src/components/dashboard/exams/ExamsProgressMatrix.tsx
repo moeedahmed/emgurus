@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, RefreshCw } from "lucide-react";
-import { CURRICULA, EXAMS, ExamName } from "@/lib/curricula";
+import { CURRICULA, EXAM_DISPLAY_NAMES, type ExamDisplayName } from "@/lib/examMapping";
 
 interface ExamAttempt {
   id: string;
@@ -24,7 +24,7 @@ interface TopicData {
 
 export default function ExamsProgressMatrix() {
   const { user } = useAuth();
-  const [exam, setExam] = useState<ExamName | "">("");
+  const [exam, setExam] = useState<ExamDisplayName | "">("");
   const [range, setRange] = useState<'30'|'90'|'all'>("30");
   const [rows, setRows] = useState<ExamAttempt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +171,7 @@ export default function ExamsProgressMatrix() {
           <Select value={exam || undefined} onValueChange={(v) => setExam(v as ExamName)}>
             <SelectTrigger><SelectValue placeholder="All" /></SelectTrigger>
             <SelectContent>
-              {EXAMS.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
+              {EXAM_DISPLAY_NAMES.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
             </SelectContent>
           </Select>
         </div>

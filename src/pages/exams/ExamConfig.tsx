@@ -21,6 +21,7 @@ const EXAM_CODE_MAP: Record<ExamName, string> = {
   "FCPS Part 1 – Pakistan": "FCPS_PART1",
   "FCPS IMM – Pakistan": "FCPS_IMM",
   "FCPS Part 2 – Pakistan": "FCPS_PART2",
+  "Other": "OTHER",
 };
 
 const TIME_OPTIONS = [

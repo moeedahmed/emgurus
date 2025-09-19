@@ -6,11 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { EXAMS, CURRICULA, ExamName } from "@/lib/curricula";
+import { EXAM_DISPLAY_NAMES, CURRICULA, type ExamDisplayName } from "@/lib/examMapping";
 
 export default function AdminGeneration() {
   const { toast } = useToast();
-  const [exam, setExam] = useState<ExamName | "">("");
+  const [exam, setExam] = useState<ExamDisplayName | "">("");
   const [topic, setTopic] = useState<string>("all");
   const [difficulty, setDifficulty] = useState<string>("medium");
   const [hasError, setHasError] = useState(false);
@@ -170,7 +170,7 @@ export default function AdminGeneration() {
                   <SelectValue placeholder="Select exam" />
                 </SelectTrigger>
                 <SelectContent>
-                  {EXAMS.map(e => (
+                  {EXAM_DISPLAY_NAMES.map(e => (
                     <SelectItem key={e} value={e}>{e}</SelectItem>
                   ))}
                 </SelectContent>
