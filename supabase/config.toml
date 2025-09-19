@@ -32,7 +32,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.consultations-api]
-verify_jwt = true
+verify_jwt = false
 
 [functions.seed-sample-gurus]
 verify_jwt = false
