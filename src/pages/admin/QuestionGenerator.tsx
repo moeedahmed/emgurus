@@ -18,6 +18,11 @@ interface ExamOption {
   display_name: ExamDisplayName;
 }
 
+interface CurriculumOption {
+  value: string;
+  label: string;
+}
+
 interface TopicOption {
   value: string;
   label: string;
@@ -50,14 +55,17 @@ const QuestionGenerator: React.FC = () => {
   
   // Database data
   const [exams, setExams] = useState<ExamOption[]>([]);
+  const [curriculumAreas, setCurriculumAreas] = useState<CurriculumOption[]>([]);
   const [topics, setTopics] = useState<TopicOption[]>([]);
   const [gurus, setGurus] = useState<Guru[]>([]);
   const [loadingExams, setLoadingExams] = useState(true);
+  const [loadingCurriculum, setLoadingCurriculum] = useState(false);
   const [loadingTopics, setLoadingTopics] = useState(false);
   
   // Generate tab state
   const [config, setConfig] = useState({
     exam: '' as ExamDisplayName | '',
+    curriculum: '',
     topic: '',
     difficulty: '',
     count: '5',
@@ -130,7 +138,61 @@ const QuestionGenerator: React.FC = () => {
     loadData();
   }, []);
 
-  // Load topics when exam changes
+  // Load curriculum areas when exam changes
+  useEffect(() => {
+    if (!config.exam) {
+      setCurriculumAreas([]);
+      return;
+    }
+
+    const loadCurriculumAreas = async () => {
+      setLoadingCurriculum(true);
+      try {
+        const examTypeEnum = mapDisplayNameToEnum(config.exam as ExamDisplayName);
+        
+        if (examTypeEnum) {
+          const { data, error } = await supabase
+            .from('curriculum_map')
+            .select('key_capability_title')
+            .eq('exam_type', examTypeEnum)
+            .order('key_capability_number');
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            // Remove duplicates and create curriculum options
+            const uniqueAreas = Array.from(
+              new Set(data.map(item => item.key_capability_title))
+            ).map(title => ({
+              value: title,
+              label: title
+            }));
+
+            setCurriculumAreas([
+              { value: 'all', label: 'All Curriculum Areas' },
+              ...uniqueAreas
+            ]);
+          } else {
+            console.warn(`No curriculum areas found for exam type: ${examTypeEnum}`);
+            setCurriculumAreas([{ value: 'all', label: 'All Curriculum Areas' }]);
+          }
+        } else {
+          console.warn(`No mapping found for exam: ${config.exam}`);
+          setCurriculumAreas([{ value: 'all', label: 'All Curriculum Areas' }]);
+        }
+      } catch (error) {
+        console.error('Error loading curriculum areas:', error);
+        toast.error('Failed to load curriculum areas');
+        setCurriculumAreas([{ value: 'all', label: 'All Curriculum Areas' }]);
+      } finally {
+        setLoadingCurriculum(false);
+      }
+    };
+
+    loadCurriculumAreas();
+  }, [config.exam]);
+
+  // Load topics when exam and curriculum change
   useEffect(() => {
     if (!config.exam) {
       setTopics([]);
@@ -140,22 +202,27 @@ const QuestionGenerator: React.FC = () => {
     const loadTopics = async () => {
       setLoadingTopics(true);
       try {
-        // Convert display name to enum value for database query
         const examTypeEnum = mapDisplayNameToEnum(config.exam as ExamDisplayName);
         
         if (examTypeEnum) {
-          const { data, error } = await supabase
+          let query = supabase
             .from('curriculum_map')
             .select('slo_title, key_capability_title')
-            .eq('exam_type', examTypeEnum)
-            .order('slo_title');
+            .eq('exam_type', examTypeEnum);
+
+          // Filter by curriculum area if selected
+          if (config.curriculum && config.curriculum !== 'all') {
+            query = query.eq('key_capability_title', config.curriculum);
+          }
+
+          const { data, error } = await query.order('slo_number');
 
           if (error) throw error;
 
           if (data && data.length > 0) {
             const topicOptions = data.map(item => ({
               value: item.slo_title,
-              label: `${item.key_capability_title}: ${item.slo_title}`
+              label: item.slo_title
             }));
 
             // Remove duplicates and add "All Topics" option
@@ -168,7 +235,7 @@ const QuestionGenerator: React.FC = () => {
               ...uniqueTopics
             ]);
           } else {
-            console.warn(`No curriculum topics found for exam type: ${examTypeEnum}`);
+            console.warn(`No topics found for exam type: ${examTypeEnum} and curriculum: ${config.curriculum}`);
             setTopics([{ value: 'all', label: 'All Topics' }]);
           }
         } else {
@@ -185,9 +252,14 @@ const QuestionGenerator: React.FC = () => {
     };
 
     loadTopics();
+  }, [config.exam, config.curriculum]);
+
+  // Reset curriculum and topic when exam changes
+  useEffect(() => {
+    setConfig(prev => ({ ...prev, curriculum: '', topic: '' }));
   }, [config.exam]);
 
-  // Reset topic when exam changes
+  // Reset topic when curriculum changes
   useEffect(() => {
     setConfig(prev => ({ ...prev, topic: '' }));
   }, [config.exam]);
@@ -199,11 +271,14 @@ const QuestionGenerator: React.FC = () => {
     }
 
     const examTitle = exams.find(e => e.display_name === config.exam)?.display_name || config.exam;
+    const curriculumText = config.curriculum && config.curriculum !== 'all' 
+      ? ` in ${config.curriculum}` 
+      : '';
     const topicText = config.topic && config.topic !== 'all' 
-      ? ` on ${topics.find(t => t.value === config.topic)?.label || config.topic}`
+      ? ` focusing on ${config.topic}`
       : '';
     
-    let prompt = `Generate ${config.count} ${config.difficulty}-level MCQs${topicText} for the ${examTitle} exam using the latest curriculum guidelines.`;
+    let prompt = `Generate ${config.count} ${config.difficulty}-level MCQs${curriculumText}${topicText} for the ${examTitle} exam using the latest curriculum guidelines.`;
     
     if (config.prompt) {
       prompt += `\n\nAdditional instructions: ${config.prompt}`;
@@ -222,6 +297,7 @@ const QuestionGenerator: React.FC = () => {
     // Log for analytics/debugging
     console.log('Generation request:', {
       exam: config.exam,
+      curriculum: config.curriculum,
       topic: config.topic,
       difficulty: config.difficulty,
       count: config.count,
@@ -231,11 +307,13 @@ const QuestionGenerator: React.FC = () => {
     setGenerating(true);
     try {
       const examTitle = exams.find(e => e.display_name === config.exam)?.display_name || config.exam;
+      const curriculumValue = config.curriculum === 'all' ? undefined : config.curriculum;
       const topicValue = config.topic === 'all' ? undefined : config.topic;
 
       const { data, error } = await supabase.functions.invoke('generate-ai-question', {
         body: {
           exam: examTitle,
+          curriculum: config.curriculum === 'all' ? undefined : config.curriculum,
           topic: topicValue,
           difficulty: config.difficulty,
           count: parseInt(config.count),
@@ -527,14 +605,45 @@ const QuestionGenerator: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Curriculum Topic</label>
+                  <label className="text-sm font-medium mb-1 block">Curriculum Area</label>
+                  <Select 
+                    value={config.curriculum} 
+                    onValueChange={(value) => setConfig(prev => ({ ...prev, curriculum: value }))}
+                    disabled={!config.exam}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={config.exam ? "Select curriculum area" : "Select exam first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {loadingCurriculum ? (
+                        <SelectItem value="loading" disabled>Loading...</SelectItem>
+                      ) : curriculumAreas.length === 0 && config.exam ? (
+                        <SelectItem value="no-curriculum" disabled>
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4" />
+                            No curriculum areas available for this exam
+                          </div>
+                        </SelectItem>
+                      ) : (
+                        curriculumAreas.map((area) => (
+                          <SelectItem key={area.value} value={area.value}>
+                            {area.label}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Specific Topic (SLO)</label>
                   <Select 
                     value={config.topic} 
                     onValueChange={(value) => setConfig(prev => ({ ...prev, topic: value }))}
                     disabled={!config.exam}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={config.exam ? "Select curriculum topic" : "Select exam first"} />
+                      <SelectValue placeholder={config.exam ? "Select specific topic" : "Select exam first"} />
                     </SelectTrigger>
                     <SelectContent>
                       {loadingTopics ? (
@@ -543,7 +652,7 @@ const QuestionGenerator: React.FC = () => {
                         <SelectItem value="no-topics" disabled>
                           <div className="flex items-center gap-2">
                             <AlertCircle className="w-4 h-4" />
-                            No curriculum topics available for this exam
+                            No specific topics available
                           </div>
                         </SelectItem>
                       ) : (
