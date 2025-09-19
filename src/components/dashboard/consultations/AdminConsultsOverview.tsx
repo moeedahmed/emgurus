@@ -62,13 +62,12 @@ export default function AdminConsultsOverview() {
   }, []);
 
   return (
-    <div className="p-4 grid gap-4 md:grid-cols-5">
+    <div className="p-4 grid gap-4 md:grid-cols-4">
       <KpiCard title="Upcoming (7d)" value={kpis.upcoming7d} isLoading={isLoading} />
       <KpiCard title="Completed (30d)" value={kpis.completed30d} isLoading={isLoading} />
       <KpiCard title="Cancellations (30d)" value={kpis.cancellations30d} isLoading={isLoading} />
-      <KpiCard title="No‑shows (30d)" value={kpis.noShows30d} isLoading={isLoading} />
       <KpiCard title="Avg rating" value={kpis.avgRating} isLoading={isLoading} />
-      <div className="md:col-span-5">
+      <div className="md:col-span-4">
         <TrendCard title="Bookings / week" series={series} rangeLabel="Last 8 weeks" isLoading={isLoading} />
       </div>
     </div>
