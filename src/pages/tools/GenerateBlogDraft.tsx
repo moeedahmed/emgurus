@@ -619,7 +619,7 @@ export default function GenerateBlogDraft() {
                   variant="ghost" 
                   className="w-full justify-between p-0 h-auto font-semibold"
                 >
-                  Sources (optional)
+                  Sources
                   <ChevronDown className={`h-4 w-4 transition-transform ${sourcesCollapsed ? 'rotate-180' : ''}`} />
                 </Button>
               </CollapsibleTrigger>
