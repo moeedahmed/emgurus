@@ -86,7 +86,7 @@ export default function ForumsModerationQueue({ isAdmin = false }: ForumsModerat
         <Button variant="outline" onClick={load} disabled={loading}>Refresh</Button>
       </div>
 
-      <div className="flex gap-2 mb-6 px-6">
+      <div className="flex gap-2 mb-6 px-6 overflow-x-auto scrollbar-hide">
         {filterItems.map(item => (
           <Button
             key={item.value}

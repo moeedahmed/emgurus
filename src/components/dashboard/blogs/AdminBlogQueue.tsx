@@ -412,7 +412,7 @@ function AdminBlogQueueContent() {
     <div className="p-0">
       {/* Removed duplicate description - handled by WorkspaceLayout */}
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'submitted' as const, label: 'Submitted' },
           { id: 'assigned' as const, label: 'Assigned' },

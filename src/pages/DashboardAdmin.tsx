@@ -116,7 +116,7 @@ const BlogSubmissionQueue: React.FC = () => {
   return (
     <div className="p-0">
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'submitted' as const, label: 'Submitted' },
           { id: 'assigned' as const, label: 'Assigned' },
@@ -154,7 +154,7 @@ const BlogPublishedArchive: React.FC = () => {
   return (
     <div className="p-0">
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'published' as const, label: 'Published' },
           { id: 'archived' as const, label: 'Archived' },
@@ -182,7 +182,7 @@ const MyBlogsAdmin: React.FC = () => {
   return (
     <div className="p-0">
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'draft' as const, label: 'Draft' },
           { id: 'in_review' as const, label: 'Submitted' },
@@ -620,7 +620,7 @@ const ExamReviewAssignment: React.FC = () => {
   return (
     <div className="p-0">
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'draft' as const, label: 'Draft' },
           { id: 'assigned' as const, label: 'Assigned' },
@@ -650,7 +650,7 @@ const ExamMarkedQuality: React.FC = () => {
   return (
     <div className="p-0">
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'open' as const, label: 'Open' },
           { id: 'resolved' as const, label: 'Resolved' },
@@ -687,7 +687,7 @@ const ExamBankSets: React.FC = () => {
   return (
     <div className="p-0">
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'questions' as const, label: 'Questions' },
           { id: 'sets' as const, label: 'Sets' },
@@ -716,7 +716,7 @@ const MyQuestionsAdmin: React.FC = () => {
   return (
     <div className="p-0">
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'draft' as const, label: 'Draft' },
           { id: 'submitted' as const, label: 'Submitted' },
@@ -962,7 +962,7 @@ const ConsultMarketplaceControls: React.FC = () => {
   return (
     <div className="p-0">
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'policies' as const, label: 'Policies' },
           { id: 'notifications' as const, label: 'Notifications' },
@@ -991,7 +991,7 @@ const ConsultBookingsOversight: React.FC = () => {
   return (
     <div className="p-0">
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'upcoming' as const, label: 'Upcoming' },
           { id: 'past' as const, label: 'Past' },
@@ -1039,7 +1039,7 @@ const GuruApprovalsTab: React.FC = () => {
         <KpiCard title="Rejected (7d)" value={counts.rejected7d} isLoading={false} />
       </div>
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'pending' as const, label: 'Pending' },
           { id: 'approved' as const, label: 'Approved' },

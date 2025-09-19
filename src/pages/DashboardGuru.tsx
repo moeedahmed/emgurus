@@ -80,7 +80,7 @@ function BlogReviews() {
         Edit and approve assigned blog posts.
       </div>
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'assigned' as const, label: 'Assigned' },
           { id: 'approved' as const, label: 'Approved' },
@@ -141,7 +141,7 @@ function ExamReviews() {
         Review assigned questions and finalize decisions.
       </div>
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         {[
           { id: 'assigned' as const, label: 'Assigned' },
           { id: 'approved' as const, label: 'Approved' },
@@ -205,7 +205,7 @@ function MyBlogStatusPanel({ filter }: { filter: 'draft' | 'in_review' }) {
         {filter === 'draft' ? 'Write or continue your own posts.' : 'Posts awaiting review.'}
       </div>
       
-      <div className="flex gap-2 mb-6 px-6 pt-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4 overflow-x-auto scrollbar-hide">
         <Button size="sm" variant="default" aria-pressed={true}>
           {filter === 'draft' ? 'Draft' : 'Submitted'}
         </Button>
