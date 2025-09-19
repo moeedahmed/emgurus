@@ -1098,7 +1098,6 @@ export default function DashboardAdmin() {
         { 
           id: "generator", 
           title: "Generator", 
-          description: "AI-powered blog generation and assignment tool.", 
           render: <div className="p-0"><GenerateBlogDraft /></div> 
         },
         { 
