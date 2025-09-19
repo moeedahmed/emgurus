@@ -584,11 +584,6 @@ export default function GenerateBlogDraft() {
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">AI Blog Generator (Experimental)</h1>
-        <p className="text-muted-foreground">Generate AI-powered blog drafts with optional source grounding and assign them to Gurus for review.</p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Generation Form */}
         <Card>
