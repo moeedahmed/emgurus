@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 import { 
   Brain, 
   BookOpen, 
@@ -16,6 +17,8 @@ import blogImage from "@/assets/medical-blog.jpg";
 
 const FeatureCarousel = () => {
   const navigate = useNavigate();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [useCarousel, setUseCarousel] = useState(false);
   
   const features = [
     {
@@ -52,16 +55,32 @@ const FeatureCarousel = () => {
     },
   ];
 
+  useEffect(() => {
+    const checkIfCarouselNeeded = () => {
+      if (!containerRef.current) return;
+      
+      const containerWidth = containerRef.current.offsetWidth;
+      // Approximate minimum width needed for all cards (4 cards * 280px + gaps)
+      const minWidthForGrid = 4 * 280 + 3 * 32; // 32px gap between cards
+      
+      setUseCarousel(containerWidth < minWidthForGrid);
+    };
+
+    checkIfCarouselNeeded();
+    window.addEventListener('resize', checkIfCarouselNeeded);
+    return () => window.removeEventListener('resize', checkIfCarouselNeeded);
+  }, []);
+
   return (
     <section className="py-16 lg:py-24 bg-gradient-to-b from-background to-secondary/30">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div ref={containerRef} className="container mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Mobile Carousel */}
-        <div className="md:hidden">
+        {/* Carousel View */}
+        {useCarousel && (
           <Carousel className="w-full">
             <CarouselContent className="-ml-2 md:-ml-4">
               {features.map((feature, index) => (
-                <CarouselItem key={index} className="pl-2 md:pl-4 basis-[85%]">
+                <CarouselItem key={index} className="pl-2 md:pl-4 basis-[85%] md:basis-[45%] lg:basis-[30%]">
                   <Card className="relative overflow-hidden group hover:shadow-strong transition-all duration-300 bg-gradient-card border-0 flex flex-col h-full">
                     <div className="aspect-[4/3] overflow-hidden">
                       <img
@@ -106,10 +125,11 @@ const FeatureCarousel = () => {
             <CarouselPrevious className="left-2" />
             <CarouselNext className="right-2" />
           </Carousel>
-        </div>
+        )}
 
-        {/* Desktop Grid */}
-        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {/* Grid View */}
+        {!useCarousel && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
           {features.map((feature, index) => (
             <Card 
               key={index} 
@@ -154,6 +174,7 @@ const FeatureCarousel = () => {
             </Card>
           ))}
         </div>
+        )}
       </div>
     </section>
   );
