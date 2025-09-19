@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -347,17 +345,15 @@ export default function QuestionSetsAdmin() {
   const filteredTree = filterTree(treeData, searchTerm);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Curriculum Database</h1>
-          <Button variant="outline" onClick={loadTreeData} disabled={loading}>
-            {loading ? 'Loading…' : 'Refresh'}
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Curriculum Database</h2>
+        <Button variant="outline" onClick={loadTreeData} disabled={loading}>
+          {loading ? 'Loading…' : 'Refresh'}
+        </Button>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
           {/* Left Panel - Tree Editor */}
           <Card className="p-4 space-y-4 overflow-hidden flex flex-col">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -520,13 +516,10 @@ export default function QuestionSetsAdmin() {
             ) : (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 Select a node from the tree to view and edit its details.
-              </div>
-            )}
-          </Card>
-        </div>
-      </main>
-      <Footer />
-      <link rel="canonical" href={`${window.location.origin}/admin/database`} />
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
