@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import WorkspaceLayout, { WorkspaceSection } from "@/components/dashboard/WorkspaceLayout";
-import { BookOpen, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings, Stethoscope, Brain, Eye, ThumbsUp, MessageCircle, Share2, Flag } from "lucide-react";
+import { BookOpen, MessageSquare, GraduationCap, BarChart3, UsersRound, Settings, Stethoscope, Brain, Eye, ThumbsUp, MessageCircle, Share2, Flag, Database } from "lucide-react";
 import ReviewedQuestionBank from "@/pages/exams/ReviewedQuestionBank";
 import AiPracticeConfig from "@/pages/exams/AiPracticeConfig";
 import ForumsModerationQueue from "@/components/dashboard/forums/ForumsModerationQueue";
@@ -25,7 +25,7 @@ import { callFunction } from "@/lib/functionsUrl";
 import ExamsAICuration from "@/pages/admin/ExamsAICuration";
 import SubmitQuestion from "@/pages/tools/SubmitQuestion";
 import QuestionSetsAdmin from "@/pages/admin/QuestionSets";
-import DatabaseManager from "@/components/admin/database/DatabaseManager";
+
 import AdminConsultsOverview from "@/components/dashboard/consultations/AdminConsultsOverview";
 import BlogsMarkedList from "@/components/dashboard/blogs/BlogsMarkedList";
 import AdminConsultsBookings from "@/components/dashboard/consultations/AdminConsultsBookings";
@@ -38,6 +38,10 @@ import AdminConsultsSettings from "@/components/dashboard/consultations/AdminCon
 import ApproveGurus from "@/pages/admin/ApproveGurus";
 import BlogTaxonomyManager from "@/components/blogs/BlogTaxonomyManager";
 import GenerateBlogDraft from "@/pages/tools/GenerateBlogDraft";
+import OverviewTab from "@/components/admin/database/OverviewTab";
+import ExamsTab from "@/components/admin/database/ExamsTab";
+import CurriculumTab from "@/components/admin/database/CurriculumTab";
+import KnowledgeBaseTab from "@/components/admin/database/KnowledgeBaseTab";
 
 // -------- Analytics panel
 const AdminAnalyticsPanel: React.FC = () => {
@@ -673,13 +677,12 @@ const ExamMarkedQuality: React.FC = () => {
 };
 
 const ExamBankSets: React.FC = () => {
-  const [activeFilter, setActiveFilter] = useState<'questions' | 'sets' | 'database'>('questions');
+  const [activeFilter, setActiveFilter] = useState<'questions' | 'sets'>('questions');
 
   const getComponent = () => {
     switch (activeFilter) {
       case 'questions': return <ReviewedQuestionBank embedded />;
       case 'sets': return <QuestionSetsAdmin />;
-      case 'database': return <DatabaseManager />;
       default: return <ReviewedQuestionBank embedded />;
     }
   };
@@ -691,7 +694,6 @@ const ExamBankSets: React.FC = () => {
         {[
           { id: 'questions' as const, label: 'Questions' },
           { id: 'sets' as const, label: 'Sets' },
-          { id: 'database' as const, label: 'Database' },
         ].map(chip => (
           <Button
             key={chip.id}
@@ -1173,6 +1175,37 @@ export default function DashboardAdmin() {
           title: "Authored", 
           description: "Your authored questions.", 
           render: <MyQuestionsAdmin />
+        },
+      ],
+    },
+    {
+      id: "database",
+      title: "Database",
+      icon: Database,
+      tabs: [
+        { 
+          id: "overview", 
+          title: "Overview", 
+          description: "Database statistics and health monitoring.", 
+          render: <div className="p-0"><OverviewTab /></div>
+        },
+        { 
+          id: "exams", 
+          title: "Exams", 
+          description: "Manage exam types and configurations.", 
+          render: <div className="p-0"><ExamsTab /></div>
+        },
+        { 
+          id: "curriculum", 
+          title: "Curriculum", 
+          description: "Manage curriculum structure and SLOs.", 
+          render: <div className="p-0"><CurriculumTab /></div>
+        },
+        { 
+          id: "knowledge", 
+          title: "Knowledge Base", 
+          description: "Manage knowledge base resources and references.", 
+          render: <div className="p-0"><KnowledgeBaseTab /></div>
         },
       ],
     },
