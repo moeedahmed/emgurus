@@ -86,72 +86,89 @@ export default function AiPracticeConfig() {
         </div>
       </div>
 
-      <Card className="min-w-0 w-full max-w-full">
+      <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-semibold">AI Practice</span>
+          <CardTitle className="flex items-center gap-2">
+            AI Practice Configuration
             <Badge variant="secondary">Beta</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            AI-generated questions with instant feedback. Use your judgment and report issues.
-          </p>
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <ul className="list-disc pl-5 text-sm text-muted-foreground">
-            <li>Immediate feedback after each question</li>
-            <li>AI-generated stems and distractors</li>
-            <li>Detailed explanations included</li>
-          </ul>
-
-          <Alert>
-            <AlertTitle>Heads up</AlertTitle>
-            <AlertDescription>
-              Content is AI-generated and may be imperfect. Please submit feedback if something looks off.
-            </AlertDescription>
-          </Alert>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="grid gap-6 md:grid-cols-2">
           <div>
-            <Label>Exam<span className="sr-only"> required</span></Label>
+            <Label>Exam <span className="text-destructive">*</span></Label>
             <Select value={exam} onValueChange={(v) => setExam(v as ExamName)}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select exam" />
+              </SelectTrigger>
               <SelectContent>
                 {EXAMS.map(e => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>
+
           <div>
             <Label>Number of questions</Label>
             <Select value={String(count)} onValueChange={(v) => setCount(Number(v))}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Select count" /></SelectTrigger>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select count" />
+              </SelectTrigger>
               <SelectContent>
                 {COUNTS.map(c => (<SelectItem key={c} value={String(c)}>{c}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>
+
           <div>
             <Label>Curriculum</Label>
             <Select value={area} onValueChange={setArea} disabled={!exam}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="All areas" /></SelectTrigger>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="All areas" />
+              </SelectTrigger>
               <SelectContent>
                 {areas.map(a => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>
+
           <div>
             <Label>Difficulty</Label>
             <Select value={difficulty} onValueChange={setDifficulty}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Select difficulty" /></SelectTrigger>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select difficulty" />
+              </SelectTrigger>
               <SelectContent>
                 {DIFFICULTIES.map(d => (<SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>
-            <div className="md:col-span-2 lg:col-span-4 flex items-center gap-2 justify-end pt-2">
-              <Button onClick={start} disabled={!exam || loading}>
-                {loading ? 'Generating…' : 'Generate'}
-              </Button>
+
+          <div className="md:col-span-2">
+            <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+              <div className="text-sm text-muted-foreground">
+                <strong>AI Practice Features:</strong>
+                <ul className="mt-1 space-y-1 text-xs">
+                  <li>• AI-generated questions on demand</li>
+                  <li>• Instant explanations and feedback</li>
+                  <li>• Customizable by exam and topic</li>
+                  <li>• Dynamic difficulty adjustment</li>
+                </ul>
+              </div>
             </div>
+          </div>
+
+          <div className="md:col-span-2">
+            <Alert>
+              <AlertTitle>Heads up</AlertTitle>
+              <AlertDescription>
+                Content is AI-generated and may be imperfect. Please submit feedback if something looks off.
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <div className="md:col-span-2 flex items-center gap-2 justify-end pt-2">
+            <Button onClick={start} disabled={!exam || loading} size="lg">
+              {loading ? 'Generating…' : 'Generate'}
+            </Button>
           </div>
         </CardContent>
       </Card>
