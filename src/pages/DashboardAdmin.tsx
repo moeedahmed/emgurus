@@ -1033,10 +1033,6 @@ const GuruApprovalsTab: React.FC = () => {
 
   return (
     <div className="p-4">
-      <div className="mb-4 text-sm text-muted-foreground">
-        Review and approve guru applications.
-      </div>
-      
       <div className="grid gap-4 md:grid-cols-3 mb-4">
         <KpiCard title="Pending" value={counts.pending} isLoading={false} />
         <KpiCard title="Approved (7d)" value={counts.approved7d} isLoading={false} />
