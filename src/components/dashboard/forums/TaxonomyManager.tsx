@@ -36,6 +36,7 @@ export default function TaxonomyManager() {
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newTopicName, setNewTopicName] = useState("");
+  const [activeTab, setActiveTab] = useState<'categories' | 'topics' | 'usage'>('categories');
 
   const loadData = async () => {
     setLoading(true);
@@ -132,16 +133,27 @@ export default function TaxonomyManager() {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-0">
+      <div className="flex gap-2 mb-6 px-6 pt-4">
+        {[
+          { id: 'categories' as const, label: 'Categories' },
+          { id: 'topics' as const, label: 'Topics' },
+          { id: 'usage' as const, label: 'Usage' },
+        ].map(tab => (
+          <Button
+            key={tab.id}
+            size="sm"
+            variant={activeTab === tab.id ? "default" : "outline"}
+            onClick={() => setActiveTab(tab.id)}
+            aria-pressed={activeTab === tab.id}
+          >
+            {tab.label}
+          </Button>
+        ))}
+      </div>
 
-      <Tabs defaultValue="categories" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="topics">Topics</TabsTrigger>
-          <TabsTrigger value="usage">Usage</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="categories" className="space-y-4">
+      {activeTab === 'categories' && (
+        <div className="space-y-4 px-6">
           <div className="flex items-center gap-2">
             <Input
               placeholder="New category name"
@@ -234,17 +246,21 @@ export default function TaxonomyManager() {
               </TableBody>
             </Table>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="topics" className="space-y-4">
+      {activeTab === 'topics' && (
+        <div className="space-y-4 px-6">
           <div className="p-4">
             <Card className="p-6 text-sm text-muted-foreground">
               Forum topic mapping not wired yet. Category management is available above.
             </Card>
           </div>
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="usage" className="space-y-4">
+      {activeTab === 'usage' && (
+        <div className="space-y-4 px-6">
           <Card>
             <Table>
               <TableHeader>
@@ -278,8 +294,8 @@ export default function TaxonomyManager() {
               </TableBody>
             </Table>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 }
