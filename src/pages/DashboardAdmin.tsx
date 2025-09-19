@@ -120,7 +120,7 @@ const BlogSubmissionQueue: React.FC = () => {
         {[
           { id: 'submitted' as const, label: 'Submitted' },
           { id: 'assigned' as const, label: 'Assigned' },
-          { id: 'approved' as const, label: 'Guru Approved' },
+          { id: 'approved' as const, label: 'Approved' },
           { id: 'rejected' as const, label: 'Rejected' },
         ].map(chip => (
           <Button
