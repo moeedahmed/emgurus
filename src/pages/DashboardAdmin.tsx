@@ -1125,7 +1125,7 @@ export default function DashboardAdmin() {
         },
         { 
           id: "myblogs", 
-          title: "MyBlogs", 
+          title: "Authored", 
           description: "Your authored posts.", 
           render: <MyBlogsAdmin /> 
         },
