@@ -489,16 +489,31 @@ const QuestionGenerator: React.FC = () => {
         <Badge variant="outline" className="ml-auto">Beta</Badge>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="generate">Generate</TabsTrigger>
-          <TabsTrigger value="drafts">
-            Drafts {drafts.length > 0 && <Badge variant="secondary" className="ml-2">{drafts.length}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="marked">Marked</TabsTrigger>
-        </TabsList>
+      <div className="flex gap-2 mb-6 px-6 pt-4">
+        {[
+          { id: 'generate' as const, label: 'Generate' },
+          { id: 'drafts' as const, label: 'Drafts' },
+          { id: 'marked' as const, label: 'Marked' },
+        ].map(tab => (
+          <Button
+            key={tab.id}
+            size="sm"
+            variant={activeTab === tab.id ? "default" : "outline"}
+            onClick={() => setActiveTab(tab.id)}
+            aria-pressed={activeTab === tab.id}
+          >
+            {tab.label}
+            {tab.id === 'drafts' && drafts.length > 0 && (
+              <Badge variant="secondary" className="ml-2">{drafts.length}</Badge>
+            )}
+          </Button>
+        ))}
+      </div>
 
-        <TabsContent value="generate" className="space-y-6">
+      {activeTab === 'generate' && (
+        <div className="space-y-6">
+
+        
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Configuration Panel */}
             <Card className="p-6 space-y-4">
@@ -664,9 +679,11 @@ const QuestionGenerator: React.FC = () => {
               </div>
             </Card>
           )}
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="drafts" className="space-y-4">
+      {activeTab === 'drafts' && (
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Draft Questions ({drafts.length})</h3>
             <div className="flex gap-2">
@@ -814,15 +831,18 @@ const QuestionGenerator: React.FC = () => {
               ))
             )}
           </div>
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="marked" className="space-y-4">
+      {activeTab === 'marked' && (
+        <div className="space-y-4">
           <Card className="p-8 text-center">
             <Flag className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
             <p className="text-muted-foreground">Marked questions functionality coming soon.</p>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
+      
 
       {/* Draft Edit Modal */}
       <DraftEditModal
