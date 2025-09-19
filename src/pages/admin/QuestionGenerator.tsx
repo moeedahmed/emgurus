@@ -11,10 +11,11 @@ import { Brain, FileText, Flag, Edit, Trash2, RotateCcw, Save, Users, AlertCircl
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast-core';
 import { DraftEditModal } from '@/components/DraftEditModal';
+import { mapSlugToEnum, getAllExamDisplayNames, mapDisplayNameToEnum, type ExamDisplayName, type ExamTypeEnum } from '@/lib/examMapping';
 
 interface ExamOption {
-  slug: string;
-  title: string;
+  enum_value: ExamTypeEnum;
+  display_name: ExamDisplayName;
 }
 
 interface TopicOption {
@@ -56,7 +57,7 @@ const QuestionGenerator: React.FC = () => {
   
   // Generate tab state
   const [config, setConfig] = useState({
-    exam: '',
+    exam: '' as ExamDisplayName | '',
     topic: '',
     difficulty: '',
     count: '5',
@@ -83,24 +84,11 @@ const QuestionGenerator: React.FC = () => {
     const loadData = async () => {
       setLoadingExams(true);
       try {
-        // Load exams
-        const { data: examData, error: examError } = await supabase
-          .from('taxonomy_terms')
-          .select('slug, title')
-          .eq('kind', 'exam')
-          .order('title');
-
-        if (examError) throw examError;
-
-        // Client-side deduplication as fallback
-        const uniqueExams = examData?.reduce((acc, exam) => {
-          if (!acc.find(existing => existing.slug === exam.slug)) {
-            acc.push({ slug: exam.slug, title: exam.title });
-          }
-          return acc;
-        }, [] as ExamOption[]) || [];
-
-        const examOptions = uniqueExams;
+        // Load exams from standardized mapping
+        const examOptions: ExamOption[] = getAllExamDisplayNames().map(displayName => ({
+          enum_value: mapDisplayNameToEnum(displayName),
+          display_name: displayName
+        }));
 
         setExams(examOptions);
 
@@ -152,28 +140,14 @@ const QuestionGenerator: React.FC = () => {
     const loadTopics = async () => {
       setLoadingTopics(true);
       try {
-        // Enhanced exam slug to enum mapping - centralized source of truth
-        const examTypeMap: Record<string, string> = {
-          'mrcem-primary': 'MRCEM_PRIMARY',
-          'mrcem-sba': 'MRCEM_SBA', 
-          'frcem-sba': 'FRCEM_SBA',
-          'fcps-part1': 'FCPS_PART1',
-          'fcps-part1-pk': 'FCPS_PART1',
-          'fcps-part2': 'FCPS_PART2',
-          'fcps-part2-pk': 'FCPS_PART2',
-          'fcps-imm': 'FCPS_IMM',
-          'fcps-imm-pk': 'FCPS_IMM',
-          'fcps-em-pk': 'FCPS_IMM', // Emergency Medicine maps to IMM for curriculum
-          'fcps-emergency-medicine': 'FCPS_IMM'
-        };
-
-        const examType = examTypeMap[config.exam];
+        // Convert display name to enum value for database query
+        const examTypeEnum = mapDisplayNameToEnum(config.exam as ExamDisplayName);
         
-        if (examType) {
+        if (examTypeEnum) {
           const { data, error } = await supabase
             .from('curriculum_map')
             .select('slo_title, key_capability_title')
-            .eq('exam_type', examType as any)
+            .eq('exam_type', examTypeEnum)
             .order('slo_title');
 
           if (error) throw error;
@@ -194,11 +168,11 @@ const QuestionGenerator: React.FC = () => {
               ...uniqueTopics
             ]);
           } else {
-            console.warn(`No curriculum topics found for exam type: ${examType}`);
+            console.warn(`No curriculum topics found for exam type: ${examTypeEnum}`);
             setTopics([{ value: 'all', label: 'All Topics' }]);
           }
         } else {
-          console.warn(`No mapping found for exam slug: ${config.exam}`);
+          console.warn(`No mapping found for exam: ${config.exam}`);
           setTopics([{ value: 'all', label: 'All Topics' }]);
         }
       } catch (error) {
@@ -224,7 +198,7 @@ const QuestionGenerator: React.FC = () => {
       return 'Please select exam, difficulty, and count to see prompt preview...';
     }
 
-    const examTitle = exams.find(e => e.slug === config.exam)?.title || config.exam;
+    const examTitle = exams.find(e => e.display_name === config.exam)?.display_name || config.exam;
     const topicText = config.topic && config.topic !== 'all' 
       ? ` on ${topics.find(t => t.value === config.topic)?.label || config.topic}`
       : '';
@@ -256,7 +230,7 @@ const QuestionGenerator: React.FC = () => {
 
     setGenerating(true);
     try {
-      const examTitle = exams.find(e => e.slug === config.exam)?.title || config.exam;
+      const examTitle = exams.find(e => e.display_name === config.exam)?.display_name || config.exam;
       const topicValue = config.topic === 'all' ? undefined : config.topic;
 
       const { data, error } = await supabase.functions.invoke('generate-ai-question', {
@@ -334,13 +308,14 @@ const QuestionGenerator: React.FC = () => {
         throw new Error('Authentication required');
       }
 
-      // Convert drafts to review_exam_questions format
+      // Convert drafts to review_exam_questions format using standardized exam_type
+      const examTypeEnum = config.exam ? mapDisplayNameToEnum(config.exam as ExamDisplayName) : 'OTHER';
       const questionsToInsert = drafts.map(draft => ({
         question: draft.stem,
         options: draft.options.map(opt => opt.text),
         correct_answer: draft.options[draft.correctIndex].text,
         explanation: draft.explanation,
-        exam_type: 'OTHER' as const,
+        exam_type: examTypeEnum,
         status: 'draft' as const,
         created_by: user.id
       }));
@@ -526,7 +501,7 @@ const QuestionGenerator: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-1 block">Exam Type</label>
-                  <Select value={config.exam} onValueChange={(value) => setConfig(prev => ({ ...prev, exam: value }))}>
+                  <Select value={config.exam} onValueChange={(value) => setConfig(prev => ({ ...prev, exam: value as ExamDisplayName | '' }))}>]
                     <SelectTrigger>
                       <SelectValue placeholder="Select exam type" />
                     </SelectTrigger>
@@ -542,8 +517,8 @@ const QuestionGenerator: React.FC = () => {
                         </SelectItem>
                       ) : (
                         exams.map((exam) => (
-                          <SelectItem key={exam.slug} value={exam.slug}>
-                            {exam.title}
+                          <SelectItem key={exam.enum_value} value={exam.display_name}>
+                            {exam.display_name}
                           </SelectItem>
                         ))
                       )}
