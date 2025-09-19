@@ -43,7 +43,7 @@ import GenerateBlogDraft from "@/pages/tools/GenerateBlogDraft";
 const AdminAnalyticsPanel: React.FC = () => {
   const { kpis, submissionsSeries, workload, engagement, feedbackSummary, isLoading } = useAdminMetrics();
   return (
-    <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 items-stretch">
       <KpiCard title="New Users (7d)" value={kpis.newUsers7d} isLoading={isLoading} icon={UsersRound} iconColor="text-blue-600" />
       <KpiCard title="Posts Submitted" value={kpis.postsSubmitted} isLoading={isLoading} icon={BookOpen} iconColor="text-purple-600" />
       <KpiCard title="Posts Assigned" value={kpis.postsAssigned} isLoading={isLoading} icon={Settings} iconColor="text-orange-600" />
