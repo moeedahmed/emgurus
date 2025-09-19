@@ -673,13 +673,12 @@ const ExamMarkedQuality: React.FC = () => {
 };
 
 const ExamBankSets: React.FC = () => {
-  const [activeFilter, setActiveFilter] = useState<'questions' | 'sets' | 'database'>('questions');
+  const [activeFilter, setActiveFilter] = useState<'questions' | 'sets'>('questions');
 
   const getComponent = () => {
     switch (activeFilter) {
       case 'questions': return <ReviewedQuestionBank embedded />;
       case 'sets': return <QuestionSetsAdmin />;
-      case 'database': return <DatabaseManager />;
       default: return <ReviewedQuestionBank embedded />;
     }
   };
@@ -691,7 +690,6 @@ const ExamBankSets: React.FC = () => {
         {[
           { id: 'questions' as const, label: 'Questions' },
           { id: 'sets' as const, label: 'Sets' },
-          { id: 'database' as const, label: 'Database' },
         ].map(chip => (
           <Button
             key={chip.id}
@@ -1167,6 +1165,12 @@ export default function DashboardAdmin() {
           title: "Bank",
           description: "Browse approved questions and manage sets.", 
           render: <ExamBankSets /> 
+        },
+        { 
+          id: "database", 
+          title: "Database", 
+          description: "Manage database structure and data.", 
+          render: <div className="p-0"><DatabaseManager /></div>
         },
         { 
           id: "authored", 
