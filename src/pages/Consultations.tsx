@@ -123,9 +123,9 @@ const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
         }
       } catch (e) {
         console.error('Consultations API error:', e);
-        // Show graceful fallback for failed membership/API calls
+        // Show graceful fallback for failed API calls
         setGurus([]);
-        toast.error('Unable to load consultations. Please check your membership status or try again later.');
+        toast.error('Unable to load consultations. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -299,10 +299,10 @@ const Consultations = ({ embedded = false }: { embedded?: boolean } = {}) => {
               <section className="text-center text-muted-foreground py-12">
                 {gurus.length === 0 ? (
                   <div className="space-y-3">
-                    <div className="font-medium">No membership found</div>
-                    <div className="text-sm">Please upgrade to access consultations or try again later.</div>
-                    <Button variant="outline" onClick={() => window.location.href = '/pricing'}>
-                      View Pricing
+                    <div className="font-medium">No consultations available</div>
+                    <div className="text-sm">Consultations are currently unavailable. Please try again later.</div>
+                    <Button variant="outline" onClick={() => window.location.reload()}>
+                      Retry
                     </Button>
                   </div>
                 ) : (
