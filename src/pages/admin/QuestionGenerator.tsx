@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Brain, FileText, Flag, Edit, Trash2, RotateCcw, Save, Users, AlertCircle, Loader2, Check, X, UserPlus, CheckSquare, CheckCircle } from 'lucide-react';
+import { Brain, FileText, Flag, Edit, Trash2, RotateCcw, Save, Users, AlertCircle, Loader2, Check, X, UserPlus, CheckSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast-core';
 import { DraftEditModal } from '@/components/DraftEditModal';
@@ -22,13 +22,6 @@ interface TopicOption {
   label: string;
 }
 
-interface CurriculumOption {
-  id: string;
-  slo_title: string;
-  key_capability_title: string;
-  display_label: string;
-}
-
 interface GeneratedQuestion {
   id?: string;
   stem: string;
@@ -36,7 +29,6 @@ interface GeneratedQuestion {
   correctIndex: number;
   explanation: string;
   reference?: string;
-  curriculumIds?: string[];
   status: 'generated' | 'kept' | 'draft';
 }
 
@@ -58,17 +50,14 @@ const QuestionGenerator: React.FC = () => {
   // Database data
   const [exams, setExams] = useState<ExamOption[]>([]);
   const [topics, setTopics] = useState<TopicOption[]>([]);
-  const [curriculums, setCurriculums] = useState<CurriculumOption[]>([]);
   const [gurus, setGurus] = useState<Guru[]>([]);
   const [loadingExams, setLoadingExams] = useState(true);
   const [loadingTopics, setLoadingTopics] = useState(false);
-  const [loadingCurriculums, setLoadingCurriculums] = useState(false);
   
   // Generate tab state
   const [config, setConfig] = useState({
     exam: '',
     topic: '',
-    curriculum: '',
     difficulty: '',
     count: '5',
     prompt: ''
@@ -153,17 +142,15 @@ const QuestionGenerator: React.FC = () => {
     loadData();
   }, []);
 
-  // Load topics and curriculums when exam changes
+  // Load topics when exam changes
   useEffect(() => {
     if (!config.exam) {
       setTopics([]);
-      setCurriculums([]);
       return;
     }
 
-    const loadTopicsAndCurriculums = async () => {
+    const loadTopics = async () => {
       setLoadingTopics(true);
-      setLoadingCurriculums(true);
       try {
         // Enhanced exam slug to enum mapping - centralized source of truth
         const examTypeMap: Record<string, string> = {
@@ -185,14 +172,13 @@ const QuestionGenerator: React.FC = () => {
         if (examType) {
           const { data, error } = await supabase
             .from('curriculum_map')
-            .select('id, slo_title, key_capability_title')
+            .select('slo_title, key_capability_title')
             .eq('exam_type', examType as any)
-            .order('key_capability_title, slo_title');
+            .order('slo_title');
 
           if (error) throw error;
 
           if (data && data.length > 0) {
-            // Create topic options
             const topicOptions = data.map(item => ({
               value: item.slo_title,
               label: `${item.key_capability_title}: ${item.slo_title}`
@@ -207,46 +193,29 @@ const QuestionGenerator: React.FC = () => {
               { value: 'all', label: 'All Topics' },
               ...uniqueTopics
             ]);
-
-            // Create curriculum options grouped by capability
-            const curriculumOptions = data.map(item => ({
-              id: item.id,
-              slo_title: item.slo_title,
-              key_capability_title: item.key_capability_title,
-              display_label: `${item.key_capability_title}: ${item.slo_title}`
-            }));
-
-            setCurriculums([
-              { id: 'all', slo_title: 'All Curriculum', key_capability_title: '', display_label: 'All Curriculum' },
-              ...curriculumOptions
-            ]);
           } else {
             console.warn(`No curriculum topics found for exam type: ${examType}`);
             setTopics([{ value: 'all', label: 'All Topics' }]);
-            setCurriculums([{ id: 'all', slo_title: 'All Curriculum', key_capability_title: '', display_label: 'All Curriculum' }]);
           }
         } else {
           console.warn(`No mapping found for exam slug: ${config.exam}`);
           setTopics([{ value: 'all', label: 'All Topics' }]);
-          setCurriculums([{ id: 'all', slo_title: 'All Curriculum', key_capability_title: '', display_label: 'All Curriculum' }]);
         }
       } catch (error) {
-        console.error('Error loading topics and curriculums:', error);
-        toast.error('Failed to load topics and curriculums');
+        console.error('Error loading topics:', error);
+        toast.error('Failed to load topics');
         setTopics([{ value: 'all', label: 'All Topics' }]);
-        setCurriculums([{ id: 'all', slo_title: 'All Curriculum', key_capability_title: '', display_label: 'All Curriculum' }]);
       } finally {
         setLoadingTopics(false);
-        setLoadingCurriculums(false);
       }
     };
 
-    loadTopicsAndCurriculums();
+    loadTopics();
   }, [config.exam]);
 
-  // Reset topic and curriculum when exam changes
+  // Reset topic when exam changes
   useEffect(() => {
-    setConfig(prev => ({ ...prev, topic: '', curriculum: '' }));
+    setConfig(prev => ({ ...prev, topic: '' }));
   }, [config.exam]);
 
   // Generate live prompt preview
@@ -260,11 +229,7 @@ const QuestionGenerator: React.FC = () => {
       ? ` on ${topics.find(t => t.value === config.topic)?.label || config.topic}`
       : '';
     
-    const curriculumText = config.curriculum && config.curriculum !== 'all'
-      ? ` focusing on curriculum: ${curriculums.find(c => c.id === config.curriculum)?.display_label || config.curriculum}`
-      : '';
-    
-    let prompt = `Generate ${config.count} ${config.difficulty}-level MCQs${topicText}${curriculumText} for the ${examTitle} exam using the latest curriculum guidelines.`;
+    let prompt = `Generate ${config.count} ${config.difficulty}-level MCQs${topicText} for the ${examTitle} exam using the latest curriculum guidelines.`;
     
     if (config.prompt) {
       prompt += `\n\nAdditional instructions: ${config.prompt}`;
@@ -284,7 +249,6 @@ const QuestionGenerator: React.FC = () => {
     console.log('Generation request:', {
       exam: config.exam,
       topic: config.topic,
-      curriculum: config.curriculum,
       difficulty: config.difficulty,
       count: config.count,
       timestamp: new Date().toISOString()
@@ -294,13 +258,11 @@ const QuestionGenerator: React.FC = () => {
     try {
       const examTitle = exams.find(e => e.slug === config.exam)?.title || config.exam;
       const topicValue = config.topic === 'all' ? undefined : config.topic;
-      const curriculumValue = config.curriculum === 'all' ? undefined : config.curriculum;
 
       const { data, error } = await supabase.functions.invoke('generate-ai-question', {
         body: {
           exam: examTitle,
           topic: topicValue,
-          curriculum: curriculumValue,
           difficulty: config.difficulty,
           count: parseInt(config.count),
           customPrompt: config.prompt || undefined
@@ -320,7 +282,6 @@ const QuestionGenerator: React.FC = () => {
         correctIndex: q.correctIndex,
         explanation: q.explanation,
         reference: q.reference,
-        curriculumIds: config.curriculum && config.curriculum !== 'all' ? [config.curriculum] : [],
         status: 'generated' as const
       }));
 
@@ -384,44 +345,11 @@ const QuestionGenerator: React.FC = () => {
         created_by: user.id
       }));
 
-      const { data: insertedQuestions, error } = await supabase
+      const { error } = await supabase
         .from('review_exam_questions')
-        .insert(questionsToInsert)
-        .select('id');
+        .insert(questionsToInsert);
 
       if (error) throw error;
-
-      // Save curriculum mappings for questions that have curriculum IDs
-      if (insertedQuestions && insertedQuestions.length > 0) {
-        const curriculumMappings = [];
-        
-        for (let i = 0; i < insertedQuestions.length; i++) {
-          const questionId = insertedQuestions[i].id;
-          const draft = drafts[i];
-          
-          if (draft.curriculumIds && draft.curriculumIds.length > 0) {
-            for (const curriculumId of draft.curriculumIds) {
-              if (curriculumId && curriculumId !== 'all') {
-                curriculumMappings.push({
-                  question_id: questionId,
-                  curriculum_id: curriculumId
-                });
-              }
-            }
-          }
-        }
-
-        if (curriculumMappings.length > 0) {
-          const { error: mappingError } = await supabase
-            .from('question_curriculum_map')
-            .insert(curriculumMappings);
-
-          if (mappingError) {
-            console.error('Failed to save curriculum mappings:', mappingError);
-            // Don't fail the entire operation for mapping errors
-          }
-        }
-      }
 
       toast.success(`Successfully committed ${drafts.length} questions to database`);
       setDrafts([]);
@@ -647,52 +575,6 @@ const QuestionGenerator: React.FC = () => {
                         topics.map((topic) => (
                           <SelectItem key={topic.value} value={topic.value}>
                             {topic.label}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="border rounded-lg p-4 bg-muted/50">
-                  <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    Curriculum Framework
-                  </label>
-                  <Select 
-                    value={config.curriculum} 
-                    onValueChange={(value) => setConfig(prev => ({ ...prev, curriculum: value }))}
-                    disabled={!config.exam}
-                  >
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder={config.exam ? "Select curriculum framework" : "Select exam first"} />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border shadow-lg z-50 max-h-[300px] overflow-y-auto">
-                      {loadingCurriculums ? (
-                        <SelectItem value="loading" disabled>
-                          <div className="flex items-center gap-2">
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Loading curriculum...
-                          </div>
-                        </SelectItem>
-                      ) : curriculums.length === 0 && config.exam ? (
-                        <SelectItem value="no-curriculums" disabled>
-                          <div className="flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4" />
-                            No curriculum available for this exam
-                          </div>
-                        </SelectItem>
-                      ) : (
-                        curriculums.map((curriculum) => (
-                          <SelectItem key={curriculum.id} value={curriculum.id} className="cursor-pointer">
-                            <div className="flex flex-col">
-                              <span className="font-medium">{curriculum.display_label}</span>
-                              {curriculum.id !== 'all' && curriculum.key_capability_title && (
-                                <span className="text-xs text-muted-foreground">
-                                  {curriculum.key_capability_title}
-                                </span>
-                              )}
-                            </div>
                           </SelectItem>
                         ))
                       )}
