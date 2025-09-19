@@ -266,7 +266,7 @@ export default function DashboardGuru() {
   const AnalyticsPanel: React.FC = () => {
     const { kpis, throughputSeries, engagement, feedbackSummary, isLoading } = useGuruMetrics();
     return (
-      <div className="sm:p-2 md:p-4 lg:p-6 grid gap-4 md:grid-cols-4">
+      <div className="p-4 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <KpiCard title="Active Assignments" value={kpis.myAssignedCount} isLoading={isLoading} icon={BookOpen} iconColor="text-orange-600" />
         <KpiCard title="Reviews Completed" value={kpis.myReviewsCompleted} isLoading={isLoading} icon={CheckCircle} iconColor="text-green-600" />
         <KpiCard title="Avg Turnaround" value={`${kpis.avgTurnaroundHrs}h`} isLoading={isLoading} icon={Clock} iconColor="text-blue-600" />

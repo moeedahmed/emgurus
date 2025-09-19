@@ -54,7 +54,7 @@ export default function BlogsOverview() {
         <h3 className="text-lg font-semibold">Overview</h3>
         <p className="text-sm text-muted-foreground">Your blog activity at a glance.</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <KpiCard title="Drafts" value={counts.draft} isLoading={loading} />
         <KpiCard title="Submitted" value={counts.in_review} isLoading={loading} />
         <KpiCard title="Published" value={counts.published} isLoading={loading} />

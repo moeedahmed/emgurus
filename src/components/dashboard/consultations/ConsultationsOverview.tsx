@@ -67,7 +67,7 @@ export default function ConsultationsOverview(){
         <h3 className="text-lg font-semibold">Overview</h3>
         <p className="text-sm text-muted-foreground">Your consultation activity over time.</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <KpiCard title="Upcoming" value={stats.upcoming} isLoading={loading} />
         <KpiCard title="Past sessions" value={stats.past} isLoading={loading} />
         <KpiCard title="Total time" value={`${stats.minutes} min`} isLoading={loading} />
