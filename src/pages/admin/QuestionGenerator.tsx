@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Brain, FileText, Flag, Edit, Trash2, RotateCcw, Save, Users, AlertCircle, Loader2, Check, X, UserPlus, CheckSquare } from 'lucide-react';
+import { Brain, FileText, Flag, Edit, Trash2, RotateCcw, Save, Users, AlertCircle, Loader2, Check, X, UserPlus, CheckSquare, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast-core';
 import { DraftEditModal } from '@/components/DraftEditModal';
@@ -654,30 +654,45 @@ const QuestionGenerator: React.FC = () => {
                   </Select>
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Curriculum</label>
+                <div className="border rounded-lg p-4 bg-muted/50">
+                  <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    Curriculum Framework
+                  </label>
                   <Select 
                     value={config.curriculum} 
                     onValueChange={(value) => setConfig(prev => ({ ...prev, curriculum: value }))}
                     disabled={!config.exam}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder={config.exam ? "Select curriculum" : "Select exam first"} />
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder={config.exam ? "Select curriculum framework" : "Select exam first"} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background border shadow-lg z-50 max-h-[300px] overflow-y-auto">
                       {loadingCurriculums ? (
-                        <SelectItem value="loading" disabled>Loading...</SelectItem>
+                        <SelectItem value="loading" disabled>
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Loading curriculum...
+                          </div>
+                        </SelectItem>
                       ) : curriculums.length === 0 && config.exam ? (
                         <SelectItem value="no-curriculums" disabled>
                           <div className="flex items-center gap-2">
                             <AlertCircle className="w-4 h-4" />
-                            No curriculums available for this exam
+                            No curriculum available for this exam
                           </div>
                         </SelectItem>
                       ) : (
                         curriculums.map((curriculum) => (
-                          <SelectItem key={curriculum.id} value={curriculum.id}>
-                            {curriculum.display_label}
+                          <SelectItem key={curriculum.id} value={curriculum.id} className="cursor-pointer">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{curriculum.display_label}</span>
+                              {curriculum.id !== 'all' && curriculum.key_capability_title && (
+                                <span className="text-xs text-muted-foreground">
+                                  {curriculum.key_capability_title}
+                                </span>
+                              )}
+                            </div>
                           </SelectItem>
                         ))
                       )}
