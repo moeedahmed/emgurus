@@ -152,9 +152,9 @@ const BlogPublishedArchive: React.FC = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-0">
       
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4">
         {[
           { id: 'published' as const, label: 'Published' },
           { id: 'archived' as const, label: 'Archived' },
@@ -180,9 +180,9 @@ const MyBlogsAdmin: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'draft' | 'in_review'>('draft');
 
   return (
-    <div className="p-4">
+    <div className="p-0">
       
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4">
         {[
           { id: 'draft' as const, label: 'Draft' },
           { id: 'in_review' as const, label: 'Submitted' },
@@ -1043,7 +1043,7 @@ const GuruApprovalsTab: React.FC = () => {
         <KpiCard title="Rejected (7d)" value={counts.rejected7d} isLoading={false} />
       </div>
       
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4">
         {[
           { id: 'pending' as const, label: 'Pending' },
           { id: 'approved' as const, label: 'Approved' },

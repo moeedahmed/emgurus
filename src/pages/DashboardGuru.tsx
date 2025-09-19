@@ -75,12 +75,12 @@ function BlogReviews() {
   };
 
   return (
-    <div className="p-4">
-      <div className="mb-4 text-sm text-muted-foreground">
+    <div className="p-0">
+      <div className="mb-4 text-sm text-muted-foreground px-6 pt-4">
         Edit and approve assigned blog posts.
       </div>
       
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4">
         {[
           { id: 'assigned' as const, label: 'Assigned' },
           { id: 'approved' as const, label: 'Approved' },
@@ -98,12 +98,14 @@ function BlogReviews() {
         ))}
       </div>
 
-      <TableCard
-        title="Reviews"
-        columns={getColumns()}
-        rows={rows}
-        emptyText="Nothing here yet."
-      />
+      <div className="px-6">
+        <TableCard
+          title="Reviews"
+          columns={getColumns()}
+          rows={rows}
+          emptyText="Nothing here yet."
+        />
+      </div>
     </div>
   );
 }
@@ -134,12 +136,12 @@ function ExamReviews() {
   }, [user?.id, activeFilter]);
 
   return (
-    <div className="p-4">
-      <div className="mb-4 text-sm text-muted-foreground">
+    <div className="p-0">
+      <div className="mb-4 text-sm text-muted-foreground px-6 pt-4">
         Review assigned questions and finalize decisions.
       </div>
       
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4">
         {[
           { id: 'assigned' as const, label: 'Assigned' },
           { id: 'approved' as const, label: 'Approved' },
@@ -157,16 +159,18 @@ function ExamReviews() {
         ))}
       </div>
 
-      <TableCard
-        title="Review & Assignment"
-        columns={[
-          { key: 'created_at', header: 'When', render: (r: any) => new Date(r.created_at).toLocaleString() },
-          { key: 'stem', header: 'Question', render: (r: any) => r.stem || '-' },
-          { key: 'exam_type', header: 'Exam', render: (r: any) => r.exam_type || '-' },
-        ]}
-        rows={rows}
-        emptyText="Nothing assigned yet."
-      />
+      <div className="px-6">
+        <TableCard
+          title="Review & Assignment"
+          columns={[
+            { key: 'created_at', header: 'When', render: (r: any) => new Date(r.created_at).toLocaleString() },
+            { key: 'stem', header: 'Question', render: (r: any) => r.stem || '-' },
+            { key: 'exam_type', header: 'Exam', render: (r: any) => r.exam_type || '-' },
+          ]}
+          rows={rows}
+          emptyText="Nothing assigned yet."
+        />
+      </div>
     </div>
   );
 }
@@ -201,7 +205,7 @@ function MyBlogStatusPanel({ filter }: { filter: 'draft' | 'in_review' }) {
         {filter === 'draft' ? 'Write or continue your own posts.' : 'Posts awaiting review.'}
       </div>
       
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-6 px-6 pt-4">
         <Button size="sm" variant="default" aria-pressed={true}>
           {filter === 'draft' ? 'Draft' : 'Submitted'}
         </Button>
