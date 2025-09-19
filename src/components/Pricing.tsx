@@ -4,9 +4,12 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { CheckCircle, Star, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect, useRef } from "react";
 
 const Pricing = () => {
   const navigate = useNavigate();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [useCarousel, setUseCarousel] = useState(false);
   
   const handlePlanClick = async (planName: string) => {
     if (planName === "Free") {
@@ -123,9 +126,25 @@ const Pricing = () => {
     },
   ];
 
+  useEffect(() => {
+    const checkIfCarouselNeeded = () => {
+      if (!containerRef.current) return;
+      
+      const containerWidth = containerRef.current.offsetWidth;
+      // Approximate minimum width needed for all cards (4 cards * 320px + gaps)
+      const minWidthForGrid = 4 * 320 + 3 * 32; // 32px gap between cards
+      
+      setUseCarousel(containerWidth < minWidthForGrid);
+    };
+
+    checkIfCarouselNeeded();
+    window.addEventListener('resize', checkIfCarouselNeeded);
+    return () => window.removeEventListener('resize', checkIfCarouselNeeded);
+  }, []);
+
   return (
     <section id="pricing" className="py-16 lg:py-24 bg-gradient-to-b from-secondary/30 to-background">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div ref={containerRef} className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
           <h2 className="heading-xl mb-6">
@@ -140,12 +159,12 @@ const Pricing = () => {
           </p>
         </div>
 
-        {/* Mobile Carousel */}
-        <div className="md:hidden">
+        {/* Carousel View */}
+        {useCarousel && (
           <Carousel className="w-full">
             <CarouselContent className="-ml-2 md:-ml-4">
               {plans.map((plan, index) => (
-                <CarouselItem key={index} className="pl-2 md:pl-4 basis-[85%]">
+                <CarouselItem key={index} className="pl-2 md:pl-4 basis-[85%] md:basis-[45%] lg:basis-[30%]">
                   <Card 
                     className={`relative overflow-hidden transition-all duration-300 hover:shadow-strong flex flex-col h-full ${
                       plan.popular 
@@ -223,10 +242,11 @@ const Pricing = () => {
             <CarouselPrevious className="left-2" />
             <CarouselNext className="right-2" />
           </Carousel>
-        </div>
+        )}
 
-        {/* Desktop Grid */}
-        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {/* Grid View */}
+        {!useCarousel && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
           {plans.map((plan, index) => (
             <Card 
               key={index} 
@@ -302,6 +322,7 @@ const Pricing = () => {
             </Card>
           ))}
         </div>
+        )}
 
         {/* Bottom CTA */}
         <div className="text-center mt-16">
