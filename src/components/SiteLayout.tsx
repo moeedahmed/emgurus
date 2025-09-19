@@ -103,7 +103,6 @@ const SiteLayout = () => {
             <div className="flex items-center gap-2">
               <Button size="sm" onClick={() => navigate('/profile')}>Complete now</Button>
               <Button variant="ghost" size="sm" onClick={dismissBanner}>Dismiss</Button>
-              <ThemeToggle />
             </div>
           </div>
         </div>
