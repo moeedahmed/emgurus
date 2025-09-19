@@ -150,7 +150,7 @@ export default function ExamsOverview() {
         <h3 className="text-lg font-semibold">Overview</h3>
         <p className="text-sm text-muted-foreground">Your exam practice at a glance.</p>
       </div>
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard title="Total sessions" value={totals.totalSessions} isLoading={loading} />
         <KpiCard title="Avg score (exam)" value={`${totals.avgScore}%`} isLoading={loading} />
         <KpiCard title="Questions attempted" value={totals.questionsAttempted} isLoading={loading} />

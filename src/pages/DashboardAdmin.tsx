@@ -43,7 +43,7 @@ import GenerateBlogDraft from "@/pages/tools/GenerateBlogDraft";
 const AdminAnalyticsPanel: React.FC = () => {
   const { kpis, submissionsSeries, workload, engagement, feedbackSummary, isLoading } = useAdminMetrics();
   return (
-    <div className="p-4 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
       <KpiCard title="New Users (7d)" value={kpis.newUsers7d} isLoading={isLoading} icon={UsersRound} iconColor="text-blue-600" />
       <KpiCard title="Posts Submitted" value={kpis.postsSubmitted} isLoading={isLoading} icon={BookOpen} iconColor="text-purple-600" />
       <KpiCard title="Posts Assigned" value={kpis.postsAssigned} isLoading={isLoading} icon={Settings} iconColor="text-orange-600" />
@@ -765,7 +765,7 @@ const ExamsOverviewPanel: React.FC = () => {
     return () => { cancelled = true; };
   }, []);
   return (
-    <div className="p-4 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
       <KpiCard title="Drafts" value={kpis.drafts} isLoading={isLoading} />
       <KpiCard title="In Review" value={kpis.inReview} isLoading={isLoading} />
       <KpiCard title="Flags Open" value={kpis.flagsOpen} isLoading={isLoading} />
@@ -797,7 +797,7 @@ const ForumsOverviewPanel: React.FC = () => {
     return () => { cancelled = true; };
   }, []);
   return (
-    <div className="p-4 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
       <KpiCard title="Open Flags" value={kpis.openFlags} isLoading={isLoading} />
       <KpiCard title="Assigned" value={kpis.assigned} isLoading={isLoading} />
       <KpiCard title="Closed (7d)" value={kpis.closed7d} isLoading={isLoading} />
@@ -1033,7 +1033,7 @@ const GuruApprovalsTab: React.FC = () => {
 
   return (
     <div className="p-4">
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-6">
         <KpiCard title="Pending" value={counts.pending} isLoading={false} />
         <KpiCard title="Approved (7d)" value={counts.approved7d} isLoading={false} />
         <KpiCard title="Rejected (7d)" value={counts.rejected7d} isLoading={false} />
@@ -1141,7 +1141,8 @@ export default function DashboardAdmin() {
         { 
           id: "overview", 
           title: "Overview", 
-          render: <div className="p-4 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"><KpiCard title="Generated (7d)" value="0" isLoading={false} /><KpiCard title="In Review" value={examKpis.under_review} isLoading={false} /><KpiCard title="Published" value={examKpis.approved} isLoading={false} /><KpiCard title="Quality Flags Open" value={examKpis.flaggedOpen} isLoading={false} /><div className="text-sm text-muted-foreground">Coverage chart coming soon</div></div> 
+          description: "Exam generation and review metrics.", 
+          render: <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5"><KpiCard title="Generated (7d)" value="0" isLoading={false} /><KpiCard title="In Review" value={examKpis.under_review} isLoading={false} /><KpiCard title="Published" value={examKpis.approved} isLoading={false} /><KpiCard title="Quality Flags Open" value={examKpis.flaggedOpen} isLoading={false} /><div className="text-sm text-muted-foreground">Coverage chart coming soon</div></div> 
         },
         { 
           id: "generator", 
@@ -1183,7 +1184,8 @@ export default function DashboardAdmin() {
         { 
           id: "overview", 
           title: "Overview", 
-          render: <div className="p-0"><AdminConsultsOverview /></div> 
+          description: "Consultation marketplace metrics and activity.", 
+          render: <div className="p-0"><AdminConsultsOverview /></div>
         },
         { 
           id: "marketplace", 
@@ -1232,7 +1234,8 @@ export default function DashboardAdmin() {
         { 
           id: "overview", 
           title: "Overview", 
-          render: <div className="p-4 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"><KpiCard title="Total Users" value="0" isLoading={false} /><KpiCard title="Active (7d)" value="0" isLoading={false} /><KpiCard title="New Today" value="0" isLoading={false} /></div> 
+          description: "User registration and activity statistics.", 
+          render: <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"><KpiCard title="Total Users" value="0" isLoading={false} /><KpiCard title="Active (7d)" value="0" isLoading={false} /><KpiCard title="New Today" value="0" isLoading={false} /></div> 
         },
         { 
           id: "approvals", 
